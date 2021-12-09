@@ -335,7 +335,8 @@ class FTPositionalDecoder(nn.Module):
 
     def decode(self, lattice):
         '''Return FT transform'''
-        assert (lattice[...,0:3].abs() - 0.5 < 1e-4).all()
+        assert (lattice[...,0:3].abs() - 0.5 < 1e-3).all(), f'lattice[...,0:3].max(): {lattice[...,0:3].max().to(torch.float32)}'
+        # assert (lattice[...,0:3].abs() - 0.5 < 1e-4).all(), f'lattice[...,0:3].max(): {lattice[...,0:3].max().to(torch.float32)}'
         # convention: only evalute the -z points
         w = lattice[...,2] > 0.0
         lattice[...,0:3][w] = -lattice[...,0:3][w] # negate lattice coordinates where z > 0

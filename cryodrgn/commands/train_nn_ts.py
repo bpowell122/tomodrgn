@@ -101,8 +101,6 @@ def train(model, lattice, optim, y, rot, trans=None, ctf_params=None, use_amp=Fa
     optim.zero_grad()
     B = y.size(0)
     ntilts=y.size(1)
-    log(f'B = {B}')
-    log(f'ntilts={ntilts}')
     D = lattice.D
     # reconstruct circle of pixels instead of whole image
     mask = lattice.get_circular_mask(D // 2)
@@ -172,20 +170,20 @@ def get_latest(args):
         log(f'Loading {args.poses}')
     return args
 
-def indptcl_ntilt_handler(ind, expanded_ind):
-    # Helper function to broadcast ind filtering (per unique particle) to all tilt images of that particle
-    # expanded_ind = np.array([])
-    # for i in ind:
-    #     expanded_ind = np.append(expanded_ind, np.arange(i * ntilts, (i + 1) * ntilts)).astype('int')
-    # return expanded_ind
-
-    # Alternative implementation: given n_imgs and n_tilts, return dictionary of {ind_particle : ind_array_particle_imgs}
-    # expanded_ind = {i : np.arange(i * ntilts, (i + 1) * ntilts) for i in np.arange(nptcls)}
-    # return expanded_ind
-
-    # Alternative: create dictionary of int ind mappings once, then parse dict for torch.tensor(ind)
-    batch_ind = [expanded_ind[i] for i in ind]
-    return torch.tensor(batch_ind)
+# def indptcl_ntilt_handler(ind, expanded_ind):
+#     # Helper function to broadcast ind filtering (per unique particle) to all tilt images of that particle
+#     expanded_ind = np.array([])
+#     for i in ind:
+#         expanded_ind = np.append(expanded_ind, np.arange(i * ntilts, (i + 1) * ntilts)).astype('int')
+#     return expanded_ind
+#
+#     # Alternative implementation: given n_imgs and n_tilts, return dictionary of {ind_particle : ind_array_particle_imgs}
+#     expanded_ind = {i : np.arange(i * ntilts, (i + 1) * ntilts) for i in np.arange(nptcls)}
+#     return expanded_ind
+#
+#     # Alternative: create dictionary of int ind mappings once, then parse dict for torch.tensor(ind)
+#     batch_ind = [expanded_ind[i] for i in ind]
+#     return torch.tensor(batch_ind)
 
 def main(args):
     t1 = dt.now()
@@ -306,26 +304,26 @@ def main(args):
         loss_accum = 0
         batch_it = 0
         for batch, ind in data_generator:
-            batch_ind = expanded_ind[ind] #need to use expanded indexing for ctf and poses
-            batch_it += len(batch_ind)
+            batch_ind = expanded_ind[ind].view(-1) # need to use expanded indexing for ctf and poses
+            batch_it += len(batch_ind) # total number of images seen (+= batchsize*ntilts)
             y = batch.to(device)
             batch_ind = batch_ind.to(device)
             if args.do_pose_sgd:
                 pose_optimizer.zero_grad()
             r, t = posetracker.get_pose(batch_ind)
             c = ctf_params[batch_ind] if ctf_params is not None else None
-            log(f'batch_ind.shape: {batch_ind.shape}')
-            log(f'rot.shape: {r.shape}')
-            log(f'trans.shape: {t.shape}')
-            log(f'ctf.shape: {c.shape}')
             loss_item = train(model, lattice, optim, y, r, trans=t, ctf_params=c, use_amp=args.amp)
             if args.do_pose_sgd and epoch >= args.pretrain:
                 pose_optimizer.step()
             loss_accum += loss_item * len(batch_ind)
             if batch_it % args.log_interval == 0:
-                flog('# [Train Epoch: {}/{}] [{}/{} subtomos] loss={:.6f}'.format(epoch + 1, args.num_epochs, batch_it,
-                                                                                Nptcls, loss_item))
-        flog('# =====> Epoch: {} Average loss = {:.6}; Finished in {}'.format(epoch + 1, loss_accum / Nimg,
+                flog('# [Train Epoch: {}/{}] [{}/{} subtomos] loss={:.6f}'.format(epoch + 1,
+                                                                                  args.num_epochs,
+                                                                                  int(batch_it / Ntilts),
+                                                                                  Nptcls,
+                                                                                  loss_item))
+        flog('# =====> Epoch: {} Average loss = {:.6}; Finished in {}'.format(epoch + 1,
+                                                                              loss_accum / Nimg,
                                                                               dt.now() - t2))
         if args.checkpoint and epoch % args.checkpoint == 0:
             out_mrc = '{}/reconstruct.{}.mrc'.format(args.outdir, epoch)
