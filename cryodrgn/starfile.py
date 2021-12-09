@@ -12,91 +12,65 @@ from .mrc import LazyImage
 
 class Starfile():
     
-    def __init__(self, headers, df, headers_optics=None, df_optics=None):
+    def __init__(self, headers, df):
         assert headers == list(df.columns), f'{headers} != {df.columns}'
         self.headers = headers
         self.df = df
-        if headers_optics is not None: # file is recognized as a RELION 3.1 star file
-            self.headers_optics = headers_optics
-            self.df_optics = df_optics
+
+    def __len__(self):
+        return len(self.df)
 
     @classmethod
     def load(self, starfile, relion31=False):
-        def parse_starblock_to_df(filehandle, BLOCK):
-            # get to block
-            while 1:
-                for line in f:
-                    if line.startswith(BLOCK):
-                        assert line.strip().split()[0] == BLOCK, f"Expected block header: {BLOCK} but found: {line.strip().split()[0]}. Is this a RELION 3.1 starfile?"
-                        break
-                break
-            # get to header loop
-            while 1:
-                for line in f:
-                    if line.startswith('loop_'):
-                        break
-                break
-            # get list of column headers
-            while 1:
-                headers = []
-                for line in f:
-                    if line.startswith('_'):
-                        headers.append(line)
-                    else:
-                        break
-                break
-            # assume all subsequent lines until empty line is the body
-            headers = [h.strip().split()[0] for h in headers]
-            assert headers != [], "Could not find headers in file. Please double check if this is a RELION 3.1 starfile."
-            if line.strip() != '':
-                body = [line]
-            else:
-                body = []
-            for line in f:
-                if line.strip() == '':
-                    break
-                body.append(line)
-            # put data into an array and instantiate as dataframe
-            words = [l.strip().split() for l in body]
-            words = np.array(words)
-            assert words.shape[1] == len(headers), f"Error in parsing. Number of columns {words.shape[1]} != number of headers {len(headers)}"
-            data = {h: words[:, i] for i, h in enumerate(headers)}
-            df = pd.DataFrame(data=data)
-            return headers, df
-
         f = open(starfile,'r')
-
-        # parse data_optics block if relion3.1 starfile
-        if relion31:
-            BLOCK = 'data_optics'
-            headers_optics, df_optics = parse_starblock_to_df(f, BLOCK)
-
-        # parse data block
+        # get to data block
         BLOCK = 'data_particles' if relion31 else 'data_'
-        headers, df = parse_starblock_to_df(f, BLOCK)
+        while 1:
+            for line in f:
+                if line.startswith(BLOCK):
+                    break
+            break
+        # get to header loop
+        while 1:
+            for line in f:
+                if line.startswith('loop_'):
+                    break
+            break
+        # get list of column headers
+        while 1:
+            headers = []
+            for line in f:
+                if line.startswith('_'):
+                    headers.append(line)
+                else:
+                    break
+            break 
+        # assume all subsequent lines until empty line is the body
+        headers = [h.strip().split()[0] for h in headers]
+        body = [line]
+        for line in f:
+            if line.strip() == '':
+                break
+            body.append(line)
+        # put data into an array and instantiate as dataframe
+        words = [l.strip().split() for l in body]
+        words = np.array(words)
+        assert words.ndim == 2, f"Uneven # columns detected in parsing {set([len(x) for x in words])}. Is this a RELION 3.1 starfile?" 
+        assert words.shape[1] == len(headers), f"Error in parsing. Number of columns {words.shape[1]} != number of headers {len(headers)}" 
+        data = {h:words[:,i] for i,h in enumerate(headers)}
+        df = pd.DataFrame(data=data)
+        return self(headers, df)
 
-        if relion31:
-            return self(headers, df, headers_optics, df_optics)
-        else:
-            return self(headers, df)
-
-    def write(self, outstar, relion31=False):
+    def write(self, outstar):
         f = open(outstar,'w')
         f.write('# Created {}\n'.format(dt.now()))
         f.write('\n')
-        if relion31:
-            f.write('data_optics\n\n')
-            f.write('loop_\n')
-            f.write('\n'.join(self.headers_optics))
-            f.write('\n')
-            for i in self.df_optics.index:
-                f.write(' '.join([str(v) for v in self.df_optics.loc[i]]))
-                f.write('\n\n')
-        f.write('data_particles\n\n') if relion31 else f.write('data_\n\n')
+        f.write('data_\n\n')
         f.write('loop_\n')
         f.write('\n'.join(self.headers))
         f.write('\n')
         for i in self.df.index:
+            # TODO: Assumes header and df ordering is consistent
             f.write(' '.join([str(v) for v in self.df.loc[i]]))
             f.write('\n')
         #f.write('\n'.join([' '.join(self.df.loc[i]) for i in range(len(self.df))]))
@@ -159,5 +133,85 @@ def csparc_get_particles(csfile, datadir=None, lazy=True):
     return dataset
 
 
+class TiltSeriesStarfile():
+    '''
+    Class to handle a star file generated by Warp when exporting subtomograms as a particleseries
+    Therefore have strong prior for what starfile should look like
+    '''
+    def __init__(self, headers, df):
+        assert headers == list(df.columns), f'{headers} != {df.columns}'
+        self.headers = headers
+        self.df = df
 
+    def __len__(self):
+        return len(self.df)
+
+    @classmethod
+    def load(self, starfile):
+        with(open(starfile, 'r')) as f:
+            # get to header loop (we know there is only one data block)
+            while 1:
+                for line in f:
+                    if line.startswith('loop_'):
+                        break
+                break
+            # get list of column headers
+            while 1:
+                headers = []
+                for line in f:
+                    if line.startswith('_'):
+                        headers.append(line)
+                    elif line.startswith('\n'):
+                        pass
+                    else:
+                        break
+                break
+            # all subsequent lines should be the data body
+            headers = [h.strip().split()[0] for h in headers]
+            body = [line]
+            for line in f:
+                if line.strip() == '':
+                    break
+                body.append(line)
+            # put data into an array and instantiate as dataframe
+            words = [l.strip().split() for l in body]
+            words = np.array(words)
+            assert words.shape[1] == len(
+                headers), f"Error in parsing. Number of columns {words.shape[1]} != number of headers {len(headers)}"
+            data = {h: words[:, i] for i, h in enumerate(headers)}
+            df = pd.DataFrame(data=data)
+        return self(headers, df)
+
+    def get_particles(self, datadir=None, lazy=False):
+        '''
+        Return particles of the starfile as (n_ptcls, n_tilts, D, D)
+
+        Input:
+            datadir (str): Overwrite base directories of particle .mrcs
+                Tries both substituting the base path and prepending to the path
+            If lazy=True, returns list of LazyImage instances, else np.array
+        '''
+        images = self.df['_rlnImageName']
+        unique_ptcls = self.df['_rlnGroupName'].unique()
+        n_tilts = self.df['_rlnGroupName'].value_counts().unique()
+        assert len(n_tilts) == 1, 'All particles must have the same number of tilt images!'
+        n_tilts = int(n_tilts)
+
+        # format is index@path_to_mrc
+        images = [x.split('@') for x in images]
+        ind = [int(x[0])-1 for x in images] # convert to 0-based indexing
+        mrcs = [x[1] for x in images]
+        if datadir is not None:
+            mrcs = prefix_paths(mrcs, datadir)
+        for path in set(mrcs):
+            assert os.path.exists(path), f'{path} not found'
+        header = mrc.parse_header(mrcs[0])
+        D = header.D # image size along one dimension in pixels
+        dtype = header.dtype
+        stride = dtype().itemsize*D*D
+        dataset = [LazyImage(f, (D,D), dtype, 1024+ii*stride) for ii,f in zip(ind, mrcs)]
+        # if not lazy: # not sure how to implement lazy loading yet
+        dataset = np.array([x.get() for x in dataset])
+        dataset = dataset.reshape((len(unique_ptcls), n_tilts, D, D))
+        return dataset
 

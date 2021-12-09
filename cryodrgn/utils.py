@@ -143,6 +143,14 @@ def xrot(tilt_deg):
                      [0, np.sin(theta), np.cos(theta)]])
     return tilt
 
+def yrot(tilt_deg):
+    '''Return rotation matrix associated with rotation over the y-axis'''
+    theta = tilt_deg*np.pi/180
+    tilt = np.array([[np.cos(theta), 0., np.sin(theta)],
+                     [0., 1., 0.],
+                     [-np.sin(theta), 0., np.cos(theta)]])
+    return tilt
+
 @memoized
 def _zero_sphere_helper(D):
     xx = np.linspace(-1, 1, D, endpoint=True if D % 2 == 1 else False)

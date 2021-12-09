@@ -252,3 +252,70 @@ class TiltMRCData(data.Dataset):
         return self.particles[index], self.particles_tilt[index]
 
 # TODO: LazyTilt
+
+class TiltSeriesMRCDataset(data.Dataset):
+    '''
+    Class representing an .mrcs particleseries of tilt-related images
+    Currently supports initializing mrcfile from .star exported by warp when generating particleseries
+    '''
+    def __init__(self, mrcfile, norm=None, keepreal=False, invert_data=False, ind=None, window=True, datadir=None, max_threads=16, window_r=0.85):
+        particles = starfile.TiltSeriesStarfile.load(mrcfile).get_particles(datadir=datadir)  # shape(n_unique_ptcls, n_tilts, D, D)
+        if ind is not None:
+            particles = np.array([particles[i].get() for i in ind], dtype=np.float32) #note that ind must be relative to each unique ptcl, not each unique image
+
+        nptcls, ntilts, ny, nx = particles.shape
+        assert ny == nx, "Images must be square"
+        assert ny % 2 == 0, "Image size must be even"
+        log('Loaded {} {}x{}x{} images'.format(nptcls, ntilts, ny, nx))
+
+        particles = particles.reshape(nptcls*ntilts, ny, nx) #temporarily return to 3-dim ptcl stack for backwards compatibility
+
+        # Real space window
+        if window:
+            m = window_mask(ny, window_r, .99)
+            particles *= m
+
+        # compute HT
+        log('Computing FFT')
+        max_threads = min(max_threads, mp.cpu_count())
+        if max_threads > 1:
+            log(f'Spawning {max_threads} processes')
+            with Pool(max_threads) as p:
+                particles = np.asarray(p.map(fft.ht2_center, particles), dtype=np.float32)
+        else:
+            particles = np.asarray([fft.ht2_center(img) for img in particles], dtype=np.float32)
+        log('Converted to FFT')
+
+        if invert_data:
+            particles *= -1
+
+        # symmetrize HT
+        particles = fft.symmetrize_ht(particles)
+        _, ny_ht, nx_ht = particles.shape
+
+        # normalize
+        if norm is None:
+            norm  = [np.mean(particles), np.std(particles)]
+            norm[0] = 0 #TODO check if this is a typo
+        particles = (particles - norm[0])/norm[1]
+        log('Normalized HT by {} +/- {}'.format(*norm))
+
+        particles = particles.reshape(nptcls, ntilts, ny_ht, nx_ht)  # return to 4-dim ptcl stack for DataLoader
+
+        self.particles = particles
+        self.norm = norm
+        self.nptcls = nptcls
+        self.ntilts = ntilts
+        self.D = particles.shape[-1]
+        self.keepreal = keepreal
+        if keepreal: raise NotImplementedError
+            # self.particles_real = particles_real
+
+    def __len__(self):
+        return self.nptcls
+
+    def __getitem__(self, index):
+        return self.particles[index], index
+
+    def get(self, index):
+        return self.particles[index]
