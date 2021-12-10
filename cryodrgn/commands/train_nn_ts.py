@@ -46,7 +46,6 @@ def add_args(parser):
     parser.add_argument('--seed', type=int, default=np.random.randint(0, 100000), help='Random seed')
 
     group = parser.add_argument_group('Dataset loading')
-    # TODO handle lazy loading
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
     group.add_argument('--no-window', dest='window', action='store_false', help='Turn off real space windowing of dataset')
     group.add_argument('--window-r', type=float, default=.85, help='Windowing radius (default: %(default)s)')

@@ -369,7 +369,7 @@ class TiltSeriesMRCData(data.Dataset):
         # normalize
         if norm is None:
             norm  = [np.mean(particles), np.std(particles)]
-            norm[0] = 0 #TODO check if this is a typo
+            norm[0] = 0
         particles = (particles - norm[0])/norm[1]
         log('Normalized HT by {} +/- {}'.format(*norm))
 
