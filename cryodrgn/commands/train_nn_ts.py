@@ -65,7 +65,6 @@ def add_args(parser):
     group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs')
 
     group = parser.add_argument_group('Pose SGD')
-    # TODO consider adapting pose sgd for tilt series
     group.add_argument('--do-pose-sgd', action='store_true', help='Refine poses')
     group.add_argument('--pretrain', type=int, default=5, help='Number of epochs with fixed poses before pose SGD (default: %(default)s)')
     group.add_argument('--emb-type', choices=('s2s2', 'quat'), default='quat', help='SO(3) embedding type for pose SGD (default: %(default)s)')
@@ -129,8 +128,12 @@ def train(model, lattice, optim, y, rot, trans=None, ctf_params=None, use_amp=Fa
 def save_config(args, dataset, lattice, model, out_config):
     dataset_args = dict(particles=args.particles,
                         norm=dataset.norm,
+                        ntilts=dataset.ntilts,
+                        nptcls=dataset.nptcls,
+                        nimg=dataset.ntilts*dataset.nptcls,
                         invert_data=args.invert_data,
                         ind=args.ind,
+                        expanded_ind=dataset.expanded_ind,
                         window=args.window,
                         window_r=args.window_r,
                         datadir=args.datadir,
@@ -244,10 +247,9 @@ def main(args):
 
     # load poses
     if args.do_pose_sgd:
-        raise NotImplementedError
-        # assert args.domain == 'hartley', "Need to use --domain hartley if doing pose SGD"
-        # posetracker = PoseTracker.load(args.poses, Nimg, D, args.emb_type, expanded_ind)
-        # pose_optimizer = torch.optim.SparseAdam(list(posetracker.parameters()), lr=args.pose_lr)
+        assert args.domain == 'hartley', "Need to use --domain hartley if doing pose SGD"
+        posetracker = PoseTracker.load(args.poses, Nimg, D, args.emb_type, expanded_ind)
+        pose_optimizer = torch.optim.SparseAdam(list(posetracker.parameters()), lr=args.pose_lr)
     else:
         posetracker = PoseTracker.load(args.poses, Nimg, D, None, expanded_ind)
 
