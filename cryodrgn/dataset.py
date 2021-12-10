@@ -253,6 +253,73 @@ class TiltMRCData(data.Dataset):
 
 # TODO: LazyTilt
 
+class LazyTiltSeriesMRCData(data.Dataset):
+    '''
+    Class representing an .mrcs stack file -- particleseries of tilt-related images loaded on the fly
+    Currently supports initializing mrcfile from .star exported by warp when generating particleseries
+    '''
+    def __init__(self, mrcfile, norm=None, keepreal=False, invert_data=False, ind=None, window=True, datadir=None, relion31=False, window_r=0.85):
+        assert not keepreal, 'Not implemented error'
+        particles_df = starfile.TiltSeriesStarfile.load(mrcfile)
+        nptcls, ntilts = particles_df.get_tiltseries_shape()
+        expanded_ind_base = np.array([np.arange(i * ntilts, (i + 1) * ntilts) for i in range(nptcls)])  # 2D array [(ind_ptcl, inds_imgs)]
+        if ind is not None:
+            particles = particles_df.get_particles(datadir=datadir, lazy=True)  # shape(n_unique_ptcls * n_tilts, D, D)
+            expanded_ind = expanded_ind_base[ind].reshape(-1) # 1D array [(ind_imgs_selected)]
+            particles = [particles[i] for i in expanded_ind] # ind must be relative to each unique ptcl, not each unique image
+            nptcls = int(len(particles)/ntilts)
+        else:
+            particles = particles_df.get_particles(datadir=datadir, lazy=True)
+            expanded_ind = expanded_ind_base.reshape(-1)
+
+        nimgs = len(particles)
+        ny, nx = particles[0].get().shape
+        assert ny == nx, "Images must be square"
+        assert ny % 2 == 0, "Image size must be even"
+        log('Preparing to lazily load {} {}x{}x{} subtomo particleseries on-the-fly'.format(nptcls, ntilts, ny, nx))
+
+        # particles = particles.reshape(nptcls, ntilts, ny_ht, nx_ht)  # reshape to 4-dim ptcl stack for DataLoader
+        particles = [particles[ntilts*i : ntilts*(i+1)] for i in range(nptcls)] # reshape to list (of all ptcls) of lists (of tilt images for each ptcl)
+
+        self.particles = particles
+        self.nptcls = nptcls
+        self.ntilts = ntilts
+        self.nimgs = nimgs
+        self.D = ny + 1 # what particles.shape[-1] will be after symmetrizing HT
+        self.keepreal = keepreal
+        self.expanded_ind = expanded_ind
+        self.invert_data = invert_data
+        if norm is None:
+            norm = self.estimate_normalization()
+        self.norm = norm
+        self.window = window_mask(ny, window_r, .99) if window else None
+
+    def estimate_normalization(self, n=1000): # samples the i%ntilts (randomish) tilt of nptcls//n randomly selected ptcls
+        n = min(n,self.nimgs)
+        random_ptcls_for_normalization = np.random.choice(np.arange(self.nptcls), self.nptcls//n, replace=False)
+        imgs = np.asarray([fft.ht2_center(self.particles[i][i%self.ntilts].get()) for i in random_ptcls_for_normalization])
+        if self.invert_data: imgs *= -1
+        imgs = fft.symmetrize_ht(imgs)
+        norm = [np.mean(imgs), np.std(imgs)]
+        norm[0] = 0
+        log('Normalizing HT by {} +/- {}'.format(*norm))
+        return norm
+
+    def get(self, i):
+        ptcl = np.asarray([ii.get() for ii in self.particles[i]], dtype=np.float32) # calls cryodrgn.mrc.LazyImage.get() to load each tilt_ii of particle_i
+        if self.window is not None: ptcl *= self.window
+        ptcl = np.asarray([fft.ht2_center(img) for img in ptcl], dtype=np.float32)
+        if self.invert_data: ptcl *= -1
+        ptcl = fft.symmetrize_ht(ptcl)
+        ptcl = (ptcl - self.norm[0])/self.norm[1]
+        return ptcl
+
+    def __len__(self):
+        return self.nptcls
+
+    def __getitem__(self, index):
+        return self.get(index), index
+
 class TiltSeriesMRCData(data.Dataset):
     '''
     Class representing an .mrcs particleseries of tilt-related images
@@ -274,9 +341,7 @@ class TiltSeriesMRCData(data.Dataset):
         nimgs, ny, nx = particles.shape
         assert ny == nx, "Images must be square"
         assert ny % 2 == 0, "Image size must be even"
-        log('Loaded {} {}x{}x{} images'.format(nptcls, ntilts, ny, nx))
-
-        # particles = particles.reshape(nptcls*ntilts, ny, nx) #temporarily return to 3-dim ptcl stack for backwards compatibility
+        log('Loaded {} {}x{}x{} subtomo particleseries'.format(nptcls, ntilts, ny, nx))
 
         # Real space window
         if window:
@@ -308,7 +373,7 @@ class TiltSeriesMRCData(data.Dataset):
         particles = (particles - norm[0])/norm[1]
         log('Normalized HT by {} +/- {}'.format(*norm))
 
-        particles = particles.reshape(nptcls, ntilts, ny_ht, nx_ht)  # return to 4-dim ptcl stack for DataLoader
+        particles = particles.reshape(nptcls, ntilts, ny_ht, nx_ht)  # reshape to 4-dim ptcl stack for DataLoader
 
         self.particles = particles
         self.norm = norm

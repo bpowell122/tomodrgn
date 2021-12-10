@@ -193,7 +193,7 @@ class TiltSeriesStarfile():
         '''
         images = self.df['_rlnImageName']
         images = [x.split('@') for x in images] # format is index@path_to_mrc
-        ind = [int(x[0])-1 for x in images] # convert to 0-based indexing
+        ind = [int(x[0])-1 for x in images] # convert to 0-based indexing of full dataset
         mrcs = [x[1] for x in images]
         if datadir is not None:
             mrcs = prefix_paths(mrcs, datadir)

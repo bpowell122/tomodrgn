@@ -40,8 +40,8 @@ def add_args(parser):
     parser.add_argument('--load', metavar='WEIGHTS.PKL', help='Initialize training from a checkpoint')
     parser.add_argument('--checkpoint', type=int, default=1,
                         help='Checkpointing interval in N_EPOCHS (default: %(default)s)')
-    parser.add_argument('--log-interval', type=int, default=1000,
-                        help='Logging interval in N_IMGS (default: %(default)s)')
+    parser.add_argument('--log-interval', type=int, default=200,
+                        help='Logging interval in N_PTCLS (default: %(default)s)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increaes verbosity')
     parser.add_argument('--seed', type=int, default=np.random.randint(0, 100000), help='Random seed')
 
@@ -200,16 +200,17 @@ def main(args):
     else:
         flog('WARNING: No GPUs detected')
 
-    # load the particles
+    # load the particle indices
     if args.ind is not None:
         flog('Filtering image dataset with {}'.format(args.ind))
         ind = pickle.load(open(args.ind, 'rb'))
     else:
         ind = None
 
+    # load the particles
     if args.lazy:
-        raise NotImplementedError
-
+        data = dataset.LazyTiltSeriesMRCData(args.particles, norm=args.norm, invert_data=args.invert_data, ind=ind,
+                                         window=args.window, datadir=args.datadir, window_r=args.window_r)
     else:
         data = dataset.TiltSeriesMRCData(args.particles, norm=args.norm, invert_data=args.invert_data, ind=ind,
                                window=args.window, datadir=args.datadir, window_r=args.window_r)
@@ -217,7 +218,7 @@ def main(args):
     Ntilts = data.ntilts
     Nptcls = data.nptcls
     Nimg = Ntilts*Nptcls
-    expanded_ind = data.expanded_ind #this is already filtered by args.ind
+    expanded_ind = data.expanded_ind #this is already filtered by args.ind, np.array of shape (1,)
 
     # instantiate model
     # if args.pe_type != 'none': assert args.l_extent == 0.5
@@ -244,9 +245,10 @@ def main(args):
 
     # load poses
     if args.do_pose_sgd:
-        assert args.domain == 'hartley', "Need to use --domain hartley if doing pose SGD"
-        posetracker = PoseTracker.load(args.poses, Nimg, D, args.emb_type, expanded_ind)
-        pose_optimizer = torch.optim.SparseAdam(list(posetracker.parameters()), lr=args.pose_lr)
+        raise NotImplementedError
+        # assert args.domain == 'hartley', "Need to use --domain hartley if doing pose SGD"
+        # posetracker = PoseTracker.load(args.poses, Nimg, D, args.emb_type, expanded_ind)
+        # pose_optimizer = torch.optim.SparseAdam(list(posetracker.parameters()), lr=args.pose_lr)
     else:
         posetracker = PoseTracker.load(args.poses, Nimg, D, None, expanded_ind)
 
