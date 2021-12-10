@@ -1,5 +1,5 @@
 '''
-Train a NN to model a 3D density map given 2D images from a tilt series with pose assignments
+Train a NN to model a 3D density map given 2D images from a tilt series with consensus pose assignments
 '''
 import numpy as np
 import sys, os
@@ -46,6 +46,7 @@ def add_args(parser):
     parser.add_argument('--seed', type=int, default=np.random.randint(0, 100000), help='Random seed')
 
     group = parser.add_argument_group('Dataset loading')
+    # TODO handle lazy loading
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
     group.add_argument('--no-window', dest='window', action='store_false', help='Turn off real space windowing of dataset')
     group.add_argument('--window-r', type=float, default=.85, help='Windowing radius (default: %(default)s)')
@@ -55,6 +56,7 @@ def add_args(parser):
     parser.add_argument('--relion31', action='store_true', help='Flag if relion3.1 star format')
 
     group = parser.add_argument_group('Training parameters')
+    # TODO establish whether wd, lr, b should be changed for tilt series from current defaults
     group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs (default: %(default)s)')
     group.add_argument('-b', '--batch-size', type=int, default=8, help='Minibatch size (default: %(default)s)')
     group.add_argument('--wd', type=float, default=0, help='Weight decay in Adam optimizer (default: %(default)s)')
@@ -64,6 +66,7 @@ def add_args(parser):
     group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs')
 
     group = parser.add_argument_group('Pose SGD')
+    # TODO consider adapting pose sgd for tilt series
     group.add_argument('--do-pose-sgd', action='store_true', help='Refine poses')
     group.add_argument('--pretrain', type=int, default=5, help='Number of epochs with fixed poses before pose SGD (default: %(default)s)')
     group.add_argument('--emb-type', choices=('s2s2', 'quat'), default='quat', help='SO(3) embedding type for pose SGD (default: %(default)s)')
@@ -156,34 +159,19 @@ def save_config(args, dataset, lattice, model, out_config):
         pickle.dump(meta, f)
 
 
-def get_latest(args):
+def get_latest(args, flog):
     # assumes args.num_epochs > latest checkpoint
-    log('Detecting latest checkpoint...')
+    flog('Detecting latest checkpoint...')
     weights = [f'{args.outdir}/weights.{i}.pkl' for i in range(args.num_epochs)]
     weights = [f for f in weights if os.path.exists(f)]
     args.load = weights[-1]
-    log(f'Loading {args.load}')
+    flog(f'Loading {args.load}')
     if args.do_pose_sgd:
         i = args.load.split('.')[-2]
         args.poses = f'{args.outdir}/pose.{i}.pkl'
         assert os.path.exists(args.poses)
-        log(f'Loading {args.poses}')
+        flog(f'Loading {args.poses}')
     return args
-
-# def indptcl_ntilt_handler(ind, expanded_ind):
-#     # Helper function to broadcast ind filtering (per unique particle) to all tilt images of that particle
-#     expanded_ind = np.array([])
-#     for i in ind:
-#         expanded_ind = np.append(expanded_ind, np.arange(i * ntilts, (i + 1) * ntilts)).astype('int')
-#     return expanded_ind
-#
-#     # Alternative implementation: given n_imgs and n_tilts, return dictionary of {ind_particle : ind_array_particle_imgs}
-#     expanded_ind = {i : np.arange(i * ntilts, (i + 1) * ntilts) for i in np.arange(nptcls)}
-#     return expanded_ind
-#
-#     # Alternative: create dictionary of int ind mappings once, then parse dict for torch.tensor(ind)
-#     batch_ind = [expanded_ind[i] for i in ind]
-#     return torch.tensor(batch_ind)
 
 def main(args):
     t1 = dt.now()
@@ -213,7 +201,6 @@ def main(args):
         flog('WARNING: No GPUs detected')
 
     # load the particles
-    #TODO separate filtering for ind_particles.pkl (_rlnGroupName) and ind_tilts.pkl (_tiltangle)
     if args.ind is not None:
         flog('Filtering image dataset with {}'.format(args.ind))
         ind = pickle.load(open(args.ind, 'rb'))
@@ -224,19 +211,17 @@ def main(args):
         raise NotImplementedError
 
     else:
-        data = dataset.TiltSeriesMRCDataset(args.particles, norm=args.norm, invert_data=args.invert_data, ind=ind,
+        data = dataset.TiltSeriesMRCData(args.particles, norm=args.norm, invert_data=args.invert_data, ind=ind,
                                window=args.window, datadir=args.datadir, window_r=args.window_r)
     D = data.D
     Ntilts = data.ntilts
     Nptcls = data.nptcls
     Nimg = Ntilts*Nptcls
-    # expanded_ind = {i: np.arange(i * Ntilts, (i + 1) * Ntilts) for i in np.arange(Nptcls)} # dictionary {ind_ptcl : inds_imgs}
-    expanded_ind = torch.tensor([np.arange(i * Ntilts, (i + 1) * Ntilts) for i in np.arange(Nptcls)]) # 2D numpy array [(ind_ptcl, inds_imgs)]
+    expanded_ind = data.expanded_ind #this is already filtered by args.ind
 
     # instantiate model
     # if args.pe_type != 'none': assert args.l_extent == 0.5
     lattice = Lattice(D, extent=args.l_extent)
-
     activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]
     model = models.get_decoder(3, D, args.layers, args.dim, args.domain, args.pe_type, enc_dim=args.pe_dim,
                                activation=activation)
@@ -260,16 +245,16 @@ def main(args):
     # load poses
     if args.do_pose_sgd:
         assert args.domain == 'hartley', "Need to use --domain hartley if doing pose SGD"
-        posetracker = PoseTracker.load(args.poses, Nimg, D, args.emb_type, ind)
+        posetracker = PoseTracker.load(args.poses, Nimg, D, args.emb_type, expanded_ind)
         pose_optimizer = torch.optim.SparseAdam(list(posetracker.parameters()), lr=args.pose_lr)
     else:
-        posetracker = PoseTracker.load(args.poses, Nimg, D, None, ind)
+        posetracker = PoseTracker.load(args.poses, Nimg, D, None, expanded_ind)
 
     # load CTF
     if args.ctf is not None:
         flog('Loading ctf params from {}'.format(args.ctf))
         ctf_params = ctf.load_ctf_for_training(D - 1, args.ctf)
-        if args.ind is not None: ctf_params = ctf_params[ind]
+        if args.ind is not None: ctf_params = ctf_params[expanded_ind]
         ctf_params = torch.tensor(ctf_params)
     else:
         ctf_params = None
@@ -298,13 +283,13 @@ def main(args):
 
     # train
     data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=True)
-    expanded_ind = expanded_ind.to(device)
+    expanded_ind_rebased = torch.tensor([np.arange(i * Ntilts, (i + 1) * Ntilts) for i in range(Nptcls)]).to(device) # redefine training inds to remove gaps created by filtering dataset when loading
     for epoch in range(start_epoch, args.num_epochs):
         t2 = dt.now()
         loss_accum = 0
         batch_it = 0
         for batch, ind in data_generator:
-            batch_ind = expanded_ind[ind].view(-1) # need to use expanded indexing for ctf and poses
+            batch_ind = expanded_ind_rebased[ind].view(-1) # need to use expanded indexing for ctf and poses
             batch_it += len(batch_ind) # total number of images seen (+= batchsize*ntilts)
             y = batch.to(device)
             batch_ind = batch_ind.to(device)

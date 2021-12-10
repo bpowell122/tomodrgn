@@ -253,22 +253,30 @@ class TiltMRCData(data.Dataset):
 
 # TODO: LazyTilt
 
-class TiltSeriesMRCDataset(data.Dataset):
+class TiltSeriesMRCData(data.Dataset):
     '''
     Class representing an .mrcs particleseries of tilt-related images
     Currently supports initializing mrcfile from .star exported by warp when generating particleseries
     '''
     def __init__(self, mrcfile, norm=None, keepreal=False, invert_data=False, ind=None, window=True, datadir=None, max_threads=16, window_r=0.85):
-        particles = starfile.TiltSeriesStarfile.load(mrcfile).get_particles(datadir=datadir)  # shape(n_unique_ptcls, n_tilts, D, D)
+        particles_df = starfile.TiltSeriesStarfile.load(mrcfile)
+        nptcls, ntilts = particles_df.get_tiltseries_shape()
+        expanded_ind_base = np.array([np.arange(i * ntilts, (i + 1) * ntilts) for i in range(nptcls)])  # 2D array [(ind_ptcl, inds_imgs)]
         if ind is not None:
-            particles = np.array([particles[i].get() for i in ind], dtype=np.float32) #note that ind must be relative to each unique ptcl, not each unique image
+            particles = particles_df.get_particles(datadir=datadir, lazy=True)  # shape(n_unique_ptcls * n_tilts, D, D)
+            expanded_ind = expanded_ind_base[ind].reshape(-1) # 1D array [(ind_imgs_selected)]
+            particles = np.array([particles[i].get() for i in expanded_ind], dtype=np.float32) #note that ind must be relative to each unique ptcl, not each unique image
+            nptcls = int(particles.shape[0]/ntilts)
+        else:
+            particles = particles_df.get_particles(datadir=datadir, lazy=False)
+            expanded_ind = expanded_ind_base.reshape(-1)
 
-        nptcls, ntilts, ny, nx = particles.shape
+        nimgs, ny, nx = particles.shape
         assert ny == nx, "Images must be square"
         assert ny % 2 == 0, "Image size must be even"
         log('Loaded {} {}x{}x{} images'.format(nptcls, ntilts, ny, nx))
 
-        particles = particles.reshape(nptcls*ntilts, ny, nx) #temporarily return to 3-dim ptcl stack for backwards compatibility
+        # particles = particles.reshape(nptcls*ntilts, ny, nx) #temporarily return to 3-dim ptcl stack for backwards compatibility
 
         # Real space window
         if window:
@@ -308,6 +316,7 @@ class TiltSeriesMRCDataset(data.Dataset):
         self.ntilts = ntilts
         self.D = particles.shape[-1]
         self.keepreal = keepreal
+        self.expanded_ind = expanded_ind
         if keepreal: raise NotImplementedError
             # self.particles_real = particles_real
 

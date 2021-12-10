@@ -184,7 +184,7 @@ class TiltSeriesStarfile():
 
     def get_particles(self, datadir=None, lazy=False):
         '''
-        Return particles of the starfile as (n_ptcls, n_tilts, D, D)
+        Return particles of the starfile as (n_ptcls * n_tilts, D, D)
 
         Input:
             datadir (str): Overwrite base directories of particle .mrcs
@@ -192,13 +192,7 @@ class TiltSeriesStarfile():
             If lazy=True, returns list of LazyImage instances, else np.array
         '''
         images = self.df['_rlnImageName']
-        unique_ptcls = self.df['_rlnGroupName'].unique()
-        n_tilts = self.df['_rlnGroupName'].value_counts().unique()
-        assert len(n_tilts) == 1, 'All particles must have the same number of tilt images!'
-        n_tilts = int(n_tilts)
-
-        # format is index@path_to_mrc
-        images = [x.split('@') for x in images]
+        images = [x.split('@') for x in images] # format is index@path_to_mrc
         ind = [int(x[0])-1 for x in images] # convert to 0-based indexing
         mrcs = [x[1] for x in images]
         if datadir is not None:
@@ -210,8 +204,13 @@ class TiltSeriesStarfile():
         dtype = header.dtype
         stride = dtype().itemsize*D*D
         dataset = [LazyImage(f, (D,D), dtype, 1024+ii*stride) for ii,f in zip(ind, mrcs)]
-        # if not lazy: # not sure how to implement lazy loading yet
-        dataset = np.array([x.get() for x in dataset])
-        dataset = dataset.reshape((len(unique_ptcls), n_tilts, D, D))
+        if not lazy: # not sure how to implement lazy loading yet
+            dataset = np.array([x.get() for x in dataset])
+        # dataset = dataset.reshape((len(unique_ptcls), ntilts, D, D))
         return dataset
 
+    def get_tiltseries_shape(self):
+        unique_ptcls = self.df['_rlnGroupName'].unique()
+        ntilts = self.df['_rlnGroupName'].value_counts().unique()
+        assert len(ntilts) == 1, 'All particles must have the same number of tilt images!'
+        return len(unique_ptcls), int(ntilts)
