@@ -175,6 +175,7 @@ def get_latest(args, flog):
         flog(f'Loading {args.poses}')
     return args
 
+
 def main(args):
     t1 = dt.now()
     if args.outdir is not None and not os.path.exists(args.outdir):
@@ -232,7 +233,7 @@ def main(args):
     flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
 
     # optimizer
-    optim = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
+    optim = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.wd) #BMP CHANGED TO AdamW
 
     # load weights
     if args.load:
