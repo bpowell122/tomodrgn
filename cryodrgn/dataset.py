@@ -366,6 +366,52 @@ class TiltSeriesMRCData(data.Dataset):
         particles = fft.symmetrize_ht(particles)
         _, ny_ht, nx_ht = particles.shape
 
+        # calculate and apply dose-weighting
+        dose_per_A2_per_tilt = 2.9268 # electrons per square angstrom per tilt micrograph
+        pixel_size = 4.0 # angstroms per pixel
+        voltage = 300 #kV
+        if dose_per_A2_per_tilt != 0:
+            # for now, restricting users to single dose increment between each sequential tilt
+            # assumes tilt images are ordered by collection sequence, i.e. ordered by increasing dose
+
+            log('Calculating dose-weighting matrix')
+
+            # code adapted from Grigorieff lab summovie_1.0.2/src/core/electron_dose.f90
+            # see also Grant and Grigorieff, eLife (2015) DOI: 10.7554/eLife.06980
+
+            dose_weights = np.zeros((ntilts, ny_ht, nx_ht))
+            fourier_pixel_sizes = 1.0 / (np.array([nx, ny]) / 2) # in units of 1/px
+            box_center_indices = (np.array([nx, ny]) / 2).astype(int)
+            critical_dose_at_dc = 2**31 # shorthand way to ensure dc component is always weighted ~1
+            voltage_scaling_factor = 1.0 if voltage == 300 else 0.8 # 1.0 for 300kV, 0.8 for 200kV microscopes
+
+            for k in range(ntilts):
+                dose_at_start_of_tilt = k * dose_per_A2_per_tilt
+                dose_at_end_of_tilt = (k+1) * dose_per_A2_per_tilt
+
+                for j in range(ny_ht):
+                    y = ((j - box_center_indices[1]) * fourier_pixel_sizes[1])
+
+                    for i in range(nx_ht):
+                        x = ((i - box_center_indices[0]) * fourier_pixel_sizes[0])
+
+                        if ((i,j) == box_center_indices).all():
+                            current_critical_dose = critical_dose_at_dc
+                        else:
+                            spatial_frequency = np.sqrt(x**2 + y**2) / pixel_size # units of 1/A
+                            current_critical_dose = (0.24499 * spatial_frequency**(-1.6649) + 2.8141) * voltage_scaling_factor # eq 3 from DOI: 10.7554/eLife.06980
+
+                        current_optimal_dose = 2.51284 * current_critical_dose
+
+                        if (abs(dose_at_end_of_tilt - current_optimal_dose) < abs(dose_at_start_of_tilt - current_optimal_dose)):
+                            dose_weights[k, j, i] = np.exp((-0.5 * dose_at_end_of_tilt) / current_critical_dose) # eq 5 from DOI: 10.7554/eLife.06980
+                        else:
+                            dose_weights[k,j,i] = 0.0
+            assert dose_weights.min() >= 0.0
+            assert dose_weights.max() <= 1.0
+        else:
+            log('Skipping calculation of dose-weighting matrix')
+
         # normalize
         if norm is None:
             norm  = [np.mean(particles), np.std(particles)]
@@ -382,6 +428,7 @@ class TiltSeriesMRCData(data.Dataset):
         self.D = particles.shape[-1]
         self.keepreal = keepreal
         self.expanded_ind = expanded_ind
+        self.dose_weights = dose_weights
         if keepreal: raise NotImplementedError
             # self.particles_real = particles_real
 
