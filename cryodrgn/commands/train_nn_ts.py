@@ -226,7 +226,8 @@ def main(args):
 
     else:
         data = dataset.TiltSeriesMRCData(args.particles, norm=args.norm, invert_data=args.invert_data, ind=ind,
-                               window=args.window, datadir=args.datadir, window_r=args.window_r)
+                                         window=args.window, datadir=args.datadir, window_r=args.window_r,
+                                         do_dose_weighting=args.do_dose_weighting, dose_override=args.dose_override)
     D = data.D
     Ntilts = data.ntilts
     Nptcls = data.nptcls
