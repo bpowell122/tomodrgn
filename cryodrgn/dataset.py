@@ -325,7 +325,9 @@ class TiltSeriesMRCData(data.Dataset):
     Class representing an .mrcs particleseries of tilt-related images
     Currently supports initializing mrcfile from .star exported by warp when generating particleseries
     '''
-    def __init__(self, mrcfile, norm=None, keepreal=False, invert_data=False, ind=None, window=True, datadir=None, max_threads=16, window_r=0.85):
+
+    def __init__(self, mrcfile, norm=None, keepreal=False, invert_data=False, ind=None, window=True, datadir=None,
+                 max_threads=16, window_r=0.85, do_dose_weighting=False, dose_override=None):
         particles_df = starfile.TiltSeriesStarfile.load(mrcfile)
         nptcls, ntilts = particles_df.get_tiltseries_shape()
         expanded_ind_base = np.array([np.arange(i * ntilts, (i + 1) * ntilts) for i in range(nptcls)])  # 2D array [(ind_ptcl, inds_imgs)]
@@ -367,14 +369,19 @@ class TiltSeriesMRCData(data.Dataset):
         _, ny_ht, nx_ht = particles.shape
 
         # calculate and apply dose-weighting
-        dose_per_A2_per_tilt = 2.9268 # electrons per square angstrom per tilt micrograph
-        pixel_size = 4.0 # angstroms per pixel
-        voltage = 300 #kV
-        if dose_per_A2_per_tilt != 0:
+        if do_dose_weighting:
             # for now, restricting users to single dose increment between each sequential tilt
             # assumes tilt images are ordered by collection sequence, i.e. ordered by increasing dose
-
             log('Calculating dose-weighting matrix')
+
+            pixel_size = particles_df.get_tiltseries_pixelsize()  # angstroms per pixel
+            voltage = particles_df.get_tiltseries_voltage()  # kV
+            if dose_override is not None:
+                dose_per_A2_per_tilt = particles_df.get_tiltseries_dose_per_A2_per_tilt()  # electrons per square angstrom per tilt micrograph
+                log(f'Dose/A2/tilt extracted from star file: {dose_per_A2_per_tilt}')
+            else:
+                dose_per_A2_per_tilt = dose_override
+                log(f'Dose/A2/tilt override supplied by user: {dose_per_A2_per_tilt}')
 
             # code adapted from Grigorieff lab summovie_1.0.2/src/core/electron_dose.f90
             # see also Grant and Grigorieff, eLife (2015) DOI: 10.7554/eLife.06980
@@ -410,7 +417,8 @@ class TiltSeriesMRCData(data.Dataset):
             assert dose_weights.min() >= 0.0
             assert dose_weights.max() <= 1.0
         else:
-            log('Skipping calculation of dose-weighting matrix')
+            log('Dose weighting not performed; all frequencies will be equally weighted for loss')
+            dose_weights = np.ones((ntilts, ny_ht, nx_ht))
 
         # normalize
         if norm is None:

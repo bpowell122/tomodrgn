@@ -53,6 +53,8 @@ def add_args(parser):
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
     parser.add_argument('--relion31', action='store_true', help='Flag if relion3.1 star format')
+    parser.add_argument('--do-dose-weighting', action='store_true', help='Flag to calculate losses per tilt per pixel with dose weighting ')
+    parser.add_argument('--dose-override', type=float, default=None, help='Manually specify dose in e- / A2 / tilt')
 
     group = parser.add_argument_group('Training parameters')
     # TODO establish whether wd, lr, b should be changed for tilt series from current defaults
@@ -97,7 +99,7 @@ def save_checkpoint(model, lattice, optim, epoch, norm, Apix, out_mrc, out_weigh
     }, out_weights)
 
 
-def train(model, lattice, optim, y, rot, trans=None, ctf_params=None, use_amp=False):
+def train(model, lattice, optim, y, rot, trans=None, ctf_params=None, use_amp=False, dose_weights=None):
     model.train()
     optim.zero_grad()
     B = y.size(0)
@@ -115,12 +117,17 @@ def train(model, lattice, optim, y, rot, trans=None, ctf_params=None, use_amp=Fa
         y = lattice.translate_ht(y, trans.unsqueeze(1), mask).view(B*ntilts, -1)
     y = y.view(B, ntilts, -1)
     yhat = yhat.view(B, ntilts, -1)
-    loss = F.mse_loss(yhat, y)
+    if dose_weights is not None:
+        dose_weights = dose_weights.view(ntilts, -1)[:, mask]
+        dose_weights = dose_weights.view(1, ntilts, -1)
+        loss = (dose_weights * (yhat - y) ** 2).mean()
+    else:
+        loss = F.mse_loss(yhat, y)
     if use_amp:
         with amp.scale_loss(loss, optim) as scaled_loss:
             scaled_loss.backward()
     else:
-        loss.backward()
+        loss.backward() # TODO consider new backward() to get gradient per dose_weighted pixel-wise MSE instead of global mean
     optim.step()
     return loss.item()
 
@@ -131,6 +138,7 @@ def save_config(args, dataset, lattice, model, out_config):
                         ntilts=dataset.ntilts,
                         nptcls=dataset.nptcls,
                         nimg=dataset.ntilts*dataset.nptcls,
+                        dose_weights=dataset.dose_weights,
                         invert_data=args.invert_data,
                         ind=args.ind,
                         expanded_ind=dataset.expanded_ind,
@@ -213,7 +221,9 @@ def main(args):
     # load the particles
     if args.lazy:
         data = dataset.LazyTiltSeriesMRCData(args.particles, norm=args.norm, invert_data=args.invert_data, ind=ind,
-                                         window=args.window, datadir=args.datadir, window_r=args.window_r)
+                                             window=args.window, datadir=args.datadir, window_r=args.window_r,
+                                             do_dose_weighting=args.do_dose_weighting, dose_override=args.dose_override)
+
     else:
         data = dataset.TiltSeriesMRCData(args.particles, norm=args.norm, invert_data=args.invert_data, ind=ind,
                                window=args.window, datadir=args.datadir, window_r=args.window_r)
@@ -222,6 +232,7 @@ def main(args):
     Nptcls = data.nptcls
     Nimg = Ntilts*Nptcls
     expanded_ind = data.expanded_ind #this is already filtered by args.ind, np.array of shape (1,)
+    dose_weights = data.dose_weights
 
     # instantiate model
     # if args.pe_type != 'none': assert args.l_extent == 0.5
@@ -288,6 +299,7 @@ def main(args):
     # train
     data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=True)
     expanded_ind_rebased = torch.tensor([np.arange(i * Ntilts, (i + 1) * Ntilts) for i in range(Nptcls)]).to(device) # redefine training inds to remove gaps created by filtering dataset when loading
+    dose_weights = torch.tensor(dose_weights).to(device)
     for epoch in range(start_epoch, args.num_epochs):
         t2 = dt.now()
         loss_accum = 0
@@ -301,7 +313,7 @@ def main(args):
                 pose_optimizer.zero_grad()
             r, t = posetracker.get_pose(batch_ind)
             c = ctf_params[batch_ind] if ctf_params is not None else None
-            loss_item = train(model, lattice, optim, y, r, trans=t, ctf_params=c, use_amp=args.amp)
+            loss_item = train(model, lattice, optim, y, r, trans=t, ctf_params=c, use_amp=args.amp, dose_weights=dose_weights)
             if args.do_pose_sgd and epoch >= args.pretrain:
                 pose_optimizer.step()
             loss_accum += loss_item * len(batch_ind)

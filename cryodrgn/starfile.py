@@ -214,3 +214,21 @@ class TiltSeriesStarfile():
         ntilts = self.df['_rlnGroupName'].value_counts().unique()
         assert len(ntilts) == 1, 'All particles must have the same number of tilt images!'
         return len(unique_ptcls), int(ntilts)
+
+    def get_tiltseries_pixelsize(self):
+        pixel_size = float(self.df['_rlnDetectorPixelSize'][0]) # expects pixel size in A/px
+        return pixel_size
+
+    def get_tiltseries_voltage(self):
+        voltage = int(self.df['_rlnVoltage'][0]) # expects voltage in kV
+        return voltage
+
+    def get_tiltseries_dose_per_A2_per_tilt(self):
+        # check if first particle in star file can be trusted as representative of dose increment
+        # if dose does not steadily increase, suggests one or more tilts were excluded when generating particleseries
+        # therefore we do not have a straightforward way to automatically extract dose
+        candidate_dose_1 = float(self.df['_rlnCtfBfactor'][0])/-4
+        candidate_dose_2 = float(self.df['_rlnCtfBfactor'][1])/-4/2
+        assert np.isclose(candidate_dose_1 / candidate_dose_2, 1, atol=0.2), 'Error getting dose from star file. Please supply dose with --override-dose'
+        dose_per_A2_per_tilt = candidate_dose_1
+        return dose_per_A2_per_tilt
