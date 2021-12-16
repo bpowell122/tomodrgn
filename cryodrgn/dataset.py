@@ -279,7 +279,7 @@ class LazyTiltSeriesMRCData(data.Dataset):
         assert ny % 2 == 0, "Image size must be even"
         log('Preparing to lazily load {} {}x{}x{} subtomo particleseries on-the-fly'.format(nptcls, ntilts, ny, nx))
 
-        # calculate and apply dose-weighting
+        # calculate dose-weighting matrix
         ny_ht, nx_ht = ny+1, nx+1
         if do_dose_weighting:
             # for now, restricting users to single dose increment between each sequential tilt
@@ -431,7 +431,7 @@ class TiltSeriesMRCData(data.Dataset):
         particles = fft.symmetrize_ht(particles)
         _, ny_ht, nx_ht = particles.shape
 
-        # calculate and apply dose-weighting
+        # calculate dose-weighting matrix
         if do_dose_weighting:
             # for now, restricting users to single dose increment between each sequential tilt
             # assumes tilt images are ordered by collection sequence, i.e. ordered by increasing dose
