@@ -220,7 +220,7 @@ class TiltSeriesStarfile():
         return pixel_size
 
     def get_tiltseries_voltage(self):
-        voltage = int(self.df['_rlnVoltage'][0]) # expects voltage in kV
+        voltage = int(float(self.df['_rlnVoltage'][0])) # expects voltage in kV
         return voltage
 
     def get_tiltseries_dose_per_A2_per_tilt(self):

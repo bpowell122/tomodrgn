@@ -183,6 +183,31 @@ def get_latest(args, flog):
         flog(f'Loading {args.poses}')
     return args
 
+def plot_dose_weight_distribution(dose_weights, spatial_frequencies, outdir):
+    # plot distribution of dose weights across tilts in the spirit of https://doi.org/10.1038/s41467-021-22251-8
+    # TODO incorporate xlim matching lattice limit representing frequencies actually used for training?
+    import matplotlib.pyplot as plt
+
+    ntilts = dose_weights.shape[0]
+    sorted_frequency_list = sorted(set(spatial_frequencies.reshape(-1)))
+    cumulative_weights = np.empty((len(sorted_frequency_list), ntilts))
+
+    for i, frequency in enumerate(sorted_frequency_list):
+        x, y = np.where(spatial_frequencies == frequency)
+        sum_of_weights_at_frequency = dose_weights[:, y, x].sum()
+        cumulative_weights[i, :] = (dose_weights[:, y, x] / sum_of_weights_at_frequency).sum(axis=1) # sum across multiple pixels at same frequency
+
+    colormap = plt.cm.get_cmap('coolwarm').reversed()
+    tilt_colors = colormap(np.linspace(0, 1, ntilts))
+
+    fig, ax = plt.subplots()
+    ax.stackplot(sorted_frequency_list, cumulative_weights.T, colors=tilt_colors)
+    ax.set_ylabel('cumulative weights')
+    ax.set_xlabel('spatial frequency (1/Å)')
+    ax.set_xlim((0, sorted_frequency_list[-1]))
+    ax.set_ylim((0, 1))
+    plt.savefig(f'{args.outdir}/cumulative_weights_across_frequencies_by_tilt.png', dpi=300)
+
 
 def main(args):
     t1 = dt.now()
@@ -234,6 +259,8 @@ def main(args):
     Nimg = Ntilts*Nptcls
     expanded_ind = data.expanded_ind #this is already filtered by args.ind, np.array of shape (1,)
     dose_weights = data.dose_weights
+    spatial_frequencies = data.spatial_frequencies
+    plot_dose_weight_distribution(dose_weights, spatial_frequencies, args.outdir)
 
     # instantiate model
     # if args.pe_type != 'none': assert args.l_extent == 0.5

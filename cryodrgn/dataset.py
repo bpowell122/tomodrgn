@@ -286,9 +286,11 @@ class LazyTiltSeriesMRCData(data.Dataset):
             # assumes tilt images are ordered by collection sequence, i.e. ordered by increasing dose
             log('Calculating dose-weighting matrix')
             dose_weights = calculate_dose_weights(particles_df, dose_override, ntilts, ny_ht, nx_ht, nx, ny)
+            spatial_frequencies = get_spatial_frequencies(particles_df, ny_ht, nx_ht, nx, ny)
         else:
             log('Dose weighting not performed; all frequencies will be equally weighted for loss')
             dose_weights = np.ones((ntilts, ny_ht, nx_ht))
+            spatial_frequencies = get_spatial_frequencies(particles_df, ny_ht, nx_ht, nx, ny)
 
         # particles = particles.reshape(nptcls, ntilts, ny_ht, nx_ht)  # reshape to 4-dim ptcl stack for DataLoader
         particles = [particles[ntilts*i : ntilts*(i+1)] for i in range(nptcls)] # reshape to list (of all ptcls) of lists (of tilt images for each ptcl)
@@ -302,6 +304,7 @@ class LazyTiltSeriesMRCData(data.Dataset):
         self.expanded_ind = expanded_ind
         self.invert_data = invert_data
         self.dose_weights = dose_weights
+        self.spatial_frequencies = spatial_frequencies
         if norm is None:
             norm = self.estimate_normalization()
         self.norm = norm
@@ -336,7 +339,7 @@ class LazyTiltSeriesMRCData(data.Dataset):
 def calculate_dose_weights(particles_df, dose_override, ntilts, ny_ht, nx_ht, nx, ny):
     pixel_size = particles_df.get_tiltseries_pixelsize()  # angstroms per pixel
     voltage = particles_df.get_tiltseries_voltage()  # kV
-    if dose_override is not None:
+    if dose_override is None:
         dose_per_A2_per_tilt = particles_df.get_tiltseries_dose_per_A2_per_tilt()  # electrons per square angstrom per tilt micrograph
         log(f'Dose/A2/tilt extracted from star file: {dose_per_A2_per_tilt}')
     else:
@@ -369,6 +372,14 @@ def calculate_dose_weights(particles_df, dose_override, ntilts, ny_ht, nx_ht, nx
                     current_critical_dose = (0.24499 * spatial_frequency ** (
                         -1.6649) + 2.8141) * voltage_scaling_factor  # eq 3 from DOI: 10.7554/eLife.06980
 
+                # from electron_dose.f90:
+                    # There is actually an analytical solution, found by Wolfram Alpha:
+                    # optimal_dose = -critical_dose - 2*critical_dose*W(-1)(-1/(2*sqrt(e)))
+                    # where W(k) is the analytic continuation of the product log function
+                    # http://mathworld.wolfram.com/LambertW-Function.html
+                    # However, there is an acceptable numerical approximation, which I
+                    # checked using a spreadsheet and the above formula.
+                    # Here, we use the numerical approximation:
                 current_optimal_dose = 2.51284 * current_critical_dose
 
                 if (abs(dose_at_end_of_tilt - current_optimal_dose) < abs(
@@ -380,8 +391,27 @@ def calculate_dose_weights(particles_df, dose_override, ntilts, ny_ht, nx_ht, nx
 
     assert dose_weights.min() >= 0.0
     assert dose_weights.max() <= 1.0
-
     return dose_weights
+
+
+def get_spatial_frequencies(particles_df, ny_ht, nx_ht, nx, ny):
+    # return spatial frequences of ht_sym in 1/A
+    pixel_size = particles_df.get_tiltseries_pixelsize()  # angstroms per pixel
+    spatial_frequencies = np.zeros((ny_ht, nx_ht))
+    fourier_pixel_sizes = 1.0 / (np.array([nx, ny]) / 2)  # in units of 1/px
+    box_center_indices = (np.array([nx, ny]) / 2).astype(int)
+
+    for j in range(ny_ht):
+        y = ((j - box_center_indices[1]) * fourier_pixel_sizes[1])
+
+        for i in range(nx_ht):
+            x = ((i - box_center_indices[0]) * fourier_pixel_sizes[0])
+
+            spatial_frequency = np.sqrt(x ** 2 + y ** 2) / pixel_size  # units of 1/A
+            spatial_frequencies[j, i] = spatial_frequency
+
+    return spatial_frequencies
+
 
 class TiltSeriesMRCData(data.Dataset):
     '''
@@ -437,9 +467,11 @@ class TiltSeriesMRCData(data.Dataset):
             # assumes tilt images are ordered by collection sequence, i.e. ordered by increasing dose
             log('Calculating dose-weighting matrix')
             dose_weights = calculate_dose_weights(particles_df, dose_override, ntilts, ny_ht, nx_ht, nx, ny)
+            spatial_frequencies = get_spatial_frequencies(particles_df, ny_ht, nx_ht, nx, ny)
         else:
             log('Dose weighting not performed; all frequencies will be equally weighted for loss')
             dose_weights = np.ones((ntilts, ny_ht, nx_ht))
+            spatial_frequencies = get_spatial_frequencies(particles_df, ny_ht, nx_ht, nx, ny)
 
         # normalize
         if norm is None:
@@ -458,6 +490,7 @@ class TiltSeriesMRCData(data.Dataset):
         self.keepreal = keepreal
         self.expanded_ind = expanded_ind
         self.dose_weights = dose_weights
+        self.spatial_frequencies = spatial_frequencies
         if keepreal: raise NotImplementedError
             # self.particles_real = particles_real
 
