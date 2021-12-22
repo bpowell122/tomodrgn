@@ -4,6 +4,8 @@ import numpy as np
 import pickle
 import collections
 import functools
+from cryodrgn import mrc, fft
+from scipy import ndimage
 
 _verbose = False
 

@@ -350,7 +350,7 @@ def calculate_dose_weights(particles_df, dose_override, ntilts, ny_ht, nx_ht, nx
     # see also Grant and Grigorieff, eLife (2015) DOI: 10.7554/eLife.06980
 
     dose_weights = np.zeros((ntilts, ny_ht, nx_ht))
-    fourier_pixel_sizes = 1.0 / (np.array([nx, ny]) / 2)  # in units of 1/px
+    fourier_pixel_sizes = 1.0 / (np.array([nx, ny]))  # in units of 1/px
     box_center_indices = (np.array([nx, ny]) / 2).astype(int)
     critical_dose_at_dc = 2 ** 31  # shorthand way to ensure dc component is always weighted ~1
     voltage_scaling_factor = 1.0 if voltage == 300 else 0.8  # 1.0 for 300kV, 0.8 for 200kV microscopes
@@ -395,11 +395,11 @@ def calculate_dose_weights(particles_df, dose_override, ntilts, ny_ht, nx_ht, nx
 
 
 def get_spatial_frequencies(particles_df, ny_ht, nx_ht, nx, ny):
-    # return spatial frequences of ht_sym in 1/A
+    # return spatial frequencies of ht_sym in 1/A
     pixel_size = particles_df.get_tiltseries_pixelsize()  # angstroms per pixel
     spatial_frequencies = np.zeros((ny_ht, nx_ht))
-    fourier_pixel_sizes = 1.0 / (np.array([nx, ny]) / 2)  # in units of 1/px
-    box_center_indices = (np.array([nx, ny]) / 2).astype(int)
+    fourier_pixel_sizes = 1.0 / (np.array([nx, ny]))  # in units of 1/px
+    box_center_indices = (np.array([nx, ny]) / 2).astype(int)  # this might break if nx, ny not even, or nx!=ny
 
     for j in range(ny_ht):
         y = ((j - box_center_indices[1]) * fourier_pixel_sizes[1])
