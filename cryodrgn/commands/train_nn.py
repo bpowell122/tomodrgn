@@ -49,6 +49,7 @@ def add_args(parser):
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
     parser.add_argument('--relion31', action='store_true', help='Flag if relion3.1 star format')
+    group.add_argument('--max-threads', type=int, default=16, help='Maximum number of CPU cores for FFT parallelization (default: %(default)s)')
 
     group = parser.add_argument_group('Training parameters')
     group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs (default: %(default)s)')
@@ -190,7 +191,7 @@ def main(args):
     if args.lazy:
         data = dataset.LazyMRCData(args.particles, norm=args.norm, invert_data=args.invert_data, ind=ind, window=args.window, datadir=args.datadir, relion31=args.relion31, window_r=args.window_r)
     else:
-        data = dataset.MRCData(args.particles, norm=args.norm, invert_data=args.invert_data, ind=ind, window=args.window, datadir=args.datadir, relion31=args.relion31, window_r=args.window_r)
+        data = dataset.MRCData(args.particles, norm=args.norm, invert_data=args.invert_data, ind=ind, window=args.window, datadir=args.datadir, relion31=args.relion31, window_r=args.window_r, max_threads=args.max_threads)
     D = data.D
     Nimg = data.N
 
