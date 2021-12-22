@@ -183,7 +183,7 @@ def get_latest(args, flog):
         flog(f'Loading {args.poses}')
     return args
 
-def plot_dose_weight_distribution(dose_weights, spatial_frequencies, outdir):
+def plot_dose_weight_distribution(dose_weights, spatial_frequencies, args):
     # plot distribution of dose weights across tilts in the spirit of https://doi.org/10.1038/s41467-021-22251-8
     # TODO incorporate xlim matching lattice limit representing frequencies actually used for training?
     import matplotlib.pyplot as plt
