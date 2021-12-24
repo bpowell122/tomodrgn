@@ -260,7 +260,7 @@ def main(args):
     expanded_ind = data.expanded_ind #this is already filtered by args.ind, np.array of shape (1,)
     dose_weights = data.dose_weights
     spatial_frequencies = data.spatial_frequencies
-    plot_dose_weight_distribution(dose_weights, spatial_frequencies, args.outdir)
+    plot_dose_weight_distribution(dose_weights, spatial_frequencies, args)
 
     # instantiate model
     # if args.pe_type != 'none': assert args.l_extent == 0.5
