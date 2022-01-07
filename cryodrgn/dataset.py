@@ -343,8 +343,8 @@ def calculate_dose_weights(particles_df, dose_override, ntilts, ny_ht, nx_ht, nx
         dose_per_A2_per_tilt = particles_df.get_tiltseries_dose_per_A2_per_tilt(ntilts)  # electrons per square angstrom per tilt micrograph
         log(f'Dose/A2/tilt series extracted from star file: {dose_per_A2_per_tilt}')
     else:
-        # dose_override is float scalar
-        dose_per_A2_per_tilt = dose_override*np.arange(1, ntilts+1)
+        # increment scalar dose_override across ntilts
+        dose_per_A2_per_tilt = dose_override * np.arange(1, ntilts+1)
         log(f'Dose/A2/tilt override series supplied by user: {dose_per_A2_per_tilt}')
 
     # code adapted from Grigorieff lab summovie_1.0.2/src/core/electron_dose.f90
