@@ -37,6 +37,9 @@ def main(args):
         integral = np.trapz(fsc[:threshold_index], x[:threshold_index])
         integrals.append(integral)
 
+    print(f'Maximum resolution of {np.array(resolutions).max()} was first reached at epoch {np.array(resolutions).argmax()}')
+    print(f'Maximum FSC integral of {np.array(integrals).max()} was first reached at epoch {np.array(integrals).argmax()}')
+
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10,4))
     ax1.plot(epochs, resolutions, linestyle='-', marker='.', mfc='red', mec='red', markersize=2)
     ax1.set_xlabel('epoch')
