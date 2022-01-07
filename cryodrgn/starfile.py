@@ -228,9 +228,9 @@ class TiltSeriesStarfile():
     def get_tiltseries_dose_per_A2_per_tilt(self, ntilts):
         # extract dose in e-/A2 from _rlnCtfBfactor column of Warp starfile (scaled by -4)
         # detects nonuniform dose, due to differential exposure during data collection or excluding tilts during processing
-        dose_series = float(self.df['_rlnCtfBfactor'][0:ntilts])/-4
+        dose_series = self.df['_rlnCtfBfactor'][0:ntilts].to_numpy(dtype=float)/-4
         constant_dose_series = np.linspace(dose_series[0], dose_series[-1], num=ntilts, endpoint=True)
-        constant_dose_step = np.isclose(dose_series, constant_dose_series)
+        constant_dose_step = np.all(np.isclose(dose_series, constant_dose_series))
         if not constant_dose_step:
             log('Caution: non-uniform dose detected between each tilt image. Check whether this is expected!')
         return dose_series
@@ -238,5 +238,5 @@ class TiltSeriesStarfile():
     def get_tiltseries_cosine_weight(self, ntilts):
         # following relion1.4 convention, weighting each tilt by cos(tilt angle)
         # see: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4559595/
-        cosine_weights = float(self.df['_rlnCtfScalefactor'][0:ntilts])
+        cosine_weights = self.df['_rlnCtfScalefactor'][0:ntilts].to_numpy(dtype=float)
         return cosine_weights
