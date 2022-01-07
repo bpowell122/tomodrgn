@@ -55,6 +55,7 @@ def add_args(parser):
     parser.add_argument('--relion31', action='store_true', help='Flag if relion3.1 star format')
     parser.add_argument('--do-dose-weighting', action='store_true', help='Flag to calculate losses per tilt per pixel with dose weighting ')
     parser.add_argument('--dose-override', type=float, default=None, help='Manually specify dose in e- / A2 / tilt')
+    parser.add_argument('--do-tilt-weighting', action='store_true', help='Flag to calculate losses per tilt with cosine(tilt_angle) weighting')
 
     group = parser.add_argument_group('Training parameters')
     # TODO establish whether wd, lr, b should be changed for tilt series from current defaults
@@ -247,12 +248,14 @@ def main(args):
     if args.lazy:
         data = dataset.LazyTiltSeriesMRCData(args.particles, norm=args.norm, invert_data=args.invert_data, ind=ind,
                                              window=args.window, datadir=args.datadir, window_r=args.window_r,
-                                             do_dose_weighting=args.do_dose_weighting, dose_override=args.dose_override)
+                                             do_dose_weighting=args.do_dose_weighting, dose_override=args.dose_override,
+                                             do_tilt_weighting = args.do_tilt_weighting)
 
     else:
         data = dataset.TiltSeriesMRCData(args.particles, norm=args.norm, invert_data=args.invert_data, ind=ind,
                                          window=args.window, datadir=args.datadir, window_r=args.window_r,
-                                         do_dose_weighting=args.do_dose_weighting, dose_override=args.dose_override)
+                                         do_dose_weighting=args.do_dose_weighting, dose_override=args.dose_override,
+                                         do_tilt_weighting = args.do_tilt_weighting)
     D = data.D
     Ntilts = data.ntilts
     Nptcls = data.nptcls

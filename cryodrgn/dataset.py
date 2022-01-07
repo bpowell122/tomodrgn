@@ -259,7 +259,7 @@ class LazyTiltSeriesMRCData(data.Dataset):
     Currently supports initializing mrcfile from .star exported by warp when generating particleseries
     '''
     def __init__(self, mrcfile, norm=None, keepreal=False, invert_data=False, ind=None, window=True, datadir=None,
-                 relion31=False, window_r=0.85, do_dose_weighting=False, dose_override=None):
+                 relion31=False, window_r=0.85, do_dose_weighting=False, dose_override=None, do_tilt_weighting=False):
         assert not keepreal, 'Not implemented error'
         particles_df = starfile.TiltSeriesStarfile.load(mrcfile)
         nptcls, ntilts = particles_df.get_tiltseries_shape()
@@ -291,6 +291,12 @@ class LazyTiltSeriesMRCData(data.Dataset):
             log('Dose weighting not performed; all frequencies will be equally weighted for loss')
             dose_weights = np.ones((ntilts, ny_ht, nx_ht))
             spatial_frequencies = get_spatial_frequencies(particles_df, ny_ht, nx_ht, nx, ny)
+
+        # weight by cosine of tilt angle following relion1.4 convention for sample thickness
+        if do_tilt_weighting:
+            log('Using cosine(tilt_angle) weighting')
+            cosine_weights = particles_df.get_tiltseries_cosine_weight(ntilts)
+            dose_weights *= cosine_weights.reshape(ntilts,1,1)
 
         # particles = particles.reshape(nptcls, ntilts, ny_ht, nx_ht)  # reshape to 4-dim ptcl stack for DataLoader
         particles = [particles[ntilts*i : ntilts*(i+1)] for i in range(nptcls)] # reshape to list (of all ptcls) of lists (of tilt images for each ptcl)
@@ -423,7 +429,7 @@ class TiltSeriesMRCData(data.Dataset):
     '''
 
     def __init__(self, mrcfile, norm=None, keepreal=False, invert_data=False, ind=None, window=True, datadir=None,
-                 max_threads=16, window_r=0.85, do_dose_weighting=False, dose_override=None):
+                 max_threads=16, window_r=0.85, do_dose_weighting=False, dose_override=None, do_tilt_weighting=False):
         particles_df = starfile.TiltSeriesStarfile.load(mrcfile)
         nptcls, ntilts = particles_df.get_tiltseries_shape()
         expanded_ind_base = np.array([np.arange(i * ntilts, (i + 1) * ntilts) for i in range(nptcls)])  # 2D array [(ind_ptcl, inds_imgs)]
@@ -466,8 +472,6 @@ class TiltSeriesMRCData(data.Dataset):
 
         # calculate dose-weighting matrix
         if do_dose_weighting:
-            # for now, restricting users to single dose increment between each sequential tilt
-            # assumes tilt images are ordered by collection sequence, i.e. ordered by increasing dose
             log('Calculating dose-weighting matrix')
             dose_weights = calculate_dose_weights(particles_df, dose_override, ntilts, ny_ht, nx_ht, nx, ny)
             spatial_frequencies = get_spatial_frequencies(particles_df, ny_ht, nx_ht, nx, ny)
@@ -475,6 +479,12 @@ class TiltSeriesMRCData(data.Dataset):
             log('Dose weighting not performed; all frequencies will be equally weighted for loss')
             dose_weights = np.ones((ntilts, ny_ht, nx_ht))
             spatial_frequencies = get_spatial_frequencies(particles_df, ny_ht, nx_ht, nx, ny)
+
+        # weight by cosine of tilt angle following relion1.4 convention for sample thickness
+        if do_tilt_weighting:
+            log('Using cosine(tilt_angle) weighting')
+            cosine_weights = particles_df.get_tiltseries_cosine_weight(ntilts)
+            dose_weights *= cosine_weights.reshape(ntilts,1,1)
 
         # normalize
         if norm is None:

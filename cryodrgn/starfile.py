@@ -234,3 +234,9 @@ class TiltSeriesStarfile():
         if not constant_dose_step:
             log('Caution: non-uniform dose detected between each tilt image. Check whether this is expected!')
         return dose_series
+
+    def get_tiltseries_cosine_weight(self, ntilts):
+        # following relion1.4 convention, weighting each tilt by cos(tilt angle)
+        # see: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4559595/
+        cosine_weights = float(self.df['_rlnCtfScalefactor'][0:ntilts])
+        return cosine_weights
