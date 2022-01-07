@@ -366,10 +366,10 @@ def calculate_dose_weights(particles_df, dose_override, ntilts, ny_ht, nx_ht, nx
                 x = ((i - box_center_indices[0]) * fourier_pixel_sizes[0])
 
                 if ((i, j) == box_center_indices).all():
-                    current_critical_dose = critical_dose_at_dc
+                    spatial_frequency_critical_dose = critical_dose_at_dc
                 else:
                     spatial_frequency = np.sqrt(x ** 2 + y ** 2) / pixel_size  # units of 1/A
-                    current_critical_dose = (0.24499 * spatial_frequency ** (
+                    spatial_frequency_critical_dose = (0.24499 * spatial_frequency ** (
                         -1.6649) + 2.8141) * voltage_scaling_factor  # eq 3 from DOI: 10.7554/eLife.06980
 
                 # from electron_dose.f90:
@@ -380,12 +380,12 @@ def calculate_dose_weights(particles_df, dose_override, ntilts, ny_ht, nx_ht, nx
                     # However, there is an acceptable numerical approximation, which I
                     # checked using a spreadsheet and the above formula.
                     # Here, we use the numerical approximation:
-                current_optimal_dose = 2.51284 * current_critical_dose
+                spatial_frequency_optimal_dose = 2.51284 * spatial_frequency_critical_dose
 
-                if (abs(dose_at_end_of_tilt - current_optimal_dose) < abs(
-                        dose_at_start_of_tilt - current_optimal_dose)):
+                if (abs(dose_at_end_of_tilt - spatial_frequency_optimal_dose) < abs(
+                        dose_at_start_of_tilt - spatial_frequency_optimal_dose)):
                     dose_weights[k, j, i] = np.exp(
-                        (-0.5 * dose_at_end_of_tilt) / current_critical_dose)  # eq 5 from DOI: 10.7554/eLife.06980
+                        (-0.5 * dose_at_end_of_tilt) / spatial_frequency_critical_dose)  # eq 5 from DOI: 10.7554/eLife.06980
                 else:
                     dose_weights[k, j, i] = 0.0
 
