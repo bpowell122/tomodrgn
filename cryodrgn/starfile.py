@@ -9,6 +9,8 @@ import os
 
 from . import mrc
 from .mrc import LazyImage
+from . import utils
+log = utils.log
 
 class Starfile():
     
@@ -223,12 +225,12 @@ class TiltSeriesStarfile():
         voltage = int(float(self.df['_rlnVoltage'][0])) # expects voltage in kV
         return voltage
 
-    def get_tiltseries_dose_per_A2_per_tilt(self):
-        # check if first particle in star file can be trusted as representative of dose increment
-        # if dose does not steadily increase, suggests one or more tilts were excluded when generating particleseries
-        # therefore we do not have a straightforward way to automatically extract dose
-        candidate_dose_1 = float(self.df['_rlnCtfBfactor'][0])/-4
-        candidate_dose_2 = float(self.df['_rlnCtfBfactor'][1])/-4/2
-        assert np.isclose(candidate_dose_1 / candidate_dose_2, 1, atol=0.2), 'Error getting dose from star file. Please supply dose with --override-dose'
-        dose_per_A2_per_tilt = candidate_dose_1
-        return dose_per_A2_per_tilt
+    def get_tiltseries_dose_per_A2_per_tilt(self, ntilts):
+        # extract dose in e-/A2 from _rlnCtfBfactor column of Warp starfile (scaled by -4)
+        # detects nonuniform dose, due to differential exposure during data collection or excluding tilts during processing
+        dose_series = float(self.df['_rlnCtfBfactor'][0:ntilts])/-4
+        constant_dose_series = np.linspace(dose_series[0], dose_series[-1], num=ntilts, endpoint=True)
+        constant_dose_step = np.isclose(dose_series, constant_dose_series)
+        if not constant_dose_step:
+            log('Caution: non-uniform dose detected between each tilt image. Check whether this is expected!')
+        return dose_series

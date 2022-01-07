@@ -340,11 +340,12 @@ def calculate_dose_weights(particles_df, dose_override, ntilts, ny_ht, nx_ht, nx
     pixel_size = particles_df.get_tiltseries_pixelsize()  # angstroms per pixel
     voltage = particles_df.get_tiltseries_voltage()  # kV
     if dose_override is None:
-        dose_per_A2_per_tilt = particles_df.get_tiltseries_dose_per_A2_per_tilt()  # electrons per square angstrom per tilt micrograph
-        log(f'Dose/A2/tilt extracted from star file: {dose_per_A2_per_tilt}')
+        dose_per_A2_per_tilt = particles_df.get_tiltseries_dose_per_A2_per_tilt(ntilts)  # electrons per square angstrom per tilt micrograph
+        log(f'Dose/A2/tilt series extracted from star file: {dose_per_A2_per_tilt}')
     else:
-        dose_per_A2_per_tilt = dose_override
-        log(f'Dose/A2/tilt override supplied by user: {dose_per_A2_per_tilt}')
+        # dose_override is float scalar
+        dose_per_A2_per_tilt = dose_override*np.arange(1, ntilts+1)
+        log(f'Dose/A2/tilt override series supplied by user: {dose_per_A2_per_tilt}')
 
     # code adapted from Grigorieff lab summovie_1.0.2/src/core/electron_dose.f90
     # see also Grant and Grigorieff, eLife (2015) DOI: 10.7554/eLife.06980
@@ -355,9 +356,11 @@ def calculate_dose_weights(particles_df, dose_override, ntilts, ny_ht, nx_ht, nx
     critical_dose_at_dc = 2 ** 31  # shorthand way to ensure dc component is always weighted ~1
     voltage_scaling_factor = 1.0 if voltage == 300 else 0.8  # 1.0 for 300kV, 0.8 for 200kV microscopes
 
-    for k in range(ntilts):
-        dose_at_start_of_tilt = k * dose_per_A2_per_tilt
-        dose_at_end_of_tilt = (k + 1) * dose_per_A2_per_tilt
+    for k, dose_at_end_of_tilt in enumerate(dose_per_A2_per_tilt):
+        if k == 0:
+            dose_at_start_of_tilt = 0
+        else:
+            dose_at_start_of_tilt = dose_per_A2_per_tilt[k-1]
 
         for j in range(ny_ht):
             y = ((j - box_center_indices[1]) * fourier_pixel_sizes[1])
