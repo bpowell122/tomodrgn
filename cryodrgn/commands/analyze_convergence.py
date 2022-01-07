@@ -700,6 +700,99 @@ def calculate_FSCs(outdir, epochs, labels, img_size, chimerax_colors, LOG):
     flog(f'Saved map-map FSC (Nyquist) plot to {outdir}/plots/07_decoder_FSC-nyquist.png', LOG)
 
 
+def make_mask_union(outdir, dilate, thresh, epochs, labels):
+    if thresh is None:
+        thresh = []
+        for epoch in epochs:
+            for cluster in range(len(labels)):
+                vol = mrc.parse_mrc(f'{outdir}/vols.{epoch}/vol_{cluster:03d}.mrc')[0]
+                thresh.append(np.percentile(vol, 99.99) / 2)
+        thresh = np.mean(thresh)
+    log(f'Threshold: {thresh}')
+    log(f'Dilating mask by: {dilate}')
+
+    def binary_mask(vol):
+        x = (vol >= thresh).astype(bool)
+        x = binary_dilation(x, iterations=dilate)
+        return x
+
+    # combine all masks by taking their union
+    vol = mrc.parse_mrc(f'{outdir}/kmeans{K}/vol_000.mrc')[0]
+    mask = ~binary_mask(vol)
+    for epoch in epochs:
+        for cluster in range(len(labels)):
+            vol = mrc.parse_mrc(f'{outdir}/vols.{epoch}/vol_{cluster:03d}.mrc')[0]
+            mask *= ~binary_mask(vol)
+    mask = ~mask
+
+    # save mask
+    out_mrc = f'{outdir}/mask_global.mrc'
+    log(f'Saving {out_mrc}')
+    mrc.write(out_mrc, mask.astype(np.float32))
+
+    # view slices
+    out_png = f'{outdir}/mask_global_slices.png'
+    D = vol.shape[0]
+    fig, ax = plt.subplots(1, 3, figsize=(10, 8))
+    ax[0].imshow(mask[D // 2, :, :])
+    ax[1].imshow(mask[:, D // 2, :])
+    ax[2].imshow(mask[:, :, D // 2])
+    plt.savefig(out_png)
+
+def calculate_nxn_gold_standard_FSCs(outdir, epochs, labels, img_size, chimerax_colors, LOG):
+
+    def calc_fsc(vol1, vol2):
+        '''
+        Helper function to calculate the FSC between two (assumed masked) volumes
+        vol1 and vol2 should be maps of the same box size, structured as numpy arrays with ndim=3, i.e. by loading with cryodrgn.mrc.parse_mrc
+        '''
+        # load masked volumes in fourier space
+        vol1_ft = fft.fftn_center(vol1)
+        vol2_ft = fft.fftn_center(vol2)
+
+        # define fourier grid and label into shells
+        D = vol1.shape[0]
+        x = np.arange(-D // 2, D // 2)
+        x0, x1, x2 = np.meshgrid(x, x, x, indexing='ij')
+        r = np.sqrt(x0 ** 2 + x1 ** 2 + x2 ** 2)
+        r_max = D // 2  # sphere inscribed within volume box
+        r_step = 1  # int(np.min(r[r>0]))
+        bins = np.arange(0, r_max, r_step)
+        bin_labels = np.searchsorted(bins, r, side='right')
+
+        # calculate the FSC via labeled shells
+        num = ndimage.sum(np.real(vol1_ft * np.conjugate(vol2_ft)), labels=bin_labels, index=bins + 1)
+        den1 = ndimage.sum(np.abs(vol1_ft) ** 2, labels=bin_labels, index=bins + 1)
+        den2 = ndimage.sum(np.abs(vol2_ft) ** 2, labels=bin_labels, index=bins + 1)
+        fsc = num / np.sqrt(den1 * den2)
+
+        x = bins / D  # x axis should be spatial frequency in 1/px
+        if np.all(fsc >=0.143):
+            gold_standard_res = x[-1]
+        else:
+            gold_standard_res = x[np.argmax(fsc < 0.143)]
+        return gold_standard_res
+
+    # calculate masked FSCs for all volumes
+    fsc_gold_standard = np.zeros((len(epochs)-1, len(labels), len(labels)))
+    mask = mrc.parse_mrc(f'{outdir}/mask_global.mrc')[0].astype(bool)
+
+    for i in range(len(epochs) - 1):
+        vols = np.array([mrc.parse_mrc(f'{outdir}/vols.{epochs[i]}/vol_{cluster:03d}.mrc')[0][mask] for cluster in range(len(labels))])
+        vols[vols < 0] = 0
+
+        # construct matrix to store all-to-all FSCs between a given epoch's volumes
+        # skip symmetric-equivalent and self-self FSC calculations
+        efficient_matrix_inds = np.triu_indices(len(labels), 1)
+        inds_A, inds_B = efficient_matrix_inds
+        for ind_A, ind_B in zip(inds_A, inds_B):
+            fsc_gold_standard[i, ind_A, ind_B] = calc_fsc(vols[ind_A], vols[ind_B])
+
+    utils.save_pkl(fsc_gold_standard, outdir + '/fsc_nxn.pkl')
+
+    # visualize nxn fsc distribution via violin plot per epoch
+    # visualize nxn fsc distribution via variance within each epoch
+
 def main(args):
     t1 = dt.now()
 
@@ -743,20 +836,8 @@ def main(args):
 
     # Get total number of particles, latent space dimensionality, input image size
     n_particles_total, n_dim = utils.load_pkl(workdir + f'/z.{E}.pkl').shape
-    particles_path = utils.load_pkl(config)['dataset_args']['particles']
-    if particles_path.endswith('.txt'):
-        with open(particles_path) as f:
-            particles_path = os.path.join(os.path.dirname(particles_path), f.read().splitlines()[0])
-    if particles_path.endswith('.star'):
-        metadata = starfile.Starfile.load(particles_path)
-        img_size = int(metadata.df['_rlnImageSize'])
-    elif particles_path.endswith('.cs'):
-        metadata = np.load(particles_path)
-        img_size = metadata['blob/shape'][0][0]
-    elif particles_path.endswith('.mrcs'):
-        img_size = mrc.parse_header(particles_path).fields['ny']
-    else:
-        flog('ERROR: could not determine image size based on provided file format', LOG)
+    config_file = utils.load_pkl(f'{workdir}/config.pkl')
+    img_size = config_file['lattice_args']['D'] -1
 
     # Commonly used variables
     #plt.rcParams.update({'font.size': 16})
