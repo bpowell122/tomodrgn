@@ -40,6 +40,8 @@ def main(args):
     print(f'Maximum resolution of {np.array(resolutions).max()} was first reached at epoch {np.array(resolutions).argmax()}')
     print(f'Maximum FSC integral of {np.array(integrals).max()} was first reached at epoch {np.array(integrals).argmax()}')
 
+    utils.save_pkl(np.array(integrals), os.path.join(args.training_dir, 'fsc_during_training_integral.pkl'))
+
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10,4))
     ax1.plot(epochs, resolutions, linestyle='-', marker='.', mfc='red', mec='red', markersize=2)
     ax1.set_xlabel('epoch')
