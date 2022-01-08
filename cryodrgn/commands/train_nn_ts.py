@@ -58,7 +58,6 @@ def add_args(parser):
     parser.add_argument('--do-tilt-weighting', action='store_true', help='Flag to calculate losses per tilt with cosine(tilt_angle) weighting')
 
     group = parser.add_argument_group('Training parameters')
-    # TODO establish whether wd, lr, b should be changed for tilt series from current defaults
     group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs (default: %(default)s)')
     group.add_argument('-b', '--batch-size', type=int, default=8, help='Minibatch size (default: %(default)s)')
     group.add_argument('--wd', type=float, default=0, help='Weight decay in Adam optimizer (default: %(default)s)')
