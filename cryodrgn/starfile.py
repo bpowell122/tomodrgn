@@ -230,7 +230,7 @@ class TiltSeriesStarfile():
         # detects nonuniform dose, due to differential exposure during data collection or excluding tilts during processing
         dose_series = self.df['_rlnCtfBfactor'][0:ntilts].to_numpy(dtype=float)/-4
         constant_dose_series = np.linspace(dose_series[0], dose_series[-1], num=ntilts, endpoint=True)
-        constant_dose_step = np.all(np.isclose(dose_series, constant_dose_series))
+        constant_dose_step = np.allclose(dose_series, constant_dose_series, atol=0.01)
         if not constant_dose_step:
             log('Caution: non-uniform dose detected between each tilt image. Check whether this is expected!')
         return dose_series
