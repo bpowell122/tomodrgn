@@ -99,12 +99,13 @@ def save_checkpoint(model, lattice, optim, epoch, norm, Apix, out_mrc, out_weigh
     }, out_weights)
 
 
-def train(model, lattice, optim, y, rot, trans=None, ctf_params=None, use_amp=False, dose_weights=None):
+def train(model, lattice, optim, y, dose_weights, rot, trans=None, ctf_params=None, use_amp=False):
     model.train()
     optim.zero_grad()
     B = y.size(0)
     ntilts=y.size(1)
     D = lattice.D
+
     # reconstruct circle of pixels instead of whole image
     mask = lattice.get_circular_mask(D // 2)
     yhat = model(lattice.coords[mask] @ rot).view(B*ntilts, -1)
@@ -112,22 +113,26 @@ def train(model, lattice, optim, y, rot, trans=None, ctf_params=None, use_amp=Fa
         freqs = lattice.freqs2d[mask]
         freqs = freqs.unsqueeze(0).expand(B*ntilts, *freqs.shape) / ctf_params[:, 0].view(B*ntilts, 1, 1)
         yhat *= ctf.compute_ctf(freqs, *torch.split(ctf_params[:, 1:], 1, 1))
+    yhat = yhat.view(B, ntilts, -1)
+
+    # process corresponding real data
     y = y.view(B*ntilts, -1)[:, mask]
     if trans is not None:
         y = lattice.translate_ht(y, trans.unsqueeze(1), mask).view(B*ntilts, -1)
     y = y.view(B, ntilts, -1)
-    yhat = yhat.view(B, ntilts, -1)
-    if dose_weights is not None:
-        dose_weights = dose_weights.view(ntilts, -1)[:, mask]
-        dose_weights = dose_weights.view(1, ntilts, -1)
-        loss = (dose_weights * (yhat - y) ** 2).mean()
-    else:
-        loss = F.mse_loss(yhat, y)
+
+    # align and mask dose_weights with y and yhat shape
+    dose_weights = dose_weights.view(ntilts, -1)[:, mask]
+    dose_weights = dose_weights.view(1, ntilts, -1)
+
+    # calculate and backprop weighted loss
+    loss = (dose_weights * (yhat - y) ** 2).mean()
     if use_amp:
         with amp.scale_loss(loss, optim) as scaled_loss:
             scaled_loss.backward()
     else:
-        loss.backward() # TODO consider new backward() to get gradient per dose_weighted pixel-wise MSE instead of global mean
+        # TODO consider new backward() to get gradient per dose_weighted pixel-wise MSE instead of global mean
+        loss.backward()
     optim.step()
     return loss.item()
 
@@ -182,6 +187,7 @@ def get_latest(args, flog):
         assert os.path.exists(args.poses)
         flog(f'Loading {args.poses}')
     return args
+
 
 def plot_dose_weight_distribution(dose_weights, spatial_frequencies, args):
     # plot distribution of dose weights across tilts in the spirit of https://doi.org/10.1038/s41467-021-22251-8
@@ -343,7 +349,7 @@ def main(args):
                 pose_optimizer.zero_grad()
             r, t = posetracker.get_pose(batch_ind)
             c = ctf_params[batch_ind] if ctf_params is not None else None
-            loss_item = train(model, lattice, optim, y, r, trans=t, ctf_params=c, use_amp=args.amp, dose_weights=dose_weights)
+            loss_item = train(model, lattice, optim, y, dose_weights, r, trans=t, ctf_params=c, use_amp=args.amp)
             if args.do_pose_sgd and epoch >= args.pretrain:
                 pose_optimizer.step()
             loss_accum += loss_item * len(batch_ind)
