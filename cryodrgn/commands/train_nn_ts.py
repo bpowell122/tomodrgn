@@ -126,7 +126,8 @@ def train(model, lattice, optim, y, dose_weights, rot, trans=None, ctf_params=No
     dose_weights = dose_weights.view(1, ntilts, -1)
 
     # calculate and backprop weighted loss
-    loss = (dose_weights * (yhat - y) ** 2).mean()
+    # loss = (dose_weights * (yhat - y) ** 2).mean() # does not properly gradient loss for 0-weight fourier components
+    loss = ((yhat - y * dose_weights) ** 2).mean() # reconstruction loss vs dose+tilt weighted stack
     if use_amp:
         with amp.scale_loss(loss, optim) as scaled_loss:
             scaled_loss.backward()
