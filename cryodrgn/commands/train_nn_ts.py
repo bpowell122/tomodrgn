@@ -30,6 +30,7 @@ from cryodrgn.lattice import Lattice
 
 log = utils.log
 vlog = utils.vlog
+# TODO fix logging: everything to flog instead of log, and optional vlog where appropriate
 
 
 def add_args(parser):
@@ -65,6 +66,7 @@ def add_args(parser):
     group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: mean, std of dataset)')
     group.add_argument('--amp', action='store_true', help='Use mixed-precision training')
     group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs')
+    group.add_argument('--skip-zeros', action='store_true', help='Reduce CUDA memory usage by ignoring 0-weight fourier components')
 
     group = parser.add_argument_group('Pose SGD')
     group.add_argument('--do-pose-sgd', action='store_true', help='Refine poses')
@@ -99,34 +101,43 @@ def save_checkpoint(model, lattice, optim, epoch, norm, Apix, out_mrc, out_weigh
     }, out_weights)
 
 
-def train(model, lattice, optim, y, dose_weights, rot, trans=None, ctf_params=None, use_amp=False):
+def train(model, lattice, optim, y, dose_weights, rot, trans=None, ctf_params=None, use_amp=False, skip_zeros=False):
     model.train()
     optim.zero_grad()
     B = y.size(0)
     ntilts=y.size(1)
     D = lattice.D
 
-    # reconstruct circle of pixels instead of whole image
-    mask = lattice.get_circular_mask(D // 2)
-    yhat = model(lattice.coords[mask] @ rot).view(B*ntilts, -1)
+    # create masks to avoid passing DxD frequencies through model
+    lattice_mask = lattice.get_circular_mask(D // 2) # reconstruct circle of pixels instead of whole image
+    if skip_zeros: # skip zero_weighted components
+        weights_mask = (dose_weights != 0).int()
+        final_mask = lattice_mask.view(1,D,D) * weights_mask # mask is currently ntilts x D x D
+        assert np.all(final_mask.reshape(ntilts,-1).cpu().numpy().sum(axis=1)) > 0, 'Masking error caused index error. Please repeat without --skip-zeros'
+        raise NotImplementedError
+        # TODO divine scheme to skip model(coord) where dose_weight[coord]==0
+    else:
+        final_mask = lattice_mask
+
+    # evaluate model at masked fourier components
+    yhat = model(lattice.coords[final_mask] @ rot).view(B*ntilts, -1)
     if ctf_params is not None:
-        freqs = lattice.freqs2d[mask]
+        freqs = lattice.freqs2d[final_mask]
         freqs = freqs.unsqueeze(0).expand(B*ntilts, *freqs.shape) / ctf_params[:, 0].view(B*ntilts, 1, 1)
         yhat *= ctf.compute_ctf(freqs, *torch.split(ctf_params[:, 1:], 1, 1))
     yhat = yhat.view(B, ntilts, -1)
 
     # process corresponding real data
-    y = y.view(B*ntilts, -1)[:, mask]
+    y = y.view(B*ntilts, -1)[:, final_mask]
     if trans is not None:
-        y = lattice.translate_ht(y, trans.unsqueeze(1), mask).view(B*ntilts, -1)
+        y = lattice.translate_ht(y, trans.unsqueeze(1), final_mask).view(B*ntilts, -1)
     y = y.view(B, ntilts, -1)
 
     # align and mask dose_weights with y and yhat shape
-    dose_weights = dose_weights.view(ntilts, -1)[:, mask]
+    dose_weights = dose_weights.view(ntilts, -1)[:, final_mask]
     dose_weights = dose_weights.view(1, ntilts, -1)
 
     # calculate and backprop weighted loss
-    # loss = (dose_weights * (yhat - y) ** 2).mean() # does not properly gradient loss for 0-weight fourier components
     loss = ((yhat - y * dose_weights) ** 2).mean() # reconstruction loss vs dose+tilt weighted stack
     if use_amp:
         with amp.scale_loss(loss, optim) as scaled_loss:
@@ -350,7 +361,7 @@ def main(args):
                 pose_optimizer.zero_grad()
             r, t = posetracker.get_pose(batch_ind)
             c = ctf_params[batch_ind] if ctf_params is not None else None
-            loss_item = train(model, lattice, optim, y, dose_weights, r, trans=t, ctf_params=c, use_amp=args.amp)
+            loss_item = train(model, lattice, optim, y, dose_weights, r, trans=t, ctf_params=c, use_amp=args.amp, skip_zeros=args.skip_zeros)
             if args.do_pose_sgd and epoch >= args.pretrain:
                 pose_optimizer.step()
             loss_accum += loss_item * len(batch_ind)
