@@ -131,6 +131,110 @@ class HetOnlyVAE(nn.Module):
         return self.decode(*args, **kwargs)
 
 
+class TiltSeriesHetOnlyVAE(nn.Module):
+    # No pose inference
+    def __init__(self, lattice,  # Lattice object
+                 qlayersA, qdimA,
+                 qlayersB, qdimB,
+                 players, pdim,
+                 in_dim, zdim=1,
+                 encode_mode='tiltseries',
+                 enc_mask=None,
+                 enc_type='linear_lowf',
+                 enc_dim=None,
+                 domain='fourier',
+                 activation=nn.ReLU):
+        super(HetOnlyVAE, self).__init__()
+        self.lattice = lattice
+        self.zdim = zdim
+        self.in_dim = in_dim
+        self.enc_mask = enc_mask
+        if encode_mode == 'tiltseries':
+            self.encoder = TiltSeriesEncoder(in_dim, qlayersA, qdimA, qlayersB, qdimB, zdim * 2, activation)
+        else:
+            raise RuntimeError('Encoder mode {} not recognized'.format(encode_mode))
+        self.encode_mode = encode_mode
+        self.decoder = get_decoder(3 + zdim, lattice.D, players, pdim, domain, enc_type, enc_dim, activation)
+
+    @classmethod
+    def load(self, config, weights=None, device=None):
+        # TODO update me
+        '''Instantiate a model from a config.pkl
+
+        Inputs:
+            config (str, dict): Path to config.pkl or loaded config.pkl
+            weights (str): Path to weights.pkl
+            device: torch.device object
+
+        Returns:
+            HetOnlyVAE instance, Lattice instance
+        '''
+        cfg = utils.load_pkl(config) if type(config) is str else config
+        c = cfg['lattice_args']
+        lat = lattice.Lattice(c['D'], extent=c['extent'])
+        c = cfg['model_args']
+        if c['enc_mask'] > 0:
+            enc_mask = lat.get_circular_mask(c['enc_mask'])
+            in_dim = int(enc_mask.sum())
+        else:
+            assert c['enc_mask'] == -1
+            enc_mask = None
+            in_dim = lat.D ** 2
+        activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[c['activation']]
+        model = HetOnlyVAE(lat,
+                           c['qlayers'], c['qdim'],
+                           c['players'], c['pdim'],
+                           in_dim, c['zdim'],
+                           encode_mode=c['encode_mode'],
+                           enc_mask=enc_mask,
+                           enc_type=c['pe_type'],
+                           enc_dim=c['pe_dim'],
+                           domain=c['domain'],
+                           activation=activation)
+        if weights is not None:
+            ckpt = torch.load(weights)
+            model.load_state_dict(ckpt['model_state_dict'])
+        if device is not None:
+            model.to(device)
+        return model, lat
+
+    def reparameterize(self, mu, logvar):
+        if not self.training:
+            return mu
+        std = torch.exp(.5 * logvar)
+        eps = torch.randn_like(std)
+        return eps * std + mu
+
+    def encode(self, batch, B, ntilts, mask):
+        # y is input batch of shape B x ntilts x D x D
+        batch = batch.view(B, ntilts, -1)
+        if self.enc_mask is not None:
+            batch = batch[:,:,mask] # B x ntilts x D*D[mask]
+        z = self.encoder(batch)
+        return z[:, :self.zdim], z[:, self.zdim:]
+
+    def cat_z(self, coords, z):
+        '''
+        coords: Bx...x3
+        z: Bxzdim
+        '''
+        assert coords.size(0) == z.size(0)
+        z = z.view(z.size(0), *([1] * (coords.ndimension() - 2)), self.zdim)
+        z = torch.cat((coords, z.expand(*coords.shape[:-1], self.zdim)), dim=-1)
+        return z
+
+    def decode(self, coords, z, mask=None):
+        '''
+        coords: B*ntilts x D*D[mask] x 3 image coordinates
+        z: B x zdim latent coordinate (repeated for ntilts)
+        '''
+        return self.decoder(self.cat_z(coords, z))
+
+    # Need forward func for DataParallel -- TODO: refactor
+    def forward(self, *args, **kwargs):
+        return self.decode(*args, **kwargs)
+
+
 def load_decoder(config, weights=None, device=None):
     '''
     Instantiate a decoder model from a config.pkl
@@ -663,6 +767,22 @@ class TiltEncoder(nn.Module):
         x_enc = self.encoder1(x)
         x_tilt_enc = self.encoder1(x_tilt)
         z = self.encoder2(torch.cat((x_enc,x_tilt_enc),-1))
+        return z
+
+class TiltSeriesEncoder(nn.Module):
+    def __init__(self, in_dim, nlayersA, hidden_dimA, ntilts, nlayersB, hidden_dimB, out_dim, activation):
+        super(TiltSeriesEncoder, self).__init__()
+        assert nlayersA+nlayersB > 2
+        # encoder1: D*D[mask] --> hidden_dimA.repeat(ntilts)
+        self.encoder1 = ResidLinearMLP(in_dim, nlayersA, hidden_dimA, hidden_dimA, activation)
+        # encoder2: hidden_dimA.repeat(ntilts) --> out_dim
+        self.encoder2 = ResidLinearMLP(hidden_dimA*ntilts, nlayersB, hidden_dimB, out_dim, activation)
+        self.in_dim = in_dim
+
+    def forward(self, batch, B):
+        # batch is input image batch of shape B x ntilts x D*D[mask]
+        batch_enc = self.encoder1(batch)
+        z = self.encoder2(batch_enc.view(B, -1))
         return z
 
 class ResidLinearMLP(nn.Module):
