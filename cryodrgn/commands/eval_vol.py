@@ -17,7 +17,7 @@ from cryodrgn import fft
 from cryodrgn import lie_tools
 from cryodrgn import config
 from cryodrgn.lattice import Lattice
-from cryodrgn.models import HetOnlyVAE
+from cryodrgn.models import HetOnlyVAE, TiltSeriesHetOnlyVAE
 
 log = utils.log
 vlog = utils.vlog
@@ -88,7 +88,10 @@ def main(args):
         assert args.downsample % 2 == 0, "Boxsize must be even"
         assert args.downsample <= D - 1, "Must be smaller than original box size"
     
-    model, lattice = HetOnlyVAE.load(cfg, args.weights)
+    if 'ntilts' in cfg['dataset_args']:
+        model, lattice = TiltSeriesHetOnlyVAE.load(cfg, args.weights)
+    else:
+        model, lattice = HetOnlyVAE.load(cfg, args.weights)
     model.eval()
 
     ### Multiple z ###
