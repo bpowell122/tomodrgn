@@ -297,6 +297,7 @@ class LazyTiltSeriesMRCData(data.Dataset):
             log('Using cosine(tilt_angle) weighting')
             cosine_weights = particles_df.get_tiltseries_cosine_weight(ntilts)
             dose_weights *= cosine_weights.reshape(ntilts,1,1)
+        cumulative_weights = dose_weights
 
         # particles = particles.reshape(nptcls, ntilts, ny_ht, nx_ht)  # reshape to 4-dim ptcl stack for DataLoader
         particles = [particles[ntilts*i : ntilts*(i+1)] for i in range(nptcls)] # reshape to list (of all ptcls) of lists (of tilt images for each ptcl)
@@ -309,7 +310,7 @@ class LazyTiltSeriesMRCData(data.Dataset):
         self.keepreal = keepreal
         self.expanded_ind = expanded_ind
         self.invert_data = invert_data
-        self.dose_weights = dose_weights
+        self.cumulative_weights = cumulative_weights
         self.spatial_frequencies = spatial_frequencies
         if norm is None:
             norm = self.estimate_normalization()
@@ -485,6 +486,7 @@ class TiltSeriesMRCData(data.Dataset):
             log('Using cosine(tilt_angle) weighting')
             cosine_weights = particles_df.get_tiltseries_cosine_weight(ntilts)
             dose_weights *= cosine_weights.reshape(ntilts,1,1)
+        cumulative_weights = dose_weights
 
         # normalize
         if norm is None:
@@ -502,7 +504,7 @@ class TiltSeriesMRCData(data.Dataset):
         self.D = particles.shape[-1]
         self.keepreal = keepreal
         self.expanded_ind = expanded_ind
-        self.dose_weights = dose_weights
+        self.cumulative_weights = cumulative_weights
         self.spatial_frequencies = spatial_frequencies
         if keepreal: raise NotImplementedError
             # self.particles_real = particles_real

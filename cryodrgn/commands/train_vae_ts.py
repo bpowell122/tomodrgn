@@ -76,7 +76,7 @@ def add_args(parser):
     group = parser.add_argument_group('Encoder Network')
     group.add_argument('--enc-layers-A', dest='qlayersA', type=int, default=3, help='Number of hidden layers for each tilt(default: %(default)s)')
     group.add_argument('--enc-dim-A', dest='qdimA', type=int, default=256, help='Number of nodes in hidden layers for each tilt (default: %(default)s)')
-    group.add_argument('--enc-layers-B', dest='qlayersB', type=int, default=3, help='Number of hidden layers encoding merged tilts (default: %(default)s)')
+    group.add_argument('--enc-layers-B', dest='qlayersB', type=int, default=1, help='Number of hidden layers encoding merged tilts (default: %(default)s)')
     group.add_argument('--enc-dim-B', dest='qdimB', type=int, default=256, help='Number of nodes in hidden layers encoding merged tilts (default: %(default)s)')
     group.add_argument('--encode-mode', default='tiltseries', choices=('resid','mlp', 'tiltseries'), help='Type of encoder network (default: %(default)s)')
     group.add_argument('--enc-mask', type=int, help='Circular mask of image for encoder (default: D/2; -1 for no mask)')
@@ -92,19 +92,19 @@ def add_args(parser):
     return parser
 
 
-def plot_dose_weight_distribution(dose_weights, spatial_frequencies, args):
+def plot_weight_distribution(cumulative_weights, spatial_frequencies, args):
     # plot distribution of dose weights across tilts in the spirit of https://doi.org/10.1038/s41467-021-22251-8
     # TODO incorporate xlim matching lattice limit representing frequencies actually used for training?
     import matplotlib.pyplot as plt
 
-    ntilts = dose_weights.shape[0]
+    ntilts = cumulative_weights.shape[0]
     sorted_frequency_list = sorted(set(spatial_frequencies.reshape(-1)))
     cumulative_weights = np.empty((len(sorted_frequency_list), ntilts))
 
     for i, frequency in enumerate(sorted_frequency_list):
         x, y = np.where(spatial_frequencies == frequency)
-        sum_of_weights_at_frequency = dose_weights[:, y, x].sum()
-        cumulative_weights[i, :] = (dose_weights[:, y, x] / sum_of_weights_at_frequency).sum(axis=1) # sum across multiple pixels at same frequency
+        sum_of_weights_at_frequency = cumulative_weights[:, y, x].sum()
+        cumulative_weights[i, :] = (cumulative_weights[:, y, x] / sum_of_weights_at_frequency).sum(axis=1) # sum across multiple pixels at same frequency
 
     colormap = plt.cm.get_cmap('coolwarm').reversed()
     tilt_colors = colormap(np.linspace(0, 1, ntilts))
@@ -134,7 +134,7 @@ def save_config(args, dataset, lattice, model, out_config):
                         ntilts=dataset.ntilts,
                         nptcls=dataset.nptcls,
                         nimg=dataset.ntilts*dataset.nptcls,
-                        dose_weights=dataset.dose_weights,
+                        cumulative_weights=dataset.cumulative_weights,
                         invert_data=args.invert_data,
                         ind=args.ind,
                         expanded_ind=dataset.expanded_ind,
@@ -171,13 +171,14 @@ def save_config(args, dataset, lattice, model, out_config):
                     version=cryodrgn.__version__)
         pickle.dump(meta, f)
 
-def train_batch(model, lattice, y, rot, trans, optim, beta, beta_control=None, ctf_params=None, use_amp=False):
+def train_batch(model, lattice, y, cumulative_weights, rot, trans, optim, beta, beta_control=None, ctf_params=None, use_amp=False):
     optim.zero_grad()
     model.train()
-    if trans is not None:
-        y = preprocess_input(y, lattice, trans)
-    z_mu, z_logvar, z, y_recon, y_recon_tilt, mask = run_batch(model, lattice, y, rot, ctf_params)
+
+    y, c = preprocess_input(y, lattice, trans, cumulative_weights, ctf_params)
+    z_mu, z_logvar, z, y_recon, mask = run_batch(model, lattice, y, rot, c)
     loss, gen_loss, kld = loss_function(z_mu, z_logvar, y, y_recon, mask, beta, beta_control)
+
     if use_amp:
         with amp.scale_loss(loss, optim) as scaled_loss:
             scaled_loss.backward()
@@ -187,24 +188,34 @@ def train_batch(model, lattice, y, rot, trans, optim, beta, beta_control=None, c
     return loss.item(), gen_loss.item(), kld.item()
 
 
-def preprocess_input(y, lattice, trans):
-    # center the image
+def preprocess_input(y, lattice, trans, cumulative_weights, ctf_params=None):
     B = y.size(0)
     ntilts = y.size(1)
     D = lattice.D
-    y = lattice.translate_ht(y.view(B*ntilts,-1), trans.unsqueeze(1)).view(B,ntilts,D,D)
-    return y
+
+    if trans is not None:
+        # center the image
+        y = lattice.translate_ht(y.view(B*ntilts,-1), trans.unsqueeze(1)).view(B,ntilts,D,D)
+
+    if ctf_params is not None:
+        # CTF-weight the image
+        freqs = lattice.freqs2d.unsqueeze(0).expand(B*ntilts, *lattice.freqs2d.shape) / ctf_params[:, 0].view(B*ntilts, 1, 1)
+        c = ctf.compute_ctf(freqs, *torch.split(ctf_params[:, 1:], 1, 1)).view(B, ntilts, D, D)
+        y *= c #.sign() # phase flip by the ctf # replacing with full CTF weighting, not just phase flip
+    else:
+        c = None
+
+    # weight the image by dose and tilt as requested (uniform weighting if not requested)
+    y *= cumulative_weights.view(B, ntilts, D, D)
+
+    # return translated, CTF-weighted, dose+tilt-weighted particle stack for encoding+decoding+loss calculation
+    return y, c
 
 
-def run_batch(model, lattice, y, rot, ctf_params=None):
-    use_ctf = ctf_params is not None
+def run_batch(model, lattice, y, rot, c=None):
     B = y.size(0)
     ntilts=y.size(1)
     D = lattice.D
-    if use_ctf:
-        freqs = lattice.freqs2d.unsqueeze(0).expand(B*ntilts, *lattice.freqs2d.shape) / ctf_params[:, 0].view(B*ntilts, 1, 1)
-        c = ctf.compute_ctf(freqs, *torch.split(ctf_params[:, 1:], 1, 1)).view(B*ntilts, D, D)
-        y *= c.sign() # phase flip by the ctf
 
     # encode
     z_mu, z_logvar = _unparallelize(model).encode(y, B, ntilts) # B x zdim, i.e. one value per ptcl (not img)
@@ -214,7 +225,8 @@ def run_batch(model, lattice, y, rot, ctf_params=None):
     # decode
     mask = lattice.get_circular_mask(D // 2)  # restrict to circular mask
     y_recon = model(lattice.coords[mask] / lattice.extent / 2 @ rot, z).view(B*ntilts, -1)
-    if use_ctf: y_recon *= c.view(B*ntilts, -1)[:, mask]
+    if c is not None:
+        y_recon *= c.view(B*ntilts, -1)[:, mask]
 
     return z_mu, z_logvar, z, y_recon, mask
 
@@ -242,7 +254,7 @@ def loss_function(z_mu, z_logvar, y, y_recon, mask, beta, beta_control=None):
     return loss, gen_loss, kld
 
 
-def eval_z(model, lattice, data, expanded_ind_rebased, batch_size, device, trans=None, ctf_params=None):
+def eval_z(model, lattice, data, cumulative_weights, expanded_ind_rebased, batch_size, device, trans=None, ctf_params=None):
     assert not model.training
     z_mu_all = []
     z_logvar_all = []
@@ -257,8 +269,9 @@ def eval_z(model, lattice, data, expanded_ind_rebased, batch_size, device, trans
             y = lattice.translate_ht(y.view(B*ntilts,-1), trans[batch_ind].unsqueeze(1)).view(B,ntilts,D,D)
         if ctf_params is not None:
             freqs = lattice.freqs2d.unsqueeze(0).expand(B*ntilts,*lattice.freqs2d.shape)/ctf_params[batch_ind,0].view(B*ntilts,1,1)
-            c = ctf.compute_ctf(freqs, *torch.split(ctf_params[batch_ind,1:], 1, 1)).view(B*ntilts,D,D)
-            y *= c.sign() # phase flip by the ctf
+            c = ctf.compute_ctf(freqs, *torch.split(ctf_params[batch_ind,1:], 1, 1)).view(B,ntilts,D,D)
+            y *= c # .sign() # phase flip by the ctf
+        y *= cumulative_weights.view(B, ntilts, D, D)
         z_mu, z_logvar = _unparallelize(model).encode(y, B, ntilts)
         z_mu_all.append(z_mu.detach().cpu().numpy())
         z_logvar_all.append(z_logvar.detach().cpu().numpy())
@@ -342,9 +355,9 @@ def main(args):
     Nptcls = data.nptcls
     Nimg = Ntilts*Nptcls
     expanded_ind = data.expanded_ind #this is already filtered by args.ind, np.array of shape (1,)
-    dose_weights = data.dose_weights
+    cumulative_weights = data.cumulative_weights
     spatial_frequencies = data.spatial_frequencies
-    plot_dose_weight_distribution(dose_weights, spatial_frequencies, args)
+    plot_weight_distribution(cumulative_weights, spatial_frequencies, args)
 
     # load poses
     posetracker = PoseTracker.load(args.poses, Nimg, D, None, expanded_ind)
@@ -425,7 +438,7 @@ def main(args):
     # train
     data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=True)
     expanded_ind_rebased = torch.tensor([np.arange(i * Ntilts, (i + 1) * Ntilts) for i in range(Nptcls)]).to(device) # redefine training inds to remove gaps created by filtering dataset when loading
-    dose_weights = torch.tensor(dose_weights).to(device)
+    cumulative_weights = torch.tensor(cumulative_weights).to(device)
     num_epochs = args.num_epochs
     for epoch in range(start_epoch, num_epochs):
         t2 = dt.now()
@@ -446,7 +459,7 @@ def main(args):
             batch_ind = batch_ind.to(device)
             rot, tran = posetracker.get_pose(batch_ind)
             ctf_param = ctf_params[batch_ind] if ctf_params is not None else None
-            loss, gen_loss, kld = train_batch(model, lattice, y, rot, tran, optim, beta, args.beta_control, ctf_params=ctf_param, use_amp=args.amp)
+            loss, gen_loss, kld = train_batch(model, lattice, y, cumulative_weights, rot, tran, optim, beta, args.beta_control, ctf_params=ctf_param, use_amp=args.amp)
 
             # logging
             gen_loss_accum += gen_loss*len(batch_ind)
@@ -462,7 +475,7 @@ def main(args):
             out_z = '{}/z.{}.pkl'.format(args.outdir, epoch)
             model.eval()
             with torch.no_grad():
-                z_mu, z_logvar = eval_z(model, lattice, data, expanded_ind_rebased, args.batch_size, device, posetracker.trans, ctf_params)
+                z_mu, z_logvar = eval_z(model, lattice, data, cumulative_weights, expanded_ind_rebased, args.batch_size, device, posetracker.trans, ctf_params)
                 save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z)
 
     # save model weights, latent encoding, and evaluate the model on 3D lattice
@@ -470,7 +483,7 @@ def main(args):
     out_z = '{}/z.pkl'.format(args.outdir)
     model.eval()
     with torch.no_grad():
-        z_mu, z_logvar = eval_z(model, lattice, data, expanded_ind_rebased, args.batch_size, device, posetracker.trans, ctf_params)
+        z_mu, z_logvar = eval_z(model, lattice, data, cumulative_weights, expanded_ind_rebased, args.batch_size, device, posetracker.trans, ctf_params)
         save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z)
 
     td = dt.now() - t1
