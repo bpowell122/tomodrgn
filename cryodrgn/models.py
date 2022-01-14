@@ -140,7 +140,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
                  in_dim, zdim=1,
                  encode_mode='tiltseries',
                  enc_mask=None,
-                 enc_type='linear_lowf',
+                 enc_type='geom_lowf',
                  enc_dim=None,
                  domain='fourier',
                  activation=nn.ReLU):
@@ -205,13 +205,13 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         eps = torch.randn_like(std)
         return eps * std + mu
 
-    def encode(self, batch, B, ntilts, mask):
-        # y is input batch of shape B x ntilts x D x D
+    def encode(self, batch, B, ntilts):
+        # input batch is of shape B x ntilts x D x D
         batch = batch.view(B, ntilts, -1)
         if self.enc_mask is not None:
-            batch = batch[:,:,mask] # B x ntilts x D*D[mask]
+            batch = batch[:,:,self.enc_mask] # B x ntilts x D*D[mask]
         z = self.encoder(batch)
-        return z[:, :self.zdim], z[:, self.zdim:]
+        return z[:, :self.zdim], z[:, self.zdim:] # B x zdim
 
     def cat_z(self, coords, z):
         '''
@@ -782,7 +782,7 @@ class TiltSeriesEncoder(nn.Module):
     def forward(self, batch, B):
         # batch is input image batch of shape B x ntilts x D*D[mask]
         batch_enc = self.encoder1(batch)
-        z = self.encoder2(batch_enc.view(B, -1))
+        z = self.encoder2(batch_enc.view(B, -1)) #reshape to encode all tilts of one ptcl together
         return z
 
 class ResidLinearMLP(nn.Module):
