@@ -23,6 +23,7 @@ def main():
     import cryodrgn.commands.view_config
     import cryodrgn.commands.analyze_convergence
     import cryodrgn.commands.train_nn_ts
+    import cryodrgn.commands.train_vae_ts
 
     modules = [cryodrgn.commands.downsample,
         cryodrgn.commands.preprocess,
@@ -40,7 +41,8 @@ def main():
         cryodrgn.commands.graph_traversal,
         cryodrgn.commands.view_config,
 	    cryodrgn.commands.analyze_convergence,
-        cryodrgn.commands.train_nn_ts
+        cryodrgn.commands.train_nn_ts,
+        cryodrgn.commands.train_vae_ts
         ]
 
     subparsers = parser.add_subparsers(title='Choose a command')
