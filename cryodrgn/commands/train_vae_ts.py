@@ -1,5 +1,5 @@
 '''
-Train a VAE for heterogeneous reconstruction with known pose
+Train a VAE for heterogeneous reconstruction with known pose for tomography data
 '''
 import numpy as np
 import sys, os
@@ -169,6 +169,7 @@ def save_config(args, dataset, lattice, model, out_config):
                     version=cryodrgn.__version__)
         pickle.dump(meta, f)
 
+
 def train_batch(model, lattice, y, cumulative_weights, rot, trans, optim, beta, beta_control=None, ctf_params=None, use_amp=False):
     optim.zero_grad()
     model.train()
@@ -204,7 +205,7 @@ def preprocess_input(y, lattice, trans, cumulative_weights, ctf_params=None):
         c = None
 
     # weight the image by dose and tilt as requested (uniform weighting if not requested)
-    y *= cumulative_weights.view(B, ntilts, D, D)
+    y *= cumulative_weights.view(1, ntilts, D, D)
 
     # return translated, CTF-weighted, dose+tilt-weighted particle stack for encoding+decoding+loss calculation
     return y, c
@@ -216,7 +217,7 @@ def run_batch(model, lattice, y, rot, c=None):
     D = lattice.D
 
     # encode
-    z_mu, z_logvar = _unparallelize(model).encode(y, B, ntilts) # B x zdim, i.e. one value per ptcl (not img)
+    z_mu, z_logvar = _unparallelize(model).encode(y, B, ntilts) # B x zdim, i.e. one value per ptcl (not per img)
     z = _unparallelize(model).reparameterize(z_mu, z_logvar)
     z = z.repeat(1,ntilts).reshape(B*ntilts, -1)# expand z to repeat value for all tilts in particle, B*ntilts x zim
 
@@ -260,8 +261,8 @@ def eval_z(model, lattice, data, cumulative_weights, expanded_ind_rebased, batch
     for batch, ind in data_generator:
         batch_ind = expanded_ind_rebased[ind].view(-1)  # need to use expanded indexing for ctf and poses
         y = batch.to(device)
-        B = y.shape(0)
-        ntilts = y.shape(1)
+        B = y.size(0)
+        ntilts = y.size(1)
         D = lattice.D
         if trans is not None:
             y = lattice.translate_ht(y.view(B*ntilts,-1), trans[batch_ind].unsqueeze(1)).view(B,ntilts,D,D)
@@ -269,7 +270,7 @@ def eval_z(model, lattice, data, cumulative_weights, expanded_ind_rebased, batch
             freqs = lattice.freqs2d.unsqueeze(0).expand(B*ntilts,*lattice.freqs2d.shape)/ctf_params[batch_ind,0].view(B*ntilts,1,1)
             c = ctf.compute_ctf(freqs, *torch.split(ctf_params[batch_ind,1:], 1, 1)).view(B,ntilts,D,D)
             y *= c # .sign() # phase flip by the ctf
-        y *= cumulative_weights.view(B, ntilts, D, D)
+        y *= cumulative_weights.view(1, ntilts, D, D)
         z_mu, z_logvar = _unparallelize(model).encode(y, B, ntilts)
         z_mu_all.append(z_mu.detach().cpu().numpy())
         z_logvar_all.append(z_logvar.detach().cpu().numpy())
@@ -384,7 +385,7 @@ def main(args):
     else:
         raise RuntimeError("Invalid argument for encoder mask radius {}".format(args.enc_mask))
     activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]
-    model = TiltSeriesHetOnlyVAE(lattice, args.qlayersA, args.qdimA, args.qlayersB, args.qdimB,
+    model = TiltSeriesHetOnlyVAE(lattice, args.qlayersA, args.qdimA, Ntilts, args.qlayersB, args.qdimB,
                                  args.players, args.pdim, in_dim, args.zdim, encode_mode=args.encode_mode,
                                  enc_mask=enc_mask, enc_type=args.pe_type, enc_dim=args.pe_dim,
                                  domain=args.domain, activation=activation)

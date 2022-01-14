@@ -135,6 +135,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
     # No pose inference
     def __init__(self, lattice,  # Lattice object
                  qlayersA, qdimA,
+                 ntilts,
                  qlayersB, qdimB,
                  players, pdim,
                  in_dim, zdim=1,
@@ -143,14 +144,14 @@ class TiltSeriesHetOnlyVAE(nn.Module):
                  enc_type='geom_lowf',
                  enc_dim=None,
                  domain='fourier',
-                 activation=nn.ReLU):
-        super(HetOnlyVAE, self).__init__()
+                 activation = nn.ReLU):
+        super(TiltSeriesHetOnlyVAE, self).__init__()
         self.lattice = lattice
         self.zdim = zdim
         self.in_dim = in_dim
         self.enc_mask = enc_mask
         if encode_mode == 'tiltseries':
-            self.encoder = TiltSeriesEncoder(in_dim, qlayersA, qdimA, qlayersB, qdimB, zdim * 2, activation)
+            self.encoder = TiltSeriesEncoder(in_dim, qlayersA, qdimA, ntilts, qlayersB, qdimB, zdim * 2, activation)
         else:
             raise RuntimeError('Encoder mode {} not recognized'.format(encode_mode))
         self.encode_mode = encode_mode
@@ -210,7 +211,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         batch = batch.view(B, ntilts, -1)
         if self.enc_mask is not None:
             batch = batch[:,:,self.enc_mask] # B x ntilts x D*D[mask]
-        z = self.encoder(batch)
+        z = self.encoder(batch, B)
         return z[:, :self.zdim], z[:, self.zdim:] # B x zdim
 
     def cat_z(self, coords, z):
@@ -770,6 +771,7 @@ class TiltEncoder(nn.Module):
         return z
 
 class TiltSeriesEncoder(nn.Module):
+                     # in_dim, qlayersA, qdimA,               qlayersB, qdimB,      zdim * 2, activation
     def __init__(self, in_dim, nlayersA, hidden_dimA, ntilts, nlayersB, hidden_dimB, out_dim, activation):
         super(TiltSeriesEncoder, self).__init__()
         assert nlayersA+nlayersB > 2
