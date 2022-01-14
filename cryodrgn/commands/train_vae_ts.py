@@ -129,7 +129,6 @@ def get_latest(args):
 
 
 def save_config(args, dataset, lattice, model, out_config):
-    # TODO update me with all tiltseries params / removed train_vae params
     dataset_args = dict(particles=args.particles,
                         norm=dataset.norm,
                         ntilts=dataset.ntilts,
