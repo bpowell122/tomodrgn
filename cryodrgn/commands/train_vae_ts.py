@@ -13,17 +13,14 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 import cryodrgn
-from cryodrgn import mrc
 from cryodrgn import utils
-from cryodrgn import fft
-from cryodrgn import lie_tools
 from cryodrgn import dataset
 from cryodrgn import ctf
 
 from cryodrgn.pose import PoseTracker
 from cryodrgn.models import TiltSeriesHetOnlyVAE
 from cryodrgn.lattice import Lattice
-from cryodrgn.beta_schedule import get_beta_schedule, LinearSchedule
+from cryodrgn.beta_schedule import get_beta_schedule
 try:
     import apex.amp as amp
 except:
