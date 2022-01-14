@@ -46,6 +46,7 @@ def add_args(parser):
     group = parser.add_argument_group('Dataset loading')
     group.add_argument('--ind', type=os.path.abspath, metavar='PKL', help='Filter particle stack by these indices')
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
+    group.add_argument('--no-window', dest='window', action='store_false', help='Turn off real space windowing of dataset')
     group.add_argument('--window-r', type=float, default=.85,  help='Windowing radius (default: %(default)s)')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
     group.add_argument('--relion31', action='store_true', help='Flag if relion3.1 star format')
@@ -96,18 +97,18 @@ def plot_weight_distribution(cumulative_weights, spatial_frequencies, args):
 
     ntilts = cumulative_weights.shape[0]
     sorted_frequency_list = sorted(set(spatial_frequencies.reshape(-1)))
-    cumulative_weights = np.empty((len(sorted_frequency_list), ntilts))
+    weights_plot = np.empty((len(sorted_frequency_list), ntilts))
 
     for i, frequency in enumerate(sorted_frequency_list):
         x, y = np.where(spatial_frequencies == frequency)
         sum_of_weights_at_frequency = cumulative_weights[:, y, x].sum()
-        cumulative_weights[i, :] = (cumulative_weights[:, y, x] / sum_of_weights_at_frequency).sum(axis=1) # sum across multiple pixels at same frequency
+        weights_plot[i, :] = (cumulative_weights[:, y, x] / sum_of_weights_at_frequency).sum(axis=1) # sum across multiple pixels at same frequency
 
     colormap = plt.cm.get_cmap('coolwarm').reversed()
     tilt_colors = colormap(np.linspace(0, 1, ntilts))
 
     fig, ax = plt.subplots()
-    ax.stackplot(sorted_frequency_list, cumulative_weights.T, colors=tilt_colors)
+    ax.stackplot(sorted_frequency_list, weights_plot.T, colors=tilt_colors)
     ax.set_ylabel('cumulative weights')
     ax.set_xlabel('spatial frequency (1/Å)')
     ax.set_xlim((0, sorted_frequency_list[-1]))
