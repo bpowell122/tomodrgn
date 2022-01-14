@@ -171,6 +171,8 @@ class TiltSeriesHetOnlyVAE(nn.Module):
             HetOnlyVAE instance, Lattice instance
         '''
         cfg = utils.load_pkl(config) if type(config) is str else config
+        c = cfg['dataset_args']
+        ntilts = c['ntilts']
         c = cfg['lattice_args']
         lat = lattice.Lattice(c['D'], extent=c['extent'])
         c = cfg['model_args']
@@ -182,16 +184,22 @@ class TiltSeriesHetOnlyVAE(nn.Module):
             enc_mask = None
             in_dim = lat.D ** 2
         activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[c['activation']]
-        model = HetOnlyVAE(lat,
-                           c['qlayers'], c['qdim'],
-                           c['players'], c['pdim'],
-                           in_dim, c['zdim'],
-                           encode_mode=c['encode_mode'],
-                           enc_mask=enc_mask,
-                           enc_type=c['pe_type'],
-                           enc_dim=c['pe_dim'],
-                           domain=c['domain'],
-                           activation=activation)
+        # TiltSeriesHetOnlyVAE(lattice, args.qlayersA, args.qdimA, Ntilts, args.qlayersB, args.qdimB,
+        #                                  args.players, args.pdim, in_dim, args.zdim, encode_mode=args.encode_mode,
+        #                                  enc_mask=enc_mask, enc_type=args.pe_type, enc_dim=args.pe_dim,
+        #                                  domain=args.domain, activation=activation)
+        model = TiltSeriesHetOnlyVAE(lat,
+                                     c['qlayersA'], c['qdimA'],
+                                     ntilts,
+                                     c['qlayersB'], c['qdimB'],
+                                     c['players'], c['pdim'],
+                                     in_dim, c['zdim'],
+                                     encode_mode=c['encode_mode'],
+                                     enc_mask=enc_mask,
+                                     enc_type=c['pe_type'],
+                                     enc_dim=c['pe_dim'],
+                                     domain=c['domain'],
+                                     activation=activation)
         if weights is not None:
             ckpt = torch.load(weights)
             model.load_state_dict(ckpt['model_state_dict'])
