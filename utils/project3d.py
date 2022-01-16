@@ -34,18 +34,19 @@ def parse_args():
     parser.add_argument('-o', type=os.path.abspath, required=True, help='Output projection stack (.mrcs)')
     parser.add_argument('--out-pose', type=os.path.abspath, required=True, help='Output poses (.pkl)')
     parser.add_argument('--out-png', type=os.path.abspath, help='Montage of first 9 projections')
-    parser.add_argument('--in-pose', type=os.path.abspath, required=True, help='Optionally provide input poses instead of random poses (.pkl)')
+    parser.add_argument('--in-pose', type=os.path.abspath, help='Optionally provide input poses instead of random poses (.pkl)')
     parser.add_argument('-N', type=int, help='Number of random projections')
     parser.add_argument('-b', type=int, default=100, help='Minibatch size (default: %(default)s)')
     parser.add_argument('--t-extent', type=float, default=5, help='Extent of image translation in pixels (default: +/-%(default)s)')
     parser.add_argument('--grid', type=int, help='Generate projections on a uniform deterministic grid on SO3. Specify resolution level')
     parser.add_argument('--tilt', type=float, help='Right-handed x-axis tilt offset in degrees')
+    parser.add_argument('--tiltseries', action='store_true', help='Project dose-symmetric tilt series per random pose')
     parser.add_argument('--seed', type=int, help='Random seed')
     parser.add_argument('-v','--verbose',action='store_true',help='Increaes verbosity')
     return parser
 
 class Projector:
-    def __init__(self, vol, tilt=None):
+    def __init__(self, vol, tilt=None, tiltseries=False):
         nz, ny, nx = vol.shape
         assert nz==ny==nx, 'Volume must be cubic'
         x2, x1, x0 = np.meshgrid(np.linspace(-1, 1, nz, endpoint=True), 
@@ -74,6 +75,17 @@ class Projector:
             tilt = torch.tensor(tilt)
         self.tilt = tilt
 
+        if tiltseries:
+            dose_symmetric_tilts = np.array([0, 3, -3, -6, 6, 9, -9, -12, 12, 15, -15, -18, 18, 21, -21, -24, 24, 27, -27,
+                                         -30, 30, 33, -33, -36, 36, 39, -39, -42, 42, 45, -45, -48, 48, 51, -51, -54,
+                                         54, 57, -57, -60, 60])
+            tiltseries_matrices = np.zeros((dose_symmetric_tilts.shape[0], 3, 3))
+            for i, tilt in enumerate(dose_symmetric_tilts):
+                tiltseries_matrices[i] = utils.xrot(tilt).astype(np.float32)
+            self.tiltseries_matrices = torch.cuda.FloatTensor(tiltseries_matrices)
+            self.dose_symmetric_tilts = dose_symmetric_tilts
+        self.tiltseries = tiltseries
+
     def rotate(self, rot):
         B = rot.size(0)
         if self.tilt is not None:
@@ -88,7 +100,15 @@ class Projector:
         return vol
 
     def project(self, rot):
-        return self.rotate(rot).sum(dim=1)
+        if not self.tiltseries:
+            return self.rotate(rot).sum(dim=1)
+        else:
+            imgs = torch.empty((rot.shape[0], self.tiltseries_matrices.shape[0], self.ny, self.nx)).to(0)
+            for i, tilt in enumerate(self.tiltseries_matrices):
+                assert tilt.shape == (3,3), print(tilt.shape)
+                imgs[:,i,:,:] = self.rotate(rot @ tilt).sum(dim=1)
+            return imgs.view(-1, imgs.shape[-1], imgs.shape[-1])
+
    
 class Poses(data.Dataset):
     def __init__(self, pose_pkl):
@@ -177,7 +197,9 @@ def main(args):
                         [0, np.cos(theta), -np.sin(theta)],
                         [0, np.sin(theta), np.cos(theta)]]).astype(np.float32)
 
-    projector = Projector(vol, args.tilt)
+    projector = Projector(vol, args.tilt, args.tiltseries)
+    if projector.tiltseries:
+        ntilts = projector.dose_symmetric_tilts.shape[0]
     if use_cuda:
         projector.lattice = projector.lattice.cuda()
         projector.vol = projector.vol.cuda()
@@ -204,10 +226,14 @@ def main(args):
     td = time.time()-t1
     log('Projected {} images in {}s ({}s per image)'.format(rots.N, td, td/rots.N ))
     imgs = np.vstack(imgs)
+    print(imgs.shape)
 
     if args.in_pose is None and args.t_extent:
         log('Shifting images between +/- {} pixels'.format(args.t_extent))
-        trans = np.random.rand(args.N,2)*2*args.t_extent - args.t_extent
+        if not projector.tiltseries:
+            trans = np.random.rand(args.N,2)*2*args.t_extent - args.t_extent
+        else:
+            trans = np.random.rand(args.N*ntilts, 2) * 2 * args.t_extent - args.t_extent
     elif args.in_pose is not None:
         log('Shifting images by input poses')
         D = imgs.shape[-1]
