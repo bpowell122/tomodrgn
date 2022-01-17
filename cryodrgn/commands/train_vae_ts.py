@@ -257,7 +257,7 @@ def eval_z(model, lattice, data, cumulative_weights, expanded_ind_rebased, batch
     assert not model.training
     z_mu_all = []
     z_logvar_all = []
-    data_generator = DataLoader(data, batch_size=batch_size, shuffle=True)
+    data_generator = DataLoader(data, batch_size=batch_size, shuffle=False)
     for batch, ind in data_generator:
         batch_ind = expanded_ind_rebased[ind].view(-1)  # need to use expanded indexing for ctf and poses
         y = batch.to(device)
