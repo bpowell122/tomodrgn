@@ -76,6 +76,7 @@ class Projector:
         self.tilt = tilt
 
         if tiltseries:
+            # TODO add option for different tilt scheme
             dose_symmetric_tilts = np.array([0, 3, -3, -6, 6, 9, -9, -12, 12, 15, -15, -18, 18, 21, -21, -24, 24, 27, -27,
                                          -30, 30, 33, -33, -36, 36, 39, -39, -42, 42, 45, -45, -48, 48, 51, -51, -54,
                                          54, 57, -57, -60, 60])

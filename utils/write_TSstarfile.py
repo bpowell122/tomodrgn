@@ -103,6 +103,7 @@ def main(args):
             headers += POSE_HDRS[3:4]
 
     # assumes 41 tilts per particle
+    # TODO add option for different tilt scheme, CTF B-factors (dose), etc
     headers += MISC_HEADERS
     ctf_bfactors = np.array([-12.99, -25.97, -38.96, -51.94, -64.93, -77.92, -90.90, -103.89, -116.87, -129.86, -142.85,
                              -155.83, -168.82, -181.80, -194.79, -207.78, -220.76, -233.75, -246.73, -259.72, -272.71,
