@@ -100,14 +100,13 @@ class Projector:
         return vol
 
     def project(self, rot):
-        if not self.tiltseries:
-            return self.rotate(rot).sum(dim=1)
-        else:
-            imgs = torch.empty((rot.shape[0], self.tiltseries_matrices.shape[0], self.ny, self.nx)).to(0)
-            for i, tilt in enumerate(self.tiltseries_matrices):
-                assert tilt.shape == (3,3), print(tilt.shape)
-                imgs[:,i,:,:] = self.rotate(rot @ tilt).sum(dim=1)
-            return imgs.view(-1, imgs.shape[-1], imgs.shape[-1])
+        return self.rotate(rot).sum(dim=1)
+        # else:
+        #     imgs = torch.empty((rot.shape[0], self.tiltseries_matrices.shape[0], self.ny, self.nx)).to(0)
+        #     for i, tilt in enumerate(self.tiltseries_matrices):
+        #         assert tilt.shape == (3,3), print(tilt.shape)
+        #         imgs[:,i,:,:] = self.rotate(rot @ tilt).sum(dim=1)
+        #     return imgs.view(-1, imgs.shape[-1], imgs.shape[-1])
 
    
 class Poses(data.Dataset):
@@ -217,11 +216,25 @@ def main(args):
     log('Projecting...')
     imgs = []
     iterator = data.DataLoader(rots, batch_size=args.b)
-    for i, rot in enumerate(iterator):
-        vlog('Projecting {}/{}'.format((i+1)*len(rot), args.N))
-        projections = projector.project(rot)  # MEMORY ERROR STARTS HERE
-        projections = projections.cpu().numpy()
-        imgs.append(projections)
+    if projector.tiltseries:
+        log('Projecting tiltseries...')
+        final_rots = np.empty((args.N * ntilts, 3, 3))
+        for i, rot in enumerate(iterator):
+            vlog('Projecting {}/{}'.format((i+1)*len(rot), args.N))
+            for j, tilt in enumerate(projector.tiltseries_matrices):
+                pose = rot @ tilt.view(1, 3, 3)
+                assert pose.shape == (1, 3, 3), print(pose.shape)
+                projections = projector.project(pose)  # MEMORY ERROR STARTS HERE
+                projections = projections.cpu().numpy()
+                imgs.append(projections)
+                final_rots[ntilts*i + j] = pose.view(3, 3).cpu().numpy()
+    else:
+        for i, rot in enumerate(iterator):
+            vlog('Projecting {}/{}'.format((i+1)*len(rot), args.N))
+            projections = projector.project(rot)  # MEMORY ERROR STARTS HERE
+            projections = projections.cpu().numpy()
+            imgs.append(projections)
+        final_rots = rots
 
     td = time.time()-t1
     log('Projected {} images in {}s ({}s per image)'.format(rots.N, td, td/rots.N ))
@@ -258,12 +271,11 @@ def main(args):
     log('Saving {}'.format(args.o))
     mrc.write(args.o,imgs.astype(np.float32))
     log('Saving {}'.format(args.out_pose))
-    rots = rots.rots.cpu().numpy()
     with open(args.out_pose,'wb') as f:
         if args.t_extent:
-            pickle.dump((rots,trans),f)
+            pickle.dump((final_rots,trans),f)
         else:
-            pickle.dump(rots, f)
+            pickle.dump(final_rots, f)
     if args.out_png:
         log('Saving {}'.format(args.out_png))
         plot_projections(args.out_png, imgs[:9])
