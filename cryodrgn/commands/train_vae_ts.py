@@ -176,7 +176,7 @@ def train_batch(model, lattice, y, cumulative_weights, rot, trans, optim, beta, 
 
     y, c = preprocess_input(y, lattice, trans, cumulative_weights, ctf_params)
     z_mu, z_logvar, z, y_recon, mask = run_batch(model, lattice, y, rot, c)
-    loss, gen_loss, kld = loss_function(z_mu, z_logvar, y, y_recon, mask, beta, beta_control)
+    loss, gen_loss, kld = loss_function(z_mu, z_logvar, y, c, y_recon, mask, beta, beta_control)
 
     if use_amp:
         with amp.scale_loss(loss, optim) as scaled_loss:
@@ -197,17 +197,17 @@ def preprocess_input(y, lattice, trans, cumulative_weights, ctf_params=None):
         y = lattice.translate_ht(y.view(B*ntilts,-1), trans.unsqueeze(1)).view(B,ntilts,D,D)
 
     if ctf_params is not None:
-        # CTF-weight the image
+        # phase flip the CTF-corrupted image
         freqs = lattice.freqs2d.unsqueeze(0).expand(B*ntilts, *lattice.freqs2d.shape) / ctf_params[:, 0].view(B*ntilts, 1, 1)
         c = ctf.compute_ctf(freqs, *torch.split(ctf_params[:, 1:], 1, 1)).view(B, ntilts, D, D)
-        y *= c #.sign() # phase flip by the ctf # replacing with full CTF weighting, not just phase flip
+        y *= c.sign() # phase flip by the ctf to be all positive amplitudes
     else:
         c = None
 
     # weight the image by dose and tilt as requested (uniform weighting if not requested)
     y *= cumulative_weights.view(1, ntilts, D, D)
 
-    # return translated, CTF-weighted, dose+tilt-weighted particle stack for encoding+decoding+loss calculation
+    # return translated, CTF-phase-flipped, dose+tilt-weighted particle stack for encoding+decoding+loss calculation
     return y, c
 
 
@@ -219,6 +219,7 @@ def run_batch(model, lattice, y, rot, c=None):
     # encode
     z_mu, z_logvar = _unparallelize(model).encode(y, B, ntilts) # B x zdim, i.e. one value per ptcl (not per img)
     z = _unparallelize(model).reparameterize(z_mu, z_logvar)
+    # TODO replace with def expand_ntilts(array, ntilts=41): return np.repeat(array, ntilts, axis=0)
     z = z.repeat(1,ntilts).reshape(B*ntilts, -1)# expand z to repeat value for all tilts in particle, B*ntilts x zim
 
     # decode
@@ -236,10 +237,11 @@ def _unparallelize(model):
     return model
 
 
-def loss_function(z_mu, z_logvar, y, y_recon, mask, beta, beta_control=None):
+def loss_function(z_mu, z_logvar, y, c, y_recon, mask, beta, beta_control=None):
     # reconstruction error
     B = y.size(0)
     ntilts = y.size(1)
+    y *= c.sign() # undo phase flipping from preprocessing
     gen_loss = F.mse_loss(y_recon, y.view(B*ntilts,-1)[:, mask])
 
     # latent loss
@@ -269,7 +271,7 @@ def eval_z(model, lattice, data, cumulative_weights, expanded_ind_rebased, batch
         if ctf_params is not None:
             freqs = lattice.freqs2d.unsqueeze(0).expand(B*ntilts,*lattice.freqs2d.shape)/ctf_params[batch_ind,0].view(B*ntilts,1,1)
             c = ctf.compute_ctf(freqs, *torch.split(ctf_params[batch_ind,1:], 1, 1)).view(B,ntilts,D,D)
-            y *= c # .sign() # phase flip by the ctf
+            y *= c.sign() # phase flip by the ctf
         y *= cumulative_weights.view(1, ntilts, D, D)
         z_mu, z_logvar = _unparallelize(model).encode(y, B, ntilts)
         z_mu_all.append(z_mu.detach().cpu().numpy())
