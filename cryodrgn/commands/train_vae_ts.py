@@ -217,7 +217,7 @@ def run_batch(model, lattice, y, rot, c=None):
     D = lattice.D
 
     # encode
-    z_mu, z_logvar = _unparallelize(model).encode(y, B, ntilts) # B x zdim, i.e. one value per ptcl (not per img)
+    z_mu, z_logvar = _unparallelize(model).encode(y, B, ntilts) # ouput is B x zdim, i.e. one value per ptcl (not per img)
     z = _unparallelize(model).reparameterize(z_mu, z_logvar)
     # TODO replace with def expand_ntilts(array, ntilts=41): return np.repeat(array, ntilts, axis=0)
     z = z.repeat(1,ntilts).reshape(B*ntilts, -1)# expand z to repeat value for all tilts in particle, B*ntilts x zim
@@ -249,9 +249,9 @@ def loss_function(z_mu, z_logvar, y, c, y_recon, mask, beta, beta_control=None):
 
     # total loss
     if beta_control is None:
-        loss = gen_loss + beta*kld/mask.sum().float()/ntilts
+        loss = gen_loss + beta*kld/mask.sum().float()
     else:
-        loss = gen_loss + beta_control*(beta-kld)**2/mask.sum().float()/ntilts
+        loss = gen_loss + beta_control*(beta-kld)**2/mask.sum().float()
     return loss, gen_loss, kld
 
 
