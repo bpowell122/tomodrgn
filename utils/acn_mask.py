@@ -20,6 +20,7 @@ log = utils.log
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('particles', help='Input MRC stack')
+    parser.add_argument('--datadir', help='path to MRC stack')
     parser.add_argument('--snr1', default=1.4, type=float, help='SNR for first pre-CTF application of noise (default: %(default)s)')
     parser.add_argument('--snr2', default=0.05, type=float, help='SNR for second post-CTF application of noise (default: %(default)s)')
     parser.add_argument('--s1', type=float, help='Override --snr1 with gaussian noise stdev')
@@ -202,10 +203,10 @@ def compute_full_ctf(D, Nimg, args):
 
 def add_ctf(particles, ctf):
     assert len(particles) == len(ctf)
-    particles = np.array([np.fft.fftshift(np.fft.fft2(np.fft.fftshift(x))) for x in particles])
+    particles = np.asarray([fft.ht2_center(img) for img in particles], dtype=np.float32)
     particles *= ctf
     del ctf
-    particles = np.array([np.fft.ifftshift(np.fft.ifft2(np.fft.ifftshift(x))).astype(np.float32) for x in particles])
+    particles = np.asarray([fft.iht2_center(img) for img in particles], dtype=np.float32)
     return particles
 
 def normalize(particles):
@@ -227,12 +228,12 @@ def main(args):
     if args.Nimg is None:
         log('Loading all particles')
         # particles = mrc.parse_mrc(args.particles, lazy=False)[0]
-        particles = dataset.load_particles(args.particles, lazy=False)
+        particles = dataset.load_particles(args.particles, lazy=False, datadir=args.datadir)
         Nimg = len(particles)
     else:
         log('Lazy loading ' + str(args.Nimg) + ' particles')
         # particle_list = mrc.parse_mrc(args.particles, lazy=True, Nimg=Nimg)[0]
-        particle_list = dataset.load_particles(args.particles, lazy=True)
+        particle_list = dataset.load_particles(args.particles, lazy=True, datadir=args.datadir)
         Nimg = args.Nimg
         particles = np.array([i.get() for i in particle_list[:Nimg]])
     D, D2 = particles[0].shape

@@ -65,7 +65,8 @@ def main(args):
         assert len(particles) == len(poses[0]), f'{len(particles)} != {len(poses[0])}, Number of particles != number of poses'
     log('{} particles'.format(len(particles)))
 
-    ind = np.arange(len(particles))
+    # ind = np.arange(len(particles))
+    ind = np.tile(np.arange(20*41), 500)
     ind += 1 # CHANGE TO 1-BASED INDEXING
     image_names = [img.fname for img in particles]
     if args.full_path:
@@ -124,6 +125,8 @@ def main(args):
         for tilt in range(ntilts):
             group_names.append(f'000_{ptcl:06d}')
     data[MISC_HEADERS[2]] = group_names
+
+    print([f'{h} : {data[h].shape}' for h in headers if type(data[h]) != list])
 
     df = pd.DataFrame(data=data)
 
