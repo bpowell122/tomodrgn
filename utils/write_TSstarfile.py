@@ -62,7 +62,7 @@ def main(args):
         assert len(particles) == len(ctf), f'{len(particles)} != {len(ctf)}, Number of particles != number of CTF paraameters'
     if args.poses:
         poses = utils.load_pkl(args.poses)
-        assert len(particles) == len(poses), f'{len(particles)} != {len(poses[0])}, Number of particles != number of poses'
+        assert len(particles) == len(poses[0]), f'{len(particles)} != {len(poses[0])}, Number of particles != number of poses'
     log('{} particles'.format(len(particles)))
 
     ind = np.arange(len(particles))
@@ -91,7 +91,7 @@ def main(args):
 
     if args.ctf:
         for i in range(7):
-            data[HEADERS[i+1]] = ctf[:,i]
+            data[CTF_HDRS[i]] = ctf[:,i]
         headers += CTF_HDRS
     if args.poses:
         for i in range(3):
@@ -100,7 +100,7 @@ def main(args):
         if trans is not None:
             for i in range(2):
                 data[POSE_HDRS[3+i]] = trans[:,i]
-            headers += POSE_HDRS[3:4]
+            headers += POSE_HDRS[3:]
 
     # assumes 41 tilts per particle
     # TODO add option for different tilt scheme, CTF B-factors (dose), etc
