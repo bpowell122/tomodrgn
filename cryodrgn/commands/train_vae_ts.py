@@ -249,7 +249,7 @@ def loss_function(z_mu, z_logvar, y, c, y_recon, mask, beta, beta_control=None):
 
     # total loss
     if beta_control is None:
-        loss = gen_loss + beta*kld/mask.sum().float()
+        loss = gen_loss + beta*kld/mask.sum().float()/ntilts
     else:
         loss = gen_loss + beta_control*(beta-kld)**2/mask.sum().float()
     return loss, gen_loss, kld
