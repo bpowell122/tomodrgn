@@ -39,6 +39,7 @@ def parse_args():
     parser.add_argument('-b', type=int, default=100, help='Minibatch size (default: %(default)s)')
     parser.add_argument('--t-extent', type=float, default=5, help='Extent of image translation in pixels (default: +/-%(default)s)')
     parser.add_argument('--grid', type=int, help='Generate projections on a uniform deterministic grid on SO3. Specify resolution level')
+    parser.add_argument('--is-mask', action='store_true', help='Takes max value along z instead of integrating along z, to create mask images from mask volumes')
     parser.add_argument('--tilt', type=float, help='Right-handed x-axis tilt offset in degrees')
     parser.add_argument('--tiltseries', action='store_true', help='Project dose-symmetric tilt series per random pose')
     parser.add_argument('--seed', type=int, help='Random seed')
@@ -46,7 +47,7 @@ def parse_args():
     return parser
 
 class Projector:
-    def __init__(self, vol, tilt=None, tiltseries=False):
+    def __init__(self, vol, tilt=None, tiltseries=False, is_mask=False):
         nz, ny, nx = vol.shape
         assert nz==ny==nx, 'Volume must be cubic'
         x2, x1, x0 = np.meshgrid(np.linspace(-1, 1, nz, endpoint=True), 
@@ -86,6 +87,7 @@ class Projector:
             self.tiltseries_matrices = torch.cuda.FloatTensor(tiltseries_matrices)
             self.dose_symmetric_tilts = dose_symmetric_tilts
         self.tiltseries = tiltseries
+        self.is_mask = is_mask
 
     def rotate(self, rot):
         B = rot.size(0)
@@ -101,7 +103,10 @@ class Projector:
         return vol
 
     def project(self, rot):
-        return self.rotate(rot).sum(dim=1)
+        if self.is_mask:
+            return self.rotate(rot).max(dim=1)[0]
+        else:
+            return self.rotate(rot).sum(dim=1)
         # else:
         #     imgs = torch.empty((rot.shape[0], self.tiltseries_matrices.shape[0], self.ny, self.nx)).to(0)
         #     for i, tilt in enumerate(self.tiltseries_matrices):
@@ -197,7 +202,7 @@ def main(args):
                         [0, np.cos(theta), -np.sin(theta)],
                         [0, np.sin(theta), np.cos(theta)]]).astype(np.float32)
 
-    projector = Projector(vol, args.tilt, args.tiltseries)
+    projector = Projector(vol, args.tilt, args.tiltseries, args.is_mask)
     if projector.tiltseries:
         ntilts = projector.dose_symmetric_tilts.shape[0]
     if use_cuda:
