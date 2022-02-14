@@ -44,6 +44,7 @@ def parse_args():
     parser.add_argument('--tiltseries', action='store_true', help='Project dose-symmetric tilt series per random pose')
     parser.add_argument('--seed', type=int, help='Random seed')
     parser.add_argument('-v','--verbose',action='store_true',help='Increaes verbosity')
+    parser.add_argument('--chunk', type=int, default=10000, help='Chunksize (in # of images) to split particle stack when saving')
     return parser
 
 class Projector:
@@ -220,11 +221,12 @@ def main(args):
         rots = RandomRot(args.N)
     
     log('Projecting...')
-    imgs = []
+     # imgs = []
     iterator = data.DataLoader(rots, batch_size=args.b)
     if projector.tiltseries:
         log('Projecting tiltseries...')
-        final_rots = np.empty((args.N * ntilts, 3, 3))
+        imgs = [] #np.empty((iterator.__len__() * ntilts, vol.shape[0], vol.shape[0]))
+        final_rots = np.empty((iterator.__len__() * ntilts, 3, 3))
         for i, rot in enumerate(iterator):
             vlog('Projecting {}/{}'.format((i+1)*len(rot), args.N))
             for j, tilt in enumerate(projector.tiltseries_matrices):
@@ -235,6 +237,7 @@ def main(args):
                 imgs.append(projections)
                 final_rots[ntilts*i + j] = pose.view(3, 3).cpu().numpy()
     else:
+        imgs = [] #np.empty((iterator.__len__(), vol.shape[0], vol.shape[0]))
         for i, rot in enumerate(iterator):
             vlog('Projecting {}/{}'.format((i+1)*len(rot), args.N))
             projections = projector.project(rot)  # MEMORY ERROR STARTS HERE
@@ -244,7 +247,7 @@ def main(args):
 
     td = time.time()-t1
     log('Projected {} images in {}s ({}s per image)'.format(rots.N, td, td/rots.N ))
-    imgs = np.vstack(imgs)
+    imgs = np.vstack(imgs).astype(np.float32)
     print(imgs.shape)
 
     if args.in_pose is None and args.t_extent:
@@ -261,9 +264,23 @@ def main(args):
     else:
         trans = None
 
-
     if trans is not None:
-        imgs = np.asarray([translate_img(img, t) for img,t in zip(imgs,trans)])
+        nchunks = np.ceil(imgs.shape[0] / args.chunk).astype(int)
+        out_mrcs = ['.{}'.format(i).join(os.path.splitext(args.o)) for i in range(nchunks)]
+        chunk_names = [os.path.basename(x) for x in out_mrcs]
+        for i in range(nchunks):
+            log('Processing chunk {}'.format(i))
+            chunk_imgs = imgs[i * args.chunk:(i + 1) * args.chunk]
+            chunk_trans = trans[i * args.chunk:(i + 1) * args.chunk]
+            chunk_translated = np.asarray([translate_img(img, t) for img,t in zip(chunk_imgs, chunk_trans)], dtype=np.float32)
+            log(chunk_translated.shape)
+            log(f'Saving {out_mrcs[i]}')
+            mrc.write(out_mrcs[i], chunk_translated, is_vol=False)
+        out_txt = '{}.txt'.format(os.path.splitext(args.o)[0])
+        log(f'Saving {out_txt}')
+        with open(out_txt, 'w') as f:
+            f.write('\n'.join(chunk_names))
+        # imgs = np.asarray([translate_img(img, t) for img,t in zip(imgs,trans)], dtype=np.float32)
         # convention: we want the first column to be x shift and second column to be y shift
         # reverse columns since current implementation of translate_img uses scipy's 
         # fourier_shift, which is flipped the other way
@@ -274,8 +291,8 @@ def main(args):
         assert D % 2 == 0
         trans /= D
 
-    log('Saving {}'.format(args.o))
-    mrc.write(args.o,imgs.astype(np.float32))
+    # log('Saving {}'.format(args.o))
+    # mrc.write(args.o,imgs.astype(np.float32))
     log('Saving {}'.format(args.out_pose))
     with open(args.out_pose,'wb') as f:
         if args.t_extent:
