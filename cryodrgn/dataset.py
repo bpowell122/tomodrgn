@@ -258,23 +258,25 @@ class LazyTiltSeriesMRCData(data.Dataset):
     Class representing an .mrcs stack file -- particleseries of tilt-related images loaded on the fly
     Currently supports initializing mrcfile from .star exported by warp when generating particleseries
     '''
-    def __init__(self, mrcfile, norm=None, keepreal=False, invert_data=False, ind=None, window=True, datadir=None,
-                 relion31=False, window_r=0.85, do_dose_weighting=False, dose_override=None, do_tilt_weighting=False):
-        assert not keepreal, 'Not implemented error'
+    def __init__(self, mrcfile, norm=None, invert_data=False, ind=None, window=True, datadir=None,
+                 window_r=0.85, do_dose_weighting=False, dose_override=None, do_tilt_weighting=False):
+        log('Parsing metadata...')
         particles_df = starfile.TiltSeriesStarfile.load(mrcfile)
         nptcls, ntilts = particles_df.get_tiltseries_shape()
         expanded_ind_base = np.array([np.arange(i * ntilts, (i + 1) * ntilts) for i in range(nptcls)])  # 2D array [(ind_ptcl, inds_imgs)]
+
+        log('Loading particles...')
         if ind is not None:
-            particles = particles_df.get_particles(datadir=datadir, lazy=True)  # shape(n_unique_ptcls * n_tilts, D, D)
+            lazyparticles = particles_df.get_particles(datadir=datadir, lazy=True)  # shape(n_unique_ptcls * n_tilts, D, D)
             expanded_ind = expanded_ind_base[ind].reshape(-1) # 1D array [(ind_imgs_selected)]
-            particles = [particles[i] for i in expanded_ind] # ind must be relative to each unique ptcl, not each unique image
-            nptcls = int(len(particles)/ntilts)
+            lazyparticles = [lazyparticles[i] for i in expanded_ind] # ind must be relative to each unique ptcl, not each unique image
+            nptcls = int(len(lazyparticles)/ntilts)
         else:
-            particles = particles_df.get_particles(datadir=datadir, lazy=True)
+            lazyparticles = particles_df.get_particles(datadir=datadir, lazy=True)
             expanded_ind = expanded_ind_base.reshape(-1)
 
-        nimgs = len(particles)
-        ny, nx = particles[0].get().shape
+        nimgs = len(lazyparticles)
+        ny, nx = lazyparticles[0].get().shape
         assert ny == nx, "Images must be square"
         assert ny % 2 == 0, "Image size must be even"
         log('Preparing to lazily load {} {}x{}x{} subtomo particleseries on-the-fly'.format(nptcls, ntilts, ny, nx))
@@ -288,7 +290,7 @@ class LazyTiltSeriesMRCData(data.Dataset):
             dose_weights = calculate_dose_weights(particles_df, dose_override, ntilts, ny_ht, nx_ht, nx, ny)
             spatial_frequencies = get_spatial_frequencies(particles_df, ny_ht, nx_ht, nx, ny)
         else:
-            log('Dose weighting not performed; all frequencies will be equally weighted for loss')
+            log('Dose weighting not performed; all frequencies will be equally weighted')
             dose_weights = np.ones((ntilts, ny_ht, nx_ht))
             spatial_frequencies = get_spatial_frequencies(particles_df, ny_ht, nx_ht, nx, ny)
 
@@ -297,17 +299,18 @@ class LazyTiltSeriesMRCData(data.Dataset):
             log('Using cosine(tilt_angle) weighting')
             cosine_weights = particles_df.get_tiltseries_cosine_weight(ntilts)
             dose_weights *= cosine_weights.reshape(ntilts,1,1)
+        else:
+            log('Cosing(tilt_angle) weighting not performed; all tilt angles will be equally weighted')
         cumulative_weights = dose_weights
 
         # particles = particles.reshape(nptcls, ntilts, ny_ht, nx_ht)  # reshape to 4-dim ptcl stack for DataLoader
-        particles = [particles[ntilts*i : ntilts*(i+1)] for i in range(nptcls)] # reshape to list (of all ptcls) of lists (of tilt images for each ptcl)
+        lazyparticles = [lazyparticles[ntilts*i : ntilts*(i+1)] for i in range(nptcls)] # reshape to list (of all ptcls) of lists (of tilt images for each ptcl)
 
-        self.particles = particles
+        self.particles = lazyparticles
         self.nptcls = nptcls
         self.ntilts = ntilts
         self.nimgs = nimgs
         self.D = ny + 1 # what particles.shape[-1] will be after symmetrizing HT
-        self.keepreal = keepreal
         self.expanded_ind = expanded_ind
         self.invert_data = invert_data
         self.cumulative_weights = cumulative_weights
@@ -429,21 +432,30 @@ class TiltSeriesMRCData(data.Dataset):
     Currently supports initializing mrcfile from .star exported by warp when generating particleseries
     '''
 
-    def __init__(self, mrcfile, norm=None, keepreal=False, invert_data=False, ind=None, window=True, datadir=None,
-                 max_threads=16, window_r=0.85, do_dose_weighting=False, dose_override=None, do_tilt_weighting=False):
+    def __init__(self, mrcfile, norm=None, invert_data=False, ind=None, window=True, datadir=None,
+                 window_r=0.85, do_dose_weighting=False, dose_override=None, do_tilt_weighting=False):
+        log('Parsing metadata...')
         particles_df = starfile.TiltSeriesStarfile.load(mrcfile)
         nptcls, ntilts = particles_df.get_tiltseries_shape()
         expanded_ind_base = np.array([np.arange(i * ntilts, (i + 1) * ntilts) for i in range(nptcls)])  # 2D array [(ind_ptcl, inds_imgs)]
+
+        log('Loading particles...')
         if ind is not None:
-            particles = particles_df.get_particles(datadir=datadir, lazy=True)  # shape(n_unique_ptcls * n_tilts, D, D)
+            lazyparticles = particles_df.get_particles(datadir=datadir, lazy=True)  # shape(n_unique_ptcls * n_tilts, D, D)
             expanded_ind = expanded_ind_base[ind].reshape(-1) # 1D array [(ind_imgs_selected)]
-            particles = np.array([particles[i].get() for i in expanded_ind], dtype=np.float32) #note that ind must be relative to each unique ptcl, not each unique image
-            nptcls = int(particles.shape[0]/ntilts)
+            lazyparticles = [lazyparticles[i] for i in expanded_ind]
+            nptcls = int(len(lazyparticles)/ntilts)
+            D = lazyparticles[0].shape[0]
+
+            # preallocating numpy array for in-place loading, fourier transform, fourier transform centering, etc
+            particles = np.empty((len(expanded_ind), D + 1, D + 1), dtype=np.float32)
+            for i, img in enumerate(lazyparticles): particles[i, :-1, :-1] = img.get().astype('np.float32')
+
         else:
             particles = particles_df.get_particles(datadir=datadir, lazy=False)
             expanded_ind = expanded_ind_base.reshape(-1)
 
-        nimgs, ny, nx = particles.shape
+        nimgs, ny, nx = np.subtract(particles.shape, (0, 1, 1))
         assert ny == nx, "Images must be square"
         assert ny % 2 == 0, "Image size must be even"
         log('Loaded {} {}x{}x{} subtomo particleseries'.format(nptcls, ntilts, ny, nx))
@@ -451,24 +463,19 @@ class TiltSeriesMRCData(data.Dataset):
         # Real space window
         if window:
             m = window_mask(ny, window_r, .99)
-            particles *= m
+            particles[:,:-1,:-1] *= m
 
         # compute HT
         log('Computing FFT')
-        max_threads = min(max_threads, mp.cpu_count())
-        if max_threads > 1:
-            log(f'Spawning {max_threads} processes')
-            with Pool(max_threads) as p:
-                particles = np.asarray(p.map(fft.ht2_center, particles), dtype=np.float32)
-        else:
-            particles = np.asarray([fft.ht2_center(img) for img in particles], dtype=np.float32)
+        for i, img in enumerate(particles):
+            particles[i,:-1,:-1] = fft.ht2_center(img[:-1,:-1])
         log('Converted to FFT')
 
         if invert_data:
             particles *= -1
 
         # symmetrize HT
-        particles = fft.symmetrize_ht(particles)
+        particles = fft.symmetrize_ht(particles, preallocated=True)
         _, ny_ht, nx_ht = particles.shape
 
         # calculate dose-weighting matrix
@@ -477,7 +484,7 @@ class TiltSeriesMRCData(data.Dataset):
             dose_weights = calculate_dose_weights(particles_df, dose_override, ntilts, ny_ht, nx_ht, nx, ny)
             spatial_frequencies = get_spatial_frequencies(particles_df, ny_ht, nx_ht, nx, ny)
         else:
-            log('Dose weighting not performed; all frequencies will be equally weighted for loss')
+            log('Dose weighting not performed; all frequencies will be equally weighted')
             dose_weights = np.ones((ntilts, ny_ht, nx_ht))
             spatial_frequencies = get_spatial_frequencies(particles_df, ny_ht, nx_ht, nx, ny)
 
@@ -486,13 +493,16 @@ class TiltSeriesMRCData(data.Dataset):
             log('Using cosine(tilt_angle) weighting')
             cosine_weights = particles_df.get_tiltseries_cosine_weight(ntilts)
             dose_weights *= cosine_weights.reshape(ntilts,1,1)
+        else:
+            log('Cosing(tilt_angle) weighting not performed; all tilt angles will be equally weighted')
         cumulative_weights = dose_weights
 
         # normalize
         if norm is None:
-            norm  = [np.mean(particles), np.std(particles)]
-            norm[0] = 0
-        particles = (particles - norm[0])/norm[1]
+            norm = np.array([np.mean(particles), np.std(particles)], dtype=np.float32)
+            norm[0] = 0.
+        # particles = (particles - norm[0])/norm[1]
+        particles /= norm[1]
         log('Normalized HT by {} +/- {}'.format(*norm))
 
         particles = particles.reshape(nptcls, ntilts, ny_ht, nx_ht)  # reshape to 4-dim ptcl stack for DataLoader
@@ -502,12 +512,9 @@ class TiltSeriesMRCData(data.Dataset):
         self.nptcls = nptcls
         self.ntilts = ntilts
         self.D = particles.shape[-1]
-        self.keepreal = keepreal
         self.expanded_ind = expanded_ind
         self.cumulative_weights = cumulative_weights
         self.spatial_frequencies = spatial_frequencies
-        if keepreal: raise NotImplementedError
-            # self.particles_real = particles_real
 
     def __len__(self):
         return self.nptcls
