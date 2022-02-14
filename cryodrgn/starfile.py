@@ -205,11 +205,14 @@ class TiltSeriesStarfile():
         D = header.D # image size along one dimension in pixels
         dtype = header.dtype
         stride = dtype().itemsize*D*D
-        dataset = [LazyImage(f, (D,D), dtype, 1024+ii*stride) for ii,f in zip(ind, mrcs)]
-        if not lazy: # not sure how to implement lazy loading yet
-            dataset = np.array([x.get() for x in dataset])
-        # dataset = dataset.reshape((len(unique_ptcls), ntilts, D, D))
-        return dataset
+        lazyparticles = [LazyImage(f, (D,D), dtype, 1024+ii*stride) for ii,f in zip(ind, mrcs)]
+        if lazy:
+            return lazyparticles
+        else:
+            # preallocating numpy array for in-place loading, fourier transform, fourier transform centering, etc
+            particles = np.empty((len(lazyparticles), D+1, D+1), dtype=np.float32)
+            for i, img in enumerate(lazyparticles): particles[i,:-1,:-1] = img.get().astype(np.float32)
+            return particles
 
     def get_tiltseries_shape(self):
         unique_ptcls = self.df['_rlnGroupName'].unique()
