@@ -449,7 +449,7 @@ class TiltSeriesMRCData(data.Dataset):
 
             # preallocating numpy array for in-place loading, fourier transform, fourier transform centering, etc
             particles = np.empty((len(expanded_ind), D + 1, D + 1), dtype=np.float32)
-            for i, img in enumerate(lazyparticles): particles[i, :-1, :-1] = img.get().astype('np.float32')
+            for i, img in enumerate(lazyparticles): particles[i, :-1, :-1] = img.get()
 
         else:
             particles = particles_df.get_particles(datadir=datadir, lazy=False)
