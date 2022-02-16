@@ -204,10 +204,10 @@ def preprocess_input(y, lattice, trans, cumulative_weights, ctf_params=None):
     else:
         c = None
 
-    # weight the image by dose and tilt as requested (uniform weighting if not requested)
+    # weight the image uniformly or by dose and/or tilt
     y *= cumulative_weights.view(1, ntilts, D, D)
 
-    # return translated, CTF-phase-flipped, dose+tilt-weighted particle stack for encoding+decoding+loss calculation
+    # return translated, CTF-phase-flipped, dose+tilt-weighted particle stack for encoder+decoder+loss calculation
     return y, c
 
 
@@ -219,11 +219,11 @@ def run_batch(model, lattice, y, rot, c=None):
     # encode
     z_mu, z_logvar = _unparallelize(model).encode(y, B, ntilts) # ouput is B x zdim, i.e. one value per ptcl (not per img)
     z = _unparallelize(model).reparameterize(z_mu, z_logvar)
-    # TODO replace with def expand_ntilts(array, ntilts=41): return np.repeat(array, ntilts, axis=0)
-    z = z.repeat(1,ntilts).reshape(B*ntilts, -1)# expand z to repeat value for all tilts in particle, B*ntilts x zim
+    z = torch.repeat_interleave(z, ntilts, dim=0) # expand z to repeat value for all tilts in particle, B*ntilts x zdim
 
     # decode
     mask = lattice.get_circular_mask(D // 2)  # restrict to circular mask
+    #TODO add mask from doseweighting here, take intersection of the two
     y_recon = model(lattice.coords[mask] / lattice.extent / 2 @ rot, z).view(B*ntilts, -1)
     if c is not None:
         y_recon *= c.view(B*ntilts, -1)[:, mask]
@@ -241,7 +241,7 @@ def loss_function(z_mu, z_logvar, y, c, y_recon, mask, beta, beta_control=None):
     # reconstruction error
     B = y.size(0)
     ntilts = y.size(1)
-    y *= c.sign() # undo phase flipping from preprocessing
+    y *= c.sign() # undo phase flipping from minibatch preprocessing
     gen_loss = F.mse_loss(y_recon, y.view(B*ntilts,-1)[:, mask])
 
     # latent loss
@@ -251,7 +251,7 @@ def loss_function(z_mu, z_logvar, y, c, y_recon, mask, beta, beta_control=None):
     if beta_control is None:
         loss = gen_loss + beta*kld/mask.sum().float()/ntilts
     else:
-        loss = gen_loss + beta_control*(beta-kld)**2/mask.sum().float()
+        loss = gen_loss + beta_control*(beta-kld)**2/mask.sum().float()/ntilts
     return loss, gen_loss, kld
 
 
@@ -368,6 +368,7 @@ def main(args):
         flog('Loading ctf params from {}'.format(args.ctf))
         ctf_params = ctf.load_ctf_for_training(D - 1, args.ctf)
         if args.ind is not None: ctf_params = ctf_params[expanded_ind]
+        assert ctf_params.shape == (Nimg, 8)
         ctf_params = torch.tensor(ctf_params)
     else:
         ctf_params = None
