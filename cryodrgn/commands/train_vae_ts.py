@@ -51,7 +51,6 @@ def add_args(parser):
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
     group.add_argument('--relion31', action='store_true', help='Flag if relion3.1 star format')
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
-    group.add_argument('--max-threads', type=int, default=16, help='Maximum number of CPU cores for FFT parallelization (default: %(default)s)')
 
     group = parser.add_argument_group('Tilt series')
     group.add_argument('--do-dose-weighting', action='store_true',
