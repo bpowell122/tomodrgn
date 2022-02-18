@@ -24,7 +24,6 @@ from cryodrgn.lattice import Lattice
 
 log = utils.log
 vlog = utils.vlog
-# TODO fix logging: everything to flog instead of log, and optional vlog where appropriate
 
 
 def add_args(parser):
