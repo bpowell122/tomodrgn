@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.cuda.amp import autocast
 
 from . import fft
 from . import lie_tools
@@ -267,7 +268,7 @@ def load_decoder(config, weights=None, device=None):
         model.to(device)
     return model
 
-def get_decoder(in_dim, D, layers, dim, domain, enc_type, enc_dim=None, activation=nn.ReLU):
+def get_decoder(in_dim, D, layers, dim, domain, enc_type, enc_dim=None, activation=nn.ReLU, use_amp=False):
     if enc_type == 'none':
         if domain == 'hartley':
             model = ResidLinearMLP(in_dim, layers, dim, 1, activation)
@@ -277,7 +278,7 @@ def get_decoder(in_dim, D, layers, dim, domain, enc_type, enc_dim=None, activati
         return model
     else:
         model = PositionalDecoder if domain == 'hartley' else FTPositionalDecoder 
-        return model(in_dim, D, layers, dim, activation, enc_type=enc_type, enc_dim=enc_dim)
+        return model(in_dim, D, layers, dim, activation, enc_type=enc_type, enc_dim=enc_dim, use_amp=use_amp)
  
 class PositionalDecoder(nn.Module):
     def __init__(self, in_dim, D, nlayers, hidden_dim, activation, enc_type='linear_lowf', enc_dim=None):
@@ -373,7 +374,7 @@ class PositionalDecoder(nn.Module):
         return vol
 
 class FTPositionalDecoder(nn.Module):
-    def __init__(self, in_dim, D, nlayers, hidden_dim, activation, enc_type='linear_lowf', enc_dim=None):
+    def __init__(self, in_dim, D, nlayers, hidden_dim, activation, enc_type='linear_lowf', enc_dim=None, use_amp=False):
         super(FTPositionalDecoder, self).__init__()
         assert in_dim >= 3
         self.zdim = in_dim - 3
@@ -384,6 +385,7 @@ class FTPositionalDecoder(nn.Module):
         self.enc_dim = self.D2 if enc_dim is None else enc_dim
         self.in_dim = 3 * (self.enc_dim) * 2 + self.zdim
         self.decoder = ResidLinearMLP(self.in_dim, nlayers, hidden_dim, 2, activation)
+        self.use_amp = use_amp
     
     def positional_encoding_geom(self, coords):
         '''Expand coordinates in the Fourier basis with geometrically spaced wavelengths from 2/D to 2pi'''
@@ -436,15 +438,16 @@ class FTPositionalDecoder(nn.Module):
         '''
         # if ignore_DC = False, then the size of the lattice will be odd (since it
         # includes the origin), so we need to evaluate one additional pixel
-        c = lattice.shape[-2]//2 # top half
-        cc = c + 1 if lattice.shape[-2] % 2 == 1 else c # include the origin
-        assert abs(lattice[...,0:3].mean()) < 1e-4, '{} != 0.0'.format(lattice[...,0:3].mean())
-        image = torch.empty(lattice.shape[:-1]) 
-        top_half = self.decode(lattice[...,0:cc,:])
-        image[..., 0:cc] = top_half[...,0] - top_half[...,1]
-        # the bottom half of the image is the complex conjugate of the top half
-        image[...,cc:] = (top_half[...,0] + top_half[...,1])[...,np.arange(c-1,-1,-1)]
-        return image
+        with autocast(enabled=self.use_amp):
+            c = lattice.shape[-2]//2 # top half
+            cc = c + 1 if lattice.shape[-2] % 2 == 1 else c # include the origin
+            assert abs(lattice[...,0:3].mean()) < 1e-4, '{} != 0.0'.format(lattice[...,0:3].mean())
+            image = torch.empty(lattice.shape[:-1])
+            top_half = self.decode(lattice[...,0:cc,:])
+            image[..., 0:cc] = top_half[...,0] - top_half[...,1]
+            # the bottom half of the image is the complex conjugate of the top half
+            image[...,cc:] = (top_half[...,0] + top_half[...,1])[...,np.arange(c-1,-1,-1)]
+            return image
 
     def decode(self, lattice):
         '''Return FT transform'''

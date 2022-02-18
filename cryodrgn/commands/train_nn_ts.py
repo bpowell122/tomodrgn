@@ -32,10 +32,8 @@ def add_args(parser):
     parser.add_argument('--poses', type=os.path.abspath, required=True, help='Image poses (.pkl)')
     parser.add_argument('--ctf', metavar='pkl', type=os.path.abspath, help='CTF parameters (.pkl)')
     parser.add_argument('--load', metavar='WEIGHTS.PKL', help='Initialize training from a checkpoint')
-    parser.add_argument('--checkpoint', type=int, default=1,
-                        help='Checkpointing interval in N_EPOCHS (default: %(default)s)')
-    parser.add_argument('--log-interval', type=int, default=200,
-                        help='Logging interval in N_PTCLS (default: %(default)s)')
+    parser.add_argument('--checkpoint', type=int, default=1, help='Checkpointing interval in N_EPOCHS (default: %(default)s)')
+    parser.add_argument('--log-interval', type=int, default=200, help='Logging interval in N_PTCLS (default: %(default)s)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increaes verbosity')
     parser.add_argument('--seed', type=int, default=np.random.randint(0, 100000), help='Random seed')
 
@@ -280,7 +278,7 @@ def main(args):
     lattice = Lattice(D, extent=args.l_extent)
     activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]
     model = models.get_decoder(3, D, args.layers, args.dim, args.domain, args.pe_type, enc_dim=args.pe_dim,
-                               activation=activation)
+                               activation=activation, use_amp = args.use_amp)
     flog(model)
     flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
 
