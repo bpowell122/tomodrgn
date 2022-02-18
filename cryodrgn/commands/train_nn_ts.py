@@ -9,18 +9,12 @@ from datetime import datetime as dt
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.utils.data import DataLoader
-
-try:
-    import apex.amp as amp
-except:
-    pass
+from torch.cuda.amp import GradScaler, autocast
 
 import cryodrgn
 from cryodrgn import mrc
 from cryodrgn import utils
-from cryodrgn import fft
 from cryodrgn import dataset
 from cryodrgn import ctf
 from cryodrgn import models
@@ -101,7 +95,7 @@ def save_checkpoint(model, lattice, optim, epoch, norm, Apix, out_mrc, out_weigh
     }, out_weights)
 
 
-def train(model, lattice, optim, y, cumulative_weights, rot, trans=None, ctf_params=None, use_amp=False, skip_zeros=False):
+def train(scaler, model, lattice, optim, y, cumulative_weights, rot, trans=None, ctf_params=None, use_amp=False, skip_zeros=False):
     model.train()
     optim.zero_grad()
     B = y.size(0)
@@ -119,15 +113,7 @@ def train(model, lattice, optim, y, cumulative_weights, rot, trans=None, ctf_par
     else:
         final_mask = lattice_mask
 
-    # evaluate model at masked fourier components
-    yhat = model(lattice.coords[final_mask] @ rot).view(B*ntilts, -1)
-    if ctf_params is not None:
-        freqs = lattice.freqs2d[final_mask]
-        freqs = freqs.unsqueeze(0).expand(B*ntilts, *freqs.shape) / ctf_params[:, 0].view(B*ntilts, 1, 1)
-        yhat *= ctf.compute_ctf(freqs, *torch.split(ctf_params[:, 1:], 1, 1))
-    yhat = yhat.view(B, ntilts, -1)
-
-    # process corresponding real data
+    # process real data at masked fourier components
     y = y.view(B*ntilts, -1)[:, final_mask]
     if trans is not None:
         y = lattice.translate_ht(y, trans.unsqueeze(1), final_mask).view(B*ntilts, -1)
@@ -137,15 +123,23 @@ def train(model, lattice, optim, y, cumulative_weights, rot, trans=None, ctf_par
     cumulative_weights = cumulative_weights.view(ntilts, -1)[:, final_mask]
     cumulative_weights = cumulative_weights.view(1, ntilts, -1)
 
-    # calculate and backprop weighted loss
-    loss = ((yhat - y * cumulative_weights) ** 2).mean() # reconstruction loss vs dose+tilt weighted stack
-    if use_amp:
-        with amp.scale_loss(loss, optim) as scaled_loss:
-            scaled_loss.backward()
-    else:
-        # TODO consider new backward() to get gradient per cumulative_weighted pixel-wise MSE instead of global mean
-        loss.backward()
-    optim.step()
+    with autocast(enabled=use_amp):
+        # evaluate model at masked fourier components
+        yhat = model(lattice.coords[final_mask] @ rot).view(B*ntilts, -1)
+        if ctf_params is not None:
+            freqs = lattice.freqs2d[final_mask]
+            freqs = freqs.unsqueeze(0).expand(B*ntilts, *freqs.shape) / ctf_params[:, 0].view(B*ntilts, 1, 1)
+            yhat *= ctf.compute_ctf(freqs, *torch.split(ctf_params[:, 1:], 1, 1))
+        yhat = yhat.view(B, ntilts, -1)
+
+        # calculate weighted loss
+        loss = ((yhat - y * cumulative_weights) ** 2).mean() # reconstruction loss vs dose+tilt weighted stack
+
+    # backpropogate loss, update model
+    scaler.scale(loss).backward()
+    scaler.step(optim)
+    scaler.update()
+
     return loss.item()
 
 
@@ -328,12 +322,9 @@ def main(args):
     save_config(args, data, lattice, model, out_config)
 
     # Mixed precision training with AMP
-    if args.amp:
-        assert args.batch_size % 8 == 0
-        assert (D - 1) % 8 == 0
-        assert args.dim % 8 == 0
-        # Also check zdim, enc_mask dim?
-        model, optim = amp.initialize(model, optim, opt_level='O1')
+    use_amp = args.amp
+    flog(f'AMP acceleration enabled (autocast + gradscaler) : {use_amp}')
+    # TODO: add warnings if various layers / batchsize / etc not multiples of 8, not optimized
 
     # parallelize
     if args.multigpu and torch.cuda.device_count() > 1:
@@ -348,6 +339,7 @@ def main(args):
     data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=True)
     expanded_ind_rebased = torch.tensor([np.arange(i * Ntilts, (i + 1) * Ntilts) for i in range(Nptcls)]).to(device) # redefine training inds to remove gaps created by filtering dataset when loading
     cumulative_weights = torch.tensor(cumulative_weights).to(device)
+    scaler = GradScaler(enabled=use_amp)
     for epoch in range(start_epoch, args.num_epochs):
         t2 = dt.now()
         loss_accum = 0
@@ -361,7 +353,7 @@ def main(args):
                 pose_optimizer.zero_grad()
             r, t = posetracker.get_pose(batch_ind)
             c = ctf_params[batch_ind] if ctf_params is not None else None
-            loss_item = train(model, lattice, optim, y, cumulative_weights, r, trans=t, ctf_params=c, use_amp=args.amp, skip_zeros=args.skip_zeros)
+            loss_item = train(scaler, model, lattice, optim, y, cumulative_weights, r, trans=t, ctf_params=c, use_amp=use_amp, skip_zeros=args.skip_zeros)
             if args.do_pose_sgd and epoch >= args.pretrain:
                 pose_optimizer.step()
             loss_accum += loss_item * len(batch_ind)
