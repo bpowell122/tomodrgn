@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
+from torch.cuda.amp import GradScaler, autocast
 
 import cryodrgn
 from cryodrgn import utils
@@ -169,20 +170,19 @@ def save_config(args, dataset, lattice, model, out_config):
         pickle.dump(meta, f)
 
 
-def train_batch(model, lattice, y, cumulative_weights, rot, trans, optim, beta, beta_control=None, ctf_params=None, use_amp=False):
+def train_batch(scaler, model, lattice, y, cumulative_weights, rot, trans, optim, beta, beta_control=None, ctf_params=None, use_amp=False):
     optim.zero_grad()
     model.train()
 
-    y, c = preprocess_input(y, lattice, trans, cumulative_weights, ctf_params)
-    z_mu, z_logvar, z, y_recon, mask = run_batch(model, lattice, y, rot, c)
-    loss, gen_loss, kld = loss_function(z_mu, z_logvar, y, c, y_recon, mask, beta, beta_control)
+    with autocast(enabled=use_amp):
+        y, c = preprocess_input(y, lattice, trans, cumulative_weights, ctf_params)
+        z_mu, z_logvar, z, y_recon, mask = run_batch(model, lattice, y, rot, c)
+        loss, gen_loss, kld = loss_function(z_mu, z_logvar, y, c, y_recon, mask, beta, beta_control)
 
-    if use_amp:
-        with amp.scale_loss(loss, optim) as scaled_loss:
-            scaled_loss.backward()
-    else:
-        loss.backward()
-    optim.step()
+    scaler.scale(loss).backward()
+    scaler.step(optim)
+    scaler.update()
+
     return loss.item(), gen_loss.item(), kld.item()
 
 
@@ -403,18 +403,9 @@ def main(args):
     optim = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.wd) #BMP CHANGED TO AdamW
 
     # Mixed precision training with AMP
-    if args.amp:
-        assert args.batch_size % 8 == 0, "Batch size must be divisible by 8 for AMP training"
-        assert (D - 1) % 8 == 0, "Image size must be divisible by 8 for AMP training"
-        assert args.pdim % 8 == 0, "Decoder hidden layer dimension must be divisible by 8 for AMP training"
-        assert args.qdimA % 8 == 0, "Encoder hidden layer A dimension must be divisible by 8 for AMP training"
-        assert args.qdimB % 8 == 0, "Encoder hidden layer B dimension must be divisible by 8 for AMP training"
-        # Also check zdim, enc_mask dim? Add them as warnings for now.
-        if args.zdim % 8 != 0:
-            log('Warning: z dimension is not a multiple of 8 -- AMP training speedup is not optimized')
-        if in_dim % 8 != 0:
-            log('Warning: Masked input image dimension is not a mutiple of 8 -- AMP training speedup is not optimized')
-        model, optim = amp.initialize(model, optim, opt_level='O1')
+    use_amp = args.amp
+    flog(f'AMP acceleration enabled (autocast + gradscaler) : {use_amp}')
+    # TODO: add warnings if various layers / batchsize / etc not multiples of 8, not optimized
 
     # restart from checkpoint
     if args.load:
@@ -441,6 +432,7 @@ def main(args):
     expanded_ind_rebased = torch.tensor([np.arange(i * Ntilts, (i + 1) * Ntilts) for i in range(Nptcls)]).to(device) # redefine training inds to remove gaps created by filtering dataset when loading
     cumulative_weights = torch.tensor(cumulative_weights).to(device)
     num_epochs = args.num_epochs
+    scaler = GradScaler(enabled=use_amp)
     for epoch in range(start_epoch, num_epochs):
         t2 = dt.now()
         gen_loss_accum = 0
@@ -460,7 +452,7 @@ def main(args):
             batch_ind = batch_ind.to(device)
             rot, tran = posetracker.get_pose(batch_ind)
             ctf_param = ctf_params[batch_ind] if ctf_params is not None else None
-            loss, gen_loss, kld = train_batch(model, lattice, y, cumulative_weights, rot, tran, optim, beta, args.beta_control, ctf_params=ctf_param, use_amp=args.amp)
+            loss, gen_loss, kld = train_batch(scaler, model, lattice, y, cumulative_weights, rot, tran, optim, beta, args.beta_control, ctf_params=ctf_param, use_amp=use_amp)
 
             # logging
             gen_loss_accum += gen_loss*len(batch_ind)
