@@ -145,18 +145,20 @@ class TiltSeriesHetOnlyVAE(nn.Module):
                  enc_type='geom_lowf',
                  enc_dim=None,
                  domain='fourier',
-                 activation = nn.ReLU):
+                 activation = nn.ReLU,
+                 use_amp=False):
         super(TiltSeriesHetOnlyVAE, self).__init__()
         self.lattice = lattice
         self.zdim = zdim
         self.in_dim = in_dim
         self.enc_mask = enc_mask
+        self.use_amp = use_amp
         if encode_mode == 'tiltseries':
             self.encoder = TiltSeriesEncoder(in_dim, qlayersA, qdimA, ntilts, qlayersB, qdimB, zdim * 2, activation)
         else:
             raise RuntimeError('Encoder mode {} not recognized'.format(encode_mode))
         self.encode_mode = encode_mode
-        self.decoder = get_decoder(3 + zdim, lattice.D, players, pdim, domain, enc_type, enc_dim, activation)
+        self.decoder = get_decoder(3 + zdim, lattice.D, players, pdim, domain, enc_type, enc_dim, activation, use_amp=use_amp)
 
     @classmethod
     def load(self, config, weights=None, device=None):

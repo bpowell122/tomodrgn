@@ -278,7 +278,7 @@ def main(args):
     lattice = Lattice(D, extent=args.l_extent)
     activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]
     model = models.get_decoder(3, D, args.layers, args.dim, args.domain, args.pe_type, enc_dim=args.pe_dim,
-                               activation=activation, use_amp = args.use_amp)
+                               activation=activation, use_amp = args.amp)
     flog(model)
     flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
 

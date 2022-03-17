@@ -390,7 +390,7 @@ def main(args):
     model = TiltSeriesHetOnlyVAE(lattice, args.qlayersA, args.qdimA, Ntilts, args.qlayersB, args.qdimB,
                                  args.players, args.pdim, in_dim, args.zdim, encode_mode=args.encode_mode,
                                  enc_mask=enc_mask, enc_type=args.pe_type, enc_dim=args.pe_dim,
-                                 domain=args.domain, activation=activation)
+                                 domain=args.domain, activation=activation, use_amp=args.amp)
     flog(model)
     flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
     flog('{} parameters in encoder'.format(sum(p.numel() for p in model.encoder.parameters() if p.requires_grad)))
@@ -400,7 +400,7 @@ def main(args):
     out_config = f'{args.outdir}/config.pkl'
     save_config(args, data, lattice, model, out_config)
 
-    optim = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.wd) #BMP CHANGED TO AdamW
+    optim = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.wd)
 
     # Mixed precision training with AMP
     use_amp = args.amp
