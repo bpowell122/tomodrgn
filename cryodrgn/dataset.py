@@ -494,13 +494,14 @@ class TiltSeriesMRCData(data.Dataset):
             cosine_weights = particles_df.get_tiltseries_cosine_weight(ntilts)
             dose_weights *= cosine_weights.reshape(ntilts,1,1)
         else:
-            log('Cosing(tilt_angle) weighting not performed; all tilt angles will be equally weighted')
+            log('Cosine(tilt_angle) weighting not performed; all tilt angles will be equally weighted')
         cumulative_weights = dose_weights
 
         # normalize
         if norm is None:
-            norm = np.array([np.mean(particles), np.std(particles)], dtype=np.float32)
-            norm[0] = 0.
+            random_ptcls_for_normalization = np.random.choice(np.arange(nimgs), nimgs // 100, replace=False)
+            norm = [np.mean(particles[random_ptcls_for_normalization]), np.std(particles[random_ptcls_for_normalization])]
+            norm[0] = 0
         # particles = (particles - norm[0])/norm[1]
         particles /= norm[1]
         log('Normalized HT by {} +/- {}'.format(*norm))
