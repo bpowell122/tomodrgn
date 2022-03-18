@@ -404,13 +404,13 @@ class FTPositionalDecoder(nn.Module):
             return self.positional_encoding_linear(coords)
         else:
             raise RuntimeError('Encoding type {} not recognized'.format(self.enc_type))
-        freqs = freqs.view(*[1]*len(coords.shape), -1) # 1 x 1 x D2
-        coords = coords.unsqueeze(-1) # B x 3 x 1
-        k = coords[...,0:3,:] * freqs # B x 3 x D2
-        s = torch.sin(k) # B x 3 x D2
-        c = torch.cos(k) # B x 3 x D2
-        x = torch.cat([s,c], -1) # B x 3 x D
-        x = x.view(*coords.shape[:-2], self.in_dim-self.zdim) # B x in_dim-zdim
+        freqs = freqs.view(*[1]*len(coords.shape), -1) # 1 x 1 x D2             # 1 x 1 x 1 x D2         # 1 x 1 x 1 x D2
+        coords = coords.unsqueeze(-1) # B x 3 x 1                               # B x N/2 x 3 x 1        # 1 x B*N x 3 x 1
+        k = coords[...,0:3,:] * freqs # B x 3 x D2                              # B x N/2 x 3 x D2       # 1 x B*N x 3 x D2
+        s = torch.sin(k) # B x 3 x D2                                           # B x N/2 x 3 x D2       # 1 x B*N x 3 x D2
+        c = torch.cos(k) # B x 3 x D2                                           # B x N/2 x 3 x D2       # 1 x B*N x 3 x D2
+        x = torch.cat([s,c], -1) # B x 3 x D                                    # B x N/2 x 3 x D        # 1 x B*N x 3 x D
+        x = x.view(*coords.shape[:-2], self.in_dim-self.zdim) # B x in_dim-zdim # B x N/2 x in_dim-zdim  # 1 x B*N x in_dim-zdim
         if self.zdim > 0:
             x = torch.cat([x,coords[...,3:,:].squeeze(-1)], -1)
             assert x.shape[-1] == self.in_dim
@@ -431,30 +431,55 @@ class FTPositionalDecoder(nn.Module):
             assert x.shape[-1] == self.in_dim
         return x
 
-    def forward(self, lattice):
+    def forward(self, lattice, eval_all_coords=False):
         '''
         Call forward on central slices only
             i.e. the middle pixel should be (0,0,0)
-
-        lattice: B x N x 3+zdim
         '''
         # if ignore_DC = False, then the size of the lattice will be odd (since it
         # includes the origin), so we need to evaluate one additional pixel
         with autocast(enabled=self.use_amp):
-            c = lattice.shape[-2]//2 # top half
-            cc = c + 1 if lattice.shape[-2] % 2 == 1 else c # include the origin
-            assert abs(lattice[...,0:3].mean()) < 1e-4, '{} != 0.0'.format(lattice[...,0:3].mean())
-            image = torch.empty(lattice.shape[:-1])
-            top_half = self.decode(lattice[...,0:cc,:])
-            image[..., 0:cc] = top_half[...,0] - top_half[...,1]
-            # the bottom half of the image is the complex conjugate of the top half
-            image[...,cc:] = (top_half[...,0] + top_half[...,1])[...,np.arange(c-1,-1,-1)]
-            return image
+            if eval_all_coords == False: # lattice: B x N x 3+zdim
+                # get number of pixels in top half of each image
+                c = lattice.shape[-2]//2 # top half
+                cc = c + 1 if lattice.shape[-2] % 2 == 1 else c # include the origin
+
+                # check that all coordinates are centered around 0
+                assert abs(lattice[...,0:3].mean()) < 1e-4, '{} != 0.0'.format(lattice[...,0:3].mean())
+
+                # allocate B x N array for pixel values to be stored after model evaluated
+                image = torch.empty(lattice.shape[:-1])
+
+                # evaluate model on pixel coordinates for top half of each image
+                top_half = self.decode(lattice[...,0:cc,:])
+
+                # store hartley information (FT real - FT imag) for top half of each image
+                image[..., 0:cc] = top_half[...,0] - top_half[...,1]
+
+                # cheaply evaluate the bottom half of the image as the complex conjugate of the top half
+                image[...,cc:] = (top_half[...,0] + top_half[...,1])[...,np.arange(c-1,-1,-1)]
+
+                return image
+
+            else: # lattice: B x ntilts*N x 3+zdim, useful when images are different sizes to avoid ragged tensors
+                # check that all coordinates are centered around 0
+                assert abs(lattice[...,0:3].mean()) < 1e-4, '{} != 0.0'.format(lattice[...,0:3].mean())
+
+                # allocate B x N array for pixel values to be stored after model evaluated
+                image = torch.empty(lattice.shape[:-1])
+
+                # evaluate model on all pixel coordinates for each image
+                full_image = self.decode(lattice)
+
+                # return hartley information (FT real - FT imag) for each image
+                image = full_image[...,0] - full_image[...,1]
+
+                return image
+
 
     def decode(self, lattice):
         '''Return FT transform'''
         assert (lattice[...,0:3].abs() - 0.5 < 1e-3).all(), f'lattice[...,0:3].max(): {lattice[...,0:3].max().to(torch.float32)}'
-        # assert (lattice[...,0:3].abs() - 0.5 < 1e-4).all(), f'lattice[...,0:3].max(): {lattice[...,0:3].max().to(torch.float32)}'
         # convention: only evalute the -z points
         w = lattice[...,2] > 0.0
         lattice[...,0:3][w] = -lattice[...,0:3][w] # negate lattice coordinates where z > 0

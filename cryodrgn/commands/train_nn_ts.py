@@ -102,35 +102,40 @@ def train(scaler, model, lattice, optim, y, cumulative_weights, rot, trans=None,
     # create masks to avoid passing DxD frequencies through model
     lattice_mask = lattice.get_circular_mask(D // 2) # reconstruct circle of pixels instead of whole image
     if skip_zeros: # skip zero_weighted components
-        weights_mask = (cumulative_weights != 0).int()
+        weights_mask = torch.tensor(cumulative_weights != 0)
         final_mask = lattice_mask.view(1,D,D) * weights_mask # mask is currently ntilts x D x D
-        assert np.all(final_mask.reshape(ntilts,-1).cpu().numpy().sum(axis=1)) > 0, 'Masking error caused index error. Please repeat without --skip-zeros'
-        raise NotImplementedError
-        # TODO divine scheme to skip model(coord) where cumulative_weights[coord]==0
     else:
-        final_mask = lattice_mask
+        final_mask = lattice_mask.view(1,D,D).repeat(ntilts,1,1)
+    assert final_mask.shape == (ntilts, D, D)
 
     # process real data at masked fourier components
-    y = y.view(B*ntilts, -1)[:, final_mask]
     if trans is not None:
-        y = lattice.translate_ht(y, trans.unsqueeze(1), final_mask).view(B*ntilts, -1)
-    y = y.view(B, ntilts, -1)
+        y = lattice.translate_ht(y.view(B*ntilts,-1), trans.unsqueeze(1))
+    y = y.view(B, ntilts, D, D)[:,final_mask]
+    # print(f'y.shape: {y.shape}')
 
     # align and mask cumulative_weights with y and yhat shape
-    cumulative_weights = cumulative_weights.view(ntilts, -1)[:, final_mask]
-    cumulative_weights = cumulative_weights.view(1, ntilts, -1)
+    cumulative_weights = cumulative_weights[final_mask]
+    # print(f'cumulative_weights.shape: {cumulative_weights.shape}')
 
     with autocast(enabled=use_amp):
         # evaluate model at masked fourier components
-        yhat = model(lattice.coords[final_mask] @ rot).view(B*ntilts, -1)
+        input_coords = (lattice.coords @ rot).view(B,ntilts,D,D,3)[:,final_mask,:]
+        # input_coords = lattice.coords.unsqueeze(0).expand(ntilts,D*D,3).view(ntilts,D,D,3)[final_mask,:]
+        yhat = model(input_coords, eval_all_coords=True).view(B,-1) # B x ntilts*N[final_mask]
+        # print(yhat.shape)
         if ctf_params is not None:
-            freqs = lattice.freqs2d[final_mask]
-            freqs = freqs.unsqueeze(0).expand(B*ntilts, *freqs.shape) / ctf_params[:, 0].view(B*ntilts, 1, 1)
-            yhat *= ctf.compute_ctf(freqs, *torch.split(ctf_params[:, 1:], 1, 1))
-        yhat = yhat.view(B, ntilts, -1)
+            # freqs = lattice.freqs2d.unsqueeze(0).expand(ntilts,D*D,2).view(ntilts,D,D,2)[final_mask,:] # ntilts*N[final_mask] x 2
+            # freqs = freqs.unsqueeze(0).expand(B,-1,2)  # B x ntilts*N[final_mask] x 2
+            # freqs = freqs / ctf_params[:, 0].view(B, ntilts, 1)[:,0,0]
+            freqs = lattice.freqs2d.unsqueeze(0).expand(B*ntilts,-1,-1) / ctf_params[:,0].view(B*ntilts,1,1)
+            ctf_weights = ctf.compute_ctf(freqs, *torch.split(ctf_params[:, 1:], 1, 1))
+            yhat *= ctf_weights.view(B,ntilts,D,D)[:,final_mask]
+
+        # print(f'yhat.shape: {yhat.shape}')
 
         # calculate weighted loss
-        loss = ((yhat - y * cumulative_weights) ** 2).mean() # reconstruction loss vs dose+tilt weighted stack
+        loss = (cumulative_weights.view(1,-1)*((yhat - y) ** 2)).mean() # reconstruction loss vs input stack weighted by dose+tilt
 
     # backpropogate loss, update model
     scaler.scale(loss).backward()
