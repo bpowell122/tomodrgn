@@ -4,8 +4,8 @@ import argparse, os, fnmatch
 from cryodrgn import utils
 
 def add_args(parser):
-    parser.add_argument('--training-dir', type=os.path.abspath, help='cryodrgn train_nn directory containing reconstruct.N.mrc')
-    parser.add_argument('--reference-volume', type=os.path.abspath, help='volume against which to calculate FSC')
+    parser.add_argument('training_directory', type=os.path.abspath, help='cryodrgn train_nn directory containing reconstruct.N.mrc')
+    parser.add_argument('reference_volume', type=os.path.abspath, help='volume against which to calculate FSC')
     parser.add_argument('--max-epoch', type=int, help='Maximum epoch for which to calculate FSCs')
     return parser
 
