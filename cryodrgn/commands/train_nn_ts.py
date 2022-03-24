@@ -57,7 +57,7 @@ def add_args(parser):
     group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: mean, std of dataset)')
     group.add_argument('--amp', action='store_true', help='Use mixed-precision training')
     group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs')
-    group.add_argument('--skip-zeros', action='store_true', help='Reduce CUDA memory usage by ignoring 0-weight fourier components')
+    group.add_argument('--skip-zeros', action='store_true', help='Ignore fourier pixels exposed to > 2.5x critical dose')
 
     group = parser.add_argument_group('Pose SGD')
     group.add_argument('--do-pose-sgd', action='store_true', help='Refine poses')
@@ -92,47 +92,26 @@ def save_checkpoint(model, lattice, optim, epoch, norm, Apix, out_mrc, out_weigh
     }, out_weights)
 
 
-def train(scaler, model, lattice, optim, y, cumulative_weights, rot, trans=None, ctf_params=None, use_amp=False, skip_zeros=False):
+def train(scaler, model, lattice, optim, y, cumulative_weights, final_mask, rot, trans=None, ctf_params=None, use_amp=False, skip_zeros=False):
     model.train()
     optim.zero_grad()
     B = y.size(0)
     ntilts=y.size(1)
     D = lattice.D
 
-    # create masks to avoid passing DxD frequencies through model
-    lattice_mask = lattice.get_circular_mask(D // 2) # reconstruct circle of pixels instead of whole image
-    if skip_zeros: # skip zero_weighted components
-        weights_mask = torch.tensor(cumulative_weights != 0)
-        final_mask = lattice_mask.view(1,D,D) * weights_mask # mask is currently ntilts x D x D
-    else:
-        final_mask = lattice_mask.view(1,D,D).repeat(ntilts,1,1)
-    assert final_mask.shape == (ntilts, D, D)
-
-    # process real data at masked fourier components
-    if trans is not None:
-        y = lattice.translate_ht(y.view(B*ntilts,-1), trans.unsqueeze(1))
-    y = y.view(B, ntilts, D, D)[:,final_mask]
-    # print(f'y.shape: {y.shape}')
-
-    # align and mask cumulative_weights with y and yhat shape
-    cumulative_weights = cumulative_weights[final_mask]
-    # print(f'cumulative_weights.shape: {cumulative_weights.shape}')
-
     with autocast(enabled=use_amp):
+        # translate real data by input pose and apply fourier mask
+        if trans is not None:
+            y = lattice.translate_ht(y.view(B * ntilts, -1), trans.unsqueeze(1))
+        y = y.view(B, ntilts, D, D)[:, final_mask]
+
         # evaluate model at masked fourier components
         input_coords = (lattice.coords @ rot).view(B,ntilts,D,D,3)[:,final_mask,:]
-        # input_coords = lattice.coords.unsqueeze(0).expand(ntilts,D*D,3).view(ntilts,D,D,3)[final_mask,:]
         yhat = model(input_coords, eval_all_coords=True).view(B,-1) # B x ntilts*N[final_mask]
-        # print(yhat.shape)
         if ctf_params is not None:
-            # freqs = lattice.freqs2d.unsqueeze(0).expand(ntilts,D*D,2).view(ntilts,D,D,2)[final_mask,:] # ntilts*N[final_mask] x 2
-            # freqs = freqs.unsqueeze(0).expand(B,-1,2)  # B x ntilts*N[final_mask] x 2
-            # freqs = freqs / ctf_params[:, 0].view(B, ntilts, 1)[:,0,0]
             freqs = lattice.freqs2d.unsqueeze(0).expand(B*ntilts,-1,-1) / ctf_params[:,0].view(B*ntilts,1,1)
-            ctf_weights = ctf.compute_ctf(freqs, *torch.split(ctf_params[:, 1:], 1, 1))
-            yhat *= ctf_weights.view(B,ntilts,D,D)[:,final_mask]
-
-        # print(f'yhat.shape: {yhat.shape}')
+            ctf_weights = ctf.compute_ctf(freqs, *torch.split(ctf_params[:, 1:], 1, 1)).view(B,ntilts,D,D)[:,final_mask]
+            yhat *= ctf_weights
 
         # calculate weighted loss
         loss = (cumulative_weights.view(1,-1)*((yhat - y) ** 2)).mean() # reconstruction loss vs input stack weighted by dose+tilt
@@ -201,9 +180,11 @@ def plot_weight_distribution(cumulative_weights, spatial_frequencies, args):
     # plot distribution of dose weights across tilts in the spirit of https://doi.org/10.1038/s41467-021-22251-8
     # TODO incorporate xlim matching lattice limit representing frequencies actually used for training?
     import matplotlib.pyplot as plt
+    import matplotlib.ticker as mticker
 
     ntilts = cumulative_weights.shape[0]
-    sorted_frequency_list = sorted(set(spatial_frequencies.reshape(-1)))
+    max_frequency_box_edge = spatial_frequencies[0,spatial_frequencies.shape[0]//2]
+    sorted_frequency_list = sorted(set(spatial_frequencies[spatial_frequencies < max_frequency_box_edge].reshape(-1)))
     weights_plot = np.empty((len(sorted_frequency_list), ntilts))
 
     for i, frequency in enumerate(sorted_frequency_list):
@@ -220,6 +201,15 @@ def plot_weight_distribution(cumulative_weights, spatial_frequencies, args):
     ax.set_xlabel('spatial frequency (1/Å)')
     ax.set_xlim((0, sorted_frequency_list[-1]))
     ax.set_ylim((0, 1))
+
+    # ax.xaxis.set_major_locator(mticker.MaxNLocator())
+    ticks_loc = ax.get_xticks().tolist()
+    ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
+    ax.set_xticklabels([f'1/{1/xtick:.1f}' if xtick != 0.0 else 0 for xtick in ticks_loc])
+
+    # xticks = ax.get_xticks().tolist()
+    # ax.set_xticklabels([f'1/{1/xtick:.1f}' if xtick != 0.0 else 0 for xtick in xticks ])
+
     plt.savefig(f'{args.outdir}/cumulative_weights_across_frequencies_by_tilt.png', dpi=300)
 
 
@@ -319,6 +309,21 @@ def main(args):
         ctf_params = None
     Apix = ctf_params[0, 0] if ctf_params is not None else 1
 
+    # create dataset mask for which pixels will be evaluated
+    flog(f'Pixels per particle (input):  {np.prod(data.particles[0].shape)} ')
+    lattice_mask = lattice.get_circular_mask(lattice.D // 2) # reconstruct box-inscribed circle of pixels
+    flog(f'Pixels per particle (+ fourier circular mask):  {Ntilts*lattice_mask.sum()}')
+    if args.skip_zeros: # skip zero_weighted components
+        weights_mask = cumulative_weights != 0
+        final_mask = lattice_mask.view(1,D,D).cpu().numpy() * weights_mask # mask is currently ntilts x D x D
+        flog(f'Pixels per particle (+ skip-zeros mask):  {final_mask.sum()}')
+    else:
+        final_mask = lattice_mask.view(1,D,D).repeat(Ntilts,1,1).cpu().numpy()
+    assert final_mask.shape == (Ntilts, D, D)
+
+    # mask cumulative weights by final_mask
+    cumulative_weights = cumulative_weights[final_mask]
+
     # save configuration
     out_config = f'{args.outdir}/config.pkl'
     save_config(args, data, lattice, model, out_config)
@@ -339,8 +344,9 @@ def main(args):
 
     # train
     data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=True)
-    expanded_ind_rebased = torch.tensor([np.arange(i * Ntilts, (i + 1) * Ntilts) for i in range(Nptcls)]).to(device) # redefine training inds to remove gaps created by filtering dataset when loading
-    cumulative_weights = torch.tensor(cumulative_weights).to(device)
+    expanded_ind_rebased = torch.tensor([np.arange(i * Ntilts, (i + 1) * Ntilts) for i in range(Nptcls)]) # redefine training inds to remove gaps created by filtering dataset when loading
+    cumulative_weights = torch.tensor(cumulative_weights)
+    final_mask = torch.tensor(final_mask)
     scaler = GradScaler(enabled=use_amp)
     for epoch in range(start_epoch, args.num_epochs):
         t2 = dt.now()
@@ -349,13 +355,13 @@ def main(args):
         for batch, ind in data_generator:
             batch_ind = expanded_ind_rebased[ind].view(-1) # need to use expanded indexing for ctf and poses
             batch_it += len(batch_ind) # total number of images seen (+= batchsize*ntilts)
-            y = batch.to(device)
-            batch_ind = batch_ind.to(device)
+            y = batch
+            batch_ind = batch_ind
             if args.do_pose_sgd:
                 pose_optimizer.zero_grad()
             r, t = posetracker.get_pose(batch_ind)
             c = ctf_params[batch_ind] if ctf_params is not None else None
-            loss_item = train(scaler, model, lattice, optim, y, cumulative_weights, r, trans=t, ctf_params=c, use_amp=use_amp, skip_zeros=args.skip_zeros)
+            loss_item = train(scaler, model, lattice, optim, y, cumulative_weights, final_mask, r, trans=t, ctf_params=c, use_amp=use_amp, skip_zeros=args.skip_zeros)
             if args.do_pose_sgd and epoch >= args.pretrain:
                 pose_optimizer.step()
             loss_accum += loss_item * len(batch_ind)
