@@ -11,14 +11,14 @@ def add_args(parser):
 
 
 def main(args):
-    LOG = f'{args.training_dir}/convergence_nn.log'
+    LOG = f'{args.training_directory}/convergence_nn.log'
     def flog(msg):  # HACK: switch to logging module
         return utils.flog(msg, LOG)
 
     reconstruction_vols = []
-    for file in os.listdir(args.training_dir):
+    for file in os.listdir(args.training_directory):
         if fnmatch.fnmatch(file, 'reconstruct.*.mrc'):
-            reconstruction_vols.append(os.path.abspath(os.path.join(args.training_dir, file)))
+            reconstruction_vols.append(os.path.abspath(os.path.join(args.training_directory, file)))
     reconstruction_vols = sorted(reconstruction_vols, key=lambda x: int(os.path.splitext(x)[0].split('.')[-1]))
     epochs = [i for i in range(len(reconstruction_vols))]
     flog(f'Found {len(epochs)} epochs to compute FSC')
@@ -28,7 +28,7 @@ def main(args):
         reconstruction_vols = reconstruction_vols[:args.max_epoch]
         flog(f'Using first {len(epochs)} epochs to compute FSC')
 
-    outdir = f'{args.training_dir}/convergence.{len(epochs)}'
+    outdir = f'{args.training_directory}/convergence.{len(epochs)}'
     os.makedirs(outdir, exist_ok=True)
 
     flog(f'Using FSC reference volume: {args.reference_volume}')
@@ -77,7 +77,7 @@ def main(args):
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
         plt.tight_layout()
-        plt.savefig(os.path.join(args.training_dir, outpath))
+        plt.savefig(os.path.join(args.training_directory, outpath))
 
     flog(f'Saving plots to {outdir}')
     plot_and_save(epochs, resolutions_point143, 'epoch', '0.143 fsc frequency (1/px)', f'{outdir}/convergence_nn_fsc0.143resolution.png', linestyle='-', marker='.', mfc='red', mec='red', markersize=2)
