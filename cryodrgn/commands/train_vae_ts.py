@@ -209,8 +209,8 @@ def train_batch(scaler, model, lattice, y, cumulative_weights_encoder, cumulativ
     D = lattice.D
 
     with autocast(enabled=use_amp):
-        y, ctf_weights = preprocess_input(y, lattice, trans, final_mask_encoder, B, ntilts, D, ctf_params)
-        z_mu, z_logvar, z, y_recon = run_batch(model, lattice, y, rot, cumulative_weights_encoder, final_mask_decoder, B, ntilts, D, ctf_weights, weight_encoder=weight_encoder)
+        y = preprocess_input(y, lattice, trans, final_mask_encoder, B, ntilts, D, ctf_params)
+        z_mu, z_logvar, z, y_recon, ctf_weights = run_batch(model, lattice, y, rot, cumulative_weights_encoder, final_mask_encoder, final_mask_decoder, B, ntilts, D, ctf_params, weight_encoder=weight_encoder)
         loss, gen_loss, kld = loss_function(z_mu, z_logvar, y, ctf_weights, y_recon, cumulative_weights_decoder, final_mask_decoder, beta, beta_control)
 
     scaler.scale(loss).backward()
@@ -224,28 +224,28 @@ def preprocess_input(y, lattice, trans, final_mask_encoder, B, ntilts, D, ctf_pa
     if trans is not None:
         # center the image
         y = lattice.translate_ht(y.view(B*ntilts,-1), trans.unsqueeze(1))
-    y = y.view(B, ntilts, D, D)[:, final_mask_encoder]
+    y = y.view(B, ntilts, D, D)
+    # return translated   ####, CTF-phase-flipped, dose+tilt-weighted, masked### particle stack for encoder+decoder+loss calculation
+    return y ###, ctf_weights
 
+
+def run_batch(model, lattice, y, rot, cumulative_weights_encoder, final_mask_encoder, final_mask_decoder, B, ntilts, D, ctf_params=None, weight_encoder=False):
+    # encode
+    # TODO use final_mask_encoder if skip_zeros_encoder to replace 0-weight pixels with 0-value for encoder so that encoder model can be shared for all tilts - or would this be inaccurate to model?
+    input = y[:, final_mask_encoder]
     if ctf_params is not None:
         # phase flip the CTF-corrupted image
         # freqs = lattice.freqs2d.unsqueeze(0).expand(B*ntilts, *lattice.freqs2d.shape) / ctf_params[:, 0].view(B*ntilts, 1, 1)
         # c = ctf.compute_ctf(freqs, *torch.split(ctf_params[:, 1:], 1, 1)).view(B, ntilts, D, D)
         freqs = lattice.freqs2d.unsqueeze(0).expand(B * ntilts, -1, -1) / ctf_params[:, 0].view(B * ntilts, 1, 1)
-        ctf_weights = ctf.compute_ctf(freqs, *torch.split(ctf_params[:, 1:], 1, 1)).view(B, ntilts, D, D)[:, final_mask_encoder]
-        y *= ctf_weights.sign() # phase flip by the ctf to be all positive amplitudes
+        ctf_weights = ctf.compute_ctf(freqs, *torch.split(ctf_params[:, 1:], 1, 1)).view(B, ntilts, D, D)
+        input *= ctf_weights[:, final_mask_encoder].sign() # phase flip by the ctf to be all positive amplitudes
     else:
-        c = None
-
-    # return translated, CTF-phase-flipped, dose+tilt-weighted, masked particle stack for encoder+decoder+loss calculation
-    return y, ctf_weights
-
-
-def run_batch(model, lattice, y, rot, cumulative_weights_encoder, final_mask_decoder, B, ntilts, D, ctf_weights=None, weight_encoder=False):
-    # encode
+        ctf_weights = None
     if weight_encoder:
         # apply cumulative_weights when encoding the image
-        y *= cumulative_weights_encoder
-    z_mu, z_logvar = _unparallelize(model).encode(y, B, ntilts) # ouput is B x zdim, i.e. one value per ptcl (not per img)
+        input *= cumulative_weights_encoder
+    z_mu, z_logvar = _unparallelize(model).encode(input, B, ntilts) # ouput is B x zdim, i.e. one value per ptcl (not per img)
     z = _unparallelize(model).reparameterize(z_mu, z_logvar)
 
     # decode
@@ -256,9 +256,9 @@ def run_batch(model, lattice, y, rot, cumulative_weights_encoder, final_mask_dec
     # if c is not None:
     #     y_recon *= c.view(B*ntilts, -1)[:, mask]
     if ctf_weights is not None:
-        y_recon *= ctf_weights #ctf_weights is already shaped correctly from preprocess_input
+        y_recon *= ctf_weights[:,final_mask_decoder]
 
-    return z_mu, z_logvar, z, y_recon
+    return z_mu, z_logvar, z, y_recon, ctf_weights
 
 
 def _unparallelize(model):
@@ -271,7 +271,8 @@ def loss_function(z_mu, z_logvar, y, ctf_weights, y_recon, cumulative_weights_de
     # reconstruction error
     # B = y.size(0)
     # ntilts = y.size(1)
-    y *= ctf_weights.sign() # undo phase flipping from minibatch preprocessing
+    # y *= ctf_weights.sign() # undo phase flipping from minibatch preprocessing
+    y = y[:,final_mask_decoder]
     # gen_loss = F.mse_loss(y_recon, y.view(B*ntilts,-1)[:, mask])
     gen_loss = (cumulative_weights_decoder.view(1, -1) * ((y_recon - y) ** 2)).mean()
 
@@ -333,9 +334,9 @@ def save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z):
 def check_memory_usage(flog):
     import subprocess
     gpu_memory_usage = subprocess.check_output(
-        ['nvidia-smi', '--query-gpu=memory.used', '--format=csv,nounits,noheader'], encoding='utf-8').strip().split(
-        '\n')
-    flog(f'GPU memory usage (MB): {[i for i in gpu_memory_usage]}')
+        ['nvidia-smi', '--query-gpu=memory.used', '--format=csv,nounits,noheader'], encoding='utf-8')\
+        .strip().split('\n')
+    flog(f'GPU memory usage (MB): {[device for device in gpu_memory_usage]}')
 
 
 def main(args):
