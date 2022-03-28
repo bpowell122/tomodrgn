@@ -200,7 +200,7 @@ def save_config(args, dataset, lattice, model, out_config):
         pickle.dump(meta, f)
 
 
-def train_batch(scaler, model, lattice, y, cumulative_weights_encoder, cumulative_weights_decoder, final_mask_encoder, final_mask_decoder, rot, trans, optim, beta, beta_control=None, ctf_params=None, use_amp=False, weight_encoder=False):
+def train_batch(scaler, model, lattice, y, cumulative_weights_encoder, cumulative_weights_decoder, final_mask_encoder, final_mask_decoder, rot, trans, optim, beta, beta_control=None, ctf_params=None, use_amp=False, skip_zeros_encoder=False, weight_encoder=False):
     optim.zero_grad()
     model.train()
 
@@ -210,7 +210,7 @@ def train_batch(scaler, model, lattice, y, cumulative_weights_encoder, cumulativ
 
     with autocast(enabled=use_amp):
         y = preprocess_input(y, lattice, trans, final_mask_encoder, B, ntilts, D, ctf_params)
-        z_mu, z_logvar, z, y_recon, ctf_weights = run_batch(model, lattice, y, rot, cumulative_weights_encoder, final_mask_encoder, final_mask_decoder, B, ntilts, D, ctf_params, weight_encoder=weight_encoder)
+        z_mu, z_logvar, z, y_recon, ctf_weights = run_batch(model, lattice, y, rot, cumulative_weights_encoder, final_mask_encoder, final_mask_decoder, B, ntilts, D, ctf_params, skip_zeros_encoder=skip_zeros_encoder, weight_encoder=weight_encoder)
         loss, gen_loss, kld = loss_function(z_mu, z_logvar, y, ctf_weights, y_recon, cumulative_weights_decoder, final_mask_decoder, beta, beta_control)
 
     scaler.scale(loss).backward()
@@ -229,22 +229,25 @@ def preprocess_input(y, lattice, trans, final_mask_encoder, B, ntilts, D, ctf_pa
     return y ###, ctf_weights
 
 
-def run_batch(model, lattice, y, rot, cumulative_weights_encoder, final_mask_encoder, final_mask_decoder, B, ntilts, D, ctf_params=None, weight_encoder=False):
+def run_batch(model, lattice, y, rot, cumulative_weights_encoder, final_mask_encoder, final_mask_decoder, B, ntilts, D, ctf_params=None, skip_zeros_encoder=False, weight_encoder=False):
     # encode
     # TODO use final_mask_encoder if skip_zeros_encoder to replace 0-weight pixels with 0-value for encoder so that encoder model can be shared for all tilts - or would this be inaccurate to model?
-    input = y[:, final_mask_encoder]
+    input = y.clone()
+    # serves as enc_mask for encoder input (preserves either lattice_mask or lattice_mask + dose_mask nonzero elements only)
     if ctf_params is not None:
         # phase flip the CTF-corrupted image
         # freqs = lattice.freqs2d.unsqueeze(0).expand(B*ntilts, *lattice.freqs2d.shape) / ctf_params[:, 0].view(B*ntilts, 1, 1)
         # c = ctf.compute_ctf(freqs, *torch.split(ctf_params[:, 1:], 1, 1)).view(B, ntilts, D, D)
         freqs = lattice.freqs2d.unsqueeze(0).expand(B * ntilts, -1, -1) / ctf_params[:, 0].view(B * ntilts, 1, 1)
         ctf_weights = ctf.compute_ctf(freqs, *torch.split(ctf_params[:, 1:], 1, 1)).view(B, ntilts, D, D)
-        input *= ctf_weights[:, final_mask_encoder].sign() # phase flip by the ctf to be all positive amplitudes
+        input *= ctf_weights.sign() # phase flip by the ctf to be all positive amplitudes
     else:
         ctf_weights = None
+    if skip_zeros_encoder:
+        input[:,final_mask_encoder == 0] = 0.
     if weight_encoder:
         # apply cumulative_weights when encoding the image
-        input *= cumulative_weights_encoder
+        input *= cumulative_weights_encoder.view(1,*cumulative_weights_encoder.shape)
     z_mu, z_logvar = _unparallelize(model).encode(input, B, ntilts) # ouput is B x zdim, i.e. one value per ptcl (not per img)
     z = _unparallelize(model).reparameterize(z_mu, z_logvar)
 
@@ -274,7 +277,7 @@ def loss_function(z_mu, z_logvar, y, ctf_weights, y_recon, cumulative_weights_de
     # y *= ctf_weights.sign() # undo phase flipping from minibatch preprocessing
     y = y[:,final_mask_decoder]
     # gen_loss = F.mse_loss(y_recon, y.view(B*ntilts,-1)[:, mask])
-    gen_loss = (cumulative_weights_decoder.view(1, -1) * ((y_recon - y) ** 2)).mean()
+    gen_loss = (cumulative_weights_decoder[final_mask_decoder].view(1, -1) * ((y_recon - y) ** 2)).mean()
 
     # latent loss
     kld = torch.mean(-0.5 * torch.sum(1 + z_logvar - z_mu.pow(2) - z_logvar.exp(), dim=1), dim=0)
@@ -300,13 +303,13 @@ def eval_z(model, lattice, data, cumulative_weights_encoder, final_mask_encoder,
         D = lattice.D
         if trans is not None:
             y = lattice.translate_ht(y.view(B*ntilts,-1), trans[batch_ind].unsqueeze(1)).view(B,ntilts,D,D)
-        y = y.view(B, ntilts, D, D)[:, final_mask_encoder]
+        y = y.view(B, ntilts, D, D)
         if ctf_params is not None:
             freqs = lattice.freqs2d.unsqueeze(0).expand(B * ntilts, -1, -1) / ctf_params[batch_ind, 0].view(B * ntilts, 1, 1)
-            ctf_weights = ctf.compute_ctf(freqs, *torch.split(ctf_params[batch_ind, 1:], 1, 1)).view(B, ntilts, D, D)[:,final_mask_encoder]
+            ctf_weights = ctf.compute_ctf(freqs, *torch.split(ctf_params[batch_ind, 1:], 1, 1)).view(B, ntilts, D, D)
             y *= ctf_weights.sign() # phase flip by the ctf
         if weight_encoder:
-            y *= cumulative_weights_encoder
+            y *= cumulative_weights_encoder.view(1,*cumulative_weights_encoder.shape)
         z_mu, z_logvar = _unparallelize(model).encode(y, B, ntilts)
         z_mu_all.append(z_mu.detach().cpu().numpy())
         z_logvar_all.append(z_logvar.detach().cpu().numpy())
@@ -422,7 +425,10 @@ def main(args):
     lattice = Lattice(D, extent=0.5)
 
     # create dataset mask for which pixels will be evaluated
-    flog(f'Pixels per particle (input):  {np.prod(data.particles[0].shape)} ')
+    if args.lazy:
+        flog(f'Pixels per particle (input):  {np.prod(data.particles[0][0].get().shape)*Ntilts} ')
+    else:
+        flog(f'Pixels per particle (input):  {np.prod(data.particles[0].shape)} ')
     lattice_mask = lattice.get_circular_mask(lattice.D // 2) # reconstruct box-inscribed circle of pixels
     flog(f'Pixels per particle (+ fourier circular mask):  {Ntilts*lattice_mask.sum()}')
     if args.skip_zeros_encoder: # skip zero_weighted components when encoding particles
@@ -432,8 +438,8 @@ def main(args):
     else:
         final_mask_encoder = lattice_mask.view(1,D,D).repeat(Ntilts,1,1).cpu().numpy()
     assert final_mask_encoder.shape == (Ntilts, D, D)
-    # mask cumulative weights encoder by final_mask
-    cumulative_weights_encoder = cumulative_weights[final_mask_encoder]
+    #### mask cumulative weights encoder by final_mask
+    cumulative_weights_encoder = cumulative_weights #[final_mask_encoder]
 
     if args.skip_zeros_decoder: # skip zero_weighted components when encoding particles
         weights_mask = cumulative_weights != 0
@@ -443,19 +449,19 @@ def main(args):
         final_mask_decoder = lattice_mask.view(1,D,D).repeat(Ntilts,1,1).cpu().numpy()
     assert final_mask_decoder.shape == (Ntilts, D, D)
     # mask cumulative weights by final_mask
-    cumulative_weights_decoder = cumulative_weights[final_mask_decoder]
+    cumulative_weights_decoder = cumulative_weights #[final_mask_decoder]
 
     # instantiate model
     weight_encoder = True if args.weight_encoder else False
     skip_zeros_encoder = True if args.skip_zeros_encoder else False
     skip_zeros_decoder = True if args.skip_zeros_decoder else False
-    if skip_zeros_encoder:
-        enc_mask = final_mask_encoder
-        flog('Skip_zeros_encoder WAS used, so critical-dose-masked tilt images will be encoded by simultaneously by encA')
-        flog('Arguments relating to encB will be ignored')
-    else:
-        enc_mask = lattice.get_circular_mask(D//2)
-        flog('Skip_zeros_encoder WAS NOT used, so uniformly-masked tilt images will be encoded by encA and encB')
+    # if skip_zeros_encoder:
+    #     enc_mask = final_mask_encoder
+    #     flog('Skip_zeros_encoder WAS used, so critical-dose-masked tilt images will be encoded by simultaneously by encA')
+    #     flog('Arguments relating to encB will be ignored')
+    # else:
+    enc_mask = lattice.get_circular_mask(D//2)
+        # flog('Skip_zeros_encoder WAS NOT used, so uniformly-masked tilt images will be encoded by encA and encB')
     in_dim = enc_mask.sum()
     # # instantiate model
     #
@@ -473,7 +479,7 @@ def main(args):
     activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]
     model = TiltSeriesHetOnlyVAE(lattice, args.qlayersA, args.qdimA, Ntilts, args.qlayersB, args.qdimB,
                                  args.players, args.pdim, in_dim, args.zdim,
-                                 # enc_mask=enc_mask,
+                                 enc_mask=enc_mask,
                                  enc_type=args.pe_type, enc_dim=args.pe_dim,
                                  domain=args.domain, activation=activation, use_amp=args.amp,
                                  skip_zeros_encoder=skip_zeros_encoder, skip_zeros_decoder=skip_zeros_decoder)
@@ -544,7 +550,8 @@ def main(args):
             loss, gen_loss, kld = train_batch(scaler, model, lattice, y, cumulative_weights_encoder,
                                               cumulative_weights_decoder, final_mask_encoder, final_mask_decoder, rot,
                                               tran, optim, beta, args.beta_control, ctf_params=ctf_param,
-                                              use_amp=use_amp, weight_encoder=weight_encoder)
+                                              use_amp=use_amp, skip_zeros_encoder=skip_zeros_encoder,
+                                              weight_encoder=weight_encoder)
 
             # logging
             gen_loss_accum += gen_loss*len(batch_ind)

@@ -141,7 +141,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
                  players, pdim,
                  in_dim, zdim=1,
                  # encode_mode='tiltseries',
-                 # enc_mask=None,
+                 enc_mask=None,
                  enc_type='geom_lowf',
                  enc_dim=None,
                  domain='fourier',
@@ -154,7 +154,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         self.ntilts = ntilts
         self.zdim = zdim
         self.in_dim = in_dim
-        # self.enc_mask = enc_mask
+        self.enc_mask = enc_mask
         self.use_amp = use_amp
         self.skip_zeros_encoder = skip_zeros_encoder
         self.skip_zeros_decoder = skip_zeros_decoder
@@ -225,14 +225,14 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         return eps * std + mu
 
     def encode(self, batch, B, ntilts):
-        if self.skip_zeros_encoder:
-            # input is of shape B x ntilts*D*D[critical_exposure_final_mask]
-            z = self.encoder(batch, B)
-        else:
-            # input batch is of shape B x ntilts x D x D [lattice_circular_mask]
-            batch = batch.view(B, ntilts, -1)
-            # if self.enc_mask is not None:
-            #     batch = batch[:,:,self.enc_mask] # B x ntilts x D*D[mask]
+        # if self.skip_zeros_encoder:
+        #     # input is of shape B x ntilts*D*D[critical_exposure_final_mask]
+        #     z = self.encoder(batch, B)
+        # else:
+        # input batch is of shape B x ntilts x D x D
+        batch = batch.view(B,ntilts,-1)[:,:,self.enc_mask]
+        # if self.enc_mask is not None:
+        #     batch = batch[:,:,self.enc_mask] # B x ntilts x D*D[mask]
         z = self.encoder(batch, B)
         return z[:, :self.zdim], z[:, self.zdim:] # B x zdim
 
@@ -844,27 +844,27 @@ class TiltSeriesEncoder(nn.Module):
     def __init__(self, in_dim, nlayersA, hidden_dimA, ntilts, nlayersB, hidden_dimB, out_dim, activation, skip_zeros_encoder):
         super(TiltSeriesEncoder, self).__init__()
         self.in_dim = in_dim
-        self.skip_zeros_encoder = skip_zeros_encoder
-        if skip_zeros_encoder:
-            # encoder1 encodes all critical-dose-masked tilts simultaneously to latent space
-            # therefore encoder2 is not needed to pool inter-tilt information
-            assert nlayersA > 2
-            self.encoder1 = ResidLinearMLP(in_dim, nlayersA, hidden_dimA, out_dim, activation)
-        else:
-            # encoder1 encodes each identically-masked tilt image separately
-            # encoder2 merges ntilts-concatenated encoder1 information and encodes further to latent space
-            assert nlayersA+nlayersB > 2
-            self.encoder1 = ResidLinearMLP(in_dim, nlayersA, hidden_dimA, hidden_dimA, activation)
-            self.encoder2 = ResidLinearMLP(hidden_dimA*ntilts, nlayersB, hidden_dimB, out_dim, activation)
+        # self.skip_zeros_encoder = skip_zeros_encoder
+        # if skip_zeros_encoder:
+        #     # encoder1 encodes all critical-dose-masked tilts simultaneously to latent space
+        #     # therefore encoder2 is not needed to pool inter-tilt information
+        #     assert nlayersA > 2
+        #     self.encoder1 = ResidLinearMLP(in_dim, nlayersA, hidden_dimA, out_dim, activation)
+        # else:
+        # encoder1 encodes each identically-masked tilt image separately
+        # encoder2 merges ntilts-concatenated encoder1 information and encodes further to latent space
+        assert nlayersA+nlayersB > 2
+        self.encoder1 = ResidLinearMLP(in_dim, nlayersA, hidden_dimA, hidden_dimA, activation)
+        self.encoder2 = ResidLinearMLP(hidden_dimA*ntilts, nlayersB, hidden_dimB, out_dim, activation)
 
     def forward(self, batch, B):
-        if self.skip_zeros_encoder:
-            # input image batch of shape B x ntilts*D*D[critical_dose_final_mask]
-            z = self.encoder1(batch)
-        else:
-            # input image batch of shape B x ntilts x D*D[lattice_circular_mask]
-            batch_enc = self.encoder1(batch)
-            z = self.encoder2(batch_enc.view(B, -1)) #reshape to encode all tilts of one ptcl together
+        # if self.skip_zeros_encoder:
+        #     # input image batch of shape B x ntilts*D*D[critical_dose_final_mask]
+        #     z = self.encoder1(batch)
+        # else:
+        # input image batch of shape B x ntilts x D*D[lattice_circular_mask]
+        batch_enc = self.encoder1(batch)
+        z = self.encoder2(batch_enc.view(B, -1)) #reshape to encode all tilts of one ptcl together
         return z
 
 class ResidLinearMLP(nn.Module):
