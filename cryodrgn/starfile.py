@@ -243,3 +243,166 @@ class TiltSeriesStarfile():
         # see: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4559595/
         cosine_weights = self.df['_rlnCtfScalefactor'][0:ntilts].to_numpy(dtype=float)
         return cosine_weights
+
+class GenericStarfile():
+    '''
+    Class to handle any star file with any number of blocks
+    Input            : path to star file
+    Attributes:
+        sourcefile   : absolute path to source data star file
+        preambles    : list of lists containing text preceeding each block in starfile
+        block_names  : list of names for each data block
+        blocks       : dictionary of {block_name: data_block_as_pandas_df}
+    Methods:
+        load         : automatically called by __init__ to read all data from .star
+        write        : writes all object data to `outstar` optionally with timestamp
+    Stores (but does not recognize) data blocks not initiated with `loop_` keyword
+    Does not support comments within column headers / data block sections (will give bad results)
+    '''
+
+    def __init__(self, starfile):
+        # assert headers == list(df.columns), f'{headers} != {df.columns}'
+        self.sourcefile = os.path.abspath(starfile)
+        preambles, blocks = self.load()
+        self.preambles = preambles
+        self.block_names = list(blocks.keys())
+        self.blocks = blocks
+
+    def __len__(self):
+        return len(self.block_names)
+
+    def load(self):
+        def parse_preamble(filehandle, line):
+            # parse all lines preceeding column headers (including 'loop_')
+            preamble = []
+            while (not 'loop_' in line):
+                if not line:
+                    print('Warning: end of last data block detected but star file still had additional data')
+                    print('Warning: GenericStarfile object created with data read so far')
+                    print('Warning: Remaining lines of data stored in self.preambles[-1]')
+                    return preamble, None
+                preamble.append(line.strip())
+                line = filehandle.readline()
+            preamble.append(line.strip())
+            block_name = [line for line in preamble if line != ''][-2]
+
+            return preamble, block_name
+
+        def parse_single_block(filehandle, line):
+            # parse all lines containing the column headers
+            header = []
+            line = filehandle.readline()
+            while line[0] == '_':
+                header.append(line.split(' ')[0])
+                position = line.split('#')[-1]
+                assert int(len(header)) == int(position), \
+                    f'Error in .star file header - column index "{position}" not matched to the reported "#" in "{header[-1]}"'
+                line = filehandle.readline()
+
+            # parse all data lines for this block
+            data = []
+            while not line.strip() == '':
+                data.append(line.split())
+                line = filehandle.readline()
+            df = pd.DataFrame(data, columns=header)
+
+            return df
+
+        with(open(self.sourcefile, 'r')) as f:
+            preambles = []
+            blocks = {}
+            while True:
+                line = f.readline()
+                if not line:
+                    # end of file reached normally, exit loop
+                    return preambles, blocks
+                preamble, block_name = parse_preamble(f, line)
+                preambles.append(preamble)
+                if block_name is None:
+                    # end of file reached with extra text following last data block, exit loop
+                    return preambles, blocks
+                df = parse_single_block(f, line)
+                blocks[block_name] = df
+
+    def write(self, outstar, timestamp=False):
+            def write_single_block(filehandle, block_id):
+                df = self.blocks[self.block_names[block_id]]
+                headers = [f'{header} #{i + 1}' for i, header in enumerate(list(df))]
+                f.write('\n'.join(headers))
+                f.write('\n')
+                for row in df.index:
+                    f.write('    '.join([str(value) for value in df.loc[row]]))
+                    f.write('\n')
+
+            f = open(outstar, 'w')
+            if timestamp:
+                f.write('# Created {}\n'.format(dt.now()))
+
+            for block_id, preamble in enumerate(self.preambles):
+                for row in preamble:
+                    f.write(row)
+                    f.write('\n')
+                write_single_block(f, block_id)
+                f.write('\n')
+
+            print(f'Wrote {os.path.abspath(outstar)}')
+
+    def get_particles(self, datadir=None, lazy=False):
+        '''
+        Return particles of the starfile as (n_ptcls * n_tilts, D, D)
+
+        Input:
+            datadir (str): Overwrite base directories of particle .mrcs
+                Tries both substituting the base path and prepending to the path
+            If lazy=True, returns list of LazyImage instances, else np.array
+        '''
+        images = self.df['_rlnImageName']
+        images = [x.split('@') for x in images] # format is index@path_to_mrc
+        ind = [int(x[0])-1 for x in images] # convert to 0-based indexing of full dataset
+        mrcs = [x[1] for x in images]
+        if datadir is not None:
+            mrcs = prefix_paths(mrcs, datadir)
+        for path in set(mrcs):
+            assert os.path.exists(path), f'{path} not found'
+        header = mrc.parse_header(mrcs[0])
+        D = header.D # image size along one dimension in pixels
+        dtype = header.dtype
+        stride = dtype().itemsize*D*D
+        lazyparticles = [LazyImage(f, (D,D), dtype, 1024+ii*stride) for ii,f in zip(ind, mrcs)]
+        if lazy:
+            return lazyparticles
+        else:
+            # preallocating numpy array for in-place loading, fourier transform, fourier transform centering, etc
+            particles = np.empty((len(lazyparticles), D+1, D+1), dtype=np.float32)
+            for i, img in enumerate(lazyparticles): particles[i,:-1,:-1] = img.get().astype(np.float32)
+            return particles
+
+    def get_tiltseries_shape(self):
+        unique_ptcls = self.df['_rlnGroupName'].unique()
+        ntilts = self.df['_rlnGroupName'].value_counts().unique()
+        assert len(ntilts) == 1, 'All particles must have the same number of tilt images!'
+        return len(unique_ptcls), int(ntilts)
+
+    def get_tiltseries_pixelsize(self):
+        pixel_size = float(self.df['_rlnDetectorPixelSize'][0]) # expects pixel size in A/px
+        return pixel_size
+
+    def get_tiltseries_voltage(self):
+        voltage = int(float(self.df['_rlnVoltage'][0])) # expects voltage in kV
+        return voltage
+
+    def get_tiltseries_dose_per_A2_per_tilt(self, ntilts):
+        # extract dose in e-/A2 from _rlnCtfBfactor column of Warp starfile (scaled by -4)
+        # detects nonuniform dose, due to differential exposure during data collection or excluding tilts during processing
+        dose_series = self.df['_rlnCtfBfactor'][0:ntilts].to_numpy(dtype=float)/-4
+        constant_dose_series = np.linspace(dose_series[0], dose_series[-1], num=ntilts, endpoint=True)
+        constant_dose_step = np.allclose(dose_series, constant_dose_series, atol=0.01)
+        if not constant_dose_step:
+            log('Caution: non-uniform dose detected between each tilt image. Check whether this is expected!')
+        return dose_series
+
+    def get_tiltseries_cosine_weight(self, ntilts):
+        # following relion1.4 convention, weighting each tilt by cos(tilt angle)
+        # see: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4559595/
+        cosine_weights = self.df['_rlnCtfScalefactor'][0:ntilts].to_numpy(dtype=float)
+        return cosine_weights
