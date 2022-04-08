@@ -14,7 +14,7 @@ def parse_args():
     parser.add_argument('--input-type', choices=('warp_particleseries', 'warp_volumeseries', 'm_volumeseries'),
                         default='warp_particleseries', help='input data .star source (subtomos as images vs as volumes')
     parser.add_argument('--ind', help='optionally select by indices array (.pkl)')
-    parser.add_argument('--ind-type', choices=('particle', 'image', 'tilt'), default='per_particle',
+    parser.add_argument('--ind-type', choices=('particle', 'image', 'tilt'), default='particle',
                         help='use indices to filter by particle, by individual image, or by tilt index')
     parser.add_argument('--tomogram', type=str,
                         help='optionally select by individual tomogram name (`all` means write individual star files per tomogram')
@@ -33,10 +33,23 @@ def check_invert_indices(args, in_ind, all_ind):
         ind_to_drop = in_ind
     return ind_to_drop
 
+def configure_dataframe_filtering_headers(args):
+    if args.input_type == 'warp_particleseries':
+        unique_particle_header = '_rlnGroupName'
+        unique_tomo_header = '_rlnImageName'
+    elif args.input_type == 'warp_volumeseries':
+        unique_particle_header = None # each row is a unique particle
+        unique_tomo_header = '_rlnMicrographName'
+    elif args.input_type == 'm_volumeseries':
+        unique_particle_header = None # each row is a unique particle
+        unique_tomo_header = '_rlnMicrographName'
+    return unique_particle_header, unique_tomo_header
+
 def main(args):
     # ingest star file
     in_star = starfile.GenericStarfile(args.input)
     print(f'Loaded starfile : {args.input}')
+    print(f'{len(in_star.blocks["data_"])} rows in input star file')
     print(f'Filtering action is : {args.action}')
 
     # load filtering selection
@@ -47,16 +60,9 @@ def main(args):
         print(f'Particles will be filtered by tomogram : {args.tomogram}')
 
     # configure filtering for input data type
-    if args.input_type == 'warp_particleseries':
-        unique_particle_header = '_rlnGroupName'
-        unique_tomo_header = '_rlnImageName'
-    elif args.input_type == 'warp_volumeseries':
-        unique_particle_header = None # each row is a unique particle
-        unique_tomo_header = '_rlnMicrographName'
-    elif args.input_type == 'm_volumeseries':
-        unique_particle_header = None # each row is a unique particle
-        unique_tomo_header = '_rlnMicrographName'
-    print(f'{len(in_star.blocks["data_"])} rows in input star file')
+    unique_particle_header, unique_tomo_header = configure_dataframe_filtering_headers(args)
+    assert in_star.blocks['data_'][unique_particle_header], f'Cound not find {unique_particle_header} in star file, please check --input-type'
+    assert in_star.blocks['data_'][unique_tomo_header], f'Cound not find {unique_tomo_header} in star file, please check --input-type'
 
     if args.ind:
         # what stride / df column to which to apply the indices
