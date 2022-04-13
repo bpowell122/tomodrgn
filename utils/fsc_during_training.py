@@ -7,6 +7,7 @@ def add_args(parser):
     parser.add_argument('training_directory', type=os.path.abspath, help='cryodrgn train_nn directory containing reconstruct.N.mrc')
     parser.add_argument('reference_volume', type=os.path.abspath, help='volume against which to calculate FSC')
     parser.add_argument('--max-epoch', type=int, help='Maximum epoch for which to calculate FSCs')
+    parser.add_argument('--ignore-dc', action='store_true', help='Skip calculating FSC for DC component')
     return parser
 
 
@@ -40,6 +41,9 @@ def main(args):
     for vol in reconstruction_vols:
         flog(f'Processing volume: {vol}')
         x, fsc = utils.calc_fsc(args.reference_volume, vol)
+        if args.ignore_dc:
+            x = x[1:]
+            fsc = fsc[1:]
         fscs.append(fsc)
 
         # find the resolution at which FSC crosses 0.5 correlation"
