@@ -33,16 +33,20 @@ def check_invert_indices(args, in_ind, all_ind):
         ind_to_drop = in_ind
     return ind_to_drop
 
-def configure_dataframe_filtering_headers(args):
+def configure_dataframe_filtering_headers(in_star, args):
     if args.input_type == 'warp_particleseries':
         unique_particle_header = '_rlnGroupName'
         unique_tomo_header = '_rlnImageName'
+        assert unique_particle_header in in_star.blocks['data_'].columns, f'Cound not find {unique_particle_header} in star file, please check --input-type'
+        assert unique_tomo_header in in_star.blocks['data_'].columns, f'Cound not find {unique_tomo_header} in star file, please check --input-type'
     elif args.input_type == 'warp_volumeseries':
         unique_particle_header = None # each row is a unique particle
         unique_tomo_header = '_rlnMicrographName'
+        assert unique_tomo_header in in_star.blocks['data_'].columns, f'Cound not find {unique_tomo_header} in star file, please check --input-type'
     elif args.input_type == 'm_volumeseries':
         unique_particle_header = None # each row is a unique particle
         unique_tomo_header = '_rlnMicrographName'
+        assert unique_tomo_header in in_star.blocks['data_'].columns, f'Cound not find {unique_tomo_header} in star file, please check --input-type'
     return unique_particle_header, unique_tomo_header
 
 def main(args):
@@ -60,9 +64,8 @@ def main(args):
         print(f'Particles will be filtered by tomogram : {args.tomogram}')
 
     # configure filtering for input data type
-    unique_particle_header, unique_tomo_header = configure_dataframe_filtering_headers(args)
-    assert in_star.blocks['data_'][unique_particle_header], f'Cound not find {unique_particle_header} in star file, please check --input-type'
-    assert in_star.blocks['data_'][unique_tomo_header], f'Cound not find {unique_tomo_header} in star file, please check --input-type'
+    unique_particle_header, unique_tomo_header = configure_dataframe_filtering_headers(in_star, args)
+
 
     if args.ind:
         # what stride / df column to which to apply the indices
