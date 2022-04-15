@@ -167,7 +167,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
 
     @classmethod
     def load(self, config, weights=None, device=None):
-        # TODO update me
+        # TODO update me and validate working
         '''Instantiate a model from a config.pkl
 
         Inputs:
@@ -182,14 +182,14 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         ntilts = cfg['dataset_args']['ntilts']
         lat = lattice.Lattice(cfg['lattice_args']['D'], extent=cfg['lattice_args']['extent'])
         in_dim = cfg['model_args']['in_dim']
-        # c = cfg['model_args']
-        # if cfg['model_args']['enc_mask'] > 0:
-        #     enc_mask = lat.get_circular_mask(c['enc_mask'])
-        #     in_dim = int(enc_mask.sum())
-        # else:
-        #     assert c['enc_mask'] == -1
-        #     enc_mask = None
-        #     in_dim = lat.D ** 2
+        c = cfg['model_args']
+        if cfg['model_args']['enc_mask'] > 0:
+            enc_mask = lat.get_circular_mask(c['enc_mask'])
+            in_dim = int(enc_mask.sum())
+        else:
+            assert c['enc_mask'] == -1
+            enc_mask = None
+            in_dim = lat.D ** 2
         activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[cfg['model_args']['activation']]
         # TiltSeriesHetOnlyVAE(lattice, args.qlayersA, args.qdimA, Ntilts, args.qlayersB, args.qdimB,
         #                                  args.players, args.pdim, in_dim, args.zdim, encode_mode=args.encode_mode,
@@ -202,7 +202,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
                                      cfg['model_args']['players'], cfg['model_args']['pdim'],
                                      in_dim, cfg['model_args']['zdim'],
                                      # encode_mode=cfg['model_args']['encode_mode'],
-                                     # enc_mask=enc_mask,
+                                     enc_mask=enc_mask,
                                      enc_type=cfg['model_args']['pe_type'],
                                      enc_dim=cfg['model_args']['pe_dim'],
                                      domain=cfg['model_args']['domain'],
@@ -230,9 +230,10 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         #     z = self.encoder(batch, B)
         # else:
         # input batch is of shape B x ntilts x D x D
-        batch = batch.view(B,ntilts,-1)[:,:,self.enc_mask]
-        # if self.enc_mask is not None:
-        #     batch = batch[:,:,self.enc_mask] # B x ntilts x D*D[mask]
+        if self.enc_mask is not None:
+            batch = batch.view(B,ntilts,-1)[:,:,self.enc_mask]
+        else:
+            batch = batch.view(B,ntilts,-1)
         z = self.encoder(batch, B)
         return z[:, :self.zdim], z[:, self.zdim:] # B x zdim
 
@@ -263,7 +264,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
             coords: B x ntilts*D*D[critical_exposure_mask] x 3 image coordinates
             z: B x zdim latent coordinate (repeated for ntilts)
             '''
-            # skip zeros decoder explicitly evaluates all FT coordinates, does not use +/- z symmetry
+            # skip zeros decoder explicitly evaluates all FT coordinates to avoid reshaping to ragged tensor, does not use +/- z symmetry
             return self.decoder(self.cat_z_perptcl(coords, z), eval_all_coords = True)
         else:
             '''

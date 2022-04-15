@@ -75,7 +75,7 @@ def add_args(parser):
     group.add_argument('--enc-layers-B', dest='qlayersB', type=int, default=1, help='Number of hidden layers encoding merged tilts (default: %(default)s)')
     group.add_argument('--enc-dim-B', dest='qdimB', type=int, default=256, help='Number of nodes in hidden layers encoding merged tilts (default: %(default)s)')
     # group.add_argument('--encode-mode', default='tiltseries', choices=('resid','mlp', 'tiltseries'), help='Type of encoder network (default: %(default)s)')
-    # group.add_argument('--enc-mask', type=int, help='Circular mask of image for encoder (default: D/2; -1 for no mask)')
+    group.add_argument('--enc-mask', type=int, help='Radius (px) of circular mask of image for encoder (default: D/2; -1 for no mask)')
     # group.add_argument('--use-real', action='store_true', help='Use real space image for encoder (for convolutional encoder)')
     group.add_argument('--skip-zeros-encoder', action='store_true', help='Ignore fourier pixels exposed to > 2.5x critical dose when encoding latent space')
     group.add_argument('--weight-encoder', action='store_true', help='Apply dose/tilt pixel weighting scheme when encoding images to latent space')
@@ -163,7 +163,7 @@ def save_config(args, dataset, lattice, model, out_config):
                       pdim=args.pdim,
                       zdim=args.zdim,
                       # encode_mode=args.encode_mode,
-                      # enc_mask=args.enc_mask,
+                      enc_mask=args.enc_mask,
                       pe_type=args.pe_type,
                       pe_dim=args.pe_dim,
                       domain=args.domain,
@@ -460,22 +460,22 @@ def main(args):
     #     flog('Skip_zeros_encoder WAS used, so critical-dose-masked tilt images will be encoded by simultaneously by encA')
     #     flog('Arguments relating to encB will be ignored')
     # else:
-    enc_mask = lattice.get_circular_mask(D//2)
+    # enc_mask = lattice.get_circular_mask(D//2)
         # flog('Skip_zeros_encoder WAS NOT used, so uniformly-masked tilt images will be encoded by encA and encB')
-    in_dim = enc_mask.sum()
+    # in_dim = enc_mask.sum()
     # # instantiate model
     #
-    # if args.enc_mask is None:
-    #     args.enc_mask = D // 2
-    # if args.enc_mask > 0:
-    #     assert args.enc_mask <= D // 2
-    #     enc_mask = lattice.get_circular_mask(args.enc_mask)
-    #     in_dim = enc_mask.sum()
-    # elif args.enc_mask == -1:
-    #     enc_mask = None
-    #     in_dim = lattice.D ** 2 if not args.use_real else (lattice.D - 1) ** 2
-    # else:
-    #     raise RuntimeError("Invalid argument for encoder mask radius {}".format(args.enc_mask))
+    if args.enc_mask is None:
+        args.enc_mask = D // 2
+    if args.enc_mask > 0:
+        assert args.enc_mask <= D // 2
+        enc_mask = lattice.get_circular_mask(args.enc_mask)
+        in_dim = enc_mask.sum()
+    elif args.enc_mask == -1:
+        enc_mask = None
+        in_dim = lattice.D ** 2
+    else:
+        raise RuntimeError("Invalid argument for encoder mask radius {}".format(args.enc_mask))
     activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]
     model = TiltSeriesHetOnlyVAE(lattice, args.qlayersA, args.qdimA, Ntilts, args.qlayersB, args.qdimB,
                                  args.players, args.pdim, in_dim, args.zdim,
