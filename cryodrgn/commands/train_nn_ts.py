@@ -123,7 +123,7 @@ def train(scaler, model, lattice, optim, y, cumulative_weights, final_mask, rot,
 
     return loss.item()
 
-
+# TODO confirm config saving / loading works
 def save_config(args, dataset, lattice, model, out_config):
     dataset_args = dict(particles=args.particles,
                         norm=dataset.norm,
@@ -178,7 +178,6 @@ def get_latest(args, flog):
 
 def plot_weight_distribution(cumulative_weights, spatial_frequencies, args):
     # plot distribution of dose weights across tilts in the spirit of https://doi.org/10.1038/s41467-021-22251-8
-    # TODO incorporate xlim matching lattice limit representing frequencies actually used for training?
     import matplotlib.pyplot as plt
     import matplotlib.ticker as mticker
 
@@ -206,9 +205,6 @@ def plot_weight_distribution(cumulative_weights, spatial_frequencies, args):
     ticks_loc = ax.get_xticks().tolist()
     ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
     ax.set_xticklabels([f'1/{1/xtick:.1f}' if xtick != 0.0 else 0 for xtick in ticks_loc])
-
-    # xticks = ax.get_xticks().tolist()
-    # ax.set_xticklabels([f'1/{1/xtick:.1f}' if xtick != 0.0 else 0 for xtick in xticks ])
 
     plt.savefig(f'{args.outdir}/cumulative_weights_across_frequencies_by_tilt.png', dpi=300)
 
@@ -310,7 +306,10 @@ def main(args):
     Apix = ctf_params[0, 0] if ctf_params is not None else 1
 
     # create dataset mask for which pixels will be evaluated
-    flog(f'Pixels per particle (input):  {np.prod(data.particles[0].shape)} ')
+    if args.lazy:
+        flog(f'Pixels per particle (input):  {np.prod(data.particles[0][0].get().shape)*Ntilts} ')
+    else:
+        flog(f'Pixels per particle (input):  {np.prod(data.particles[0].shape)} ')
     lattice_mask = lattice.get_circular_mask(lattice.D // 2) # reconstruct box-inscribed circle of pixels
     flog(f'Pixels per particle (+ fourier circular mask):  {Ntilts*lattice_mask.sum()}')
     if args.skip_zeros: # skip zero_weighted components
