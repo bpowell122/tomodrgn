@@ -3,7 +3,6 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.cuda.amp import autocast
 
 from . import fft
@@ -140,7 +139,6 @@ class TiltSeriesHetOnlyVAE(nn.Module):
                  qlayersB, qdimB,
                  players, pdim,
                  in_dim, zdim=1,
-                 # encode_mode='tiltseries',
                  enc_mask=None,
                  enc_type='geom_lowf',
                  enc_dim=None,
@@ -158,11 +156,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         self.use_amp = use_amp
         self.skip_zeros_encoder = skip_zeros_encoder
         self.skip_zeros_decoder = skip_zeros_decoder
-        # if encode_mode == 'tiltseries':
         self.encoder = TiltSeriesEncoder(in_dim, qlayersA, qdimA, ntilts, qlayersB, qdimB, zdim * 2, activation, skip_zeros_encoder)
-        # else:
-        #     raise RuntimeError('Encoder mode {} not recognized'.format(encode_mode))
-        # self.encode_mode = encode_mode
         self.decoder = get_decoder(3 + zdim, lattice.D, players, pdim, domain, enc_type, enc_dim, activation, use_amp=use_amp)
 
     @classmethod
@@ -181,7 +175,6 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         cfg = utils.load_pkl(config) if type(config) is str else config
         ntilts = cfg['dataset_args']['ntilts']
         lat = lattice.Lattice(cfg['lattice_args']['D'], extent=cfg['lattice_args']['extent'])
-        in_dim = cfg['model_args']['in_dim']
         c = cfg['model_args']
         if cfg['model_args']['enc_mask'] > 0:
             enc_mask = lat.get_circular_mask(c['enc_mask'])
@@ -191,17 +184,13 @@ class TiltSeriesHetOnlyVAE(nn.Module):
             enc_mask = None
             in_dim = lat.D ** 2
         activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[cfg['model_args']['activation']]
-        # TiltSeriesHetOnlyVAE(lattice, args.qlayersA, args.qdimA, Ntilts, args.qlayersB, args.qdimB,
-        #                                  args.players, args.pdim, in_dim, args.zdim, encode_mode=args.encode_mode,
-        #                                  enc_mask=enc_mask, enc_type=args.pe_type, enc_dim=args.pe_dim,
-        #                                  domain=args.domain, activation=activation)
+
         model = TiltSeriesHetOnlyVAE(lat,
                                      cfg['model_args']['qlayersA'], cfg['model_args']['qdimA'],
                                      ntilts,
                                      cfg['model_args']['qlayersB'], cfg['model_args']['qdimB'],
                                      cfg['model_args']['players'], cfg['model_args']['pdim'],
                                      in_dim, cfg['model_args']['zdim'],
-                                     # encode_mode=cfg['model_args']['encode_mode'],
                                      enc_mask=enc_mask,
                                      enc_type=cfg['model_args']['pe_type'],
                                      enc_dim=cfg['model_args']['pe_dim'],
@@ -225,10 +214,6 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         return eps * std + mu
 
     def encode(self, batch, B, ntilts):
-        # if self.skip_zeros_encoder:
-        #     # input is of shape B x ntilts*D*D[critical_exposure_final_mask]
-        #     z = self.encoder(batch, B)
-        # else:
         # input batch is of shape B x ntilts x D x D
         if self.enc_mask is not None:
             batch = batch.view(B,ntilts,-1)[:,:,self.enc_mask]
@@ -844,25 +829,12 @@ class TiltSeriesEncoder(nn.Module):
                      # in_dim, qlayersA, qdimA,               qlayersB, qdimB,      zdim * 2, activation
     def __init__(self, in_dim, nlayersA, hidden_dimA, ntilts, nlayersB, hidden_dimB, out_dim, activation, skip_zeros_encoder):
         super(TiltSeriesEncoder, self).__init__()
-        self.in_dim = in_dim
-        # self.skip_zeros_encoder = skip_zeros_encoder
-        # if skip_zeros_encoder:
-        #     # encoder1 encodes all critical-dose-masked tilts simultaneously to latent space
-        #     # therefore encoder2 is not needed to pool inter-tilt information
-        #     assert nlayersA > 2
-        #     self.encoder1 = ResidLinearMLP(in_dim, nlayersA, hidden_dimA, out_dim, activation)
-        # else:
-        # encoder1 encodes each identically-masked tilt image separately
-        # encoder2 merges ntilts-concatenated encoder1 information and encodes further to latent space
         assert nlayersA+nlayersB > 2
+        self.in_dim = in_dim
         self.encoder1 = ResidLinearMLP(in_dim, nlayersA, hidden_dimA, hidden_dimA, activation)
         self.encoder2 = ResidLinearMLP(hidden_dimA*ntilts, nlayersB, hidden_dimB, out_dim, activation)
 
     def forward(self, batch, B):
-        # if self.skip_zeros_encoder:
-        #     # input image batch of shape B x ntilts*D*D[critical_dose_final_mask]
-        #     z = self.encoder1(batch)
-        # else:
         # input image batch of shape B x ntilts x D*D[lattice_circular_mask]
         batch_enc = self.encoder1(batch)
         z = self.encoder2(batch_enc.view(B, -1)) #reshape to encode all tilts of one ptcl together
