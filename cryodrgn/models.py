@@ -134,18 +134,16 @@ class HetOnlyVAE(nn.Module):
 class TiltSeriesHetOnlyVAE(nn.Module):
     # No pose inference
     def __init__(self, lattice,  # Lattice object
-                 qlayersA, qdimA,
-                 ntilts,
-                 qlayersB, qdimB,
+                 nlayersA, hidden_dimA,
+                 out_dimA, ntilts,
+                 nlayersB, hidden_dimB,
                  players, pdim,
                  in_dim, zdim=1,
                  enc_mask=None,
                  enc_type='geom_lowf',
                  enc_dim=None,
-                 domain='fourier',
                  activation = nn.ReLU,
                  use_amp=False,
-                 skip_zeros_encoder=False,
                  skip_zeros_decoder=False):
         super(TiltSeriesHetOnlyVAE, self).__init__()
         self.lattice = lattice
@@ -154,10 +152,9 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         self.in_dim = in_dim
         self.enc_mask = enc_mask
         self.use_amp = use_amp
-        self.skip_zeros_encoder = skip_zeros_encoder
         self.skip_zeros_decoder = skip_zeros_decoder
-        self.encoder = TiltSeriesEncoder(in_dim, qlayersA, qdimA, ntilts, qlayersB, qdimB, zdim * 2, activation, skip_zeros_encoder)
-        self.decoder = get_decoder(3 + zdim, lattice.D, players, pdim, domain, enc_type, enc_dim, activation, use_amp=use_amp)
+        self.encoder = TiltSeriesEncoder(in_dim, nlayersA, hidden_dimA, out_dimA, ntilts, nlayersB, hidden_dimB, zdim * 2, activation, use_amp=use_amp)
+        self.decoder = FTPositionalDecoder(3 + zdim, lattice.D, players, pdim, activation, enc_type, enc_dim, use_amp=use_amp)
 
     @classmethod
     def load(self, config, weights=None, device=None):
@@ -173,7 +170,6 @@ class TiltSeriesHetOnlyVAE(nn.Module):
             HetOnlyVAE instance, Lattice instance
         '''
         cfg = utils.load_pkl(config) if type(config) is str else config
-        ntilts = cfg['dataset_args']['ntilts']
         lat = lattice.Lattice(cfg['lattice_args']['D'], extent=cfg['lattice_args']['extent'])
         c = cfg['model_args']
         if cfg['model_args']['enc_mask'] > 0:
@@ -187,17 +183,15 @@ class TiltSeriesHetOnlyVAE(nn.Module):
 
         model = TiltSeriesHetOnlyVAE(lat,
                                      cfg['model_args']['qlayersA'], cfg['model_args']['qdimA'],
-                                     ntilts,
+                                     cfg['model_args']['outdimA'], cfg['dataset_args']['ntilts'],
                                      cfg['model_args']['qlayersB'], cfg['model_args']['qdimB'],
                                      cfg['model_args']['players'], cfg['model_args']['pdim'],
                                      in_dim, cfg['model_args']['zdim'],
                                      enc_mask=enc_mask,
                                      enc_type=cfg['model_args']['pe_type'],
                                      enc_dim=cfg['model_args']['pe_dim'],
-                                     domain=cfg['model_args']['domain'],
                                      activation=activation,
                                      use_amp=cfg['training_args']['amp'],
-                                     skip_zeros_encoder=cfg['model_args']['skip_zeros_encoder'],
                                      skip_zeros_decoder=cfg['model_args']['skip_zeros_decoder'])
         if weights is not None:
             ckpt = torch.load(weights)
@@ -224,8 +218,8 @@ class TiltSeriesHetOnlyVAE(nn.Module):
 
     def cat_z_pertilt(self, coords, z):
         '''
-        coords: B*ntilts x D*D[mask] x 3 image coordinates
-        z: B x zdim latent coordinate (repeated for ntilts)
+        coords: B*ntilts x D*D[uniform_circular_mask] x 3 image coordinates
+        z: B x zdim latent coordinate
         '''
         assert coords.size(0) == z.size(0)*self.ntilts
         z = torch.repeat_interleave(z, self.ntilts, dim=0)  # expand z along batch dimension to repeat value for all tilts in particle, B*ntilts x zdim
@@ -235,8 +229,8 @@ class TiltSeriesHetOnlyVAE(nn.Module):
 
     def cat_z_perptcl(self, coords, z):
         '''
-        coords: B x ntilts*D*D[mask] x 3 image coordinates
-        z: B x zdim latent coordinate (repeated for ntilts)
+        coords: B x ntilts*D*D[critical_exposure_mask] x 3 image coordinates
+        z: B x zdim latent coordinate
         '''
         assert coords.size(0) == z.size(0)
         z = z.view(z.size(0), *([1] * (coords.ndimension() - 2)), self.zdim)
@@ -247,16 +241,16 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         if self.skip_zeros_decoder:
             '''
             coords: B x ntilts*D*D[critical_exposure_mask] x 3 image coordinates
-            z: B x zdim latent coordinate (repeated for ntilts)
+            z: B x zdim latent coordinate
             '''
             # skip zeros decoder explicitly evaluates all FT coordinates to avoid reshaping to ragged tensor, does not use +/- z symmetry
             return self.decoder(self.cat_z_perptcl(coords, z), eval_all_coords = True)
         else:
             '''
             coords: B x ntilts*D*D[uniform_circular_mask] x 3 image coordinates
-            z: B x zdim latent coordinate (repeated for ntilts)
+            z: B x zdim latent coordinate
             '''
-            coords = coords.view(z.shape[0]*self.ntilts, -1, 3) # reshape to B*ntilts x D*D[mask] x 3 image coordinates
+            coords = coords.view(z.shape[0]*self.ntilts, -1, 3) # reshape to B*ntilts x D*D[uniform_circular_mask] x 3 image coordinates
             return self.decoder(self.cat_z_pertilt(coords, z), eval_all_coords = False)
 
     # Need forward func for DataParallel -- TODO: refactor
@@ -492,7 +486,6 @@ class FTPositionalDecoder(nn.Module):
                 image = full_image[...,0] - full_image[...,1]
 
                 return image
-
 
     def decode(self, lattice):
         '''Return FT transform'''
@@ -826,19 +819,19 @@ class TiltEncoder(nn.Module):
         return z
 
 class TiltSeriesEncoder(nn.Module):
-                     # in_dim, qlayersA, qdimA,               qlayersB, qdimB,      zdim * 2, activation
-    def __init__(self, in_dim, nlayersA, hidden_dimA, ntilts, nlayersB, hidden_dimB, out_dim, activation, skip_zeros_encoder):
+    def __init__(self, in_dim, nlayersA, hidden_dimA, out_dimA, ntilts, nlayersB, hidden_dimB, out_dimB, activation, use_amp=False):
         super(TiltSeriesEncoder, self).__init__()
         assert nlayersA+nlayersB > 2
         self.in_dim = in_dim
-        self.encoder1 = ResidLinearMLP(in_dim, nlayersA, hidden_dimA, hidden_dimA, activation)
-        self.encoder2 = ResidLinearMLP(hidden_dimA*ntilts, nlayersB, hidden_dimB, out_dim, activation)
+        self.use_amp = use_amp
+        self.encoder1 = ResidLinearMLP(in_dim, nlayersA, hidden_dimA, out_dimA, activation)
+        self.encoder2 = ResidLinearMLP(out_dimA*ntilts, nlayersB, hidden_dimB, out_dimB, activation)
 
     def forward(self, batch, B):
-        # input image batch of shape B x ntilts x D*D[lattice_circular_mask]
-        batch_enc = self.encoder1(batch)
-        z = self.encoder2(batch_enc.view(B, -1)) #reshape to encode all tilts of one ptcl together
-        return z
+        with autocast(enabled=self.use_amp):
+            batch_enc = self.encoder1(batch)         # input image batch of shape B x ntilts x D*D[lattice_circular_mask]
+            z = self.encoder2(batch_enc.view(B, -1)) # reshape to encode all tilts of one ptcl together
+            return z
 
 class ResidLinearMLP(nn.Module):
     def __init__(self, in_dim, nlayers, hidden_dim, out_dim, activation):

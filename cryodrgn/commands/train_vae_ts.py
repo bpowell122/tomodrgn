@@ -30,9 +30,8 @@ def add_args(parser):
     parser.add_argument('--poses', type=os.path.abspath, required=True, help='Image poses (.pkl)')
     parser.add_argument('--ctf', metavar='pkl', type=os.path.abspath, help='CTF parameters (.pkl)')
     parser.add_argument('--load', metavar='WEIGHTS.PKL', help='Initialize training from a checkpoint')
-    parser.add_argument('--checkpoint', type=int, default=1, help='Checkpointing interval in N_EPOCHS (default: %(default)s)')
-    parser.add_argument('--log-interval', type=int, default=200,
-                        help='Logging interval in N_PTCLS (default: %(default)s)')
+    parser.add_argument('--checkpoint', type=int, default=1, help='Checkpointing interval in N_EPOCHS')
+    parser.add_argument('--log-interval', type=int, default=200, help='Logging interval in N_PTCLS')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increaes verbosity')
     parser.add_argument('--seed', type=int, default=np.random.randint(0,100000), help='Random seed')
 
@@ -40,10 +39,9 @@ def add_args(parser):
     group.add_argument('--ind', type=os.path.abspath, metavar='PKL', help='Filter particle stack by these indices')
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
     group.add_argument('--no-window', dest='window', action='store_false', help='Turn off real space windowing of dataset')
-    group.add_argument('--window-r', type=float, default=.85,  help='Windowing radius (default: %(default)s)')
+    group.add_argument('--window-r', type=float, default=.85,  help='Windowing radius')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
-    group.add_argument('--relion31', action='store_true', help='Flag if relion3.1 star format')
-    group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
+    group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (recommend reading from SSD)')
 
     group = parser.add_argument_group('Tilt series')
     group.add_argument('--do-dose-weighting', action='store_true', help='Flag to calculate losses per tilt per pixel with dose weighting ')
@@ -51,32 +49,30 @@ def add_args(parser):
     group.add_argument('--do-tilt-weighting', action='store_true', help='Flag to calculate losses per tilt with cosine(tilt_angle) weighting')
 
     group = parser.add_argument_group('Training parameters')
-    group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs (default: %(default)s)')
-    group.add_argument('-b','--batch-size', type=int, default=8, help='Minibatch size (default: %(default)s)')
-    group.add_argument('--wd', type=float, default=0, help='Weight decay in Adam optimizer (default: %(default)s)')
-    group.add_argument('--lr', type=float, default=1e-4, help='Learning rate in Adam optimizer (default: %(default)s)')
-    group.add_argument('--beta', default=None, help='Choice of beta schedule or a constant for KLD weight (default: 1/zdim)')
-    group.add_argument('--beta-control', type=float, help='KL-Controlled VAE gamma. Beta is KL target. (default: %(default)s)')
-    group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: 0, std of dataset)')
+    group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs')
+    group.add_argument('-b','--batch-size', type=int, default=8, help='Minibatch size')
+    group.add_argument('--wd', type=float, default=0, help='Weight decay in Adam optimizer')
+    group.add_argument('--lr', type=float, default=1e-4, help='Learning rate in Adam optimizer')
+    group.add_argument('--beta', default=None, help='Choice of beta schedule or a constant for KLD weight')
+    group.add_argument('--beta-control', type=float, help='KL-Controlled VAE gamma. Beta is KL target')
+    group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale ')
     group.add_argument('--amp', action='store_true', help='Use mixed-precision training')
     group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs')
 
     group = parser.add_argument_group('Encoder Network')
-    group.add_argument('--enc-layers-A', dest='qlayersA', type=int, default=3, help='Number of hidden layers for each tilt(default: %(default)s)')
-    group.add_argument('--enc-dim-A', dest='qdimA', type=int, default=256, help='Number of nodes in hidden layers for each tilt (default: %(default)s)')
-    group.add_argument('--enc-layers-B', dest='qlayersB', type=int, default=1, help='Number of hidden layers encoding merged tilts (default: %(default)s)')
-    group.add_argument('--enc-dim-B', dest='qdimB', type=int, default=256, help='Number of nodes in hidden layers encoding merged tilts (default: %(default)s)')
-    group.add_argument('--enc-mask', type=int, help='Radius (px) of circular mask of image for encoder (default: D/2; -1 for no mask)')
-    group.add_argument('--skip-zeros-encoder', action='store_true', help='Ignore fourier pixels exposed to > 2.5x critical dose when encoding latent space')
-    group.add_argument('--weight-encoder', action='store_true', help='Apply dose/tilt pixel weighting scheme when encoding images to latent space')
+    group.add_argument('--enc-mask', type=int, help='Radius (px) of circular mask of image input to encoder (default: D/2; -1 for no mask)')
+    group.add_argument('--enc-layers-A', dest='qlayersA', type=int, default=3, help='Number of hidden layers for each tilt')
+    group.add_argument('--enc-dim-A', dest='qdimA', type=int, default=256, help='Number of nodes in hidden layers for each tilt')
+    group.add_argument('--out-dim-A', dest='outdimA', type=int, default=128, help='Number of nodes in output layer of EncA per tilt')
+    group.add_argument('--enc-layers-B', dest='qlayersB', type=int, default=1, help='Number of hidden layers encoding merged tilts')
+    group.add_argument('--enc-dim-B', dest='qdimB', type=int, default=256, help='Number of nodes in hidden layers encoding merged tilts')
 
     group = parser.add_argument_group('Decoder Network')
-    group.add_argument('--dec-layers', dest='players', type=int, default=3, help='Number of hidden layers (default: %(default)s)')
-    group.add_argument('--dec-dim', dest='pdim', type=int, default=256, help='Number of nodes in hidden layers (default: %(default)s)')
-    group.add_argument('--pe-type', choices=('geom_ft','geom_full','geom_lowf','geom_nohighf','linear_lowf','none'), default='geom_lowf', help='Type of positional encoding (default: %(default)s)')
+    group.add_argument('--dec-layers', dest='players', type=int, default=3, help='Number of hidden layers')
+    group.add_argument('--dec-dim', dest='pdim', type=int, default=256, help='Number of nodes in hidden layers')
+    group.add_argument('--pe-type', choices=('geom_ft','geom_full','geom_lowf','geom_nohighf','linear_lowf','none'), default='geom_lowf', help='Type of positional encoding')
     group.add_argument('--pe-dim', type=int, help='Num features in positional encoding (default: image D)')
-    group.add_argument('--domain', choices=('hartley','fourier'), default='fourier', help='Decoder representation domain (default: %(default)s)')
-    group.add_argument('--activation', choices=('relu','leaky_relu'), default='relu', help='Activation (default: %(default)s)')
+    group.add_argument('--activation', choices=('relu','leaky_relu'), default='relu', help='Activation')
     group.add_argument('--skip-zeros-decoder', action='store_true', help='Ignore fourier pixels exposed to > 2.5x critical dose when reconstructing image for MSE loss')
     return parser
 
@@ -135,14 +131,14 @@ def save_config(args, dataset, lattice, model, out_config):
                         window_r=args.window_r,
                         datadir=args.datadir,
                         ctf=args.ctf,
-                        poses=args.poses,
-                        relion31=args.relion31)
+                        poses=args.poses)
     lattice_args = dict(D=lattice.D,
                         extent=lattice.extent,
                         ignore_DC=lattice.ignore_DC)
     model_args = dict(in_dim=model.in_dim,
                       qlayersA=args.qlayersA,
                       qdimA=args.qdimA,
+                      outdimA = args.outdimA,
                       qlayersB=args.qlayersB,
                       qdimB=args.qdimB,
                       players=args.players,
@@ -151,9 +147,7 @@ def save_config(args, dataset, lattice, model, out_config):
                       enc_mask=args.enc_mask,
                       pe_type=args.pe_type,
                       pe_dim=args.pe_dim,
-                      domain=args.domain,
                       activation=args.activation,
-                      skip_zeros_encoder=args.skip_zeros_encoder,
                       skip_zeros_decoder=args.skip_zeros_decoder)
     training_args = dict(n=args.num_epochs,
                          B=args.batch_size,
@@ -167,7 +161,6 @@ def save_config(args, dataset, lattice, model, out_config):
                          do_dose_weighting=args.do_dose_weighting,
                          dose_override=args.dose_override,
                          do_tilt_weighting=args.do_tilt_weighting,
-                         weight_encoder=args.weight_encoder,
                          verbose=args.verbose,
                          log_interval=args.log_interval,
                          checkpoint=args.checkpoint,
@@ -206,9 +199,10 @@ def train_batch(scaler, model, lattice, y, cumulative_weights_decoder, final_mas
 
 
 def preprocess_input(y, lattice, trans, B, ntilts, D):
-    if trans is not None:
-        # center the image
-        y = lattice.translate_ht(y.view(B*ntilts,-1), trans.unsqueeze(1))
+    # skipping translations for warp-extracted particles bc they are centered and this can cause artifacts
+    # if trans is not None:
+    #     # center the image
+    #     y = lattice.translate_ht(y.view(B*ntilts,-1), trans.unsqueeze(1))
     y = y.view(B, ntilts, D, D)
     # return translated particle stack for encoder+decoder+loss calculation
     return y
@@ -231,9 +225,10 @@ def run_batch(model, lattice, y, rot, final_mask_decoder, B, ntilts, D, ctf_para
 
     # decode
     input_coords = (lattice.coords @ rot).view(B, ntilts, D, D, 3)[:, final_mask_decoder, :]
-    y_recon = model(input_coords, z).view(B, -1)  # B x ntilts*N[final_mask]
+    y_recon = model(input_coords, z).view(B, -1)  # B x ntilts*N[final_mask_decoder]
 
     if ctf_weights is not None:
+        # CTF-corrupt reconstruction post-decoder such that model learns uncorrupted volume
         y_recon *= ctf_weights[:,final_mask_decoder]
 
     return z_mu, z_logvar, z, y_recon, ctf_weights
@@ -272,8 +267,9 @@ def eval_z(model, lattice, data, expanded_ind_rebased, batch_size, device, trans
         B = y.size(0)
         ntilts = y.size(1)
         D = lattice.D
-        if trans is not None:
-            y = lattice.translate_ht(y.view(B*ntilts,-1), trans[batch_ind].unsqueeze(1)).view(B,ntilts,D,D)
+        # # skipping translations for warp-extracted particles bc they are centered and this can cause artifacts
+        # if trans is not None:
+        #     y = lattice.translate_ht(y.view(B*ntilts,-1), trans[batch_ind].unsqueeze(1)).view(B,ntilts,D,D)
         y = y.view(B, ntilts, D, D)
         if ctf_params is not None:
             freqs = lattice.freqs2d.unsqueeze(0).expand(B * ntilts, -1, -1) / ctf_params[batch_ind, 0].view(B * ntilts, 1, 1)
@@ -301,7 +297,6 @@ def save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z):
     with open(out_z,'wb') as f:
         pickle.dump(z_mu, f)
         pickle.dump(z_logvar, f)
-
 
 def check_memory_usage(flog):
     import subprocess
@@ -332,7 +327,7 @@ def main(args):
     # set the device
     use_cuda = torch.cuda.is_available()
     device = torch.device('cuda' if use_cuda else 'cpu')
-    flog('Use cuda {}'.format(use_cuda))
+    flog(f'Use cuda {use_cuda}')
     if use_cuda:
         torch.set_default_tensor_type(torch.cuda.FloatTensor)
     else:
@@ -344,12 +339,12 @@ def main(args):
     try:
         args.beta = float(args.beta)
     except ValueError:
-        assert args.beta_control, "Need to set beta control weight for schedule {}".format(args.beta)
+        assert args.beta_control, f"Need to set beta control weight for schedule {args.beta}"
     beta_schedule = get_beta_schedule(args.beta)
 
     # load the particle indices
     if args.ind is not None:
-        flog('Filtering image dataset with {}'.format(args.ind))
+        flog(f'Filtering image dataset with {args.ind}')
         ind = pickle.load(open(args.ind, 'rb'))
     else:
         ind = None
@@ -381,7 +376,7 @@ def main(args):
 
     # load CTF
     if args.ctf is not None:
-        flog('Loading ctf params from {}'.format(args.ctf))
+        flog(f'Loading ctf params from {args.ctf}')
         ctf_params = ctf.load_ctf_for_training(D - 1, args.ctf)
         if args.ind is not None: ctf_params = ctf_params[expanded_ind]
         assert ctf_params.shape == (Nimg, 8)
@@ -409,8 +404,8 @@ def main(args):
         enc_mask = None
         in_dim = lattice.D ** 2
     else:
-        raise RuntimeError("Invalid argument for encoder mask radius {}".format(args.enc_mask))
-    flog(f'Pixels per particle for encoder (after encoder mask): {in_dim}')
+        raise RuntimeError(f"Invalid argument for encoder mask radius {args.enc_mask}")
+    flog(f'Pixels per tilt image for encoder (after encoder mask): {in_dim}')
 
     # set decoder mask
     lattice_mask = lattice.get_circular_mask(lattice.D // 2) # reconstruct box-inscribed circle of pixels
@@ -422,22 +417,22 @@ def main(args):
     else:
         # uniform diameter circular mask for each tilt of the particle when decoding particles
         final_mask_decoder = lattice_mask.view(1,D,D).repeat(Ntilts,1,1).cpu().numpy()
-        flog(f'Pixels per particle for decoder (after fourier circular mask):  {Ntilts * lattice_mask.sum()}')
+        flog(f'Pixels per particle for decoder (after fourier circular mask):  {final_mask_decoder.sum()}')
     assert final_mask_decoder.shape == (Ntilts, D, D)
     cumulative_weights_decoder = cumulative_weights[final_mask_decoder]
 
     # instantiate model
     activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]
-    model = TiltSeriesHetOnlyVAE(lattice, args.qlayersA, args.qdimA, Ntilts, args.qlayersB, args.qdimB,
+    model = TiltSeriesHetOnlyVAE(lattice, args.qlayersA, args.qdimA, args.outdimA, Ntilts, args.qlayersB, args.qdimB,
                                  args.players, args.pdim, in_dim, args.zdim,
                                  enc_mask=enc_mask,
                                  enc_type=args.pe_type, enc_dim=args.pe_dim,
-                                 domain=args.domain, activation=activation, use_amp=args.amp,
+                                 activation=activation, use_amp=args.amp,
                                  skip_zeros_decoder=args.skip_zeros_decoder)
     flog(model)
-    flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
-    flog('{} parameters in encoder'.format(sum(p.numel() for p in model.encoder.parameters() if p.requires_grad)))
-    flog('{} parameters in decoder'.format(sum(p.numel() for p in model.decoder.parameters() if p.requires_grad)))
+    flog(f'{sum(p.numel() for p in model.parameters() if p.requires_grad)} parameters in model')
+    flog(f'{sum(p.numel() for p in model.encoder.parameters() if p.requires_grad)} parameters in encoder')
+    flog(f'{sum(p.numel() for p in model.decoder.parameters() if p.requires_grad)} parameters in decoder')
 
     # save configuration
     out_config = f'{args.outdir}/config.pkl'
@@ -452,7 +447,7 @@ def main(args):
 
     # restart from checkpoint
     if args.load:
-        flog('Loading checkpoint from {}'.format(args.load))
+        flog(f'Loading checkpoint from {args.load}')
         checkpoint = torch.load(args.load)
         model.load_state_dict(checkpoint['model_state_dict'])
         optim.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -505,28 +500,28 @@ def main(args):
             loss_accum += loss*len(batch_ind)
 
             if batch_it % args.log_interval == 0:
-                log('# [Train Epoch: {}/{}] [{}/{} subtomos] gen loss={:.6f}, kld={:.6f}, beta={:.6f}, loss={:.6f}'.format(epoch+1, num_epochs, int(batch_it/Ntilts), Nptcls, gen_loss, kld, beta, loss))
+                log(f'# [Train Epoch: {epoch+1}/{num_epochs}] [{int(batch_it/Ntilts)}/{Nptcls} subtomos] gen loss={gen_loss:.6f}, kld={kld:.6f}, beta={beta:.6f}, loss={loss:.6f}')
 
-        flog('# =====> Epoch: {} Average gen loss = {:.6}, KLD = {:.6f}, total loss = {:.6f}; Finished in {}'.format(epoch+1, gen_loss_accum/Nimg, kld_accum/Nimg, loss_accum/Nimg, dt.now()-t2))
+        flog(f'# =====> Epoch: {epoch+1} Average gen loss = {gen_loss_accum/Nimg:.6}, KLD = {kld_accum/Nimg:.6f}, total loss = {loss_accum/Nimg:.6f}; Finished in {dt.now()-t2}')
         if args.checkpoint and epoch % args.checkpoint == 0:
             check_memory_usage(flog)
-            out_weights = '{}/weights.{}.pkl'.format(args.outdir,epoch)
-            out_z = '{}/z.{}.pkl'.format(args.outdir, epoch)
+            out_weights = f'{args.outdir}/weights.{epoch}.pkl'
+            out_z = f'{args.outdir}/z.{epoch}.pkl'
             model.eval()
             with torch.no_grad():
                 z_mu, z_logvar = eval_z(model, lattice, data, expanded_ind_rebased, args.batch_size, device, posetracker.trans, ctf_params)
                 save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z)
 
-    # save model weights, latent encoding, and evaluate the model on 3D lattice
-    out_weights = '{}/weights.pkl'.format(args.outdir)
-    out_z = '{}/z.pkl'.format(args.outdir)
+    # Final outputs at end of training: save model weights, latent encoding, and evaluate the model on 3D lattice
+    out_weights = f'{args.outdir}/weights.pkl'
+    out_z = f'{args.outdir}/z.pkl'
     model.eval()
     with torch.no_grad():
         z_mu, z_logvar = eval_z(model, lattice, data, expanded_ind_rebased, args.batch_size, device, posetracker.trans, ctf_params)
         save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z)
 
     td = dt.now() - t1
-    flog('Finished in {} ({} per epoch)'.format(td, td / (num_epochs - start_epoch)))
+    flog(f'Finished in {td} ({td / (num_epochs - start_epoch)} per epoch)')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
