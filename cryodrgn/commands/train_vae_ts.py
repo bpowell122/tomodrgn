@@ -68,6 +68,7 @@ def add_args(parser):
     group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: 0, std of dataset)')
     group.add_argument('--amp', action='store_true', help='Use mixed-precision training')
     group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs')
+    group.add_argument('--enable-trans', action='store_true', help='Apply translations in starfile. Not recommended if using centered + re-extracted particles')
 
     group = parser.add_argument_group('Encoder Network')
     group.add_argument('--enc-layers-A', dest='qlayersA', type=int, default=3, help='Number of hidden layers for each tilt(default: %(default)s)')
@@ -409,6 +410,10 @@ def main(args):
 
     # load poses
     posetracker = PoseTracker.load(args.poses, Nimg, D, None, expanded_ind)
+    if not args.enable_trans:
+        # currently recommended pipeline uses centered and re-extracted images
+        # translation residuals in starfile represent numerical error and cause artifacts in volume reconstruction
+        posetracker.use_trans = False
 
     # load CTF
     if args.ctf is not None:
