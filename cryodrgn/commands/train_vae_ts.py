@@ -315,7 +315,7 @@ def check_memory_usage(flog):
 # TODO: move to utils
 def check_git_revision_hash():
     import subprocess
-    return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
+    return subprocess.check_output(['git', '--git-dir', '/nobackup/users/bmp/software/cryodrgn/.git', 'rev-parse', 'HEAD']).decode('ascii').strip()
 
 
 def main(args):
