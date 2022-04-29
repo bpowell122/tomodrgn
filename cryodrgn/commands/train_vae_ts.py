@@ -150,12 +150,11 @@ def save_config(args, dataset, lattice, model, out_config):
                       players=args.players,
                       pdim=args.pdim,
                       zdim=args.zdim,
-                      # enc_mask=args.enc_mask,
+                      enc_mask=args.enc_mask,
                       pe_type=args.pe_type,
                       pe_dim=args.pe_dim,
                       domain=args.domain,
                       activation=args.activation,
-                      skip_zeros_encoder=args.skip_zeros_encoder,
                       skip_zeros_decoder=args.skip_zeros_decoder)
     training_args = dict(n=args.num_epochs,
                          B=args.batch_size,
@@ -169,7 +168,6 @@ def save_config(args, dataset, lattice, model, out_config):
                          do_dose_weighting=args.do_dose_weighting,
                          dose_override=args.dose_override,
                          do_tilt_weighting=args.do_tilt_weighting,
-                         weight_encoder=args.weight_encoder,
                          verbose=args.verbose,
                          log_interval=args.log_interval,
                          checkpoint=args.checkpoint,
@@ -489,6 +487,7 @@ def main(args):
     data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=True)
     expanded_ind_rebased = torch.tensor([np.arange(i * Ntilts, (i + 1) * Ntilts) for i in range(Nptcls)]).to(device) # redefine training inds to remove gaps created by filtering dataset when loading
     dec_mask = torch.tensor(dec_mask)
+    cumulative_weights = torch.tensor(cumulative_weights)
     num_epochs = args.num_epochs
     scaler = GradScaler(enabled=use_amp)
     for epoch in range(start_epoch, num_epochs):
