@@ -312,6 +312,11 @@ def check_memory_usage(flog):
         .strip().split('\n')
     flog(f'GPU memory usage (MB): {[device for device in gpu_memory_usage]}')
 
+# TODO: move to utils
+def check_git_revision_hash():
+    import subprocess
+    return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
+
 
 def main(args):
     t1 = dt.now()
@@ -326,6 +331,7 @@ def main(args):
         args = get_latest(args)
     flog(' '.join(sys.argv))
     flog(args)
+    flog(f'Git revision hash: {check_git_revision_hash()}')
 
     # set the random seed
     np.random.seed(args.seed)
