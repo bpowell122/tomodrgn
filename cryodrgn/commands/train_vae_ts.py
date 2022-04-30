@@ -256,7 +256,7 @@ def eval_z(model, lattice, data, expanded_ind_rebased, batch_size, device, trans
     return z_mu_all, z_logvar_all
 
 
-def save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z):
+def save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z, scaler):
     '''
     Save model weights and latent encoding z
     '''
@@ -265,6 +265,7 @@ def save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z):
         'epoch':epoch,
         'model_state_dict':_unparallelize(model).state_dict(),
         'optimizer_state_dict':optim.state_dict(),
+        'scaler': scaler.state_dict() if scaler is not None else None
         }, out_weights)
     # save z
     with open(out_z,'wb') as f:
@@ -408,12 +409,20 @@ def main(args):
     out_config = f'{args.outdir}/config.pkl'
     save_config(args, data, lattice, model, out_config)
 
+    # instantiate optimizer
     optim = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.wd)
 
-    # TODO: add warnings if various layers / batchsize / etc not multiples of 8, not optimized
     # Mixed precision training with AMP
     use_amp = args.amp
     flog(f'AMP acceleration enabled (autocast + gradscaler) : {use_amp}')
+    scaler = GradScaler(enabled=use_amp)
+    if not args.batch_size % 8 == 0: flog('Warning: recommended to have batch size divisible by 8 for AMP training')
+    if not (D-1) % 8 == 0: flog('Warning: recommended to have image size divisible by 8 for AMP training')
+    if in_dim % 8 != 0: flog('Warning: recommended to have masked image dimensions divisible by 8 for AMP training')
+    assert args.qdimA % 8 == 0, "Encoder hidden layer dimension must be divisible by 8 for AMP training"
+    assert args.qdimB % 8 == 0, "Encoder hidden layer dimension must be divisible by 8 for AMP training"
+    if args.zdim % 8 != 0: flog('Warning: recommended to have z dimension divisible by 8 for AMP training')
+    assert args.pdim % 8 == 0, "Decoder hidden layer dimension must be divisible by 8 for AMP training"
 
     # restart from checkpoint
     if args.load:
@@ -421,6 +430,10 @@ def main(args):
         checkpoint = torch.load(args.load)
         model.load_state_dict(checkpoint['model_state_dict'])
         optim.load_state_dict(checkpoint['optimizer_state_dict'])
+        try:
+            scaler.load_state_dict(checkpoint['scaler'])
+        except:
+            flog('No GradScaler instance found in specified checkpoint; creating new GradScaler')
         start_epoch = checkpoint['epoch']+1
         model.train()
     else:
@@ -441,7 +454,6 @@ def main(args):
     dec_mask = torch.tensor(dec_mask)
     cumulative_weights = torch.tensor(cumulative_weights)
     num_epochs = args.num_epochs
-    scaler = GradScaler(enabled=use_amp)
     for epoch in range(start_epoch, num_epochs):
         t2 = dt.now()
         gen_loss_accum = 0
@@ -479,7 +491,7 @@ def main(args):
             model.eval()
             with torch.no_grad():
                 z_mu, z_logvar = eval_z(model, lattice, data, expanded_ind_rebased, args.batch_size, device, posetracker.trans, ctf_params)
-                save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z)
+                save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z, scaler)
 
     # save model weights, latent encoding, and evaluate the model on 3D lattice
     out_weights = '{}/weights.pkl'.format(args.outdir)
