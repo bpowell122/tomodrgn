@@ -6,6 +6,7 @@ import collections
 import functools
 from cryodrgn import mrc, fft
 from scipy import ndimage
+import subprocess
 
 _verbose = False
 
@@ -200,3 +201,12 @@ def calc_fsc(vol1_path, vol2_path):
 
     x = bins / D  # x axis should be spatial frequency in 1/px
     return x, fsc
+
+
+def check_memory_usage(flog):
+    gpu_memory_usage = subprocess.check_output(['nvidia-smi', '--query-gpu=memory.used,memory.total', '--format=csv,noheader'], encoding='utf-8').strip().split('\n')
+    return [f'{gpu.split(", ")[0]} / {gpu.split(", ")[1]}' for gpu in gpu_memory_usage]
+
+
+def check_git_revision_hash(repo_path):
+    return subprocess.check_output(['git', '--git-dir', repo_path, 'rev-parse', 'HEAD']).decode('ascii').strip()

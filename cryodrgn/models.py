@@ -166,34 +166,27 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         cfg = utils.load_pkl(config) if type(config) is str else config
         ntilts = cfg['dataset_args']['ntilts']
         lat = lattice.Lattice(cfg['lattice_args']['D'], extent=cfg['lattice_args']['extent'])
-        in_dim = cfg['model_args']['in_dim']
-        # c = cfg['model_args']
-        # if cfg['model_args']['enc_mask'] > 0:
-        #     enc_mask = lat.get_circular_mask(c['enc_mask'])
-        #     in_dim = int(enc_mask.sum())
-        # else:
-        #     assert c['enc_mask'] == -1
-        #     enc_mask = None
-        #     in_dim = lat.D ** 2
+        c = cfg['model_args']
+        if cfg['model_args']['enc_mask'] > 0:
+            enc_mask = lat.get_circular_mask(c['enc_mask'])
+            in_dim = int(enc_mask.sum())
+        else:
+            assert c['enc_mask'] == -1
+            enc_mask = None
+            in_dim = lat.D ** 2
         activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[cfg['model_args']['activation']]
-        # TiltSeriesHetOnlyVAE(lattice, args.qlayersA, args.qdimA, Ntilts, args.qlayersB, args.qdimB,
-        #                                  args.players, args.pdim, in_dim, args.zdim, encode_mode=args.encode_mode,
-        #                                  enc_mask=enc_mask, enc_type=args.pe_type, enc_dim=args.pe_dim,
-        #                                  domain=args.domain, activation=activation)
         model = TiltSeriesHetOnlyVAE(lat,
                                      cfg['model_args']['qlayersA'], cfg['model_args']['qdimA'],
                                      ntilts,
                                      cfg['model_args']['qlayersB'], cfg['model_args']['qdimB'],
                                      cfg['model_args']['players'], cfg['model_args']['pdim'],
                                      in_dim, cfg['model_args']['zdim'],
-                                     # encode_mode=cfg['model_args']['encode_mode'],
-                                     # enc_mask=enc_mask,
+                                     enc_mask=enc_mask,
                                      enc_type=cfg['model_args']['pe_type'],
                                      enc_dim=cfg['model_args']['pe_dim'],
                                      domain=cfg['model_args']['domain'],
                                      activation=activation,
                                      use_amp=cfg['training_args']['amp'],
-                                     skip_zeros_encoder=cfg['model_args']['skip_zeros_encoder'],
                                      skip_zeros_decoder=cfg['model_args']['skip_zeros_decoder'])
         if weights is not None:
             ckpt = torch.load(weights)

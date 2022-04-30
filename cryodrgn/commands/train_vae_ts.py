@@ -302,18 +302,7 @@ def save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z):
         pickle.dump(z_logvar, f)
 
 
-# TODO: move to utils and add usage out of max to output
-def check_memory_usage(flog):
-    import subprocess
-    gpu_memory_usage = subprocess.check_output(
-        ['nvidia-smi', '--query-gpu=memory.used', '--format=csv,nounits,noheader'], encoding='utf-8')\
-        .strip().split('\n')
-    flog(f'GPU memory usage (MB): {[device for device in gpu_memory_usage]}')
 
-# TODO: move to utils
-def check_git_revision_hash():
-    import subprocess
-    return subprocess.check_output(['git', '--git-dir', '/nobackup/users/bmp/software/cryodrgn/.git', 'rev-parse', 'HEAD']).decode('ascii').strip()
 
 
 def main(args):
@@ -329,7 +318,7 @@ def main(args):
         args = get_latest(args)
     flog(' '.join(sys.argv))
     flog(args)
-    flog(f'Git revision hash: {check_git_revision_hash()}')
+    flog(f'Git revision hash: {utils.check_git_revision_hash("/nobackup/users/bmp/software/cryodrgn/.git")}')
 
     # set the random seed
     np.random.seed(args.seed)
@@ -403,9 +392,9 @@ def main(args):
     # instantiate pixel lattice
     lattice = Lattice(D, extent=0.5)
     if args.lazy:
-        flog(f'Pixels per particle (input):  {np.prod(data.particles[0][0].get().shape)*Ntilts} ')
+        flog(f'Pixels per particle (raw data):  {np.prod(data.particles[0][0].get().shape)*Ntilts} ')
     else:
-        flog(f'Pixels per particle (input):  {np.prod(data.particles[0].shape)} ')
+        flog(f'Pixels per particle (raw data):  {np.prod(data.particles[0].shape)} ')
 
     # determine which pixels to encode
     if args.enc_mask is None:
@@ -425,8 +414,7 @@ def main(args):
 
     # determine which pixels to decode
     lattice_mask = lattice.get_circular_mask(lattice.D // 2) # reconstruct box-inscribed circle of pixels
-    skip_zeros_decoder = True if args.skip_zeros_decoder else False
-    if skip_zeros_decoder:
+    if args.skip_zeros_decoder:
         # decode pixels that accumulated < 2.5x critical dose (variable fourier radius by tilt)
         weights_mask = cumulative_weights != 0
         dec_mask = lattice_mask.view(1,D,D).cpu().numpy() * weights_mask # mask is currently ntilts x D x D
@@ -444,7 +432,7 @@ def main(args):
                                  args.players, args.pdim, in_dim, args.zdim,
                                  enc_mask=enc_mask, enc_type=args.pe_type, enc_dim=args.pe_dim,
                                  domain=args.domain, activation=activation, use_amp=args.amp,
-                                 skip_zeros_decoder=skip_zeros_decoder)
+                                 skip_zeros_decoder=args.skip_zeros_decoder)
     flog(model)
     flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
     flog('{} parameters in encoder'.format(sum(p.numel() for p in model.encoder.parameters() if p.requires_grad)))
@@ -521,7 +509,7 @@ def main(args):
 
         flog('# =====> Epoch: {} Average gen loss = {:.6}, KLD = {:.6f}, total loss = {:.6f}; Finished in {}'.format(epoch+1, gen_loss_accum/Nimg, kld_accum/Nimg, loss_accum/Nimg, dt.now()-t2))
         if args.checkpoint and epoch % args.checkpoint == 0:
-            check_memory_usage(flog)
+            flog(f'GPU memory usage: {utils.check_memory_usage()}')
             out_weights = '{}/weights.{}.pkl'.format(args.outdir,epoch)
             out_z = '{}/z.{}.pkl'.format(args.outdir, epoch)
             model.eval()
