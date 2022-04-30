@@ -404,7 +404,6 @@ def main(args):
     flog('{} parameters in encoder'.format(sum(p.numel() for p in model.encoder.parameters() if p.requires_grad)))
     flog('{} parameters in decoder'.format(sum(p.numel() for p in model.decoder.parameters() if p.requires_grad)))
 
-    # TODO: confirm save config works correctly
     # save configuration
     out_config = f'{args.outdir}/config.pkl'
     save_config(args, data, lattice, model, out_config)
@@ -416,7 +415,6 @@ def main(args):
     use_amp = args.amp
     flog(f'AMP acceleration enabled (autocast + gradscaler) : {use_amp}')
 
-    # TODO: confirm loading from checkpoint works
     # restart from checkpoint
     if args.load:
         flog('Loading checkpoint from {}'.format(args.load))
