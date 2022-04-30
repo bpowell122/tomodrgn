@@ -134,7 +134,7 @@ class HetOnlyVAE(nn.Module):
 
 class TiltSeriesHetOnlyVAE(nn.Module):
     # No pose inference
-    def __init__(self, lattice, qlayersA, qdimA, ntilts, qlayersB, qdimB,
+    def __init__(self, lattice, qlayersA, qdimA, out_dimA, ntilts, qlayersB, qdimB,
                  players, pdim, in_dim, zdim=1,
                  enc_mask=None, enc_type='geom_lowf', enc_dim=None,
                  domain='fourier', activation = nn.ReLU, use_amp=False,
@@ -147,7 +147,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         self.enc_mask = enc_mask
         self.use_amp = use_amp
         self.skip_zeros_decoder = skip_zeros_decoder
-        self.encoder = TiltSeriesEncoder(in_dim, qlayersA, qdimA, ntilts, qlayersB, qdimB, zdim * 2, activation)
+        self.encoder = TiltSeriesEncoder(in_dim, qlayersA, qdimA, out_dimA, ntilts, qlayersB, qdimB, zdim * 2, activation)
         self.decoder = get_decoder(3 + zdim, lattice.D, players, pdim, domain, enc_type, enc_dim, activation, use_amp=use_amp)
 
     @classmethod
@@ -177,7 +177,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[cfg['model_args']['activation']]
         model = TiltSeriesHetOnlyVAE(lat,
                                      cfg['model_args']['qlayersA'], cfg['model_args']['qdimA'],
-                                     ntilts,
+                                     cfg['model_args']['out_dimA'], ntilts,
                                      cfg['model_args']['qlayersB'], cfg['model_args']['qdimB'],
                                      cfg['model_args']['players'], cfg['model_args']['pdim'],
                                      in_dim, cfg['model_args']['zdim'],
@@ -814,14 +814,14 @@ class TiltEncoder(nn.Module):
         return z
 
 class TiltSeriesEncoder(nn.Module):
-    def __init__(self, in_dim, nlayersA, hidden_dimA, ntilts, nlayersB, hidden_dimB, out_dim, activation):
+    def __init__(self, in_dim, nlayersA, hidden_dimA, out_dimA, ntilts, nlayersB, hidden_dimB, out_dim, activation):
         super(TiltSeriesEncoder, self).__init__()
         self.in_dim = in_dim
         assert nlayersA+nlayersB > 2
         # encoder1 encodes each identically-masked tilt image separately
         # encoder2 merges ntilts-concatenated encoder1 information and encodes further to latent space
-        self.encoder1 = ResidLinearMLP(in_dim, nlayersA, hidden_dimA, hidden_dimA, activation)
-        self.encoder2 = ResidLinearMLP(hidden_dimA*ntilts, nlayersB, hidden_dimB, out_dim, activation)
+        self.encoder1 = ResidLinearMLP(in_dim, nlayersA, hidden_dimA, out_dimA, activation)
+        self.encoder2 = ResidLinearMLP(out_dimA*ntilts, nlayersB, hidden_dimB, out_dim, activation)
 
     def forward(self, batch, B):
         # input image batch of shape B x ntilts x D*D[lattice_circular_mask]
