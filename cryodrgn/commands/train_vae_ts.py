@@ -16,6 +16,7 @@ import cryodrgn
 from cryodrgn import utils
 from cryodrgn import dataset
 from cryodrgn import ctf
+from cryodrgn import dose
 
 from cryodrgn.pose import PoseTracker
 from cryodrgn.models import TiltSeriesHetOnlyVAE
@@ -81,39 +82,6 @@ def add_args(parser):
     group.add_argument('--activation', choices=('relu','leaky_relu'), default='relu', help='Activation (default: %(default)s)')
     group.add_argument('--skip-zeros-decoder', action='store_true', help='Ignore fourier pixels exposed to > 2.5x critical dose when reconstructing image for MSE loss')
     return parser
-
-# TODO: create single importable dose_ts.py or similar for calculating and plotting weight distributions
-def plot_weight_distribution(cumulative_weights, spatial_frequencies, args):
-    # plot distribution of dose weights across tilts in the spirit of https://doi.org/10.1038/s41467-021-22251-8
-    import matplotlib.pyplot as plt
-    import matplotlib.ticker as mticker
-
-    ntilts = cumulative_weights.shape[0]
-    max_frequency_box_edge = spatial_frequencies[0,spatial_frequencies.shape[0]//2]
-    sorted_frequency_list = sorted(set(spatial_frequencies[spatial_frequencies < max_frequency_box_edge].reshape(-1)))
-    weights_plot = np.empty((len(sorted_frequency_list), ntilts))
-
-    for i, frequency in enumerate(sorted_frequency_list):
-        x, y = np.where(spatial_frequencies == frequency)
-        sum_of_weights_at_frequency = cumulative_weights[:, y, x].sum()
-        weights_plot[i, :] = (cumulative_weights[:, y, x] / sum_of_weights_at_frequency).sum(axis=1) # sum across multiple pixels at same frequency
-
-    colormap = plt.cm.get_cmap('coolwarm').reversed()
-    tilt_colors = colormap(np.linspace(0, 1, ntilts))
-
-    fig, ax = plt.subplots()
-    ax.stackplot(sorted_frequency_list, weights_plot.T, colors=tilt_colors)
-    ax.set_ylabel('cumulative weights')
-    ax.set_xlabel('spatial frequency (1/Å)')
-    ax.set_xlim((0, sorted_frequency_list[-1]))
-    ax.set_ylim((0, 1))
-
-    # ax.xaxis.set_major_locator(mticker.MaxNLocator())
-    ticks_loc = ax.get_xticks().tolist()
-    ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
-    ax.set_xticklabels([f'1/{1/xtick:.1f}' if xtick != 0.0 else 0 for xtick in ticks_loc])
-
-    plt.savefig(f'{args.outdir}/cumulative_weights_across_frequencies_by_tilt.png', dpi=300)
 
 
 def get_latest(args):
@@ -302,9 +270,6 @@ def save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z):
         pickle.dump(z_logvar, f)
 
 
-
-
-
 def main(args):
     t1 = dt.now()
     if args.outdir is not None and not os.path.exists(args.outdir):
@@ -369,7 +334,7 @@ def main(args):
     expanded_ind = data.expanded_ind #this is already filtered by args.ind, np.array of shape (1,)
     cumulative_weights = data.cumulative_weights
     spatial_frequencies = data.spatial_frequencies
-    plot_weight_distribution(cumulative_weights, spatial_frequencies, args)
+    dose.plot_weight_distribution(cumulative_weights, spatial_frequencies, args.outdir)
 
     # load poses
     posetracker = PoseTracker.load(args.poses, Nimg, D, None, expanded_ind)
