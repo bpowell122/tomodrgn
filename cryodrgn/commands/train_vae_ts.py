@@ -392,7 +392,6 @@ def main(args):
         flog(f'Pixels decoded per particle (+ fourier circular mask):  {dec_mask.sum()}')
     assert dec_mask.shape == (Ntilts, D, D)
 
-    # TODO: add argparse encA_outdim option
     # instantiate model
     activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]
     model = TiltSeriesHetOnlyVAE(lattice, args.qlayersA, args.qdimA, args.out_dim_A, Ntilts, args.qlayersB, args.qdimB,

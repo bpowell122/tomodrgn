@@ -203,7 +203,7 @@ def calc_fsc(vol1_path, vol2_path):
     return x, fsc
 
 
-def check_memory_usage(flog):
+def check_memory_usage():
     gpu_memory_usage = subprocess.check_output(['nvidia-smi', '--query-gpu=memory.used,memory.total', '--format=csv,noheader'], encoding='utf-8').strip().split('\n')
     return [f'{gpu.split(", ")[0]} / {gpu.split(", ")[1]}' for gpu in gpu_memory_usage]
 
