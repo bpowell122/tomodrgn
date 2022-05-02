@@ -162,9 +162,9 @@ def train_batch(scaler, model, lattice, y, rot, tran, cumulative_weights, dec_ma
     B = y.size(0)
     ntilts = y.size(1)
     D = lattice.D
+    y = y.view(B, ntilts, D, D)
 
     with autocast(enabled=use_amp):
-        y = preprocess_input(y, lattice, tran, B, ntilts, D)
         z_mu, z_logvar, z, y_recon, ctf_weights = run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params)
         loss, gen_loss, kld = loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta, beta_control)
 
@@ -173,14 +173,6 @@ def train_batch(scaler, model, lattice, y, rot, tran, cumulative_weights, dec_ma
     scaler.update()
 
     return loss.item(), gen_loss.item(), kld.item()
-
-
-def preprocess_input(y, lattice, trans, B, ntilts, D):
-    if trans is not None:
-        # center the image
-        y = lattice.translate_ht(y.view(B*ntilts,-1), trans.unsqueeze(1))
-    y = y.view(B, ntilts, D, D)
-    return y
 
 
 def run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params=None):
@@ -448,9 +440,20 @@ def main(args):
     elif args.multigpu:
         log(f'WARNING: --multigpu selected, but {torch.cuda.device_count()} GPUs detected')
 
+    # apply translations once at start of training
+    flog('Applying translations just once at start of training')
+    expanded_ind_rebased = torch.tensor([np.arange(i * Ntilts, (i + 1) * Ntilts) for i in range(Nptcls)], device='cpu')# .to(device) # redefine training inds to remove gaps created by filtering dataset when loading
+    for ind in range(Nptcls):
+        imgs_ind = expanded_ind_rebased[ind].view(-1)
+        _, trans = posetracker.get_pose(imgs_ind)
+        if trans is not None:
+            # center the image
+            trans = trans.to('cpu')
+            data.particles[imgs_ind] = lattice.translate_ht(data.particles[imgs_ind].view(Ntilts, -1), trans.unsqueeze(1))
+
     # train
+    flog('Done all preprocessing; starting training now!')
     data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=True)
-    expanded_ind_rebased = torch.tensor([np.arange(i * Ntilts, (i + 1) * Ntilts) for i in range(Nptcls)]).to(device) # redefine training inds to remove gaps created by filtering dataset when loading
     dec_mask = torch.tensor(dec_mask)
     cumulative_weights = torch.tensor(cumulative_weights)
     num_epochs = args.num_epochs
@@ -468,11 +471,11 @@ def main(args):
             beta = beta_schedule(global_it)
 
             # training minibatch
-            y = batch.to(device)
-            batch_ind = batch_ind.to(device)
+            # y = batch.to(device)
+            # batch_ind = batch_ind.to(device)
             rot, tran = posetracker.get_pose(batch_ind)
             ctf_param = ctf_params[batch_ind] if ctf_params is not None else None
-            loss, gen_loss, kld = train_batch(scaler, model, lattice, y, rot, tran, cumulative_weights, dec_mask,
+            loss, gen_loss, kld = train_batch(scaler, model, lattice, batch, rot, tran, cumulative_weights, dec_mask,
                                               optim, beta, args.beta_control, ctf_params=ctf_param, use_amp=use_amp)
 
             # logging
