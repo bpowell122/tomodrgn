@@ -43,7 +43,7 @@ def add_args(parser):
     group.add_argument('--ind', type=os.path.abspath, metavar='PKL', help='Filter particle stack by these indices')
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
     group.add_argument('--no-window', dest='window', action='store_false', help='Turn off real space windowing of dataset')
-    group.add_argument('--window-r', type=float, default=.85,  help='Windowing radius (default: %(default)s)')
+    group.add_argument('--window-r', type=float, default=.85,  help='Windowing radius')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
 
@@ -54,31 +54,30 @@ def add_args(parser):
     group.add_argument('--enable-trans', action='store_true', help='Apply translations in starfile. Not recommended if using centered + re-extracted particles')
 
     group = parser.add_argument_group('Training parameters')
-    group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs (default: %(default)s)')
-    group.add_argument('-b','--batch-size', type=int, default=8, help='Minibatch size (default: %(default)s)')
-    group.add_argument('--wd', type=float, default=0, help='Weight decay in Adam optimizer (default: %(default)s)')
-    group.add_argument('--lr', type=float, default=1e-4, help='Learning rate in Adam optimizer (default: %(default)s)')
-    group.add_argument('--beta', default=None, help='Choice of beta schedule or a constant for KLD weight (default: 1/zdim)')
-    group.add_argument('--beta-control', type=float, help='KL-Controlled VAE gamma. Beta is KL target. (default: %(default)s)')
+    group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs')
+    group.add_argument('-b','--batch-size', type=int, default=8, help='Minibatch size')
+    group.add_argument('--wd', type=float, default=0, help='Weight decay in Adam optimizer')
+    group.add_argument('--lr', type=float, default=1e-4, help='Learning rate in Adam optimizer')
+    group.add_argument('--beta', default=None, help='Choice of beta schedule or a constant for KLD weight')
+    group.add_argument('--beta-control', type=float, help='KL-Controlled VAE gamma. Beta is KL target')
     group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: 0, std of dataset)')
     group.add_argument('--amp', action='store_true', help='Use mixed-precision training')
     group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs')
 
     group = parser.add_argument_group('Encoder Network')
-    group.add_argument('--enc-layers-A', dest='qlayersA', type=int, default=3, help='Number of hidden layers for each tilt(default: %(default)s)')
-    group.add_argument('--enc-dim-A', dest='qdimA', type=int, default=256, help='Number of nodes in hidden layers for each tilt (default: %(default)s)')
+    group.add_argument('--enc-layers-A', dest='qlayersA', type=int, default=3, help='Number of hidden layers for each tilt')
+    group.add_argument('--enc-dim-A', dest='qdimA', type=int, default=256, help='Number of nodes in hidden layers for each tilt')
     group.add_argument('--out-dim-A', type=int, default=128, help='Number of nodes in output layer of encA == ntilts * number of nodes input to encB')
-    group.add_argument('--enc-layers-B', dest='qlayersB', type=int, default=1, help='Number of hidden layers encoding merged tilts (default: %(default)s)')
-    group.add_argument('--enc-dim-B', dest='qdimB', type=int, default=256, help='Number of nodes in hidden layers encoding merged tilts (default: %(default)s)')
+    group.add_argument('--enc-layers-B', dest='qlayersB', type=int, default=1, help='Number of hidden layers encoding merged tilts')
+    group.add_argument('--enc-dim-B', dest='qdimB', type=int, default=256, help='Number of nodes in hidden layers encoding merged tilts')
     group.add_argument('--enc-mask', type=int, help='Circular mask of image for encoder (default: D/2; -1 for no mask)')
 
     group = parser.add_argument_group('Decoder Network')
-    group.add_argument('--dec-layers', dest='players', type=int, default=3, help='Number of hidden layers (default: %(default)s)')
-    group.add_argument('--dec-dim', dest='pdim', type=int, default=256, help='Number of nodes in hidden layers (default: %(default)s)')
-    group.add_argument('--pe-type', choices=('geom_ft','geom_full','geom_lowf','geom_nohighf','linear_lowf','none'), default='geom_lowf', help='Type of positional encoding (default: %(default)s)')
-    group.add_argument('--pe-dim', type=int, help='Num features in positional encoding (default: image D)')
-    group.add_argument('--domain', choices=('hartley','fourier'), default='fourier', help='Decoder representation domain (default: %(default)s)')
-    group.add_argument('--activation', choices=('relu','leaky_relu'), default='relu', help='Activation (default: %(default)s)')
+    group.add_argument('--dec-layers', dest='players', type=int, default=3, help='Number of hidden layers')
+    group.add_argument('--dec-dim', dest='pdim', type=int, default=256, help='Number of nodes in hidden layers')
+    group.add_argument('--pe-type', choices=('geom_ft','geom_full','geom_lowf','geom_nohighf','linear_lowf','none'), default='geom_lowf', help='Type of positional encoding')
+    group.add_argument('--pe-dim', type=int, help='Num features in positional encoding')
+    group.add_argument('--activation', choices=('relu','leaky_relu'), default='relu', help='Activation')
     group.add_argument('--skip-zeros-decoder', action='store_true', help='Ignore fourier pixels exposed to > 2.5x critical dose when reconstructing image for MSE loss')
     return parser
 
@@ -120,7 +119,7 @@ def save_config(args, dataset, lattice, model, out_config):
                       enc_mask=args.enc_mask,
                       pe_type=args.pe_type,
                       pe_dim=args.pe_dim,
-                      domain=args.domain,
+                      domain='fourier',
                       activation=args.activation,
                       skip_zeros_decoder=args.skip_zeros_decoder)
     training_args = dict(n=args.num_epochs,
@@ -387,7 +386,7 @@ def main(args):
     model = TiltSeriesHetOnlyVAE(lattice, args.qlayersA, args.qdimA, args.out_dim_A, Ntilts, args.qlayersB, args.qdimB,
                                  args.players, args.pdim, in_dim, args.zdim,
                                  enc_mask=enc_mask, enc_type=args.pe_type, enc_dim=args.pe_dim,
-                                 domain=args.domain, activation=activation, use_amp=args.amp,
+                                 domain='fourier', activation=activation, use_amp=args.amp,
                                  skip_zeros_decoder=args.skip_zeros_decoder)
     flog(model)
     flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
@@ -468,8 +467,6 @@ def main(args):
             beta = beta_schedule(global_it)
 
             # training minibatch
-            # y = batch.to(device)
-            # batch_ind = batch_ind.to(device)
             rot, tran = posetracker.get_pose(batch_ind)
             ctf_param = ctf_params[batch_ind] if ctf_params is not None else None
             loss, gen_loss, kld = train_batch(scaler, model, lattice, batch, rot, tran, cumulative_weights, dec_mask,
