@@ -45,13 +45,13 @@ def add_args(parser):
     group.add_argument('--no-window', dest='window', action='store_false', help='Turn off real space windowing of dataset')
     group.add_argument('--window-r', type=float, default=.85,  help='Windowing radius (default: %(default)s)')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
-    group.add_argument('--relion31', action='store_true', help='Flag if relion3.1 star format')
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
 
     group = parser.add_argument_group('Tilt series')
     group.add_argument('--do-dose-weighting', action='store_true', help='Flag to calculate losses per tilt per pixel with dose weighting ')
     group.add_argument('--dose-override', type=float, default=None, help='Manually specify dose in e- / A2 / tilt')
     group.add_argument('--do-tilt-weighting', action='store_true', help='Flag to calculate losses per tilt with cosine(tilt_angle) weighting')
+    group.add_argument('--enable-trans', action='store_true', help='Apply translations in starfile. Not recommended if using centered + re-extracted particles')
 
     group = parser.add_argument_group('Training parameters')
     group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs (default: %(default)s)')
@@ -63,7 +63,6 @@ def add_args(parser):
     group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: 0, std of dataset)')
     group.add_argument('--amp', action='store_true', help='Use mixed-precision training')
     group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs')
-    group.add_argument('--enable-trans', action='store_true', help='Apply translations in starfile. Not recommended if using centered + re-extracted particles')
 
     group = parser.add_argument_group('Encoder Network')
     group.add_argument('--enc-layers-A', dest='qlayersA', type=int, default=3, help='Number of hidden layers for each tilt(default: %(default)s)')
@@ -72,7 +71,6 @@ def add_args(parser):
     group.add_argument('--enc-layers-B', dest='qlayersB', type=int, default=1, help='Number of hidden layers encoding merged tilts (default: %(default)s)')
     group.add_argument('--enc-dim-B', dest='qdimB', type=int, default=256, help='Number of nodes in hidden layers encoding merged tilts (default: %(default)s)')
     group.add_argument('--enc-mask', type=int, help='Circular mask of image for encoder (default: D/2; -1 for no mask)')
-    group.add_argument('--weight-encoder', action='store_true', help='Apply dose/tilt pixel weighting scheme when encoding images to latent space')
 
     group = parser.add_argument_group('Decoder Network')
     group.add_argument('--dec-layers', dest='players', type=int, default=3, help='Number of hidden layers (default: %(default)s)')
@@ -106,8 +104,7 @@ def save_config(args, dataset, lattice, model, out_config):
                         window_r=args.window_r,
                         datadir=args.datadir,
                         ctf=args.ctf,
-                        poses=args.poses,
-                        relion31=args.relion31)
+                        poses=args.poses)
     lattice_args = dict(D=lattice.D,
                         extent=lattice.extent,
                         ignore_DC=lattice.ignore_DC)
