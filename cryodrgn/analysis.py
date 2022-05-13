@@ -602,9 +602,9 @@ def rescale_df_coordinates(df, tomo_max_xyz_nm=(680, 680, 510), tomo_pixelsize=1
     tomo_max_x_nm, tomo_max_y_nm, tomo_max_z_nm = tomo_max_xyz_nm  # units = nm
 
     # rlnCoordinate from starfile is measured in px, so needs to be rescaled to dimensionless tomo voxels
-    df['_rlnCoordinateX'] = df['_rlnCoordinateX'].astype('float') * starfile_pixelsize / tomo_pixelsize
-    df['_rlnCoordinateY'] = df['_rlnCoordinateY'].astype('float') * starfile_pixelsize / tomo_pixelsize
-    df['_rlnCoordinateZ'] = df['_rlnCoordinateZ'].astype('float') * starfile_pixelsize / tomo_pixelsize
+    df.loc[:,'_rlnCoordinateX'] = df['_rlnCoordinateX'].astype('float') * starfile_pixelsize / tomo_pixelsize
+    df.loc[:,'_rlnCoordinateY'] = df['_rlnCoordinateY'].astype('float') * starfile_pixelsize / tomo_pixelsize
+    df.loc[:,'_rlnCoordinateZ'] = df['_rlnCoordinateZ'].astype('float') * starfile_pixelsize / tomo_pixelsize
 
     assert 0 <= df['_rlnCoordinateX'].all() <= tomo_max_x_nm
     assert 0 <= df['_rlnCoordinateY'].all() <= tomo_max_y_nm
@@ -665,6 +665,8 @@ def subset_ptcls_and_render(df, tomo_name_for_df):
             colors = 'dodgerblue'
         quiverplot.color = colors
         if show_selection_checkbox.value:
+            subset_value_range.min = df_subset_numeric[column_selection.value].min()
+            subset_value_range.max = df_subset_numeric[column_selection.value].max()
             subset_value_range.value = [df_subset_numeric[column_selection.value].min(),
                                         df_subset_numeric[column_selection.value].max()]
             update_subset_quiver()
@@ -770,7 +772,7 @@ def subset_ptcls_and_render(df, tomo_name_for_df):
 
 ### TOMOGRAM PARTICLE INTERACTIVE WIDGET ###
 
-def interactive_tomo_ptcls(tomo_list, star_list, tomo_star_mappings):
+def interactive_tomo_ptcls(df_merged, tomo_list, tomo_star_mappings):
     def load_tomogram(*args):
         selected_tomogram_path = tomo_selection.value
         selected_rendering_style = rendering_selection.value
@@ -784,26 +786,11 @@ def interactive_tomo_ptcls(tomo_list, star_list, tomo_star_mappings):
             tomogram = mrc.parse_mrc(selected_tomogram_path)[0]
             rendering_styles[selected_rendering_style](tomogram)
 
-    def load_particles_from_starfile(*args):
-        s_path = starfile_path.value
-        s = starfile.GenericStarfile(s_path)
-        df = s.blocks['data_']
-
-        tomo_max_xyz_nm = (tomo_dim_x.value, tomo_dim_y.value, tomo_dim_z.value)
-        tomo_pixelsize = tomo_Apx.value
-        starfile_pixelsize = starfile_Apx.value
-
-        # scale df coordinates to match tomogram
-        df = rescale_df_coordinates(df,
-                                    tomo_max_xyz_nm=tomo_max_xyz_nm,
-                                    tomo_pixelsize=tomo_pixelsize,
-                                    starfile_pixelsize=starfile_pixelsize)
-
-        # start from here !!
+    def load_particles(*args):
         selected_tomogram_name = tomo_selection.value.split('/')[-1]
         tomo_name_for_df = tomo_star_mappings[selected_tomogram_name]
         with output:
-            subset_ptcls_and_render(df, tomo_name_for_df)
+            subset_ptcls_and_render(df_merged, tomo_name_for_df)
 
     def toggle_axes(*args):
         axes_on = displayaxes_checkbox.value
@@ -837,14 +824,6 @@ def interactive_tomo_ptcls(tomo_list, star_list, tomo_star_mappings):
                                       disabled=False,
                                       button_style='',  # 'success', 'info', 'warning', 'danger' or ''
                                       tooltip='Load selected tomogram into memory')
-
-    # starfile widget initialization
-    starfile_path = widgets.Dropdown(options=star_list, description='M Starfile:')
-    tomo_dim_x = widgets.IntText(value=680, description='Tomo px X:')
-    tomo_dim_y = widgets.IntText(value=680, description='Tomo px Y:')
-    tomo_dim_z = widgets.IntText(value=510, description='Tomo px Z:')
-    tomo_Apx = widgets.FloatText(value=10.0, description='Tomo A/px:')
-    starfile_Apx = widgets.FloatText(value=1.0, description='Starfile A/px')
     load_particles_button = widgets.Button(description='Load particles', tooltip='Load particles into display')
 
     # meta widget initialization
@@ -853,19 +832,16 @@ def interactive_tomo_ptcls(tomo_list, star_list, tomo_star_mappings):
     reset_button = widgets.Button(description='Clear all output', tooltip='Clears all figures, widgets, and text')
 
     # widget layout
-    starfile_widgets = widgets.VBox([widgets.HBox([starfile_path, tomo_Apx, starfile_Apx]),
-                                     widgets.HBox([tomo_dim_x, tomo_dim_y, tomo_dim_z])],
-                                    layout=widgets.Layout(border='2px solid'))
     tomogram_widgets = widgets.HBox([tomo_selection, rendering_selection, load_tomo_button, load_particles_button],
                                     layout=widgets.Layout(border='2px solid'))
     meta_widgets = widgets.HBox([displayaxes_checkbox, displaybox_checkbox, reset_button],
                                 layout=widgets.Layout(border='2px solid'))
     output = widgets.Output()
-    load_widget = widgets.VBox([starfile_widgets, tomogram_widgets, meta_widgets, output])
+    load_widget = widgets.VBox([tomogram_widgets, meta_widgets, output])
 
     # widget interactvity
     load_tomo_button.on_click(load_tomogram)
-    load_particles_button.on_click(load_particles_from_starfile)
+    load_particles_button.on_click(load_particles)
     displayaxes_checkbox.observe(toggle_axes, names='value')
     displaybox_checkbox.observe(toggle_box, names='value')
     reset_button.on_click(clear_output)
