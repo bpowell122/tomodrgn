@@ -3,6 +3,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.cuda.amp import autocast
 
 from . import fft
@@ -133,18 +134,11 @@ class HetOnlyVAE(nn.Module):
 
 class TiltSeriesHetOnlyVAE(nn.Module):
     # No pose inference
-    def __init__(self, lattice,  # Lattice object
-                 nlayersA, hidden_dimA,
-                 out_dimA, ntilts,
-                 nlayersB, hidden_dimB,
-                 players, pdim,
-                 in_dim, zdim=1,
-                 enc_mask=None,
-                 enc_type='geom_lowf',
-                 enc_dim=None,
-                 activation = nn.ReLU,
-                 use_amp=False,
-                 skip_zeros_decoder=False):
+    def __init__(self, lattice, qlayersA, qdimA, out_dimA, ntilts, qlayersB, qdimB,
+                 players, pdim, in_dim, zdim=1,
+                 enc_mask=None, enc_type='geom_lowf', enc_dim=None,
+                 domain='fourier', activation = nn.ReLU, use_amp=False,
+                 skip_zeros_decoder=False, feat_sigma = None):
         super(TiltSeriesHetOnlyVAE, self).__init__()
         self.lattice = lattice
         self.ntilts = ntilts
@@ -153,12 +147,12 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         self.enc_mask = enc_mask
         self.use_amp = use_amp
         self.skip_zeros_decoder = skip_zeros_decoder
-        self.encoder = TiltSeriesEncoder(in_dim, nlayersA, hidden_dimA, out_dimA, ntilts, nlayersB, hidden_dimB, zdim * 2, activation, use_amp=use_amp)
-        self.decoder = FTPositionalDecoder(3 + zdim, lattice.D, players, pdim, activation, enc_type, enc_dim, use_amp=use_amp)
+        self.encoder = TiltSeriesEncoder(in_dim, qlayersA, qdimA, out_dimA, ntilts, qlayersB, qdimB, zdim * 2, activation)
+        self.decoder = get_decoder(3 + zdim, lattice.D, players, pdim, domain, enc_type, enc_dim, activation, use_amp=use_amp, feat_sigma=feat_sigma)
 
     @classmethod
     def load(self, config, weights=None, device=None):
-        # TODO update me and validate working
+        # TODO update me
         '''Instantiate a model from a config.pkl
 
         Inputs:
@@ -170,6 +164,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
             HetOnlyVAE instance, Lattice instance
         '''
         cfg = utils.load_pkl(config) if type(config) is str else config
+        ntilts = cfg['dataset_args']['ntilts']
         lat = lattice.Lattice(cfg['lattice_args']['D'], extent=cfg['lattice_args']['extent'])
         c = cfg['model_args']
         if cfg['model_args']['enc_mask'] > 0:
@@ -180,19 +175,20 @@ class TiltSeriesHetOnlyVAE(nn.Module):
             enc_mask = None
             in_dim = lat.D ** 2
         activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[cfg['model_args']['activation']]
-
         model = TiltSeriesHetOnlyVAE(lat,
                                      cfg['model_args']['qlayersA'], cfg['model_args']['qdimA'],
-                                     cfg['model_args']['outdimA'], cfg['dataset_args']['ntilts'],
+                                     cfg['model_args']['out_dimA'], ntilts,
                                      cfg['model_args']['qlayersB'], cfg['model_args']['qdimB'],
                                      cfg['model_args']['players'], cfg['model_args']['pdim'],
                                      in_dim, cfg['model_args']['zdim'],
                                      enc_mask=enc_mask,
                                      enc_type=cfg['model_args']['pe_type'],
                                      enc_dim=cfg['model_args']['pe_dim'],
+                                     domain=cfg['model_args']['domain'],
                                      activation=activation,
                                      use_amp=cfg['training_args']['amp'],
-                                     skip_zeros_decoder=cfg['model_args']['skip_zeros_decoder'])
+                                     skip_zeros_decoder=cfg['model_args']['skip_zeros_decoder'],
+                                     feat_sigma=cfg['model_args']['feat_sigma'])
         if weights is not None:
             ckpt = torch.load(weights)
             model.load_state_dict(ckpt['model_state_dict'])
@@ -209,17 +205,16 @@ class TiltSeriesHetOnlyVAE(nn.Module):
 
     def encode(self, batch, B, ntilts):
         # input batch is of shape B x ntilts x D x D
+        batch = batch.view(B,ntilts,-1)  # B x ntilts x D*D
         if self.enc_mask is not None:
-            batch = batch.view(B,ntilts,-1)[:,:,self.enc_mask]
-        else:
-            batch = batch.view(B,ntilts,-1)
+            batch = batch[:,:,self.enc_mask] # B x ntilts x D*D[mask]
         z = self.encoder(batch, B)
         return z[:, :self.zdim], z[:, self.zdim:] # B x zdim
 
     def cat_z_pertilt(self, coords, z):
         '''
-        coords: B*ntilts x D*D[uniform_circular_mask] x 3 image coordinates
-        z: B x zdim latent coordinate
+        coords: B*ntilts x D*D[mask] x 3 image coordinates
+        z: B x zdim latent coordinate (repeated for ntilts)
         '''
         assert coords.size(0) == z.size(0)*self.ntilts
         z = torch.repeat_interleave(z, self.ntilts, dim=0)  # expand z along batch dimension to repeat value for all tilts in particle, B*ntilts x zdim
@@ -229,8 +224,8 @@ class TiltSeriesHetOnlyVAE(nn.Module):
 
     def cat_z_perptcl(self, coords, z):
         '''
-        coords: B x ntilts*D*D[critical_exposure_mask] x 3 image coordinates
-        z: B x zdim latent coordinate
+        coords: B x ntilts*D*D[mask] x 3 image coordinates
+        z: B x zdim latent coordinate (repeated for ntilts)
         '''
         assert coords.size(0) == z.size(0)
         z = z.view(z.size(0), *([1] * (coords.ndimension() - 2)), self.zdim)
@@ -241,16 +236,16 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         if self.skip_zeros_decoder:
             '''
             coords: B x ntilts*D*D[critical_exposure_mask] x 3 image coordinates
-            z: B x zdim latent coordinate
+            z: B x zdim latent coordinate (repeated for ntilts)
             '''
-            # skip zeros decoder explicitly evaluates all FT coordinates to avoid reshaping to ragged tensor, does not use +/- z symmetry
+            # skip zeros decoder explicitly evaluates all FT coordinates, does not use +/- z symmetry
             return self.decoder(self.cat_z_perptcl(coords, z), eval_all_coords = True)
         else:
             '''
             coords: B x ntilts*D*D[uniform_circular_mask] x 3 image coordinates
-            z: B x zdim latent coordinate
+            z: B x zdim latent coordinate (repeated for ntilts)
             '''
-            coords = coords.view(z.shape[0]*self.ntilts, -1, 3) # reshape to B*ntilts x D*D[uniform_circular_mask] x 3 image coordinates
+            coords = coords.view(z.shape[0]*self.ntilts, -1, 3) # reshape to B*ntilts x D*D[mask] x 3 image coordinates
             return self.decoder(self.cat_z_pertilt(coords, z), eval_all_coords = False)
 
     # Need forward func for DataParallel -- TODO: refactor
@@ -273,7 +268,7 @@ def load_decoder(config, weights=None, device=None):
     c = cfg['model_args']
     D = cfg['lattice_args']['D']
     activation={"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[c['activation']]
-    model = get_decoder(3, D, c['layers'], c['dim'], c['domain'], c['pe_type'], c['pe_dim'], activation) 
+    model = get_decoder(3, D, c['layers'], c['dim'], c['domain'], c['pe_type'], c['pe_dim'], activation, use_amp=cfg['training_args']['amp'], feat_sigma=cfg['model_args']['feat_sigma'])
     if weights is not None:
         ckpt = torch.load(weights)
         model.load_state_dict(ckpt['model_state_dict'])
@@ -281,7 +276,7 @@ def load_decoder(config, weights=None, device=None):
         model.to(device)
     return model
 
-def get_decoder(in_dim, D, layers, dim, domain, enc_type, enc_dim=None, activation=nn.ReLU, use_amp=False):
+def get_decoder(in_dim, D, layers, dim, domain, enc_type, enc_dim=None, activation=nn.ReLU, use_amp=False, feat_sigma=None):
     if enc_type == 'none':
         if domain == 'hartley':
             model = ResidLinearMLP(in_dim, layers, dim, 1, activation)
@@ -291,7 +286,7 @@ def get_decoder(in_dim, D, layers, dim, domain, enc_type, enc_dim=None, activati
         return model
     else:
         model = PositionalDecoder if domain == 'hartley' else FTPositionalDecoder 
-        return model(in_dim, D, layers, dim, activation, enc_type=enc_type, enc_dim=enc_dim, use_amp=use_amp)
+        return model(in_dim, D, layers, dim, activation, enc_type=enc_type, enc_dim=enc_dim, use_amp=use_amp, feat_sigma=feat_sigma)
  
 class PositionalDecoder(nn.Module):
     def __init__(self, in_dim, D, nlayers, hidden_dim, activation, enc_type='linear_lowf', enc_dim=None):
@@ -387,7 +382,7 @@ class PositionalDecoder(nn.Module):
         return vol
 
 class FTPositionalDecoder(nn.Module):
-    def __init__(self, in_dim, D, nlayers, hidden_dim, activation, enc_type='linear_lowf', enc_dim=None, use_amp=False):
+    def __init__(self, in_dim, D, nlayers, hidden_dim, activation, enc_type='linear_lowf', enc_dim=None, use_amp=False, feat_sigma=None):
         super(FTPositionalDecoder, self).__init__()
         assert in_dim >= 3
         self.zdim = in_dim - 3
@@ -399,9 +394,24 @@ class FTPositionalDecoder(nn.Module):
         self.in_dim = 3 * (self.enc_dim) * 2 + self.zdim
         self.decoder = ResidLinearMLP(self.in_dim, nlayers, hidden_dim, 2, activation)
         self.use_amp = use_amp
+
+        if enc_type == "gaussian":
+            # We construct 3 * self.enc_dim random vector frequences, to match the original positional encoding:
+            # In the positional encoding we produce self.enc_dim features for each of the x,y,z dimensions,
+            # whereas in gaussian encoding we produce self.enc_dim features each with random x,y,z components
+            #
+            # Each of the random feats is the sine/cosine of the dot product of the coordinates with a frequency
+            # vector sampled from a gaussian with std of feat_sigma
+            rand_freqs = torch.randn((3 * self.enc_dim, 3), dtype=torch.float) * feat_sigma
+            # make rand_feats a parameter so it is saved in the checkpoint, but do not perform SGD on it
+            self.rand_freqs = nn.Parameter(rand_freqs, requires_grad=False)
+        else:
+            self.rand_feats = None
     
     def positional_encoding_geom(self, coords):
         '''Expand coordinates in the Fourier basis with geometrically spaced wavelengths from 2/D to 2pi'''
+        if self.enc_type == "gaussian":
+            return self.random_fourier_encoding(coords)
         freqs = torch.arange(self.enc_dim, dtype=torch.float)
         if self.enc_type == 'geom_ft':
             freqs = self.DD*np.pi*(2./self.DD)**(freqs/(self.enc_dim-1)) # option 1: 2/D to 1 
@@ -424,6 +434,24 @@ class FTPositionalDecoder(nn.Module):
         x = x.view(*coords.shape[:-2], self.in_dim-self.zdim) # B x in_dim-zdim # B x N/2 x in_dim-zdim  # 1 x B*N x in_dim-zdim
         if self.zdim > 0:
             x = torch.cat([x,coords[...,3:,:].squeeze(-1)], -1)
+            assert x.shape[-1] == self.in_dim
+        return x
+
+    def random_fourier_encoding(self, coords):
+        assert self.rand_freqs is not None
+        # k = coords . rand_freqs
+        # expand rand_freqs with singleton dimension along the batch dimensions
+        # e.g. dim (1, ..., 1, n_rand_feats, 3)
+        freqs = self.rand_freqs.view(*[1] * (len(coords.shape) - 1), -1, 3) * self.D2
+
+        kxkykz = (coords[..., None, 0:3] * freqs)  # compute the x,y,z components of k
+        k = kxkykz.sum(-1)  # compute k
+        s = torch.sin(k)
+        c = torch.cos(k)
+        x = torch.cat([s, c], -1)
+        x = x.view(*coords.shape[:-1], self.in_dim - self.zdim)
+        if self.zdim > 0:
+            x = torch.cat([x, coords[..., 3:]], -1)
             assert x.shape[-1] == self.in_dim
         return x
 
@@ -486,6 +514,7 @@ class FTPositionalDecoder(nn.Module):
                 image = full_image[...,0] - full_image[...,1]
 
                 return image
+
 
     def decode(self, lattice):
         '''Return FT transform'''
@@ -819,19 +848,20 @@ class TiltEncoder(nn.Module):
         return z
 
 class TiltSeriesEncoder(nn.Module):
-    def __init__(self, in_dim, nlayersA, hidden_dimA, out_dimA, ntilts, nlayersB, hidden_dimB, out_dimB, activation, use_amp=False):
+    def __init__(self, in_dim, nlayersA, hidden_dimA, out_dimA, ntilts, nlayersB, hidden_dimB, out_dim, activation):
         super(TiltSeriesEncoder, self).__init__()
-        assert nlayersA+nlayersB > 2
         self.in_dim = in_dim
-        self.use_amp = use_amp
+        assert nlayersA+nlayersB > 2
+        # encoder1 encodes each identically-masked tilt image separately
+        # encoder2 merges ntilts-concatenated encoder1 information and encodes further to latent space
         self.encoder1 = ResidLinearMLP(in_dim, nlayersA, hidden_dimA, out_dimA, activation)
-        self.encoder2 = ResidLinearMLP(out_dimA*ntilts, nlayersB, hidden_dimB, out_dimB, activation)
+        self.encoder2 = ResidLinearMLP(out_dimA*ntilts, nlayersB, hidden_dimB, out_dim, activation)
 
     def forward(self, batch, B):
-        with autocast(enabled=self.use_amp):
-            batch_enc = self.encoder1(batch)         # input image batch of shape B x ntilts x D*D[lattice_circular_mask]
-            z = self.encoder2(batch_enc.view(B, -1)) # reshape to encode all tilts of one ptcl together
-            return z
+        # input image batch of shape B x ntilts x D*D[lattice_circular_mask]
+        batch_enc = self.encoder1(batch)
+        z = self.encoder2(batch_enc.view(B, -1)) #reshape to encode all tilts of one ptcl together
+        return z
 
 class ResidLinearMLP(nn.Module):
     def __init__(self, in_dim, nlayers, hidden_dim, out_dim, activation):

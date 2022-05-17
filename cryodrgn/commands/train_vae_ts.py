@@ -6,14 +6,18 @@ import sys, os
 import argparse
 import pickle
 from datetime import datetime as dt
+
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.cuda.amp import GradScaler, autocast
+
 import cryodrgn
 from cryodrgn import utils
 from cryodrgn import dataset
 from cryodrgn import ctf
+from cryodrgn import dose
+
 from cryodrgn.pose import PoseTracker
 from cryodrgn.models import TiltSeriesHetOnlyVAE
 from cryodrgn.lattice import Lattice
@@ -30,8 +34,8 @@ def add_args(parser):
     parser.add_argument('--poses', type=os.path.abspath, required=True, help='Image poses (.pkl)')
     parser.add_argument('--ctf', metavar='pkl', type=os.path.abspath, help='CTF parameters (.pkl)')
     parser.add_argument('--load', metavar='WEIGHTS.PKL', help='Initialize training from a checkpoint')
-    parser.add_argument('--checkpoint', type=int, default=1, help='Checkpointing interval in N_EPOCHS')
-    parser.add_argument('--log-interval', type=int, default=200, help='Logging interval in N_PTCLS')
+    parser.add_argument('--checkpoint', type=int, default=1, help='Checkpointing interval in N_EPOCHS (default: %(default)s)')
+    parser.add_argument('--log-interval', type=int, default=200, help='Logging interval in N_PTCLS (default: %(default)s)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increaes verbosity')
     parser.add_argument('--seed', type=int, default=np.random.randint(0,100000), help='Random seed')
 
@@ -41,12 +45,13 @@ def add_args(parser):
     group.add_argument('--no-window', dest='window', action='store_false', help='Turn off real space windowing of dataset')
     group.add_argument('--window-r', type=float, default=.85,  help='Windowing radius')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
-    group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (recommend reading from SSD)')
+    group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
 
     group = parser.add_argument_group('Tilt series')
     group.add_argument('--do-dose-weighting', action='store_true', help='Flag to calculate losses per tilt per pixel with dose weighting ')
     group.add_argument('--dose-override', type=float, default=None, help='Manually specify dose in e- / A2 / tilt')
     group.add_argument('--do-tilt-weighting', action='store_true', help='Flag to calculate losses per tilt with cosine(tilt_angle) weighting')
+    group.add_argument('--enable-trans', action='store_true', help='Apply translations in starfile. Not recommended if using centered + re-extracted particles')
 
     group = parser.add_argument_group('Training parameters')
     group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs')
@@ -55,59 +60,27 @@ def add_args(parser):
     group.add_argument('--lr', type=float, default=1e-4, help='Learning rate in Adam optimizer')
     group.add_argument('--beta', default=None, help='Choice of beta schedule or a constant for KLD weight')
     group.add_argument('--beta-control', type=float, help='KL-Controlled VAE gamma. Beta is KL target')
-    group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale ')
+    group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: 0, std of dataset)')
     group.add_argument('--amp', action='store_true', help='Use mixed-precision training')
     group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs')
 
     group = parser.add_argument_group('Encoder Network')
-    group.add_argument('--enc-mask', type=int, help='Radius (px) of circular mask of image input to encoder (default: D/2; -1 for no mask)')
     group.add_argument('--enc-layers-A', dest='qlayersA', type=int, default=3, help='Number of hidden layers for each tilt')
     group.add_argument('--enc-dim-A', dest='qdimA', type=int, default=256, help='Number of nodes in hidden layers for each tilt')
-    group.add_argument('--out-dim-A', dest='outdimA', type=int, default=128, help='Number of nodes in output layer of EncA per tilt')
+    group.add_argument('--out-dim-A', type=int, default=128, help='Number of nodes in output layer of encA == ntilts * number of nodes input to encB')
     group.add_argument('--enc-layers-B', dest='qlayersB', type=int, default=1, help='Number of hidden layers encoding merged tilts')
     group.add_argument('--enc-dim-B', dest='qdimB', type=int, default=256, help='Number of nodes in hidden layers encoding merged tilts')
+    group.add_argument('--enc-mask', type=int, help='Circular mask of image for encoder (default: D/2; -1 for no mask)')
 
     group = parser.add_argument_group('Decoder Network')
     group.add_argument('--dec-layers', dest='players', type=int, default=3, help='Number of hidden layers')
     group.add_argument('--dec-dim', dest='pdim', type=int, default=256, help='Number of nodes in hidden layers')
-    group.add_argument('--pe-type', choices=('geom_ft','geom_full','geom_lowf','geom_nohighf','linear_lowf','none'), default='geom_lowf', help='Type of positional encoding')
-    group.add_argument('--pe-dim', type=int, help='Num features in positional encoding (default: image D)')
+    group.add_argument('--pe-type', choices=('geom_ft','geom_full','geom_lowf','geom_nohighf','linear_lowf', 'gaussian', 'none'), default='geom_lowf', help='Type of positional encoding')
+    group.add_argument('--feat-sigma', type=float, default=0.5, help="Scale for random Gaussian features")
+    group.add_argument('--pe-dim', type=int, help='Num features in positional encoding')
     group.add_argument('--activation', choices=('relu','leaky_relu'), default='relu', help='Activation')
     group.add_argument('--skip-zeros-decoder', action='store_true', help='Ignore fourier pixels exposed to > 2.5x critical dose when reconstructing image for MSE loss')
     return parser
-
-
-def plot_weight_distribution(cumulative_weights, spatial_frequencies, args):
-    # plot distribution of dose weights across tilts in the spirit of https://doi.org/10.1038/s41467-021-22251-8
-    import matplotlib.pyplot as plt
-    import matplotlib.ticker as mticker
-
-    ntilts = cumulative_weights.shape[0]
-    max_frequency_box_edge = spatial_frequencies[0,spatial_frequencies.shape[0]//2]
-    sorted_frequency_list = sorted(set(spatial_frequencies[spatial_frequencies < max_frequency_box_edge].reshape(-1)))
-    weights_plot = np.empty((len(sorted_frequency_list), ntilts))
-
-    for i, frequency in enumerate(sorted_frequency_list):
-        x, y = np.where(spatial_frequencies == frequency)
-        sum_of_weights_at_frequency = cumulative_weights[:, y, x].sum()
-        weights_plot[i, :] = (cumulative_weights[:, y, x] / sum_of_weights_at_frequency).sum(axis=1) # sum across multiple pixels at same frequency
-
-    colormap = plt.cm.get_cmap('coolwarm').reversed()
-    tilt_colors = colormap(np.linspace(0, 1, ntilts))
-
-    fig, ax = plt.subplots()
-    ax.stackplot(sorted_frequency_list, weights_plot.T, colors=tilt_colors)
-    ax.set_ylabel('cumulative weights')
-    ax.set_xlabel('spatial frequency (1/Å)')
-    ax.set_xlim((0, sorted_frequency_list[-1]))
-    ax.set_ylim((0, 1))
-
-    # ax.xaxis.set_major_locator(mticker.MaxNLocator())
-    ticks_loc = ax.get_xticks().tolist()
-    ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
-    ax.set_xticklabels([f'1/{1/xtick:.1f}' if xtick != 0.0 else 0 for xtick in ticks_loc])
-
-    plt.savefig(f'{args.outdir}/cumulative_weights_across_frequencies_by_tilt.png', dpi=300)
 
 
 def get_latest(args):
@@ -138,15 +111,17 @@ def save_config(args, dataset, lattice, model, out_config):
     model_args = dict(in_dim=model.in_dim,
                       qlayersA=args.qlayersA,
                       qdimA=args.qdimA,
-                      outdimA = args.outdimA,
                       qlayersB=args.qlayersB,
                       qdimB=args.qdimB,
+                      out_dimA=args.out_dim_A,
                       players=args.players,
                       pdim=args.pdim,
                       zdim=args.zdim,
                       enc_mask=args.enc_mask,
                       pe_type=args.pe_type,
+                      feat_sigma=args.feat_sigma,
                       pe_dim=args.pe_dim,
+                      domain='fourier',
                       activation=args.activation,
                       skip_zeros_decoder=args.skip_zeros_decoder)
     training_args = dict(n=args.num_epochs,
@@ -178,18 +153,18 @@ def save_config(args, dataset, lattice, model, out_config):
         pickle.dump(meta, f)
 
 
-def train_batch(scaler, model, lattice, y, cumulative_weights_decoder, final_mask_decoder, rot, trans, optim, beta, beta_control=None, ctf_params=None, use_amp=False):
+def train_batch(scaler, model, lattice, y, rot, tran, cumulative_weights, dec_mask, optim, beta, beta_control=None, ctf_params=None, use_amp=False):
     optim.zero_grad()
     model.train()
 
     B = y.size(0)
     ntilts = y.size(1)
     D = lattice.D
+    y = y.view(B, ntilts, D, D)
 
     with autocast(enabled=use_amp):
-        y = preprocess_input(y, lattice, trans, B, ntilts, D)
-        z_mu, z_logvar, z, y_recon, ctf_weights = run_batch(model, lattice, y, rot, final_mask_decoder, B, ntilts, D, ctf_params)
-        loss, gen_loss, kld = loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights_decoder, final_mask_decoder, beta, beta_control)
+        z_mu, z_logvar, z, y_recon, ctf_weights = run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params)
+        loss, gen_loss, kld = loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta, beta_control)
 
     scaler.scale(loss).backward()
     scaler.step(optim)
@@ -198,17 +173,7 @@ def train_batch(scaler, model, lattice, y, cumulative_weights_decoder, final_mas
     return loss.item(), gen_loss.item(), kld.item()
 
 
-def preprocess_input(y, lattice, trans, B, ntilts, D):
-    # skipping translations for warp-extracted particles bc they are centered and this can cause artifacts
-    # if trans is not None:
-    #     # center the image
-    #     y = lattice.translate_ht(y.view(B*ntilts,-1), trans.unsqueeze(1))
-    y = y.view(B, ntilts, D, D)
-    # return translated particle stack for encoder+decoder+loss calculation
-    return y
-
-
-def run_batch(model, lattice, y, rot, final_mask_decoder, B, ntilts, D, ctf_params=None):
+def run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params=None):
     # encode
     input = y.clone()
 
@@ -224,12 +189,11 @@ def run_batch(model, lattice, y, rot, final_mask_decoder, B, ntilts, D, ctf_para
     z = _unparallelize(model).reparameterize(z_mu, z_logvar)
 
     # decode
-    input_coords = (lattice.coords @ rot).view(B, ntilts, D, D, 3)[:, final_mask_decoder, :]
-    y_recon = model(input_coords, z).view(B, -1)  # B x ntilts*N[final_mask_decoder]
+    input_coords = (lattice.coords @ rot).view(B, ntilts, D, D, 3)[:, dec_mask, :]
+    y_recon = model(input_coords, z).view(B, -1)  # B x ntilts*N[final_mask]
 
     if ctf_weights is not None:
-        # CTF-corrupt reconstruction post-decoder such that model learns uncorrupted volume
-        y_recon *= ctf_weights[:,final_mask_decoder]
+        y_recon *= ctf_weights[:,dec_mask]
 
     return z_mu, z_logvar, z, y_recon, ctf_weights
 
@@ -240,19 +204,19 @@ def _unparallelize(model):
     return model
 
 
-def loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights_decoder, final_mask_decoder, beta, beta_control=None):
+def loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta, beta_control=None):
     # reconstruction error
-    y = y[:,final_mask_decoder]
-    gen_loss = (cumulative_weights_decoder.view(1, -1) * ((y_recon - y) ** 2)).mean()
+    y = y[:,dec_mask]
+    gen_loss = (cumulative_weights[dec_mask].view(1, -1) * ((y_recon - y) ** 2)).mean()
 
     # latent loss
     kld = torch.mean(-0.5 * torch.sum(1 + z_logvar - z_mu.pow(2) - z_logvar.exp(), dim=1), dim=0)
 
     # total loss
     if beta_control is None:
-        loss = gen_loss + beta*kld/final_mask_decoder.sum().float()
+        loss = gen_loss + beta*kld/dec_mask.sum().float()
     else:
-        loss = gen_loss + beta_control*(beta-kld)**2/final_mask_decoder.sum().float()
+        loss = gen_loss + beta_control*(beta-kld)**2/dec_mask.sum().float()
     return loss, gen_loss, kld
 
 
@@ -267,9 +231,8 @@ def eval_z(model, lattice, data, expanded_ind_rebased, batch_size, device, trans
         B = y.size(0)
         ntilts = y.size(1)
         D = lattice.D
-        # # skipping translations for warp-extracted particles bc they are centered and this can cause artifacts
-        # if trans is not None:
-        #     y = lattice.translate_ht(y.view(B*ntilts,-1), trans[batch_ind].unsqueeze(1)).view(B,ntilts,D,D)
+        if trans is not None:
+            y = lattice.translate_ht(y.view(B*ntilts,-1), trans[batch_ind].unsqueeze(1)).view(B,ntilts,D,D)
         y = y.view(B, ntilts, D, D)
         if ctf_params is not None:
             freqs = lattice.freqs2d.unsqueeze(0).expand(B * ntilts, -1, -1) / ctf_params[batch_ind, 0].view(B * ntilts, 1, 1)
@@ -283,7 +246,7 @@ def eval_z(model, lattice, data, expanded_ind_rebased, batch_size, device, trans
     return z_mu_all, z_logvar_all
 
 
-def save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z):
+def save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z, scaler):
     '''
     Save model weights and latent encoding z
     '''
@@ -292,18 +255,12 @@ def save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z):
         'epoch':epoch,
         'model_state_dict':_unparallelize(model).state_dict(),
         'optimizer_state_dict':optim.state_dict(),
+        'scaler': scaler.state_dict() if scaler is not None else None
         }, out_weights)
     # save z
     with open(out_z,'wb') as f:
         pickle.dump(z_mu, f)
         pickle.dump(z_logvar, f)
-
-def check_memory_usage(flog):
-    import subprocess
-    gpu_memory_usage = subprocess.check_output(
-        ['nvidia-smi', '--query-gpu=memory.used', '--format=csv,nounits,noheader'], encoding='utf-8')\
-        .strip().split('\n')
-    flog(f'GPU memory usage (MB): {[device for device in gpu_memory_usage]}')
 
 
 def main(args):
@@ -319,6 +276,7 @@ def main(args):
         args = get_latest(args)
     flog(' '.join(sys.argv))
     flog(args)
+    flog(f'Git revision hash: {utils.check_git_revision_hash("/nobackup/users/bmp/software/cryodrgn/.git")}')
 
     # set the random seed
     np.random.seed(args.seed)
@@ -327,7 +285,7 @@ def main(args):
     # set the device
     use_cuda = torch.cuda.is_available()
     device = torch.device('cuda' if use_cuda else 'cpu')
-    flog(f'Use cuda {use_cuda}')
+    flog('Use cuda {}'.format(use_cuda))
     if use_cuda:
         torch.set_default_tensor_type(torch.cuda.FloatTensor)
     else:
@@ -339,12 +297,12 @@ def main(args):
     try:
         args.beta = float(args.beta)
     except ValueError:
-        assert args.beta_control, f"Need to set beta control weight for schedule {args.beta}"
+        assert args.beta_control, "Need to set beta control weight for schedule {}".format(args.beta)
     beta_schedule = get_beta_schedule(args.beta)
 
     # load the particle indices
     if args.ind is not None:
-        flog(f'Filtering image dataset with {args.ind}')
+        flog('Filtering image dataset with {}'.format(args.ind))
         ind = pickle.load(open(args.ind, 'rb'))
     else:
         ind = None
@@ -369,88 +327,103 @@ def main(args):
     expanded_ind = data.expanded_ind #this is already filtered by args.ind, np.array of shape (1,)
     cumulative_weights = data.cumulative_weights
     spatial_frequencies = data.spatial_frequencies
-    plot_weight_distribution(cumulative_weights, spatial_frequencies, args)
+    dose.plot_weight_distribution(cumulative_weights, spatial_frequencies, args.outdir)
 
     # load poses
     posetracker = PoseTracker.load(args.poses, Nimg, D, None, expanded_ind)
+    if not args.enable_trans:
+        # currently recommended pipeline uses centered and re-extracted images
+        # translation residuals in starfile represent numerical error and cause artifacts in volume reconstruction
+        posetracker.use_trans = False
 
     # load CTF
     if args.ctf is not None:
-        flog(f'Loading ctf params from {args.ctf}')
+        flog('Loading ctf params from {}'.format(args.ctf))
         ctf_params = ctf.load_ctf_for_training(D - 1, args.ctf)
         if args.ind is not None: ctf_params = ctf_params[expanded_ind]
         assert ctf_params.shape == (Nimg, 8)
         ctf_params = torch.tensor(ctf_params)
     else:
         ctf_params = None
+    Apix = ctf_params[0, 0] if ctf_params is not None else 1
 
-    # instantiate lattice
+    # instantiate pixel lattice
     lattice = Lattice(D, extent=0.5)
-
-    # log amount of training data
     if args.lazy:
         flog(f'Pixels per particle (raw data):  {np.prod(data.particles[0][0].get().shape)*Ntilts} ')
     else:
         flog(f'Pixels per particle (raw data):  {np.prod(data.particles[0].shape)} ')
 
-    # set encoder mask and encoder in_dim
+    # determine which pixels to encode
     if args.enc_mask is None:
         args.enc_mask = D // 2
     if args.enc_mask > 0:
+        # encode pixels within defined circular radius in fourier space
         assert args.enc_mask <= D // 2
         enc_mask = lattice.get_circular_mask(args.enc_mask)
         in_dim = enc_mask.sum()
     elif args.enc_mask == -1:
+        # encode all pixels in fourier space
         enc_mask = None
-        in_dim = lattice.D ** 2
+        in_dim = lattice.D ** 2 if not args.use_real else (lattice.D - 1) ** 2
     else:
-        raise RuntimeError(f"Invalid argument for encoder mask radius {args.enc_mask}")
-    flog(f'Pixels per tilt image for encoder (after encoder mask): {in_dim}')
+        raise RuntimeError("Invalid argument for encoder mask radius {}".format(args.enc_mask))
+    flog(f'Pixels encoded per tilt (+ enc-mask):  {in_dim.sum()}')
 
-    # set decoder mask
+    # determine which pixels to decode
     lattice_mask = lattice.get_circular_mask(lattice.D // 2) # reconstruct box-inscribed circle of pixels
     if args.skip_zeros_decoder:
-        # variable diameter circular mask for each tilt of the particle when decoding particles
+        # decode pixels that accumulated < 2.5x critical dose (variable fourier radius by tilt)
         weights_mask = cumulative_weights != 0
-        final_mask_decoder = lattice_mask.view(1,D,D).cpu().numpy() * weights_mask # mask is currently ntilts x D x D
-        flog(f'Pixels per particle for decoder (after skip-zeros-decoder mask):  {final_mask_decoder.sum()}')
+        dec_mask = lattice_mask.view(1,D,D).cpu().numpy() * weights_mask # mask is currently ntilts x D x D
+        flog(f'Pixels decoded per particle (+ skip-zeros-decoder mask):  {dec_mask.sum()}')
     else:
-        # uniform diameter circular mask for each tilt of the particle when decoding particles
-        final_mask_decoder = lattice_mask.view(1,D,D).repeat(Ntilts,1,1).cpu().numpy()
-        flog(f'Pixels per particle for decoder (after fourier circular mask):  {final_mask_decoder.sum()}')
-    assert final_mask_decoder.shape == (Ntilts, D, D)
-    cumulative_weights_decoder = cumulative_weights[final_mask_decoder]
+        # decode pixels wtihin defined circular radius in fourier space (constant for all tilts)
+        dec_mask = lattice_mask.view(1,D,D).repeat(Ntilts,1,1).cpu().numpy()
+        flog(f'Pixels decoded per particle (+ fourier circular mask):  {dec_mask.sum()}')
+    assert dec_mask.shape == (Ntilts, D, D)
 
     # instantiate model
     activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]
-    model = TiltSeriesHetOnlyVAE(lattice, args.qlayersA, args.qdimA, args.outdimA, Ntilts, args.qlayersB, args.qdimB,
+    model = TiltSeriesHetOnlyVAE(lattice, args.qlayersA, args.qdimA, args.out_dim_A, Ntilts, args.qlayersB, args.qdimB,
                                  args.players, args.pdim, in_dim, args.zdim,
-                                 enc_mask=enc_mask,
-                                 enc_type=args.pe_type, enc_dim=args.pe_dim,
-                                 activation=activation, use_amp=args.amp,
-                                 skip_zeros_decoder=args.skip_zeros_decoder)
+                                 enc_mask=enc_mask, enc_type=args.pe_type, enc_dim=args.pe_dim,
+                                 domain='fourier', activation=activation, use_amp=args.amp,
+                                 skip_zeros_decoder=args.skip_zeros_decoder, feat_sigma=args.feat_sigma)
     flog(model)
-    flog(f'{sum(p.numel() for p in model.parameters() if p.requires_grad)} parameters in model')
-    flog(f'{sum(p.numel() for p in model.encoder.parameters() if p.requires_grad)} parameters in encoder')
-    flog(f'{sum(p.numel() for p in model.decoder.parameters() if p.requires_grad)} parameters in decoder')
+    flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
+    flog('{} parameters in encoder'.format(sum(p.numel() for p in model.encoder.parameters() if p.requires_grad)))
+    flog('{} parameters in decoder'.format(sum(p.numel() for p in model.decoder.parameters() if p.requires_grad)))
 
     # save configuration
     out_config = f'{args.outdir}/config.pkl'
     save_config(args, data, lattice, model, out_config)
 
+    # instantiate optimizer
     optim = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.wd)
 
     # Mixed precision training with AMP
     use_amp = args.amp
     flog(f'AMP acceleration enabled (autocast + gradscaler) : {use_amp}')
-    # TODO: add warnings if various layers / batchsize / etc not multiples of 8, not optimized
+    scaler = GradScaler(enabled=use_amp)
+    if not args.batch_size % 8 == 0: flog('Warning: recommended to have batch size divisible by 8 for AMP training')
+    if not (D-1) % 8 == 0: flog('Warning: recommended to have image size divisible by 8 for AMP training')
+    if in_dim % 8 != 0: flog('Warning: recommended to have masked image dimensions divisible by 8 for AMP training')
+    assert args.qdimA % 8 == 0, "Encoder hidden layer dimension must be divisible by 8 for AMP training"
+    assert args.qdimB % 8 == 0, "Encoder hidden layer dimension must be divisible by 8 for AMP training"
+    if args.zdim % 8 != 0: flog('Warning: recommended to have z dimension divisible by 8 for AMP training')
+    assert args.pdim % 8 == 0, "Decoder hidden layer dimension must be divisible by 8 for AMP training"
 
     # restart from checkpoint
     if args.load:
-        flog(f'Loading checkpoint from {args.load}')
+        flog('Loading checkpoint from {}'.format(args.load))
         checkpoint = torch.load(args.load)
         model.load_state_dict(checkpoint['model_state_dict'])
         optim.load_state_dict(checkpoint['optimizer_state_dict'])
+        try:
+            scaler.load_state_dict(checkpoint['scaler'])
+        except:
+            flog('No GradScaler instance found in specified checkpoint; creating new GradScaler')
         start_epoch = checkpoint['epoch']+1
         model.train()
     else:
@@ -465,13 +438,23 @@ def main(args):
     elif args.multigpu:
         log(f'WARNING: --multigpu selected, but {torch.cuda.device_count()} GPUs detected')
 
+    # apply translations once at start of training
+    flog('Applying translations just once at start of training')
+    expanded_ind_rebased = torch.tensor([np.arange(i * Ntilts, (i + 1) * Ntilts) for i in range(Nptcls)], device='cpu')# .to(device) # redefine training inds to remove gaps created by filtering dataset when loading
+    for ind in range(Nptcls):
+        imgs_ind = expanded_ind_rebased[ind].view(-1)
+        _, trans = posetracker.get_pose(imgs_ind)
+        if trans is not None:
+            # center the image
+            trans = trans.to('cpu')
+            data.particles[imgs_ind] = lattice.translate_ht(data.particles[imgs_ind].view(Ntilts, -1), trans.unsqueeze(1))
+
     # train
+    flog('Done all preprocessing; starting training now!')
     data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=True)
-    expanded_ind_rebased = torch.tensor([np.arange(i * Ntilts, (i + 1) * Ntilts) for i in range(Nptcls)]).to(device) # redefine training inds to remove gaps created by filtering dataset when loading
-    cumulative_weights_decoder = torch.tensor(cumulative_weights_decoder)
-    final_mask_decoder = torch.tensor(final_mask_decoder)
+    dec_mask = torch.tensor(dec_mask)
+    cumulative_weights = torch.tensor(cumulative_weights)
     num_epochs = args.num_epochs
-    scaler = GradScaler(enabled=use_amp)
     for epoch in range(start_epoch, num_epochs):
         t2 = dt.now()
         gen_loss_accum = 0
@@ -486,13 +469,10 @@ def main(args):
             beta = beta_schedule(global_it)
 
             # training minibatch
-            y = batch.to(device)
-            batch_ind = batch_ind.to(device)
-            rot, trans = posetracker.get_pose(batch_ind)
+            rot, tran = posetracker.get_pose(batch_ind)
             ctf_param = ctf_params[batch_ind] if ctf_params is not None else None
-            loss, gen_loss, kld = train_batch(scaler, model, lattice, y, cumulative_weights_decoder, final_mask_decoder,
-                                              rot, trans, optim, beta, beta_control=args.beta_control,
-                                              ctf_params=ctf_param, use_amp=use_amp)
+            loss, gen_loss, kld = train_batch(scaler, model, lattice, batch, rot, tran, cumulative_weights, dec_mask,
+                                              optim, beta, args.beta_control, ctf_params=ctf_param, use_amp=use_amp)
 
             # logging
             gen_loss_accum += gen_loss*len(batch_ind)
@@ -500,28 +480,28 @@ def main(args):
             loss_accum += loss*len(batch_ind)
 
             if batch_it % args.log_interval == 0:
-                log(f'# [Train Epoch: {epoch+1}/{num_epochs}] [{int(batch_it/Ntilts)}/{Nptcls} subtomos] gen loss={gen_loss:.6f}, kld={kld:.6f}, beta={beta:.6f}, loss={loss:.6f}')
+                log('# [Train Epoch: {}/{}] [{}/{} subtomos] gen loss={:.6f}, kld={:.6f}, beta={:.6f}, loss={:.6f}'.format(epoch+1, num_epochs, int(batch_it/Ntilts), Nptcls, gen_loss, kld, beta, loss))
 
-        flog(f'# =====> Epoch: {epoch+1} Average gen loss = {gen_loss_accum/Nimg:.6}, KLD = {kld_accum/Nimg:.6f}, total loss = {loss_accum/Nimg:.6f}; Finished in {dt.now()-t2}')
+        flog('# =====> Epoch: {} Average gen loss = {:.6}, KLD = {:.6f}, total loss = {:.6f}; Finished in {}'.format(epoch+1, gen_loss_accum/Nimg, kld_accum/Nimg, loss_accum/Nimg, dt.now()-t2))
         if args.checkpoint and epoch % args.checkpoint == 0:
-            check_memory_usage(flog)
-            out_weights = f'{args.outdir}/weights.{epoch}.pkl'
-            out_z = f'{args.outdir}/z.{epoch}.pkl'
+            flog(f'GPU memory usage: {utils.check_memory_usage()}')
+            out_weights = '{}/weights.{}.pkl'.format(args.outdir,epoch)
+            out_z = '{}/z.{}.pkl'.format(args.outdir, epoch)
             model.eval()
             with torch.no_grad():
                 z_mu, z_logvar = eval_z(model, lattice, data, expanded_ind_rebased, args.batch_size, device, posetracker.trans, ctf_params)
-                save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z)
+                save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z, scaler)
 
-    # Final outputs at end of training: save model weights, latent encoding, and evaluate the model on 3D lattice
-    out_weights = f'{args.outdir}/weights.pkl'
-    out_z = f'{args.outdir}/z.pkl'
+    # save model weights, latent encoding, and evaluate the model on 3D lattice
+    out_weights = '{}/weights.pkl'.format(args.outdir)
+    out_z = '{}/z.pkl'.format(args.outdir)
     model.eval()
     with torch.no_grad():
         z_mu, z_logvar = eval_z(model, lattice, data, expanded_ind_rebased, args.batch_size, device, posetracker.trans, ctf_params)
-        save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z)
+        save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z, scaler)
 
     td = dt.now() - t1
-    flog(f'Finished in {td} ({td / (num_epochs - start_epoch)} per epoch)')
+    flog('Finished in {} ({} per epoch)'.format(td, td / (num_epochs - start_epoch)))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)

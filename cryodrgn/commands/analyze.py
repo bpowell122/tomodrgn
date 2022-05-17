@@ -200,9 +200,9 @@ def main(args):
         log(f'Creating jupyter notebook...')
         ipynb = f'{cryodrgn._ROOT}/templates/cryoDRGN_viz_template.ipynb'
         shutil.copyfile(ipynb, out_ipynb)
+        log(out_ipynb)
     else:
         log(f'{out_ipynb} already exists. Skipping')
-    log(out_ipynb)
 
     # copy over template if file doesn't exist
     out_ipynb = f'{outdir}/cryoDRGN_filtering.ipynb'
@@ -210,10 +210,21 @@ def main(args):
         log(f'Creating jupyter notebook...')
         ipynb = f'{cryodrgn._ROOT}/templates/cryoDRGN_filtering_template.ipynb'
         shutil.copyfile(ipynb, out_ipynb)
+        log(out_ipynb)
     else:
         log(f'{out_ipynb} already exists. Skipping')
-    log(out_ipynb)
-    
+
+    # copy over template if file doesn't exist
+    out_ipynb = f'{outdir}/tomoDRGN_viz+filt.ipynb'
+    if not os.path.exists(out_ipynb):
+        log(f'Creating jupyter notebook...')
+        ipynb = f'{cryodrgn._ROOT}/templates/tomoDRGN_viz+filt_template.ipynb'
+        assert os.path.exists(ipynb)
+        shutil.copyfile(ipynb, out_ipynb)
+        log(out_ipynb)
+    else:
+        log(f'{out_ipynb} already exists. Skipping')
+
     log(f'Finished in {dt.now()-t1}')
 
 

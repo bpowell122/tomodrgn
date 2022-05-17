@@ -18,6 +18,7 @@ from cryodrgn import utils
 from cryodrgn import dataset
 from cryodrgn import ctf
 from cryodrgn import models
+from cryodrgn import dose
 
 from cryodrgn.pose import PoseTracker
 from cryodrgn.lattice import Lattice
@@ -70,8 +71,9 @@ def add_args(parser):
     group.add_argument('--dim', type=int, default=256, help='Number of nodes in hidden layers (default: %(default)s)')
     group.add_argument('--l-extent', type=float, default=0.5, help='Coordinate lattice size (if not using positional encoding) (default: %(default)s)')
     group.add_argument('--pe-type',
-                       choices=('geom_ft', 'geom_full', 'geom_lowf', 'geom_nohighf', 'linear_lowf', 'none'),
+                       choices=('geom_ft', 'geom_full', 'geom_lowf', 'geom_nohighf', 'linear_lowf', 'gaussian', 'none'),
                        default='geom_lowf', help='Type of positional encoding (default: %(default)s)')
+    group.add_argument('--feat-sigma', type=float, default=0.5, help="Scale for random Gaussian features")
     group.add_argument('--pe-dim', type=int, help='Num sinusoid features in positional encoding (default: D/2)')
     group.add_argument('--domain', choices=('hartley', 'fourier'), default='fourier', help='Volume decoder representation (default: %(default)s)')
     group.add_argument('--activation', choices=('relu', 'leaky_relu'), default='relu', help='Activation (default: %(default)s)')
@@ -123,7 +125,7 @@ def train(scaler, model, lattice, optim, y, cumulative_weights, final_mask, rot,
 
     return loss.item()
 
-# TODO confirm config saving / loading works
+
 def save_config(args, dataset, lattice, model, out_config):
     dataset_args = dict(particles=args.particles,
                         norm=dataset.norm,
@@ -175,38 +177,6 @@ def get_latest(args, flog):
         flog(f'Loading {args.poses}')
     return args
 
-
-def plot_weight_distribution(cumulative_weights, spatial_frequencies, args):
-    # plot distribution of dose weights across tilts in the spirit of https://doi.org/10.1038/s41467-021-22251-8
-    import matplotlib.pyplot as plt
-    import matplotlib.ticker as mticker
-
-    ntilts = cumulative_weights.shape[0]
-    max_frequency_box_edge = spatial_frequencies[0,spatial_frequencies.shape[0]//2]
-    sorted_frequency_list = sorted(set(spatial_frequencies[spatial_frequencies < max_frequency_box_edge].reshape(-1)))
-    weights_plot = np.empty((len(sorted_frequency_list), ntilts))
-
-    for i, frequency in enumerate(sorted_frequency_list):
-        x, y = np.where(spatial_frequencies == frequency)
-        sum_of_weights_at_frequency = cumulative_weights[:, y, x].sum()
-        weights_plot[i, :] = (cumulative_weights[:, y, x] / sum_of_weights_at_frequency).sum(axis=1) # sum across multiple pixels at same frequency
-
-    colormap = plt.cm.get_cmap('coolwarm').reversed()
-    tilt_colors = colormap(np.linspace(0, 1, ntilts))
-
-    fig, ax = plt.subplots()
-    ax.stackplot(sorted_frequency_list, weights_plot.T, colors=tilt_colors)
-    ax.set_ylabel('cumulative weights')
-    ax.set_xlabel('spatial frequency (1/Å)')
-    ax.set_xlim((0, sorted_frequency_list[-1]))
-    ax.set_ylim((0, 1))
-
-    # ax.xaxis.set_major_locator(mticker.MaxNLocator())
-    ticks_loc = ax.get_xticks().tolist()
-    ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
-    ax.set_xticklabels([f'1/{1/xtick:.1f}' if xtick != 0.0 else 0 for xtick in ticks_loc])
-
-    plt.savefig(f'{args.outdir}/cumulative_weights_across_frequencies_by_tilt.png', dpi=300)
 
 
 def main(args):
@@ -262,14 +232,14 @@ def main(args):
     expanded_ind = data.expanded_ind #this is already filtered by args.ind, np.array of shape (1,)
     cumulative_weights = data.cumulative_weights
     spatial_frequencies = data.spatial_frequencies
-    plot_weight_distribution(cumulative_weights, spatial_frequencies, args)
+    dose.plot_weight_distribution(cumulative_weights, spatial_frequencies, args.outdir)
 
     # instantiate model
     # if args.pe_type != 'none': assert args.l_extent == 0.5
     lattice = Lattice(D, extent=args.l_extent)
     activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]
     model = models.get_decoder(3, D, args.layers, args.dim, args.domain, args.pe_type, enc_dim=args.pe_dim,
-                               activation=activation, use_amp = args.amp)
+                               activation=activation, use_amp = args.amp, feat_sigma=args.feat_sigma)
     flog(model)
     flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
 
@@ -306,10 +276,7 @@ def main(args):
     Apix = ctf_params[0, 0] if ctf_params is not None else 1
 
     # create dataset mask for which pixels will be evaluated
-    if args.lazy:
-        flog(f'Pixels per particle (input):  {np.prod(data.particles[0][0].get().shape)*Ntilts} ')
-    else:
-        flog(f'Pixels per particle (input):  {np.prod(data.particles[0].shape)} ')
+    flog(f'Pixels per particle (input):  {np.prod(data.particles[0].shape)} ')
     lattice_mask = lattice.get_circular_mask(lattice.D // 2) # reconstruct box-inscribed circle of pixels
     flog(f'Pixels per particle (+ fourier circular mask):  {Ntilts*lattice_mask.sum()}')
     if args.skip_zeros: # skip zero_weighted components
