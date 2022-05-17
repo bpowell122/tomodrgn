@@ -75,7 +75,8 @@ def add_args(parser):
     group = parser.add_argument_group('Decoder Network')
     group.add_argument('--dec-layers', dest='players', type=int, default=3, help='Number of hidden layers')
     group.add_argument('--dec-dim', dest='pdim', type=int, default=256, help='Number of nodes in hidden layers')
-    group.add_argument('--pe-type', choices=('geom_ft','geom_full','geom_lowf','geom_nohighf','linear_lowf','none'), default='geom_lowf', help='Type of positional encoding')
+    group.add_argument('--pe-type', choices=('geom_ft','geom_full','geom_lowf','geom_nohighf','linear_lowf', 'gaussian', 'none'), default='geom_lowf', help='Type of positional encoding')
+    group.add_argument('--feat-sigma', type=float, default=0.5, help="Scale for random Gaussian features")
     group.add_argument('--pe-dim', type=int, help='Num features in positional encoding')
     group.add_argument('--activation', choices=('relu','leaky_relu'), default='relu', help='Activation')
     group.add_argument('--skip-zeros-decoder', action='store_true', help='Ignore fourier pixels exposed to > 2.5x critical dose when reconstructing image for MSE loss')
@@ -118,6 +119,7 @@ def save_config(args, dataset, lattice, model, out_config):
                       zdim=args.zdim,
                       enc_mask=args.enc_mask,
                       pe_type=args.pe_type,
+                      feat_sigma=args.feat_sigma,
                       pe_dim=args.pe_dim,
                       domain='fourier',
                       activation=args.activation,
@@ -387,7 +389,7 @@ def main(args):
                                  args.players, args.pdim, in_dim, args.zdim,
                                  enc_mask=enc_mask, enc_type=args.pe_type, enc_dim=args.pe_dim,
                                  domain='fourier', activation=activation, use_amp=args.amp,
-                                 skip_zeros_decoder=args.skip_zeros_decoder)
+                                 skip_zeros_decoder=args.skip_zeros_decoder, feat_sigma=args.feat_sigma)
     flog(model)
     flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
     flog('{} parameters in encoder'.format(sum(p.numel() for p in model.encoder.parameters() if p.requires_grad)))
@@ -496,7 +498,7 @@ def main(args):
     model.eval()
     with torch.no_grad():
         z_mu, z_logvar = eval_z(model, lattice, data, expanded_ind_rebased, args.batch_size, device, posetracker.trans, ctf_params)
-        save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z)
+        save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z, scaler)
 
     td = dt.now() - t1
     flog('Finished in {} ({} per epoch)'.format(td, td / (num_epochs - start_epoch)))
