@@ -30,9 +30,11 @@ def add_args(parser):
 
     group = parser.add_argument_group('Extra arguments for volume generation')
     group.add_argument('--Apix', type=float, default=1, help='Pixel size to add to .mrc header (default: %(default)s A/pix)')
-    group.add_argument('--flip', action='store_true', help='Flip handedness of output volume')
+    group.add_argument('--flip', action='store_true', help='Flip handedness of output volumes')
+    group.add_argument('--invert', action='store_true', help='Invert contrast of output volumes')
     group.add_argument('-d','--downsample', type=int, help='Downsample volumes to this box size (pixels)')
     group.add_argument('--pc', type=int, default=2, help='Number of principal component traversals to generate (default: %(default)s)')
+    group.add_argument('--pc-ondata', action='store_true', help='Find closest on-data latent point to each PC percentile')
     group.add_argument('--ksample', type=int, default=20, help='Number of kmeans samples to generate (default: %(default)s)')
     return parser
 
@@ -56,7 +58,7 @@ def analyze_z1(z, outdir, vg):
     ztraj = np.linspace(*np.percentile(z,(5,95)), 10) # or np.percentile(z, np.linspace(5,95,10)) ?
     vg.gen_volumes(outdir, ztraj)
 
-def analyze_zN(z, outdir, vg, skip_umap=False, num_pcs=2, num_ksamples=20):
+def analyze_zN(z, outdir, vg, skip_umap=False, num_pcs=2, num_ksamples=20, pc_ondata=False):
     zdim = z.shape[1]
 
     # Principal component analysis
@@ -66,6 +68,9 @@ def analyze_zN(z, outdir, vg, skip_umap=False, num_pcs=2, num_ksamples=20):
     for i in range(num_pcs):
         start, end = np.percentile(pc[:,i],(5,95))
         z_pc = analysis.get_pc_traj(pca, z.shape[1], 10, i+1, start, end)
+        if pc_ondata:
+            log('Using on-data PCA')
+            z_pc, _ = analysis.get_nearest_point(z, z_pc)
         vg.gen_volumes(f'{outdir}/pc{i+1}', z_pc)
 
     # kmeans clustering
@@ -152,7 +157,7 @@ class VolumeGenerator:
         self.skip_vol = skip_vol
 
     def gen_volumes(self, outdir, z_values):
-        if self.skip_vol: return 
+        if self.skip_vol: return
         if not os.path.exists(outdir):
             os.makedirs(outdir)
         zfile = f'{outdir}/z_values.txt'
@@ -181,23 +186,23 @@ def main(args):
     z = utils.load_pkl(zfile)
     zdim = z.shape[1]
 
-    vol_args = dict(Apix=args.Apix, downsample=args.downsample, flip=args.flip, cuda=args.device)
+    vol_args = dict(Apix=args.Apix, downsample=args.downsample, flip=args.flip, cuda=args.device, invert=args.invert)
     vg = VolumeGenerator(weights, config, vol_args, skip_vol=args.skip_vol)
 
     if zdim == 1:
         analyze_z1(z, outdir, vg)
     else:
-        analyze_zN(z, outdir, vg, skip_umap=args.skip_umap, num_pcs=args.pc, num_ksamples=args.ksample)
-       
+        analyze_zN(z, outdir, vg, skip_umap=args.skip_umap, num_pcs=args.pc, num_ksamples=args.ksample, pc_ondata=args.pc_ondata)
+
     # copy over template if file doesn't exist
     out_ipynb = f'{outdir}/cryoDRGN_viz.ipynb'
     if not os.path.exists(out_ipynb):
         log(f'Creating jupyter notebook...')
         ipynb = f'{cryodrgn._ROOT}/templates/cryoDRGN_viz_template.ipynb'
         shutil.copyfile(ipynb, out_ipynb)
+        log(out_ipynb)
     else:
         log(f'{out_ipynb} already exists. Skipping')
-    log(out_ipynb)
 
     # copy over template if file doesn't exist
     out_ipynb = f'{outdir}/cryoDRGN_filtering.ipynb'
@@ -205,10 +210,21 @@ def main(args):
         log(f'Creating jupyter notebook...')
         ipynb = f'{cryodrgn._ROOT}/templates/cryoDRGN_filtering_template.ipynb'
         shutil.copyfile(ipynb, out_ipynb)
+        log(out_ipynb)
     else:
         log(f'{out_ipynb} already exists. Skipping')
-    log(out_ipynb)
-    
+
+    # copy over template if file doesn't exist
+    out_ipynb = f'{outdir}/tomoDRGN_viz+filt.ipynb'
+    if not os.path.exists(out_ipynb):
+        log(f'Creating jupyter notebook...')
+        ipynb = f'{cryodrgn._ROOT}/templates/tomoDRGN_viz+filt_template.ipynb'
+        assert os.path.exists(ipynb)
+        shutil.copyfile(ipynb, out_ipynb)
+        log(out_ipynb)
+    else:
+        log(f'{out_ipynb} already exists. Skipping')
+
     log(f'Finished in {dt.now()-t1}')
 
 

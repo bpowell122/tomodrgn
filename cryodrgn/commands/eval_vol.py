@@ -17,7 +17,7 @@ from cryodrgn import fft
 from cryodrgn import lie_tools
 from cryodrgn import config
 from cryodrgn.lattice import Lattice
-from cryodrgn.models import HetOnlyVAE
+from cryodrgn.models import HetOnlyVAE, TiltSeriesHetOnlyVAE
 
 log = utils.log
 vlog = utils.vlog
@@ -39,6 +39,7 @@ def add_args(parser):
     group = parser.add_argument_group('Volume arguments')
     group.add_argument('--Apix', type=float, default=1, help='Pixel size to add to .mrc header (default: %(default)s A/pix)')
     group.add_argument('--flip', action='store_true', help='Flip handedness of output volume')
+    group.add_argument('--invert', action='store_true', help='Invert contrast of output volume')
     group.add_argument('-d','--downsample', type=int, help='Downsample volumes to this box size (pixels)')
 
     group = parser.add_argument_group('Overwrite architecture hyperparameters in config.pkl')
@@ -88,7 +89,10 @@ def main(args):
         assert args.downsample % 2 == 0, "Boxsize must be even"
         assert args.downsample <= D - 1, "Must be smaller than original box size"
     
-    model, lattice = HetOnlyVAE.load(cfg, args.weights)
+    if 'ntilts' in cfg['dataset_args']:
+        model, lattice = TiltSeriesHetOnlyVAE.load(cfg, args.weights)
+    else:
+        model, lattice = HetOnlyVAE.load(cfg, args.weights)
     model.eval()
 
     ### Multiple z ###
@@ -119,6 +123,8 @@ def main(args):
             out_mrc = '{}/{}{:03d}.mrc'.format(args.o, args.prefix, i)
             if args.flip:
                 vol = vol[::-1]
+            if args.invert:
+                vol *= -1
             mrc.write(out_mrc, vol.astype(np.float32), Apix=args.Apix)
     
     ### Single z ###
@@ -133,10 +139,12 @@ def main(args):
             vol = model.decoder.eval_volume(lattice.coords, lattice.D, lattice.extent, norm, z) 
         if args.flip:
             vol = vol[::-1]
+        if args.invert:
+            vol *= -1
         mrc.write(args.o, vol.astype(np.float32), Apix=args.Apix)
 
     td = dt.now()-t1
-    log('Finsihed in {}'.format(td))
+    log('Finished in {}'.format(td))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)

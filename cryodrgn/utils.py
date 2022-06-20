@@ -4,6 +4,9 @@ import numpy as np
 import pickle
 import collections
 import functools
+from cryodrgn import mrc, fft
+from scipy import ndimage
+import subprocess
 
 _verbose = False
 
@@ -143,6 +146,14 @@ def xrot(tilt_deg):
                      [0, np.sin(theta), np.cos(theta)]])
     return tilt
 
+def yrot(tilt_deg):
+    '''Return rotation matrix associated with rotation over the y-axis'''
+    theta = tilt_deg*np.pi/180
+    tilt = np.array([[np.cos(theta), 0., np.sin(theta)],
+                     [0., 1., 0.],
+                     [-np.sin(theta), 0., np.cos(theta)]])
+    return tilt
+
 @memoized
 def _zero_sphere_helper(D):
     xx = np.linspace(-1, 1, D, endpoint=True if D % 2 == 1 else False)
@@ -160,3 +171,42 @@ def zero_sphere(vol):
     vol[tmp] = 0
     return vol
 
+def calc_fsc(vol1_path, vol2_path):
+    '''
+    Function to calculate the FSC between two volumes
+    vol1 and vol2 should be paths to maps of the same box size
+    '''
+    # load masked volumes in fourier space
+    vol1, _ = mrc.parse_mrc(vol1_path)
+    vol2, _ = mrc.parse_mrc(vol2_path)
+
+    vol1_ft = fft.fftn_center(vol1)
+    vol2_ft = fft.fftn_center(vol2)
+
+    # define fourier grid and label into shells
+    D = vol1.shape[0]
+    x = np.arange(-D // 2, D // 2)
+    x0, x1, x2 = np.meshgrid(x, x, x, indexing='ij')
+    r = np.sqrt(x0 ** 2 + x1 ** 2 + x2 ** 2)
+    r_max = D // 2  # sphere inscribed within volume box
+    r_step = 1  # int(np.min(r[r>0]))
+    bins = np.arange(0, r_max, r_step)
+    bin_labels = np.searchsorted(bins, r, side='right')
+
+    # calculate the FSC via labeled shells
+    num = ndimage.sum(np.real(vol1_ft * np.conjugate(vol2_ft)), labels=bin_labels, index=bins + 1)
+    den1 = ndimage.sum(np.abs(vol1_ft) ** 2, labels=bin_labels, index=bins + 1)
+    den2 = ndimage.sum(np.abs(vol2_ft) ** 2, labels=bin_labels, index=bins + 1)
+    fsc = num / np.sqrt(den1 * den2)
+
+    x = bins / D  # x axis should be spatial frequency in 1/px
+    return x, fsc
+
+
+def check_memory_usage():
+    gpu_memory_usage = subprocess.check_output(['nvidia-smi', '--query-gpu=memory.used,memory.total', '--format=csv,noheader'], encoding='utf-8').strip().split('\n')
+    return [f'{gpu.split(", ")[0]} / {gpu.split(", ")[1]}' for gpu in gpu_memory_usage]
+
+
+def check_git_revision_hash(repo_path):
+    return subprocess.check_output(['git', '--git-dir', repo_path, 'rev-parse', 'HEAD']).decode('ascii').strip()

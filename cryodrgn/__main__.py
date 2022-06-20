@@ -21,6 +21,9 @@ def main():
     import cryodrgn.commands.pc_traversal
     import cryodrgn.commands.graph_traversal
     import cryodrgn.commands.view_config
+    import cryodrgn.commands.analyze_convergence
+    import cryodrgn.commands.train_nn_ts
+    import cryodrgn.commands.train_vae_ts
 
     modules = [cryodrgn.commands.downsample,
         cryodrgn.commands.preprocess,
@@ -37,6 +40,9 @@ def main():
         cryodrgn.commands.pc_traversal,
         cryodrgn.commands.graph_traversal,
         cryodrgn.commands.view_config,
+	    cryodrgn.commands.analyze_convergence,
+        cryodrgn.commands.train_nn_ts,
+        cryodrgn.commands.train_vae_ts
         ]
 
     subparsers = parser.add_subparsers(title='Choose a command')
@@ -46,7 +52,7 @@ def main():
         return os.path.splitext(os.path.basename(module.__file__))[0]
 
     for module in modules:
-        this_parser = subparsers.add_parser(get_str_name(module), description=module.__doc__)
+        this_parser = subparsers.add_parser(get_str_name(module), description=module.__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         module.add_args(this_parser)
         this_parser.set_defaults(func=module.main)
 

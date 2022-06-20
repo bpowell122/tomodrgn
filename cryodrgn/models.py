@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.cuda.amp import autocast
 
 from . import fft
 from . import lie_tools
@@ -131,6 +132,127 @@ class HetOnlyVAE(nn.Module):
         return self.decode(*args, **kwargs)
 
 
+class TiltSeriesHetOnlyVAE(nn.Module):
+    # No pose inference
+    def __init__(self, lattice, qlayersA, qdimA, out_dimA, ntilts, qlayersB, qdimB,
+                 players, pdim, in_dim, zdim=1,
+                 enc_mask=None, enc_type='geom_lowf', enc_dim=None,
+                 domain='fourier', activation = nn.ReLU, use_amp=False,
+                 skip_zeros_decoder=False, feat_sigma = None):
+        super(TiltSeriesHetOnlyVAE, self).__init__()
+        self.lattice = lattice
+        self.ntilts = ntilts
+        self.zdim = zdim
+        self.in_dim = in_dim
+        self.enc_mask = enc_mask
+        self.use_amp = use_amp
+        self.skip_zeros_decoder = skip_zeros_decoder
+        self.encoder = TiltSeriesEncoder(in_dim, qlayersA, qdimA, out_dimA, ntilts, qlayersB, qdimB, zdim * 2, activation)
+        self.decoder = get_decoder(3 + zdim, lattice.D, players, pdim, domain, enc_type, enc_dim, activation, use_amp=use_amp, feat_sigma=feat_sigma)
+
+    @classmethod
+    def load(self, config, weights=None, device=None):
+        # TODO update me
+        '''Instantiate a model from a config.pkl
+
+        Inputs:
+            config (str, dict): Path to config.pkl or loaded config.pkl
+            weights (str): Path to weights.pkl
+            device: torch.device object
+
+        Returns:
+            HetOnlyVAE instance, Lattice instance
+        '''
+        cfg = utils.load_pkl(config) if type(config) is str else config
+        ntilts = cfg['dataset_args']['ntilts']
+        lat = lattice.Lattice(cfg['lattice_args']['D'], extent=cfg['lattice_args']['extent'])
+        c = cfg['model_args']
+        if cfg['model_args']['enc_mask'] > 0:
+            enc_mask = lat.get_circular_mask(c['enc_mask'])
+            in_dim = int(enc_mask.sum())
+        else:
+            assert c['enc_mask'] == -1
+            enc_mask = None
+            in_dim = lat.D ** 2
+        activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[cfg['model_args']['activation']]
+        model = TiltSeriesHetOnlyVAE(lat,
+                                     cfg['model_args']['qlayersA'], cfg['model_args']['qdimA'],
+                                     cfg['model_args']['out_dimA'], ntilts,
+                                     cfg['model_args']['qlayersB'], cfg['model_args']['qdimB'],
+                                     cfg['model_args']['players'], cfg['model_args']['pdim'],
+                                     in_dim, cfg['model_args']['zdim'],
+                                     enc_mask=enc_mask,
+                                     enc_type=cfg['model_args']['pe_type'],
+                                     enc_dim=cfg['model_args']['pe_dim'],
+                                     domain=cfg['model_args']['domain'],
+                                     activation=activation,
+                                     use_amp=cfg['training_args']['amp'],
+                                     skip_zeros_decoder=cfg['model_args']['skip_zeros_decoder'],
+                                     feat_sigma=cfg['model_args']['feat_sigma'])
+        if weights is not None:
+            ckpt = torch.load(weights)
+            model.load_state_dict(ckpt['model_state_dict'])
+        if device is not None:
+            model.to(device)
+        return model, lat
+
+    def reparameterize(self, mu, logvar):
+        if not self.training:
+            return mu
+        std = torch.exp(.5 * logvar)
+        eps = torch.randn_like(std)
+        return eps * std + mu
+
+    def encode(self, batch, B, ntilts):
+        # input batch is of shape B x ntilts x D x D
+        batch = batch.view(B,ntilts,-1)  # B x ntilts x D*D
+        if self.enc_mask is not None:
+            batch = batch[:,:,self.enc_mask] # B x ntilts x D*D[mask]
+        z = self.encoder(batch, B)
+        return z[:, :self.zdim], z[:, self.zdim:] # B x zdim
+
+    def cat_z_pertilt(self, coords, z):
+        '''
+        coords: B*ntilts x D*D[mask] x 3 image coordinates
+        z: B x zdim latent coordinate (repeated for ntilts)
+        '''
+        assert coords.size(0) == z.size(0)*self.ntilts
+        z = torch.repeat_interleave(z, self.ntilts, dim=0)  # expand z along batch dimension to repeat value for all tilts in particle, B*ntilts x zdim
+        z = z.view(z.size(0), *([1] * (coords.ndimension() - 2)), self.zdim)
+        z = torch.cat((coords, z.expand(*coords.shape[:-1], self.zdim)), dim=-1)
+        return z
+
+    def cat_z_perptcl(self, coords, z):
+        '''
+        coords: B x ntilts*D*D[mask] x 3 image coordinates
+        z: B x zdim latent coordinate (repeated for ntilts)
+        '''
+        assert coords.size(0) == z.size(0)
+        z = z.view(z.size(0), *([1] * (coords.ndimension() - 2)), self.zdim)
+        z = torch.cat((coords, z.expand(*coords.shape[:-1], self.zdim)), dim=-1)
+        return z
+
+    def decode(self, coords, z):
+        if self.skip_zeros_decoder:
+            '''
+            coords: B x ntilts*D*D[critical_exposure_mask] x 3 image coordinates
+            z: B x zdim latent coordinate (repeated for ntilts)
+            '''
+            # skip zeros decoder explicitly evaluates all FT coordinates, does not use +/- z symmetry
+            return self.decoder(self.cat_z_perptcl(coords, z), eval_all_coords = True)
+        else:
+            '''
+            coords: B x ntilts*D*D[uniform_circular_mask] x 3 image coordinates
+            z: B x zdim latent coordinate (repeated for ntilts)
+            '''
+            coords = coords.view(z.shape[0]*self.ntilts, -1, 3) # reshape to B*ntilts x D*D[mask] x 3 image coordinates
+            return self.decoder(self.cat_z_pertilt(coords, z), eval_all_coords = False)
+
+    # Need forward func for DataParallel -- TODO: refactor
+    def forward(self, *args, **kwargs):
+        return self.decode(*args, **kwargs)
+
+
 def load_decoder(config, weights=None, device=None):
     '''
     Instantiate a decoder model from a config.pkl
@@ -146,7 +268,7 @@ def load_decoder(config, weights=None, device=None):
     c = cfg['model_args']
     D = cfg['lattice_args']['D']
     activation={"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[c['activation']]
-    model = get_decoder(3, D, c['layers'], c['dim'], c['domain'], c['pe_type'], c['pe_dim'], activation) 
+    model = get_decoder(3, D, c['layers'], c['dim'], c['domain'], c['pe_type'], c['pe_dim'], activation, use_amp=cfg['training_args']['amp'], feat_sigma=cfg['model_args']['feat_sigma'])
     if weights is not None:
         ckpt = torch.load(weights)
         model.load_state_dict(ckpt['model_state_dict'])
@@ -154,7 +276,7 @@ def load_decoder(config, weights=None, device=None):
         model.to(device)
     return model
 
-def get_decoder(in_dim, D, layers, dim, domain, enc_type, enc_dim=None, activation=nn.ReLU):
+def get_decoder(in_dim, D, layers, dim, domain, enc_type, enc_dim=None, activation=nn.ReLU, use_amp=False, feat_sigma=None):
     if enc_type == 'none':
         if domain == 'hartley':
             model = ResidLinearMLP(in_dim, layers, dim, 1, activation)
@@ -164,7 +286,7 @@ def get_decoder(in_dim, D, layers, dim, domain, enc_type, enc_dim=None, activati
         return model
     else:
         model = PositionalDecoder if domain == 'hartley' else FTPositionalDecoder 
-        return model(in_dim, D, layers, dim, activation, enc_type=enc_type, enc_dim=enc_dim)
+        return model(in_dim, D, layers, dim, activation, enc_type=enc_type, enc_dim=enc_dim, use_amp=use_amp, feat_sigma=feat_sigma)
  
 class PositionalDecoder(nn.Module):
     def __init__(self, in_dim, D, nlayers, hidden_dim, activation, enc_type='linear_lowf', enc_dim=None):
@@ -260,7 +382,7 @@ class PositionalDecoder(nn.Module):
         return vol
 
 class FTPositionalDecoder(nn.Module):
-    def __init__(self, in_dim, D, nlayers, hidden_dim, activation, enc_type='linear_lowf', enc_dim=None):
+    def __init__(self, in_dim, D, nlayers, hidden_dim, activation, enc_type='linear_lowf', enc_dim=None, use_amp=False, feat_sigma=None):
         super(FTPositionalDecoder, self).__init__()
         assert in_dim >= 3
         self.zdim = in_dim - 3
@@ -271,9 +393,25 @@ class FTPositionalDecoder(nn.Module):
         self.enc_dim = self.D2 if enc_dim is None else enc_dim
         self.in_dim = 3 * (self.enc_dim) * 2 + self.zdim
         self.decoder = ResidLinearMLP(self.in_dim, nlayers, hidden_dim, 2, activation)
+        self.use_amp = use_amp
+
+        if enc_type == "gaussian":
+            # We construct 3 * self.enc_dim random vector frequences, to match the original positional encoding:
+            # In the positional encoding we produce self.enc_dim features for each of the x,y,z dimensions,
+            # whereas in gaussian encoding we produce self.enc_dim features each with random x,y,z components
+            #
+            # Each of the random feats is the sine/cosine of the dot product of the coordinates with a frequency
+            # vector sampled from a gaussian with std of feat_sigma
+            rand_freqs = torch.randn((3 * self.enc_dim, 3), dtype=torch.float) * feat_sigma
+            # make rand_feats a parameter so it is saved in the checkpoint, but do not perform SGD on it
+            self.rand_freqs = nn.Parameter(rand_freqs, requires_grad=False)
+        else:
+            self.rand_feats = None
     
     def positional_encoding_geom(self, coords):
         '''Expand coordinates in the Fourier basis with geometrically spaced wavelengths from 2/D to 2pi'''
+        if self.enc_type == "gaussian":
+            return self.random_fourier_encoding(coords)
         freqs = torch.arange(self.enc_dim, dtype=torch.float)
         if self.enc_type == 'geom_ft':
             freqs = self.DD*np.pi*(2./self.DD)**(freqs/(self.enc_dim-1)) # option 1: 2/D to 1 
@@ -287,15 +425,33 @@ class FTPositionalDecoder(nn.Module):
             return self.positional_encoding_linear(coords)
         else:
             raise RuntimeError('Encoding type {} not recognized'.format(self.enc_type))
-        freqs = freqs.view(*[1]*len(coords.shape), -1) # 1 x 1 x D2
-        coords = coords.unsqueeze(-1) # B x 3 x 1
-        k = coords[...,0:3,:] * freqs # B x 3 x D2
-        s = torch.sin(k) # B x 3 x D2
-        c = torch.cos(k) # B x 3 x D2
-        x = torch.cat([s,c], -1) # B x 3 x D
-        x = x.view(*coords.shape[:-2], self.in_dim-self.zdim) # B x in_dim-zdim
+        freqs = freqs.view(*[1]*len(coords.shape), -1) # 1 x 1 x D2             # 1 x 1 x 1 x D2         # 1 x 1 x 1 x D2
+        coords = coords.unsqueeze(-1) # B x 3 x 1                               # B x N/2 x 3 x 1        # 1 x B*N x 3 x 1
+        k = coords[...,0:3,:] * freqs # B x 3 x D2                              # B x N/2 x 3 x D2       # 1 x B*N x 3 x D2
+        s = torch.sin(k) # B x 3 x D2                                           # B x N/2 x 3 x D2       # 1 x B*N x 3 x D2
+        c = torch.cos(k) # B x 3 x D2                                           # B x N/2 x 3 x D2       # 1 x B*N x 3 x D2
+        x = torch.cat([s,c], -1) # B x 3 x D                                    # B x N/2 x 3 x D        # 1 x B*N x 3 x D
+        x = x.view(*coords.shape[:-2], self.in_dim-self.zdim) # B x in_dim-zdim # B x N/2 x in_dim-zdim  # 1 x B*N x in_dim-zdim
         if self.zdim > 0:
             x = torch.cat([x,coords[...,3:,:].squeeze(-1)], -1)
+            assert x.shape[-1] == self.in_dim
+        return x
+
+    def random_fourier_encoding(self, coords):
+        assert self.rand_freqs is not None
+        # k = coords . rand_freqs
+        # expand rand_freqs with singleton dimension along the batch dimensions
+        # e.g. dim (1, ..., 1, n_rand_feats, 3)
+        freqs = self.rand_freqs.view(*[1] * (len(coords.shape) - 1), -1, 3) * self.D2
+
+        kxkykz = (coords[..., None, 0:3] * freqs)  # compute the x,y,z components of k
+        k = kxkykz.sum(-1)  # compute k
+        s = torch.sin(k)
+        c = torch.cos(k)
+        x = torch.cat([s, c], -1)
+        x = x.view(*coords.shape[:-1], self.in_dim - self.zdim)
+        if self.zdim > 0:
+            x = torch.cat([x, coords[..., 3:]], -1)
             assert x.shape[-1] == self.in_dim
         return x
 
@@ -314,28 +470,55 @@ class FTPositionalDecoder(nn.Module):
             assert x.shape[-1] == self.in_dim
         return x
 
-    def forward(self, lattice):
+    def forward(self, lattice, eval_all_coords=False):
         '''
         Call forward on central slices only
             i.e. the middle pixel should be (0,0,0)
-
-        lattice: B x N x 3+zdim
         '''
         # if ignore_DC = False, then the size of the lattice will be odd (since it
         # includes the origin), so we need to evaluate one additional pixel
-        c = lattice.shape[-2]//2 # top half
-        cc = c + 1 if lattice.shape[-2] % 2 == 1 else c # include the origin
-        assert abs(lattice[...,0:3].mean()) < 1e-4, '{} != 0.0'.format(lattice[...,0:3].mean())
-        image = torch.empty(lattice.shape[:-1]) 
-        top_half = self.decode(lattice[...,0:cc,:])
-        image[..., 0:cc] = top_half[...,0] - top_half[...,1]
-        # the bottom half of the image is the complex conjugate of the top half
-        image[...,cc:] = (top_half[...,0] + top_half[...,1])[...,np.arange(c-1,-1,-1)]
-        return image
+        with autocast(enabled=self.use_amp):
+            if eval_all_coords == False: # lattice: B x N x 3+zdim
+                # get number of pixels in top half of each image
+                c = lattice.shape[-2]//2 # top half
+                cc = c + 1 if lattice.shape[-2] % 2 == 1 else c # include the origin
+
+                # check that all coordinates are centered around 0
+                assert abs(lattice[...,0:3].mean()) < 1e-4, '{} != 0.0'.format(lattice[...,0:3].mean())
+
+                # allocate B x N array for pixel values to be stored after model evaluated
+                image = torch.empty(lattice.shape[:-1])
+
+                # evaluate model on pixel coordinates for top half of each image
+                top_half = self.decode(lattice[...,0:cc,:])
+
+                # store hartley information (FT real - FT imag) for top half of each image
+                image[..., 0:cc] = top_half[...,0] - top_half[...,1]
+
+                # cheaply evaluate the bottom half of the image as the complex conjugate of the top half
+                image[...,cc:] = (top_half[...,0] + top_half[...,1])[...,np.arange(c-1,-1,-1)]
+
+                return image
+
+            else: # lattice: B x ntilts*N x 3+zdim, useful when images are different sizes to avoid ragged tensors
+                # check that all coordinates are centered around 0
+                assert abs(lattice[...,0:3].mean()) < 1e-4, '{} != 0.0'.format(lattice[...,0:3].mean())
+
+                # allocate B x N array for pixel values to be stored after model evaluated
+                image = torch.empty(lattice.shape[:-1])
+
+                # evaluate model on all pixel coordinates for each image
+                full_image = self.decode(lattice)
+
+                # return hartley information (FT real - FT imag) for each image
+                image = full_image[...,0] - full_image[...,1]
+
+                return image
+
 
     def decode(self, lattice):
         '''Return FT transform'''
-        assert (lattice[...,0:3].abs() - 0.5 < 1e-4).all()
+        assert (lattice[...,0:3].abs() - 0.5 < 1e-3).all(), f'lattice[...,0:3].max(): {lattice[...,0:3].max().to(torch.float32)}'
         # convention: only evalute the -z points
         w = lattice[...,2] > 0.0
         lattice[...,0:3][w] = -lattice[...,0:3][w] # negate lattice coordinates where z > 0
@@ -662,6 +845,22 @@ class TiltEncoder(nn.Module):
         x_enc = self.encoder1(x)
         x_tilt_enc = self.encoder1(x_tilt)
         z = self.encoder2(torch.cat((x_enc,x_tilt_enc),-1))
+        return z
+
+class TiltSeriesEncoder(nn.Module):
+    def __init__(self, in_dim, nlayersA, hidden_dimA, out_dimA, ntilts, nlayersB, hidden_dimB, out_dim, activation):
+        super(TiltSeriesEncoder, self).__init__()
+        self.in_dim = in_dim
+        assert nlayersA+nlayersB > 2
+        # encoder1 encodes each identically-masked tilt image separately
+        # encoder2 merges ntilts-concatenated encoder1 information and encodes further to latent space
+        self.encoder1 = ResidLinearMLP(in_dim, nlayersA, hidden_dimA, out_dimA, activation)
+        self.encoder2 = ResidLinearMLP(out_dimA*ntilts, nlayersB, hidden_dimB, out_dim, activation)
+
+    def forward(self, batch, B):
+        # input image batch of shape B x ntilts x D*D[lattice_circular_mask]
+        batch_enc = self.encoder1(batch)
+        z = self.encoder2(batch_enc.view(B, -1)) #reshape to encode all tilts of one ptcl together
         return z
 
 class ResidLinearMLP(nn.Module):
