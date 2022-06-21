@@ -26,7 +26,7 @@ from tomodrgn.models import HetOnlyVAE
 from tomodrgn.lattice import Lattice
 from tomodrgn.beta_schedule import get_beta_schedule, LinearSchedule
 
-from tomodrgn.commands.train_vae import preprocess_input, run_batch, loss_function
+from tomodrgn.commands.train_vae_ts import preprocess_input, run_batch, loss_function
 
 log = utils.log
 vlog = utils.vlog

@@ -195,26 +195,6 @@ def main(args):
         analyze_zN(z, outdir, vg, skip_umap=args.skip_umap, num_pcs=args.pc, num_ksamples=args.ksample, pc_ondata=args.pc_ondata)
 
     # copy over template if file doesn't exist
-    out_ipynb = f'{outdir}/cryoDRGN_viz.ipynb'
-    if not os.path.exists(out_ipynb):
-        log(f'Creating jupyter notebook...')
-        ipynb = f'{tomodrgn._ROOT}/templates/cryoDRGN_viz_template.ipynb'
-        shutil.copyfile(ipynb, out_ipynb)
-        log(out_ipynb)
-    else:
-        log(f'{out_ipynb} already exists. Skipping')
-
-    # copy over template if file doesn't exist
-    out_ipynb = f'{outdir}/cryoDRGN_filtering.ipynb'
-    if not os.path.exists(out_ipynb):
-        log(f'Creating jupyter notebook...')
-        ipynb = f'{tomodrgn._ROOT}/templates/cryoDRGN_filtering_template.ipynb'
-        shutil.copyfile(ipynb, out_ipynb)
-        log(out_ipynb)
-    else:
-        log(f'{out_ipynb} already exists. Skipping')
-
-    # copy over template if file doesn't exist
     out_ipynb = f'{outdir}/tomoDRGN_viz+filt.ipynb'
     if not os.path.exists(out_ipynb):
         log(f'Creating jupyter notebook...')
