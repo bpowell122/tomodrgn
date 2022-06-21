@@ -6,7 +6,7 @@ import argparse
 
 import numpy as np
 
-from cryodrgn import utils
+from tomodrgn import utils
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)

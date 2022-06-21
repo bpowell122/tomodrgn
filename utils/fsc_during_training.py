@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse, os, fnmatch
-from cryodrgn import utils
+from tomodrgn import utils
 
 def add_args(parser):
     parser.add_argument('training_directory', type=os.path.abspath, help='cryodrgn train_nn directory containing reconstruct.N.mrc')

@@ -2,24 +2,25 @@
 
 from setuptools import setup, find_packages
 import os,sys
-sys.path.insert(0, f'{os.path.dirname(__file__)}/cryodrgn')
-import cryodrgn 
-version = cryodrgn.__version__
+sys.path.insert(0, f'{os.path.dirname(__file__)}/tomodrgn')
+import tomodrgn
+version = tomodrgn.__version__
 
-setup(name='cryodrgn',
+setup(name='tomodrgn',
       version=version,
-      description='cryoDRGN heterogeneous reconstruction',
-      author='Ellen Zhong',
+      description='tomoDRGN heterogeneity training and analysis',
+      author='Barrett Powell',
       author_email='zhonge@mit.edu',
-      url='https://github.com/zhonge/cryodrgn',
+      url='https://github.com/bpowell122/tomodrgn',
       license='GPLv3',
       packages=find_packages(),
       entry_points={
           "console_scripts": [
-            "cryodrgn = cryodrgn.__main__:main",
+            "tomodrgn = tomodrgn.__main__:main",
             ],
       },
       include_package_data = True,
+      python_requires='>=3.7',
       install_requires=[
         'torch>=1.0.0',
         'pandas',
@@ -31,6 +32,7 @@ setup(name='cryodrgn',
         'cufflinks',
         'jupyterlab',
         'umap-learn',
-        'ipywidgets'
+        'ipywidgets',
+        'ipyvolume'
         ]
      )

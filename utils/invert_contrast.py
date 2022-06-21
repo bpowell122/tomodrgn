@@ -5,8 +5,8 @@ import numpy as np
 import sys, os
 import pickle
 
-from cryodrgn import utils
-from cryodrgn import mrc
+from tomodrgn import utils
+from tomodrgn import mrc
 log = utils.log 
 
 def parse_args():

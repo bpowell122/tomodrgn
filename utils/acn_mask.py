@@ -9,11 +9,11 @@ import sys, os
 import pickle
 from datetime import datetime as dt
 
-from cryodrgn.ctf import compute_ctf_np as compute_ctf
-from cryodrgn import mrc
-from cryodrgn import utils
-from cryodrgn import fft
-from cryodrgn import dataset
+from tomodrgn.ctf import compute_ctf_np as compute_ctf
+from tomodrgn import mrc
+from tomodrgn import utils
+from tomodrgn import fft
+from tomodrgn import dataset
 
 log = utils.log
 

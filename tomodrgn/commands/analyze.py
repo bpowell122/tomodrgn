@@ -14,14 +14,14 @@ matplotlib.use('Agg') # non-interactive backend
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-import cryodrgn
-from cryodrgn import analysis
-from cryodrgn import utils
+import tomodrgn
+from tomodrgn import analysis
+from tomodrgn import utils
 
 log = utils.log
 
 def add_args(parser):
-    parser.add_argument('workdir', type=os.path.abspath, help='Directory with cryoDRGN results')
+    parser.add_argument('workdir', type=os.path.abspath, help='Directory with tomoDRGN results')
     parser.add_argument('epoch', type=int, help='Epoch number N to analyze (0-based indexing, corresponding to z.N.pkl, weights.N.pkl)')
     parser.add_argument('--device', type=int, help='Optionally specify CUDA device')
     parser.add_argument('-o','--outdir', help='Output directory for analysis results (default: [workdir]/analyze.[epoch])')
@@ -198,7 +198,7 @@ def main(args):
     out_ipynb = f'{outdir}/cryoDRGN_viz.ipynb'
     if not os.path.exists(out_ipynb):
         log(f'Creating jupyter notebook...')
-        ipynb = f'{cryodrgn._ROOT}/templates/cryoDRGN_viz_template.ipynb'
+        ipynb = f'{tomodrgn._ROOT}/templates/cryoDRGN_viz_template.ipynb'
         shutil.copyfile(ipynb, out_ipynb)
         log(out_ipynb)
     else:
@@ -208,7 +208,7 @@ def main(args):
     out_ipynb = f'{outdir}/cryoDRGN_filtering.ipynb'
     if not os.path.exists(out_ipynb):
         log(f'Creating jupyter notebook...')
-        ipynb = f'{cryodrgn._ROOT}/templates/cryoDRGN_filtering_template.ipynb'
+        ipynb = f'{tomodrgn._ROOT}/templates/cryoDRGN_filtering_template.ipynb'
         shutil.copyfile(ipynb, out_ipynb)
         log(out_ipynb)
     else:
@@ -218,7 +218,7 @@ def main(args):
     out_ipynb = f'{outdir}/tomoDRGN_viz+filt.ipynb'
     if not os.path.exists(out_ipynb):
         log(f'Creating jupyter notebook...')
-        ipynb = f'{cryodrgn._ROOT}/templates/tomoDRGN_viz+filt_template.ipynb'
+        ipynb = f'{tomodrgn._ROOT}/templates/tomoDRGN_viz+filt_template.ipynb'
         assert os.path.exists(ipynb)
         shutil.copyfile(ipynb, out_ipynb)
         log(out_ipynb)

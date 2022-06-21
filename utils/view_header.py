@@ -4,8 +4,8 @@ import argparse
 import numpy as np
 import sys, os
 
-from cryodrgn import mrc
-from cryodrgn import utils
+from tomodrgn import mrc
+from tomodrgn import utils
 
 log = utils.log
 

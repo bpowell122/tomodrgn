@@ -1,5 +1,5 @@
 '''
-Display config information of a cryoDRGN job
+Display config information of a tomoDRGN job
 '''
 
 import argparse
@@ -9,13 +9,13 @@ import pickle
 import subprocess
 from datetime import datetime as dt
 
-from cryodrgn import utils
+from tomodrgn import utils
 from pprint import pprint
 
 log = utils.log
 
 def add_args(parser):
-    parser.add_argument('workdir', type=os.path.abspath, help='Directory with cryoDRGN results')
+    parser.add_argument('workdir', type=os.path.abspath, help='Directory with tomoDRGN results')
     return parser
 
 def main(args):

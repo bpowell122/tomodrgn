@@ -9,10 +9,10 @@ import math
 import multiprocessing as mp
 from multiprocessing import Pool
 
-from cryodrgn import utils
-from cryodrgn import mrc
-from cryodrgn import fft
-from cryodrgn import dataset
+from tomodrgn import utils
+from tomodrgn import mrc
+from tomodrgn import fft
+from tomodrgn import dataset
 
 log = utils.log
 

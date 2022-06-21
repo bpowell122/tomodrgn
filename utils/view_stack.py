@@ -7,9 +7,9 @@ import sys, os
 import matplotlib
 import matplotlib.pyplot as plt
 
-from cryodrgn import utils
-from cryodrgn import mrc
-from cryodrgn import analysis
+from tomodrgn import utils
+from tomodrgn import mrc
+from tomodrgn import analysis
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)

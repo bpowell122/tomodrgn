@@ -10,7 +10,7 @@ from scipy.spatial.distance import cdist
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 
-from cryodrgn import analysis
+from tomodrgn import analysis
 
 def add_args(parser):
     parser.add_argument('z', help='Input z.pkl')

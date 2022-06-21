@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import argparse, os, fnmatch
-from cryodrgn import utils, mrc
+from tomodrgn import utils, mrc
 from datetime import datetime as dt
 
 def add_args(parser):

@@ -4,11 +4,11 @@ import argparse
 import numpy as np
 import sys, os
 
-from cryodrgn import utils
-from cryodrgn import mrc
-from cryodrgn import dataset
-from cryodrgn import ctf
-from cryodrgn import fft
+from tomodrgn import utils
+from tomodrgn import mrc
+from tomodrgn import dataset
+from tomodrgn import ctf
+from tomodrgn import fft
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)

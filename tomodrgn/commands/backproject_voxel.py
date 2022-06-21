@@ -10,14 +10,14 @@ import pickle
 
 import torch
 
-from cryodrgn import utils
-from cryodrgn import mrc
-from cryodrgn import fft
-from cryodrgn import dataset
-from cryodrgn import ctf
+from tomodrgn import utils
+from tomodrgn import mrc
+from tomodrgn import fft
+from tomodrgn import dataset
+from tomodrgn import ctf
 
-from cryodrgn.pose import PoseTracker
-from cryodrgn.lattice import Lattice
+from tomodrgn.pose import PoseTracker
+from tomodrgn.lattice import Lattice
 
 log = utils.log
 

@@ -12,16 +12,16 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.cuda.amp import GradScaler, autocast
 
-import cryodrgn
-from cryodrgn import mrc
-from cryodrgn import utils
-from cryodrgn import dataset
-from cryodrgn import ctf
-from cryodrgn import models
-from cryodrgn import dose
+import tomodrgn
+from tomodrgn import mrc
+from tomodrgn import utils
+from tomodrgn import dataset
+from tomodrgn import ctf
+from tomodrgn import models
+from tomodrgn import dose
 
-from cryodrgn.pose import PoseTracker
-from cryodrgn.lattice import Lattice
+from tomodrgn.pose import PoseTracker
+from tomodrgn.lattice import Lattice
 
 log = utils.log
 vlog = utils.vlog
@@ -159,7 +159,7 @@ def save_config(args, dataset, lattice, model, out_config):
         pickle.dump(config, f)
         meta = dict(time=dt.now(),
                     cmd=sys.argv,
-                    version=cryodrgn.__version__)
+                    version=tomodrgn.__version__)
         pickle.dump(meta, f)
 
 
@@ -192,6 +192,7 @@ def main(args):
         args = get_latest(args, flog)
     flog(' '.join(sys.argv))
     flog(args)
+    flog(f'Git revision hash: {utils.check_git_revision_hash("/nobackup/users/bmp/software/tomodrgn/.git")}')
 
     # set the random seed
     np.random.seed(args.seed)

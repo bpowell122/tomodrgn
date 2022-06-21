@@ -5,8 +5,8 @@ import numpy as np
 import sys, os
 import pickle
 
-from cryodrgn import utils
-from cryodrgn import starfile
+from tomodrgn import utils
+from tomodrgn import starfile
 log = utils.log
 
 def add_args(parser):

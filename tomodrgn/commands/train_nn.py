@@ -16,16 +16,16 @@ try:
 except: 
     pass
 
-import cryodrgn
-from cryodrgn import mrc
-from cryodrgn import utils
-from cryodrgn import fft
-from cryodrgn import dataset
-from cryodrgn import ctf
-from cryodrgn import models
+import tomodrgn
+from tomodrgn import mrc
+from tomodrgn import utils
+from tomodrgn import fft
+from tomodrgn import dataset
+from tomodrgn import ctf
+from tomodrgn import models
 
-from cryodrgn.pose import PoseTracker
-from cryodrgn.lattice import Lattice
+from tomodrgn.pose import PoseTracker
+from tomodrgn.lattice import Lattice
 
 log = utils.log
 vlog = utils.vlog
@@ -141,7 +141,7 @@ def save_config(args, dataset, lattice, model, out_config):
         pickle.dump(config, f)
         meta = dict(time=dt.now(),
                     cmd=sys.argv,
-                    version=cryodrgn.__version__)
+                    version=tomodrgn.__version__)
         pickle.dump(meta, f)
 
 def get_latest(args):

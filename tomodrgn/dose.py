@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
-from cryodrgn import utils
+from . import utils
 log = utils.log
 
 

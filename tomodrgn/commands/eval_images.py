@@ -1,5 +1,5 @@
 '''
-Evaluate cryoDRGN z and loss for a stack of images
+Evaluate tomoDRGN z and loss for a stack of images
 '''
 import numpy as np
 import sys, os
@@ -13,20 +13,20 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-from cryodrgn import mrc
-from cryodrgn import utils
-from cryodrgn import fft
-from cryodrgn import lie_tools
-from cryodrgn import dataset
-from cryodrgn import ctf
-from cryodrgn import config
+from tomodrgn import mrc
+from tomodrgn import utils
+from tomodrgn import fft
+from tomodrgn import lie_tools
+from tomodrgn import dataset
+from tomodrgn import ctf
+from tomodrgn import config
 
-from cryodrgn.pose import PoseTracker
-from cryodrgn.models import HetOnlyVAE
-from cryodrgn.lattice import Lattice
-from cryodrgn.beta_schedule import get_beta_schedule, LinearSchedule
+from tomodrgn.pose import PoseTracker
+from tomodrgn.models import HetOnlyVAE
+from tomodrgn.lattice import Lattice
+from tomodrgn.beta_schedule import get_beta_schedule, LinearSchedule
 
-from cryodrgn.commands.train_vae import preprocess_input, run_batch, loss_function
+from tomodrgn.commands.train_vae import preprocess_input, run_batch, loss_function
 
 log = utils.log
 vlog = utils.vlog

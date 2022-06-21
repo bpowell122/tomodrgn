@@ -5,9 +5,9 @@ import numpy as np
 import sys, os
 import pickle
 
-from cryodrgn import utils
-from cryodrgn import starfile
-from cryodrgn import ctf
+from tomodrgn import utils
+from tomodrgn import starfile
+from tomodrgn import ctf
 log = utils.log 
 
 HEADERS = ['_rlnDefocusU', '_rlnDefocusV', '_rlnDefocusAngle', '_rlnVoltage', '_rlnSphericalAberration', '_rlnAmplitudeContrast', '_rlnPhaseShift']

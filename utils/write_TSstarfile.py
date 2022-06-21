@@ -9,10 +9,10 @@ import pickle
 
 import pandas as pd
 
-from cryodrgn import dataset
-from cryodrgn import utils
-from cryodrgn import starfile
-from cryodrgn import mrc
+from tomodrgn import dataset
+from tomodrgn import utils
+from tomodrgn import starfile
+from tomodrgn import mrc
 log = utils.log
 
 HEADERS = ['_rlnImageName',

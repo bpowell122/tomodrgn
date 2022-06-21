@@ -1,5 +1,5 @@
 import numpy as np
-from cryodrgn import mrc, fft
+from tomodrgn import mrc, fft
 import datetime as dt
 import time
 from scipy import ndimage

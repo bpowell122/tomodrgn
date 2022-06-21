@@ -15,11 +15,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data as data
 
-from cryodrgn import utils
-from cryodrgn import mrc
-from cryodrgn import fft
-from cryodrgn import lie_tools
-from cryodrgn import so3_grid
+from tomodrgn import utils
+from tomodrgn import mrc
+from tomodrgn import fft
+from tomodrgn import lie_tools
+from tomodrgn import so3_grid
 
 import matplotlib
 matplotlib.use('Agg')

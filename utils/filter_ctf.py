@@ -4,7 +4,7 @@ Filter a ctf.pkl by defocus values
 
 import argparse
 import os
-from cryodrgn import utils
+from tomodrgn import utils
 import seaborn as sns
 import numpy as np
 

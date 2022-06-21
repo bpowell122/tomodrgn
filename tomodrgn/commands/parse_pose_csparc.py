@@ -6,8 +6,8 @@ import sys, os
 import pickle
 import torch
 
-from cryodrgn import lie_tools
-from cryodrgn import utils
+from tomodrgn import lie_tools
+from tomodrgn import utils
 
 log = utils.log
 

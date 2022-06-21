@@ -5,10 +5,10 @@ import numpy as np
 import sys, os
 import matplotlib.pyplot as plt
 
-from cryodrgn import utils
-from cryodrgn import dataset
-from cryodrgn import mrc
-from cryodrgn import fft
+from tomodrgn import utils
+from tomodrgn import dataset
+from tomodrgn import mrc
+from tomodrgn import fft
 
 log = utils.log
 

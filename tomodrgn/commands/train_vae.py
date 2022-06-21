@@ -16,18 +16,18 @@ try:
 except: 
     pass
 
-import cryodrgn
-from cryodrgn import mrc
-from cryodrgn import utils
-from cryodrgn import fft
-from cryodrgn import lie_tools
-from cryodrgn import dataset
-from cryodrgn import ctf
+import tomodrgn
+from tomodrgn import mrc
+from tomodrgn import utils
+from tomodrgn import fft
+from tomodrgn import lie_tools
+from tomodrgn import dataset
+from tomodrgn import ctf
 
-from cryodrgn.pose import PoseTracker
-from cryodrgn.models import HetOnlyVAE
-from cryodrgn.lattice import Lattice
-from cryodrgn.beta_schedule import get_beta_schedule, LinearSchedule
+from tomodrgn.pose import PoseTracker
+from tomodrgn.models import HetOnlyVAE
+from tomodrgn.lattice import Lattice
+from tomodrgn.beta_schedule import get_beta_schedule, LinearSchedule
 
 log = utils.log
 vlog = utils.vlog
@@ -52,7 +52,7 @@ def add_args(parser):
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
     group.add_argument('--relion31', action='store_true', help='Flag if relion3.1 star format')
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
-    group.add_argument('--preprocessed', action='store_true', help='Skip preprocessing steps if input data is from cryodrgn preprocess_mrcs')
+    group.add_argument('--preprocessed', action='store_true', help='Skip preprocessing steps if input data is from tomodrgn preprocess_mrcs')
     group.add_argument('--max-threads', type=int, default=16, help='Maximum number of CPU cores for FFT parallelization (default: %(default)s)')
 
     group = parser.add_argument_group('Tilt series')
@@ -247,7 +247,7 @@ def save_config(args, dataset, lattice, model, out_config):
         pickle.dump(config, f)
         meta = dict(time=dt.now(),
                     cmd=sys.argv,
-                    version=cryodrgn.__version__)
+                    version=tomodrgn.__version__)
         pickle.dump(meta, f)
 
 def get_latest(args):

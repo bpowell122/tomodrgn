@@ -11,13 +11,13 @@ import pprint
 
 import torch
 
-from cryodrgn import mrc
-from cryodrgn import utils
-from cryodrgn import fft
-from cryodrgn import lie_tools
-from cryodrgn import config
-from cryodrgn.lattice import Lattice
-from cryodrgn.models import HetOnlyVAE, TiltSeriesHetOnlyVAE
+from tomodrgn import mrc
+from tomodrgn import utils
+from tomodrgn import fft
+from tomodrgn import lie_tools
+from tomodrgn import config
+from tomodrgn.lattice import Lattice
+from tomodrgn.models import HetOnlyVAE, TiltSeriesHetOnlyVAE
 
 log = utils.log
 vlog = utils.vlog

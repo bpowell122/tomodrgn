@@ -4,7 +4,7 @@ import numpy as np
 import pickle
 import collections
 import functools
-from cryodrgn import mrc, fft
+from . import mrc, fft
 from scipy import ndimage
 import subprocess
 
