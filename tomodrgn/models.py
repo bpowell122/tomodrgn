@@ -3,11 +3,10 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.cuda.amp import autocast
 
 from . import fft
-from . import lie_tools
+from focused_heterogeneity import lie_tools
 from . import utils
 from . import lattice
 
@@ -962,7 +961,7 @@ class SO3reparameterize(nn.Module):
         z = self.main(x)
         z1 = z[:,:3].double()
         z2 = z[:,3:6].double()
-        z_mu = lie_tools.s2s2_to_SO3(z1,z2).float()
+        z_mu = lie_tools.s2s2_to_SO3(z1, z2).float()
         logvar = z[:,6:]
         z_std = torch.exp(.5*logvar) # or could do softplus
         return z_mu, z_std

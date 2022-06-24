@@ -2,21 +2,16 @@
 Evaluate the decoder at specified values of z
 '''
 import numpy as np
-import sys, os
+import os
 import argparse
-import pickle
 from datetime import datetime as dt
-import matplotlib.pyplot as plt 
 import pprint
 
 import torch
 
 from tomodrgn import mrc
 from tomodrgn import utils
-from tomodrgn import fft
-from tomodrgn import lie_tools
 from tomodrgn import config
-from tomodrgn.lattice import Lattice
 from tomodrgn.models import HetOnlyVAE, TiltSeriesHetOnlyVAE
 
 log = utils.log

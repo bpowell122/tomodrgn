@@ -7,22 +7,20 @@ def main():
     parser.add_argument('--version', action='version', version='tomoDRGN '+tomodrgn.__version__)
 
     import tomodrgn.commands.downsample
-    import tomodrgn.commands.preprocess
     import tomodrgn.commands.parse_pose_star
     import tomodrgn.commands.parse_ctf_star
     import tomodrgn.commands.backproject_voxel
-    import tomodrgn.commands.train_nn_ts
-    import tomodrgn.commands.train_vae_ts
+    import tomodrgn.commands.train_nn
+    import tomodrgn.commands.train_vae
     import tomodrgn.commands.eval_vol
     import tomodrgn.commands.eval_images
     import tomodrgn.commands.analyze
     import tomodrgn.commands.pc_traversal
     import tomodrgn.commands.graph_traversal
     import tomodrgn.commands.view_config
-    import tomodrgn.commands.analyze_convergence
+    import tomodrgn.commands.convergence_vae
 
     modules = [tomodrgn.commands.downsample,
-        tomodrgn.commands.preprocess,
         tomodrgn.commands.parse_pose_star,
         tomodrgn.commands.parse_ctf_star,
         tomodrgn.commands.train_nn_ts,

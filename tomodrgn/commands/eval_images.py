@@ -2,31 +2,24 @@
 Evaluate tomoDRGN z and loss for a stack of images
 '''
 import numpy as np
-import sys, os
+import os
 import argparse
 import pickle
 from datetime import datetime as dt
 import pprint
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-from tomodrgn import mrc
 from tomodrgn import utils
-from tomodrgn import fft
-from tomodrgn import lie_tools
 from tomodrgn import dataset
 from tomodrgn import ctf
 from tomodrgn import config
 
 from tomodrgn.pose import PoseTracker
 from tomodrgn.models import HetOnlyVAE
-from tomodrgn.lattice import Lattice
-from tomodrgn.beta_schedule import get_beta_schedule, LinearSchedule
 
-from tomodrgn.commands.train_vae_ts import preprocess_input, run_batch, loss_function
+from tomodrgn.commands.train_vae import run_batch, loss_function
 
 log = utils.log
 vlog = utils.vlog
@@ -74,7 +67,14 @@ def add_args(parser):
   
 def eval_batch(model, lattice, y, yt, rot, trans, beta, tilt=None, ctf_params=None, yr=None):
     if trans is not None:
-        y, yt = preprocess_input(y, yt, lattice, trans)
+        # TODO: incorporate this as preprocess_input function somewhere
+        # center the image
+        B = y.size(0)
+        D = lattice.D
+        y = lattice.translate_ht(y.view(B, -1), trans.unsqueeze(1)).view(B, D, D)
+        if yt is not None: yt = lattice.translate_ht(yt.view(B, -1), trans.unsqueeze(1)).view(B, D, D)
+        # return y, yt
+        # y, yt = preprocess_input(y, yt, lattice, trans)
     z_mu, z_logvar, z, y_recon, y_recon_tilt, mask = run_batch(model, lattice, y, yt, rot, tilt, ctf_params, yr)
     loss, gen_loss, kld = loss_function(z_mu, z_logvar, y, yt, y_recon, mask, beta, y_recon_tilt, beta_control=None)
     return z_mu.detach().cpu().numpy(), z_logvar.detach().cpu().numpy(), loss.item(), gen_loss.item(), kld.item()
