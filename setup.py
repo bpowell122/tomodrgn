@@ -13,7 +13,7 @@ setup(name='tomodrgn',
       author_email='zhonge@mit.edu',
       url='https://github.com/bpowell122/tomodrgn',
       license='GPLv3',
-      zip_safe=True,
+      zip_safe=False,
       packages=find_packages(),
       entry_points={
           "console_scripts": [

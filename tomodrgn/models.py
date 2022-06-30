@@ -500,6 +500,7 @@ class FTPositionalDecoder(nn.Module):
                 return image
 
             else: # lattice: B x ntilts*N x 3+zdim, useful when images are different sizes to avoid ragged tensors
+                # lattice: B*ntilts*N x 3+zdim
                 # check that all coordinates are centered around 0
                 assert abs(lattice[...,0:3].mean()) < 1e-4, '{} != 0.0'.format(lattice[...,0:3].mean())
 
@@ -517,7 +518,7 @@ class FTPositionalDecoder(nn.Module):
 
     def decode(self, lattice):
         '''Return FT transform'''
-        assert (lattice[...,0:3].abs() - 0.5 < 1e-3).all(), f'lattice[...,0:3].max(): {lattice[...,0:3].max().to(torch.float32)}'
+        assert (lattice[...,0:3].abs() - 0.5 < 1e-3).all(), f'lattice[...,0:3].max(): {lattice[...,0:3].max().to(torch.float32)}; lattice[...,0:3].min(): {lattice[...,0:3].min().to(torch.float32)}'
         # convention: only evalute the -z points
         w = lattice[...,2] > 0.0
         lattice[...,0:3][w] = -lattice[...,0:3][w] # negate lattice coordinates where z > 0

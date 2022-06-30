@@ -68,7 +68,7 @@ def calculate_dose_weights(particles_df, dose_override, ntilts, ny_ht, nx_ht, nx
 
 def get_spatial_frequencies(particles_df, ny_ht, nx_ht, nx, ny):
     # return spatial frequencies of ht_sym in 1/A
-    pixel_size = particles_df.get_tiltseries_pixelsize()  # angstroms per pixel
+    pixel_size = float(particles_df['_rlnDetectorPixelSize'].iloc[0])  # angstroms per pixel
     spatial_frequencies = np.zeros((ny_ht, nx_ht))
     fourier_pixel_sizes = 1.0 / (np.array([nx, ny]))  # in units of 1/px
     box_center_indices = (np.array([nx, ny]) / 2).astype(int)  # this might break if nx, ny not even, or nx!=ny
@@ -85,7 +85,7 @@ def get_spatial_frequencies(particles_df, ny_ht, nx_ht, nx, ny):
     return spatial_frequencies
 
 
-def plot_weight_distribution(cumulative_weights, spatial_frequencies, outdir):
+def plot_weight_distribution(cumulative_weights, spatial_frequencies, outdir, weight_distribution_index = None):
     # plot distribution of dose weights across tilts in the spirit of https://doi.org/10.1038/s41467-021-22251-8
 
     ntilts = cumulative_weights.shape[0]
@@ -113,5 +113,5 @@ def plot_weight_distribution(cumulative_weights, spatial_frequencies, outdir):
     ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
     ax.set_xticklabels([f'1/{1/xtick:.1f}' if xtick != 0.0 else 0 for xtick in ticks_loc])
 
-    plt.savefig(f'{outdir}/cumulative_weights_across_frequencies_by_tilt.png', dpi=300)
+    plt.savefig(f'{outdir}/weighting_scheme_{weight_distribution_index}.png', dpi=300)
 
