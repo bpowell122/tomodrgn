@@ -194,7 +194,8 @@ def run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params=None):
     input_coords = (lattice.coords @ rot).view(B, ntilts, D, D, 3)[dec_mask, :]  #[:, dec_mask, :] # shape dec_mask.flat() x 3, because dec_mask can have variable # elements per particle
     pixels_per_ptcl = [int(i) for i in torch.sum(dec_mask.view(B, -1), dim=1)] # torch.tensor([torch.sum(dec_mask[:i+1,...]) for i in range(B)])  #  slicing by #pixels per particle after dec_mask is applied to indirectly get regularly sized tensors for model evaluation
 
-    y_recon = torch.stack([model(input_coords_ptcl.unsqueeze(0), z[i].unsqueeze(0)).squeeze(0) for i, input_coords_ptcl in enumerate(input_coords.split(pixels_per_ptcl, dim=0))]).view(1,-1)
+    y_recon = [model(input_coords_ptcl.unsqueeze(0), z[i].unsqueeze(0)) for i, input_coords_ptcl in enumerate(input_coords.split(pixels_per_ptcl, dim=0))]
+    y_recon = torch.cat(y_recon, dim=1)
 
     # y_recon = torch.empty((1,sum(pixels_per_ptcl)))
     # for i, input_coords_ptcl in enumerate(input_coords.split(pixels_per_ptcl, dim=0)):
@@ -342,11 +343,11 @@ def main(args):
     # expanded_ind = data.expanded_ind #this is already filtered by args.ind, np.array of shape (1,)
 
     # convert images to tensors for later processing
-    for ptcl_ind in data.ptcls_list:
-        data.ptcls[ptcl_ind].images = torch.tensor(data.ptcls[ptcl_ind].images)
-        data.ptcls[ptcl_ind].rot = torch.tensor(data.ptcls[ptcl_ind].rot)
-        data.ptcls[ptcl_ind].trans = torch.tensor(data.ptcls[ptcl_ind].trans)
-        data.ptcls[ptcl_ind].ctf = torch.tensor(data.ptcls[ptcl_ind].ctf)
+    # for ptcl_ind in data.ptcls_list:
+    #     data.ptcls[ptcl_ind].images = torch.tensor(data.ptcls[ptcl_ind].images)
+    #     data.ptcls[ptcl_ind].rot = torch.tensor(data.ptcls[ptcl_ind].rot)
+    #     data.ptcls[ptcl_ind].trans = torch.tensor(data.ptcls[ptcl_ind].trans)
+    #     data.ptcls[ptcl_ind].ctf = torch.tensor(data.ptcls[ptcl_ind].ctf)
 
     for i, weighting_scheme_key in enumerate(data.weights_dict.keys()):
         weights = data.weights_dict[weighting_scheme_key]
@@ -418,8 +419,10 @@ def main(args):
             f'The number of tilts requested to be sampled per particle ({args.sample_ntilts}) ' \
             f'exceeds the number of tilt images for at least one particle ({data.ntilts_range[0]})'
         data.ntilts_training = args.sample_ntilts
+        flog(f'Sampling {args.sample_ntilts} tilts per particle')
     else:
         data.ntilts_training = data.ntilts_range[0]
+
 
 
     # instantiate model
