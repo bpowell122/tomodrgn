@@ -588,8 +588,8 @@ class TiltSeriesDatasetAllParticles(data.Dataset):
         # else:
         #     weights_keys = None
         if self.ptcls[self.ptcls_list[idx_ptcl]].weights_key is not None:
-            weights = self.weights_dict[self.ptcls[self.ptcls_list[idx_ptcl]].weights_key]
-            dec_mask = self.dec_mask_dict[self.ptcls[self.ptcls_list[idx_ptcl]].weights_key]
+            weights = self.weights_dict[self.ptcls[self.ptcls_list[idx_ptcl]].weights_key][tilt_inds]
+            dec_mask = self.dec_mask_dict[self.ptcls[self.ptcls_list[idx_ptcl]].weights_key][tilt_inds]
         else:
             weights = torch.ones(*images.shape)
             dec_mask = torch.ones(*images.shape, dtype=torch.bool)

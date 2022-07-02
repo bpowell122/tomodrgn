@@ -6,7 +6,7 @@ import torch.nn as nn
 from torch.cuda.amp import autocast
 
 from . import fft
-from focused_heterogeneity import lie_tools
+from tomodrgn import lie_tools
 from . import utils
 from . import lattice
 
