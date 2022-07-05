@@ -190,6 +190,7 @@ def run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params=None):
     z = _unparallelize(model).reparameterize(z_mu, z_logvar)
 
     # decode
+    # model decoding is not vectorized across batch dimension due to uneven numbers of coords from each ptcl to reconstruct after skip_zeros_decoder masking of sample_ntilts different images per ptcl
     # TODO reimplement decoding more cleanly and efficiently with NestedTensors when autograd available: https://github.com/pytorch/nestedtensor
     input_coords = (lattice.coords @ rot).view(B, ntilts, D, D, 3)[dec_mask, :]  #[:, dec_mask, :] # shape dec_mask.flat() x 3, because dec_mask can have variable # elements per particle
     pixels_per_ptcl = [int(i) for i in torch.sum(dec_mask.view(B, -1), dim=1)] # torch.tensor([torch.sum(dec_mask[:i+1,...]) for i in range(B)])  #  slicing by #pixels per particle after dec_mask is applied to indirectly get regularly sized tensors for model evaluation
@@ -397,14 +398,13 @@ def main(args):
     flog(f'Pixels encoded per tilt (+ enc-mask):  {in_dim.sum()}')
 
     # determine which pixels to decode (cache by related weights_dict keys)
+    flog(f'Constructing baseline circular lattice for decoder with radius {lattice.D // 2}')
     lattice_mask = lattice.get_circular_mask(lattice.D // 2) # reconstruct box-inscribed circle of pixels
     for weights_key in data.weights_dict.keys():
         ntilts = data.weights_dict[weights_key].shape[0]
         if args.skip_zeros_decoder:
-            # decode pixels that accumulated < 2.5x critical dose (results in variable fourier radius by tilt)
-            cumulative_weights = data.weights_dict[weights_key]
-            weights_mask = cumulative_weights != 0
-            dec_mask = lattice_mask.view(1,D,D).cpu().numpy() * weights_mask # mask is currently ntilts x D x D
+            # decode pixels with 0-weights only (can vary by tilt)
+            dec_mask = data.weights_dict[weights_key] != 0  # mask is currently ntilts x D x D
             data.dec_mask_dict[weights_key] = dec_mask
             flog(f'Pixels decoded per particle (+ skip-zeros-decoder mask):  {dec_mask.sum()}')
         else:
@@ -486,9 +486,9 @@ def main(args):
         flog('Applying translations as final preprocessing step')
         # expanded_ind_rebased = torch.tensor([np.arange(i * Ntilts, (i + 1) * Ntilts) for i in range(Nptcls)], device='cpu')# .to(device) # redefine training inds to remove gaps created by filtering dataset when loading
         for ptcl_id in data.ptcls_list:
-            images = data.ptcls[ptcl_id].images
+            images = torch.tensor(data.ptcls[ptcl_id].images, device='cpu')
             ntilts = data.ptcls[ptcl_id].ntilts
-            trans = data.ptcls[ptcl_id].trans
+            trans = torch.tensor(data.ptcls[ptcl_id].trans, device='cpu')
             data.ptcls[ptcl_id].images = lattice.translate_ht(images.view(ntilts, -1), trans.unsqueeze(1))
             # imgs_ind = expanded_ind_rebased[ind].view(-1)
             # _, trans = posetracker.get_pose(imgs_ind)

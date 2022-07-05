@@ -210,21 +210,22 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         z = self.encoder(batch, B)
         return z[:, :self.zdim], z[:, self.zdim:] # B x zdim
 
-    def cat_z_pertilt(self, coords, z):
-        '''
-        coords: B*ntilts x D*D[mask] x 3 image coordinates
-        z: B x zdim latent coordinate (repeated for ntilts)
-        '''
-        assert coords.size(0) == z.size(0)*self.ntilts
-        z = torch.repeat_interleave(z, self.ntilts, dim=0)  # expand z along batch dimension to repeat value for all tilts in particle, B*ntilts x zdim
-        z = z.view(z.size(0), *([1] * (coords.ndimension() - 2)), self.zdim)
-        z = torch.cat((coords, z.expand(*coords.shape[:-1], self.zdim)), dim=-1)
-        return z
+    # def cat_z_pertilt(self, coords, z):
+    #     '''
+    #     coords: B*ntilts x D*D[mask] x 3 image coordinates
+    #     z: B x zdim latent coordinate (repeated for ntilts)
+    #     '''
+    #     assert coords.size(0) == z.size(0)*self.ntilts
+    #     z = torch.repeat_interleave(z, self.ntilts, dim=0)  # expand z along batch dimension to repeat value for all tilts in particle, B*ntilts x zdim
+    #     z = z.view(z.size(0), *([1] * (coords.ndimension() - 2)), self.zdim)
+    #     z = torch.cat((coords, z.expand(*coords.shape[:-1], self.zdim)), dim=-1)
+    #     return z
 
-    def cat_z_perptcl(self, coords, z):
+    def cat_z(self, coords, z):
         '''
         coords: B x ntilts*D*D[mask] x 3 image coordinates
         z: B x zdim latent coordinate (repeated for ntilts)
+        returns: B x ntilts*D*D[mask] x 3+zdim
         '''
         assert coords.size(0) == z.size(0)
         z = z.view(z.size(0), *([1] * (coords.ndimension() - 2)), self.zdim)
@@ -232,20 +233,25 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         return z
 
     def decode(self, coords, z):
-        if self.skip_zeros_decoder:
-            '''
-            coords: B x ntilts*D*D[critical_exposure_mask] x 3 image coordinates
-            z: B x zdim latent coordinate (repeated for ntilts)
-            '''
-            # skip zeros decoder explicitly evaluates all FT coordinates, does not use +/- z symmetry
-            return self.decoder(self.cat_z_perptcl(coords, z), eval_all_coords = True)
-        else:
-            '''
-            coords: B x ntilts*D*D[uniform_circular_mask] x 3 image coordinates
-            z: B x zdim latent coordinate (repeated for ntilts)
-            '''
-            coords = coords.view(z.shape[0]*self.ntilts, -1, 3) # reshape to B*ntilts x D*D[mask] x 3 image coordinates
-            return self.decoder(self.cat_z_pertilt(coords, z), eval_all_coords = False)
+        # if self.skip_zeros_decoder:
+        '''
+        coords: B x ntilts*D*D[critical_exposure_mask] x 3 image coordinates
+        z: B x zdim latent coordinate (repeated for ntilts)
+
+        coords: B x ntilts*D*D[critical_exposure_mask] x 3 image coordinates
+        z: B x zdim latent coordinate (repeated for ntilts)
+        '''
+        # skip zeros decoder explicitly evaluates all FT coordinates, does not use +/- z symmetry
+        return self.decoder(self.cat_z(coords, z), eval_all_coords = True)
+        # else:
+        #     '''
+        #     coords: B x ntilts*D*D[uniform_circular_mask] x 3 image coordinates
+        #     z: B x zdim latent coordinate (repeated for ntilts)
+        #     '''
+        #     print(coords.shape)
+        #     print(z.shape)
+        #     coords = coords.view(z.shape[0]*self.ntilts, -1, 3) # reshape to B*ntilts x D*D[mask] x 3 image coordinates
+        #     return self.decoder(self.cat_z_pertilt(coords, z), eval_all_coords = False)
 
     # Need forward func for DataParallel -- TODO: refactor
     def forward(self, *args, **kwargs):
