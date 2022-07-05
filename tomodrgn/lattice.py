@@ -69,7 +69,6 @@ class Lattice:
         if R in self.circle_mask:
             return self.circle_mask[R]
         assert 2*R+1 <= self.D, 'Mask with radius {} too large for lattice with size {}'.format(R,self.D)
-        log('Using circular lattice with radius {}'.format(R))
         r = R/(self.D//2)*self.extent
         mask = self.coords.pow(2).sum(-1) <= r**2
         if self.ignore_DC:
