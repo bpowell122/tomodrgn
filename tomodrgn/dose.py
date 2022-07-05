@@ -22,7 +22,7 @@ def calculate_dose_weights(particles_df, dose_override, ntilts, ny_ht, nx_ht, nx
     dose_weights = np.zeros((ntilts, ny_ht, nx_ht))
     fourier_pixel_sizes = 1.0 / (np.array([nx, ny]))  # in units of 1/px
     box_center_indices = (np.array([nx, ny]) / 2).astype(int)
-    critical_dose_at_dc = 2 ** 31  # shorthand way to ensure dc component is always weighted ~1
+    critical_dose_at_dc = 0.001 * (2 ** 31)  # shorthand way to ensure dc component is always weighted ~1
     voltage_scaling_factor = 1.0 if voltage == 300 else 0.8  # 1.0 for 300kV, 0.8 for 200kV microscopes
 
     for k, dose_at_end_of_tilt in enumerate(dose_per_A2_per_tilt):
@@ -90,13 +90,14 @@ def plot_weight_distribution(cumulative_weights, spatial_frequencies, outdir, we
 
     ntilts = cumulative_weights.shape[0]
     max_frequency_box_edge = spatial_frequencies[0,spatial_frequencies.shape[0]//2]
-    sorted_frequency_list = sorted(set(spatial_frequencies[spatial_frequencies < max_frequency_box_edge].reshape(-1)))
-    weights_plot = np.empty((len(sorted_frequency_list), ntilts))
+    sorted_frequency_list = sorted(set(spatial_frequencies[spatial_frequencies <= max_frequency_box_edge].reshape(-1)))
+    weights_plot = np.zeros((len(sorted_frequency_list), ntilts))
 
     for i, frequency in enumerate(sorted_frequency_list):
         x, y = np.where(spatial_frequencies == frequency)
         sum_of_weights_at_frequency = cumulative_weights[:, y, x].sum()
-        weights_plot[i, :] = (cumulative_weights[:, y, x] / sum_of_weights_at_frequency).sum(axis=1) # sum across multiple pixels at same frequency
+        if not sum_of_weights_at_frequency == 0:
+            weights_plot[i, :] = (cumulative_weights[:, y, x] / sum_of_weights_at_frequency).sum(axis=1) # sum across multiple pixels at same frequency
 
     colormap = plt.cm.get_cmap('coolwarm').reversed()
     tilt_colors = colormap(np.linspace(0, 1, ntilts))
