@@ -10,6 +10,7 @@ from . import mrc
 from . import utils
 from . import starfile
 from . import dose
+from . import lattice
 
 log = utils.log
 
@@ -523,7 +524,14 @@ class TiltSeriesDatasetAllParticles(data.Dataset):
                                                                             ptcls_unique_objects[ptcl].D-1)  # ny
                 ptcls_unique_objects[ptcl].weights_key = weights_key
             else:
-                ptcls_unique_objects[ptcl].weights_key = None
+                weights_key = 'lattice_mask_extent0.5'
+                if weights_key not in weights_dict.keys():
+                    weights_dict[weights_key] = np.ones_like(ptcls_unique_objects[ptcl].images) * \
+                                                lattice.Lattice(ptcls_unique_objects[ptcl].D, extent=0.5).\
+                                                    get_circular_mask(ptcls_unique_objects[ptcl].D // 2).\
+                                                    view(1, ptcls_unique_objects[ptcl].D, ptcls_unique_objects[ptcl].D)\
+                                                    .cpu().numpy()
+                ptcls_unique_objects[ptcl].weights_key = weights_key
 
             # update min and max number of tilts across all particles
             if ptcls_unique_objects[ptcl].ntilts > any(ntilts_range):
@@ -538,6 +546,7 @@ class TiltSeriesDatasetAllParticles(data.Dataset):
         log(f'Loaded {nptcls} {D-1}x{D-1} subtomo particleseries with {ntilts_range[0]} to {ntilts_range[1]} tilts')
 
         # check how many weighting schemes were found
+        # if do_dose_weighting or do_tilt_weighting:
         log(f'Found {len(weights_dict.keys())} different weighting schemes')
 
         # calculate spatial frequencies matrix
@@ -585,14 +594,15 @@ class TiltSeriesDatasetAllParticles(data.Dataset):
         #     weights_keys = self.star.df[self.star.df['_rlnGroupName'] == self.ptcls_list[idx_ptcl]]['_rlnCtfScalefactor'].to_numpy(dtype=float).data.tobytes()
         # elif not self.do_tilt_weighting and self.do_dose_weighting:
         #     weights_keys = self.star.df[self.star.df['_rlnGroupName'] == self.ptcls_list[idx_ptcl]]['_rlnCtfBfactor'].to_numpy(dtype=float).data.tobytes()
+
         # else:
         #     weights_keys = None
-        if self.ptcls[self.ptcls_list[idx_ptcl]].weights_key is not None:
-            weights = self.weights_dict[self.ptcls[self.ptcls_list[idx_ptcl]].weights_key][tilt_inds]
-            dec_mask = self.dec_mask_dict[self.ptcls[self.ptcls_list[idx_ptcl]].weights_key][tilt_inds]
-        else:
-            weights = torch.ones(*images.shape)
-            dec_mask = torch.ones(*images.shape, dtype=torch.bool)
+        # if self.ptcls[self.ptcls_list[idx_ptcl]].weights_key is not None:
+        weights = self.weights_dict[self.ptcls[self.ptcls_list[idx_ptcl]].weights_key][tilt_inds]
+        dec_mask = self.dec_mask_dict[self.ptcls[self.ptcls_list[idx_ptcl]].weights_key][tilt_inds]
+        # else:
+        #     weights = torch.ones(*images.shape)
+        #     dec_mask = torch.ones(*images.shape, dtype=torch.bool)
 
         return images, rot, trans, ctf, weights, dec_mask, ptcl_ids
 
