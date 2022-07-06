@@ -137,7 +137,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
                  players, pdim, in_dim, zdim=1,
                  enc_mask=None, enc_type='geom_lowf', enc_dim=None,
                  domain='fourier', activation = nn.ReLU, use_amp=False,
-                 skip_zeros_decoder=False, feat_sigma = None):
+                 skip_zeros_decoder=False, feat_sigma = None, use_decoder_symmetry = False):
         super(TiltSeriesHetOnlyVAE, self).__init__()
         self.lattice = lattice
         self.ntilts = ntilts
@@ -146,8 +146,10 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         self.enc_mask = enc_mask
         self.use_amp = use_amp
         self.skip_zeros_decoder = skip_zeros_decoder
+        self.use_decoder_symmetry = use_decoder_symmetry
         self.encoder = TiltSeriesEncoder(in_dim, qlayersA, qdimA, out_dimA, ntilts, qlayersB, qdimB, zdim * 2, activation)
-        self.decoder = get_decoder(3 + zdim, lattice.D, players, pdim, domain, enc_type, enc_dim, activation, use_amp=use_amp, feat_sigma=feat_sigma)
+        self.decoder = FTPositionalDecoder(3+zdim, lattice.D, players, pdim, activation, enc_type, enc_dim, use_amp, feat_sigma, use_decoder_symmetry)
+
 
     @classmethod
     def load(self, config, weights=None, device=None):
@@ -187,7 +189,8 @@ class TiltSeriesHetOnlyVAE(nn.Module):
                                      activation=activation,
                                      use_amp=cfg['training_args']['amp'],
                                      skip_zeros_decoder=cfg['model_args']['skip_zeros_decoder'],
-                                     feat_sigma=cfg['model_args']['feat_sigma'])
+                                     feat_sigma=cfg['model_args']['feat_sigma'],
+                                     use_decoder_symmetry=cfg['model_args']['use_decoder_symmetry'])
         if weights is not None:
             ckpt = torch.load(weights)
             model.load_state_dict(ckpt['model_state_dict'])
@@ -232,17 +235,17 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         z = torch.cat((coords, z.expand(*coords.shape[:-1], self.zdim)), dim=-1)
         return z
 
-    def decode(self, coords, z):
-        # if self.skip_zeros_decoder:
+    def decode(self, coords, z, img_pixel_counts = None):
         '''
         coords: B x ntilts*D*D[critical_exposure_mask] x 3 image coordinates
         z: B x zdim latent coordinate (repeated for ntilts)
-
-        coords: B x ntilts*D*D[critical_exposure_mask] x 3 image coordinates
-        z: B x zdim latent coordinate (repeated for ntilts)
+        img_pixel_counts: number of coordinates to evaluate per image; allows use of fourier symmetry to evaluate top half of images only
         '''
-        # skip zeros decoder explicitly evaluates all FT coordinates, does not use +/- z symmetry
-        return self.decoder(self.cat_z(coords, z), eval_all_coords = True)
+        all_coords_z = self.cat_z(coords, z)
+        if self.use_decoder_symmetry:
+            return torch.cat([self.decoder(img_coords_z) for img_coords_z in all_coords_z.split(img_pixel_counts, dim=1)], dim=1)
+        else:
+            return self.decoder(all_coords_z)
         # else:
         #     '''
         #     coords: B x ntilts*D*D[uniform_circular_mask] x 3 image coordinates
@@ -387,7 +390,7 @@ class PositionalDecoder(nn.Module):
         return vol
 
 class FTPositionalDecoder(nn.Module):
-    def __init__(self, in_dim, D, nlayers, hidden_dim, activation, enc_type='linear_lowf', enc_dim=None, use_amp=False, feat_sigma=None):
+    def __init__(self, in_dim, D, nlayers, hidden_dim, activation, enc_type='linear_lowf', enc_dim=None, use_amp=False, feat_sigma=None, use_decoder_symmetry=False):
         super(FTPositionalDecoder, self).__init__()
         assert in_dim >= 3
         self.zdim = in_dim - 3
@@ -399,6 +402,7 @@ class FTPositionalDecoder(nn.Module):
         self.in_dim = 3 * (self.enc_dim) * 2 + self.zdim
         self.decoder = ResidLinearMLP(self.in_dim, nlayers, hidden_dim, 2, activation)
         self.use_amp = use_amp
+        self.use_decoder_symmetry = use_decoder_symmetry
 
         if enc_type == "gaussian":
             # We construct 3 * self.enc_dim random vector frequences, to match the original positional encoding:
@@ -475,7 +479,7 @@ class FTPositionalDecoder(nn.Module):
             assert x.shape[-1] == self.in_dim
         return x
 
-    def forward(self, lattice, eval_all_coords=False):
+    def forward(self, lattice):
         '''
         Call forward on central slices only
             i.e. the middle pixel should be (0,0,0)
@@ -483,7 +487,7 @@ class FTPositionalDecoder(nn.Module):
         # if ignore_DC = False, then the size of the lattice will be odd (since it
         # includes the origin), so we need to evaluate one additional pixel
         with autocast(enabled=self.use_amp):
-            if eval_all_coords == False: # lattice: B x N x 3+zdim
+            if self.use_decoder_symmetry: # lattice: B x N x 3+zdim
                 # get number of pixels in top half of each image
                 c = lattice.shape[-2]//2 # top half
                 cc = c + 1 if lattice.shape[-2] % 2 == 1 else c # include the origin
@@ -500,18 +504,15 @@ class FTPositionalDecoder(nn.Module):
                 # store hartley information (FT real - FT imag) for top half of each image
                 image[..., 0:cc] = top_half[...,0] - top_half[...,1]
 
-                # cheaply evaluate the bottom half of the image as the complex conjugate of the top half
+                # memory-cheaply evaluate the bottom half of the image as the complex conjugate of the top half
                 image[...,cc:] = (top_half[...,0] + top_half[...,1])[...,np.arange(c-1,-1,-1)]
 
                 return image
 
-            else: # lattice: B x ntilts*N x 3+zdim, useful when images are different sizes to avoid ragged tensors
-                # lattice: B*ntilts*N x 3+zdim
+            else:
+                # lattice: B x ntilts*N x 3+zdim, useful when images are different sizes to avoid ragged tensors
                 # check that all coordinates are centered around 0
                 assert abs(lattice[...,0:3].mean()) < 1e-4, '{} != 0.0'.format(lattice[...,0:3].mean())
-
-                # allocate B x N array for pixel values to be stored after model evaluated
-                image = torch.empty(lattice.shape[:-1])
 
                 # evaluate model on all pixel coordinates for each image
                 full_image = self.decode(lattice)
@@ -524,10 +525,15 @@ class FTPositionalDecoder(nn.Module):
 
     def decode(self, lattice):
         '''Return FT transform'''
-        assert (lattice[...,0:3].abs() - 0.5 < 1e-3).all(), f'lattice[...,0:3].max(): {lattice[...,0:3].max().to(torch.float32)}; lattice[...,0:3].min(): {lattice[...,0:3].min().to(torch.float32)}'
+        assert (lattice[...,0:3].abs() - 0.5*(2**0.5) < 1e-3).all(), \
+            f'lattice[...,0:3].max(): {lattice[...,0:3].max().to(torch.float32)}; ' \
+            f'lattice[...,0:3].min(): {lattice[...,0:3].min().to(torch.float32)}'
         # convention: only evalute the -z points
         w = lattice[...,2] > 0.0
-        lattice[...,0:3][w] = -lattice[...,0:3][w] # negate lattice coordinates where z > 0
+        w_zflipper = torch.ones_like(lattice)  # avoids "modifying tensor in-place" warnings+errors
+        w_zflipper[...,0:3][w] *= -1
+        lattice = lattice * w_zflipper # negate lattice coordinates where z > 0
+        # lattice[...,0:3][w] *= -1 # negate lattice coordinates where z > 0
         result = self.decoder(self.positional_encoding_geom(lattice))
         result[...,1][w] *= -1 # replace with complex conjugate to get correct values for original lattice positions
         return result
@@ -563,7 +569,7 @@ class FTPositionalDecoder(nn.Module):
                 else:
                     y = self.decode(x)
                     y = y[...,0] - y[...,1]
-                slice_ = torch.zeros(D**2, device='cpu')
+                slice_ = torch.zeros(D**2, device='cpu', dtype=y.dtype)
                 slice_[keep] = y.cpu()
                 slice_ = slice_.view(D,D).numpy()
             vol_f[i] = slice_

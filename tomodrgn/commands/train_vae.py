@@ -81,6 +81,7 @@ def add_args(parser):
     group.add_argument('--pe-dim', type=int, help='Num features in positional encoding')
     group.add_argument('--activation', choices=('relu','leaky_relu'), default='relu', help='Activation')
     group.add_argument('--skip-zeros-decoder', action='store_true', help='Ignore fourier pixels exposed to > 2.5x critical dose when reconstructing image for MSE loss')
+    group.add_argument('--use-decoder-symmetry', action='store_true', help='Exploit fourier symmetry to only decode half of each image. Reduces GPU memory usage at cost of longer epoch times')
     return parser
 
 
@@ -124,7 +125,8 @@ def save_config(args, dataset, lattice, model, out_config):
                       pe_dim=args.pe_dim,
                       domain='fourier',
                       activation=args.activation,
-                      skip_zeros_decoder=args.skip_zeros_decoder)
+                      skip_zeros_decoder=args.skip_zeros_decoder,
+                      use_decoder_symmetry = args.use_decoder_symmetry)
     training_args = dict(n=args.num_epochs,
                          B=args.batch_size,
                          wd=args.wd,
@@ -192,10 +194,11 @@ def run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params=None):
     # decode
     # model decoding is not vectorized across batch dimension due to uneven numbers of coords from each ptcl to reconstruct after skip_zeros_decoder masking of sample_ntilts different images per ptcl
     # TODO reimplement decoding more cleanly and efficiently with NestedTensors when autograd available: https://github.com/pytorch/nestedtensor
-    input_coords = (lattice.coords @ rot).view(B, ntilts, D, D, 3)[dec_mask, :]  #[:, dec_mask, :] # shape dec_mask.flat() x 3, because dec_mask can have variable # elements per particle
-    pixels_per_ptcl = [int(i) for i in torch.sum(dec_mask.view(B, -1), dim=1)] # torch.tensor([torch.sum(dec_mask[:i+1,...]) for i in range(B)])  #  slicing by #pixels per particle after dec_mask is applied to indirectly get regularly sized tensors for model evaluation
+    input_coords = (lattice.coords @ rot).view(B, ntilts, D, D, 3)[dec_mask, :].unsqueeze(0)  #[:, dec_mask, :] # shape 1 x dec_mask.flat() x 3, because dec_mask can have variable # elements per particle
+    ptcl_pixel_counts = [int(i) for i in torch.sum(dec_mask.view(B, -1), dim=1)] # torch.tensor([torch.sum(dec_mask[:i+1,...]) for i in range(B)])  #  slicing by #pixels per particle after dec_mask is applied to indirectly get regularly sized tensors for model evaluation
+    img_pixel_counts = [[int(i) for i in torch.sum(dec_mask[j].view(ntilts, -1), dim=1)] for j in range(B)]
 
-    y_recon = [model(input_coords_ptcl.unsqueeze(0), z[i].unsqueeze(0)) for i, input_coords_ptcl in enumerate(input_coords.split(pixels_per_ptcl, dim=0))]
+    y_recon = [model(input_coords_ptcl, z[i].unsqueeze(0), img_pixel_counts = img_pixel_counts[i]) for i, input_coords_ptcl in enumerate(input_coords.split(ptcl_pixel_counts, dim=1))]
     y_recon = torch.cat(y_recon, dim=1)
 
     # y_recon = torch.empty((1,sum(pixels_per_ptcl)))
@@ -431,7 +434,8 @@ def main(args):
                                  args.qlayersB, args.qdimB, args.players, args.pdim, in_dim, args.zdim,
                                  enc_mask=enc_mask, enc_type=args.pe_type, enc_dim=args.pe_dim,
                                  domain='fourier', activation=activation, use_amp=args.amp,
-                                 skip_zeros_decoder=args.skip_zeros_decoder, feat_sigma=args.feat_sigma)
+                                 skip_zeros_decoder=args.skip_zeros_decoder, feat_sigma=args.feat_sigma,
+                                 use_decoder_symmetry=args.use_decoder_symmetry)
     flog(model)
     flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
     flog('{} parameters in encoder'.format(sum(p.numel() for p in model.encoder.parameters() if p.requires_grad)))
