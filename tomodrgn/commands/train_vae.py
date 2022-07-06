@@ -18,7 +18,6 @@ from tomodrgn import dataset
 from tomodrgn import ctf
 from tomodrgn import dose
 
-from tomodrgn.pose import PoseTracker
 from tomodrgn.models import TiltSeriesHetOnlyVAE
 from tomodrgn.lattice import Lattice
 from tomodrgn.beta_schedule import get_beta_schedule
@@ -101,7 +100,6 @@ def save_config(args, dataset, lattice, model, out_config):
                         ntilts=dataset.ntilts_training,
                         invert_data=args.invert_data,
                         ind=args.ind,
-                        # expanded_ind=dataset.expanded_ind,  # eliminated in OOP transition
                         window=args.window,
                         window_r=args.window_r,
                         datadir=args.datadir,
@@ -181,7 +179,6 @@ def run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params=None):
 
     if ctf_params is not None:
         # phase flip the CTF-corrupted image
-
         freqs = lattice.freqs2d.unsqueeze(0).expand(B * ntilts, -1, -1) / ctf_params[:,:,1].view(B * ntilts, 1, 1)
         ctf_weights = ctf.compute_ctf(freqs, *torch.split(ctf_params.view(B*ntilts,-1)[:, 2:], 1, 1)).view(B, ntilts, D, D)
         input *= ctf_weights.sign() # phase flip by the ctf to be all positive amplitudes
@@ -194,24 +191,16 @@ def run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params=None):
     # decode
     # model decoding is not vectorized across batch dimension due to uneven numbers of coords from each ptcl to reconstruct after skip_zeros_decoder masking of sample_ntilts different images per ptcl
     # TODO reimplement decoding more cleanly and efficiently with NestedTensors when autograd available: https://github.com/pytorch/nestedtensor
-    input_coords = (lattice.coords @ rot).view(B, ntilts, D, D, 3)[dec_mask, :].unsqueeze(0)  #[:, dec_mask, :] # shape 1 x dec_mask.flat() x 3, because dec_mask can have variable # elements per particle
-    ptcl_pixel_counts = [int(i) for i in torch.sum(dec_mask.view(B, -1), dim=1)] # torch.tensor([torch.sum(dec_mask[:i+1,...]) for i in range(B)])  #  slicing by #pixels per particle after dec_mask is applied to indirectly get regularly sized tensors for model evaluation
+    input_coords = (lattice.coords @ rot).view(B, ntilts, D, D, 3)[dec_mask, :].unsqueeze(0)  # shape 1 x dec_mask.flat() x 3, because dec_mask can have variable # elements per particle
+    ptcl_pixel_counts = [int(i) for i in torch.sum(dec_mask.view(B, -1), dim=1)]
     img_pixel_counts = [[int(i) for i in torch.sum(dec_mask[j].view(ntilts, -1), dim=1)] for j in range(B)]
 
+    # slicing by #pixels per particle after dec_mask is applied to indirectly get regularly sized tensors for model evaluation
     y_recon = [model(input_coords_ptcl, z[i].unsqueeze(0), img_pixel_counts = img_pixel_counts[i]) for i, input_coords_ptcl in enumerate(input_coords.split(ptcl_pixel_counts, dim=1))]
     y_recon = torch.cat(y_recon, dim=1)
 
-    # y_recon = torch.empty((1,sum(pixels_per_ptcl)))
-    # for i, input_coords_ptcl in enumerate(input_coords.split(pixels_per_ptcl, dim=0)):
-    #     if i == 0:
-    #         y_recon[0,0:pixels_per_ptcl[i]] = model(input_coords_ptcl.unsqueeze(0), z[i].unsqueeze(0)).clone()
-    #     else:
-    #         y_recon[0,sum(pixels_per_ptcl[:i-1]):sum(pixels_per_ptcl[:i])] = model(input_coords_ptcl.unsqueeze(0), z[i].unsqueeze(0)).clone()
-
-    # y_recon = model(input_coords, z).view(B, -1)  # B x ntilts*N[final_mask]
-
     if ctf_weights is not None:
-        y_recon *= ctf_weights[dec_mask].view(1,-1)  # [:,dec_mask]
+        y_recon *= ctf_weights[dec_mask].view(1,-1)
 
     return z_mu, z_logvar, z, y_recon, ctf_weights
 
@@ -224,9 +213,8 @@ def _unparallelize(model):
 
 def loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta, beta_control=None):
     # reconstruction error
-    y = y[dec_mask].view(1,-1)  # [:,dec_mask]
+    y = y[dec_mask].view(1,-1)
     gen_loss = (cumulative_weights[dec_mask].view(1,-1) * ((y_recon - y) ** 2)).mean()
-    # gen_loss = ((y_recon - y) ** 2).mean()
 
     # latent loss
     kld = torch.mean(-0.5 * torch.sum(1 + z_logvar - z_mu.pow(2) - z_logvar.exp(), dim=1), dim=0)
@@ -245,13 +233,10 @@ def eval_z(model, lattice, data, batch_size, device):
     z_logvar_all = []
     data_generator = DataLoader(data, batch_size=batch_size, shuffle=False)
     for batch_images, _, _, batch_ctf, _, _, _ in data_generator:
-        # batch_ind = expanded_ind_rebased[ind].view(-1)  # need to use expanded indexing for ctf and poses
         y = batch_images.to(device)
         B = y.size(0)
         ntilts = y.size(1)
         D = lattice.D
-        # if trans is not None:
-        #     y = lattice.translate_ht(y.view(B*ntilts,-1), trans[batch_ind].unsqueeze(1)).view(B,ntilts,D,D)
         y = y.view(B, ntilts, D, D)
         if batch_ctf is not None:
             freqs = lattice.freqs2d.unsqueeze(0).expand(B * ntilts, -1, -1) / batch_ctf[:,:,1].view(B * ntilts, 1, 1)
@@ -341,40 +326,13 @@ def main(args):
                                                      window_r=args.window_r, do_dose_weighting=args.do_dose_weighting,
                                                      dose_override=args.dose_override, do_tilt_weighting=args.do_tilt_weighting)
     D = data.D
-    # Ntilts = data.ntilts
     nptcls = data.nptcls
-    # Nimg = Ntilts*Nptcls
-    # expanded_ind = data.expanded_ind #this is already filtered by args.ind, np.array of shape (1,)
 
-    # convert images to tensors for later processing
-    # for ptcl_ind in data.ptcls_list:
-    #     data.ptcls[ptcl_ind].images = torch.tensor(data.ptcls[ptcl_ind].images)
-    #     data.ptcls[ptcl_ind].rot = torch.tensor(data.ptcls[ptcl_ind].rot)
-    #     data.ptcls[ptcl_ind].trans = torch.tensor(data.ptcls[ptcl_ind].trans)
-    #     data.ptcls[ptcl_ind].ctf = torch.tensor(data.ptcls[ptcl_ind].ctf)
-
+    # save plots of all weighting schemes
     for i, weighting_scheme_key in enumerate(data.weights_dict.keys()):
         weights = data.weights_dict[weighting_scheme_key]
         spatial_frequencies = data.spatial_frequencies
         dose.plot_weight_distribution(weights, spatial_frequencies, args.outdir, weight_distribution_index = i)
-
-    # # load poses
-    # posetracker = PoseTracker.load(args.poses, Nimg, D, None, expanded_ind)
-    # if not args.enable_trans:
-    #     # currently recommended pipeline uses centered and re-extracted images
-    #     # translation residuals in starfile represent numerical error and cause artifacts in volume reconstruction
-    #     posetracker.use_trans = False
-    #
-    # # load CTF
-    # if args.ctf is not None:
-    #     flog('Loading ctf params from {}'.format(args.ctf))
-    #     ctf_params = ctf.load_ctf_for_training(D - 1, args.ctf)
-    #     if args.ind is not None: ctf_params = ctf_params[expanded_ind]
-    #     assert ctf_params.shape == (Nimg, 8)
-    #     ctf_params = torch.tensor(ctf_params)
-    # else:
-    #     ctf_params = None
-    # Apix = ctf_params[0, 0] if ctf_params is not None else 1
 
     # instantiate pixel lattice
     lattice = Lattice(D, extent=0.5)
@@ -488,25 +446,16 @@ def main(args):
     # apply translations as final preprocessing step, since we aren't optimizing poses
     if args.enable_trans:
         flog('Applying translations as final preprocessing step')
-        # expanded_ind_rebased = torch.tensor([np.arange(i * Ntilts, (i + 1) * Ntilts) for i in range(Nptcls)], device='cpu')# .to(device) # redefine training inds to remove gaps created by filtering dataset when loading
         for ptcl_id in data.ptcls_list:
             images = torch.tensor(data.ptcls[ptcl_id].images, device='cpu')
             ntilts = data.ptcls[ptcl_id].ntilts
             trans = torch.tensor(data.ptcls[ptcl_id].trans, device='cpu')
             data.ptcls[ptcl_id].images = lattice.translate_ht(images.view(ntilts, -1), trans.unsqueeze(1))
-            # imgs_ind = expanded_ind_rebased[ind].view(-1)
-            # _, trans = posetracker.get_pose(imgs_ind)
-            # if trans is not None:
-            #     # center the image
-            #     trans = trans.to('cpu')
-            #     data.particles[imgs_ind] = lattice.translate_ht(data.particles[imgs_ind].view(Ntilts, -1), trans.unsqueeze(1))
     else: flog('Not applying translations')
 
     # train
     flog('Done all preprocessing; starting training now!')
     data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=True)
-    # dec_mask = torch.tensor(dec_mask)
-    # cumulative_weights = torch.tensor(cumulative_weights)
     num_epochs = args.num_epochs
     for epoch in range(start_epoch, num_epochs):
         t2 = dt.now()
@@ -515,16 +464,12 @@ def main(args):
         kld_accum = 0
         batch_it = 0
         for batch_images, batch_rot, batch_trans, batch_ctf, batch_weights, batch_dec_mask, batch_ptcl_ids in data_generator:
-
             # impression counting
-            # batch_ind = expanded_ind_rebased[ind].view(-1) # need to use expanded indexing for ctf and poses
-            batch_it += len(batch_ptcl_ids) # total number of ptcls seen (+= batchsize)
+            batch_it += len(batch_ptcl_ids) # total number of ptcls seen
             global_it = nptcls*epoch + batch_it
             beta = beta_schedule(global_it)
 
             # training minibatch
-            # rot, tran = posetracker.get_pose(batch_ind)
-            # ctf_param = ctf_params[batch_ind] if ctf_params is not None else None
             loss, gen_loss, kld = train_batch(scaler, model, lattice, batch_images, batch_rot, batch_trans,
                                               batch_weights, batch_dec_mask, optim, beta, args.beta_control,
                                               ctf_params=batch_ctf, use_amp=use_amp)

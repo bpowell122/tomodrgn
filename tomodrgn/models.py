@@ -213,17 +213,6 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         z = self.encoder(batch, B)
         return z[:, :self.zdim], z[:, self.zdim:] # B x zdim
 
-    # def cat_z_pertilt(self, coords, z):
-    #     '''
-    #     coords: B*ntilts x D*D[mask] x 3 image coordinates
-    #     z: B x zdim latent coordinate (repeated for ntilts)
-    #     '''
-    #     assert coords.size(0) == z.size(0)*self.ntilts
-    #     z = torch.repeat_interleave(z, self.ntilts, dim=0)  # expand z along batch dimension to repeat value for all tilts in particle, B*ntilts x zdim
-    #     z = z.view(z.size(0), *([1] * (coords.ndimension() - 2)), self.zdim)
-    #     z = torch.cat((coords, z.expand(*coords.shape[:-1], self.zdim)), dim=-1)
-    #     return z
-
     def cat_z(self, coords, z):
         '''
         coords: B x ntilts*D*D[mask] x 3 image coordinates
@@ -246,15 +235,6 @@ class TiltSeriesHetOnlyVAE(nn.Module):
             return torch.cat([self.decoder(img_coords_z) for img_coords_z in all_coords_z.split(img_pixel_counts, dim=1)], dim=1)
         else:
             return self.decoder(all_coords_z)
-        # else:
-        #     '''
-        #     coords: B x ntilts*D*D[uniform_circular_mask] x 3 image coordinates
-        #     z: B x zdim latent coordinate (repeated for ntilts)
-        #     '''
-        #     print(coords.shape)
-        #     print(z.shape)
-        #     coords = coords.view(z.shape[0]*self.ntilts, -1, 3) # reshape to B*ntilts x D*D[mask] x 3 image coordinates
-        #     return self.decoder(self.cat_z_pertilt(coords, z), eval_all_coords = False)
 
     # Need forward func for DataParallel -- TODO: refactor
     def forward(self, *args, **kwargs):
@@ -528,12 +508,11 @@ class FTPositionalDecoder(nn.Module):
         assert (lattice[...,0:3].abs() - 0.5*(2**0.5) < 1e-3).all(), \
             f'lattice[...,0:3].max(): {lattice[...,0:3].max().to(torch.float32)}; ' \
             f'lattice[...,0:3].min(): {lattice[...,0:3].min().to(torch.float32)}'
-        # convention: only evalute the -z points
+        # convention: only evaluate the -z points
         w = lattice[...,2] > 0.0
-        w_zflipper = torch.ones_like(lattice)  # avoids "modifying tensor in-place" warnings+errors
+        w_zflipper = torch.ones_like(lattice)
         w_zflipper[...,0:3][w] *= -1
-        lattice = lattice * w_zflipper # negate lattice coordinates where z > 0
-        # lattice[...,0:3][w] *= -1 # negate lattice coordinates where z > 0
+        lattice = lattice * w_zflipper # avoids "modifying tensor in-place" warnings+errors
         result = self.decoder(self.positional_encoding_geom(lattice))
         result[...,1][w] *= -1 # replace with complex conjugate to get correct values for original lattice positions
         return result

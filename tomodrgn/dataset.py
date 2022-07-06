@@ -460,7 +460,6 @@ class TiltSeriesDatasetAllParticles(data.Dataset):
                  window_r=0.85, do_dose_weighting=False, dose_override=None, do_tilt_weighting=False):
         log('Parsing metadata...')
         ptcls_star = starfile.TiltSeriesStarfile.load(mrcfile)
-        # ptcls_star.df['original_star_index'] = ptcls_star.df.index
 
         # evaluate command line arguments affecting preprocessing
         if ind_ptcl is not None:
@@ -546,7 +545,6 @@ class TiltSeriesDatasetAllParticles(data.Dataset):
         log(f'Loaded {nptcls} {D-1}x{D-1} subtomo particleseries with {ntilts_range[0]} to {ntilts_range[1]} tilts')
 
         # check how many weighting schemes were found
-        # if do_dose_weighting or do_tilt_weighting:
         log(f'Found {len(weights_dict.keys())} different weighting schemes')
 
         # calculate spatial frequencies matrix
@@ -588,21 +586,8 @@ class TiltSeriesDatasetAllParticles(data.Dataset):
         trans = self.ptcls[self.ptcls_list[idx_ptcl]].trans[tilt_inds]
         ctf = self.ptcls[self.ptcls_list[idx_ptcl]].ctf[tilt_inds]
         ptcl_ids = self.ptcls_list[idx_ptcl]
-        # if self.do_tilt_weighting and self.do_dose_weighting:
-        #     weights_keys = self.star.df[self.star.df['_rlnGroupName'] == self.ptcls_list[idx_ptcl]][['_rlnCtfScalefactor', '_rlnCtfBfactor']].to_numpy(dtype=float).data.tobytes()
-        # elif self.do_tilt_weighting and not self.do_dose_weighting:
-        #     weights_keys = self.star.df[self.star.df['_rlnGroupName'] == self.ptcls_list[idx_ptcl]]['_rlnCtfScalefactor'].to_numpy(dtype=float).data.tobytes()
-        # elif not self.do_tilt_weighting and self.do_dose_weighting:
-        #     weights_keys = self.star.df[self.star.df['_rlnGroupName'] == self.ptcls_list[idx_ptcl]]['_rlnCtfBfactor'].to_numpy(dtype=float).data.tobytes()
-
-        # else:
-        #     weights_keys = None
-        # if self.ptcls[self.ptcls_list[idx_ptcl]].weights_key is not None:
         weights = self.weights_dict[self.ptcls[self.ptcls_list[idx_ptcl]].weights_key][tilt_inds]
         dec_mask = self.dec_mask_dict[self.ptcls[self.ptcls_list[idx_ptcl]].weights_key][tilt_inds]
-        # else:
-        #     weights = torch.ones(*images.shape)
-        #     dec_mask = torch.ones(*images.shape, dtype=torch.bool)
 
         return images, rot, trans, ctf, weights, dec_mask, ptcl_ids
 
@@ -617,7 +602,6 @@ class TiltSeriesDatasetPerParticle(data.Dataset):
     def __init__(self, ptcls_star_subset, invert_data=False, window=True, datadir=None, window_r=0.85):
 
         images = ptcls_star_subset.get_particles(datadir=datadir, lazy=False)
-        # expanded_ind = expanded_ind_base.reshape(-1)
 
         ntilts, ny, nx = np.subtract(images.shape, (0, 1, 1))
         assert ny-1 == nx-1, "Images must be square"
