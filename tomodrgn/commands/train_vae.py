@@ -212,6 +212,9 @@ def _unparallelize(model):
 
 
 def loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta, beta_control=None):
+    # TODO try moving dose+tilt weighting recon to pre-mse since now we have mask to not mis-train 0-weight pixels
+    # TODO should tilt weighting be whole FFT array or just DC component -->
+
     # reconstruction error
     y = y[dec_mask].view(1,-1)
     gen_loss = (cumulative_weights[dec_mask].view(1,-1) * ((y_recon - y) ** 2)).mean()
@@ -280,7 +283,7 @@ def main(args):
         args = get_latest(args)
     flog(' '.join(sys.argv))
     flog(args)
-    flog(f'Git revision hash: {utils.check_git_revision_hash("/nobackup/users/bmp/software/tomodrgn/.git")}')
+    flog(f'Git revision hash: {utils.check_git_revision_hash(os.path.join(tomodrgn._ROOT, ".git"))}')
 
     # set the random seed
     np.random.seed(args.seed)
