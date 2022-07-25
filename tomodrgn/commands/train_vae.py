@@ -212,12 +212,10 @@ def _unparallelize(model):
 
 
 def loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta, beta_control=None):
-    # TODO try moving dose+tilt weighting recon to pre-mse since now we have mask to not mis-train 0-weight pixels
-    # TODO should tilt weighting be whole FFT array or just DC component -->
-
     # reconstruction error
     y = y[dec_mask].view(1,-1)
-    gen_loss = (cumulative_weights[dec_mask].view(1,-1) * ((y_recon - y) ** 2)).mean()
+    y_recon *= cumulative_weights[dec_mask].view(1,-1)
+    gen_loss = ((y_recon - y) ** 2).mean()
 
     # latent loss
     kld = torch.mean(-0.5 * torch.sum(1 + z_logvar - z_mu.pow(2) - z_logvar.exp(), dim=1), dim=0)
@@ -283,7 +281,7 @@ def main(args):
         args = get_latest(args)
     flog(' '.join(sys.argv))
     flog(args)
-    flog(f'Git revision hash: {utils.check_git_revision_hash(os.path.join(tomodrgn._ROOT, ".git"))}')
+    flog(f'Git revision hash: {utils.check_git_revision_hash(os.path.join("/nobackup/users/bmp/software/tomodrgn", ".git"))}')
 
     # set the random seed
     np.random.seed(args.seed)
@@ -314,7 +312,7 @@ def main(args):
     else:
         ind = None
 
-    # load the particles
+    # load the particles + poses + ctf from input starfile
     flog(f'Loading dataset from {args.particles}')
     if args.lazy:
         raise NotImplementedError
