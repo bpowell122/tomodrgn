@@ -222,9 +222,9 @@ def loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta
 
     # total loss
     if beta_control is None:
-        loss = gen_loss + beta * kld / (dec_mask.sum().float() / dec_mask.shape[0])
+        loss = gen_loss + beta * kld / dec_mask.sum().float()
     else:
-        loss = gen_loss + beta_control * (beta - kld)**2 / (dec_mask.sum().float() / dec_mask.shape[0])
+        loss = gen_loss + beta_control * (beta - kld)**2 / dec_mask.sum().float()
     return loss, gen_loss, kld
 
 
