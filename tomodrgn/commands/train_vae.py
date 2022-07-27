@@ -30,8 +30,6 @@ def add_args(parser):
     parser.add_argument('particles', type=os.path.abspath, help='Input particles (.mrcs, .star, .cs, or .txt)')
     parser.add_argument('-o', '--outdir', type=os.path.abspath, required=True, help='Output directory to save model')
     parser.add_argument('--zdim', type=int, required=True, help='Dimension of latent variable')
-    parser.add_argument('--poses', type=os.path.abspath, help='Image poses (.pkl)')
-    parser.add_argument('--ctf', metavar='pkl', type=os.path.abspath, help='CTF parameters (.pkl)')
     parser.add_argument('--load', metavar='WEIGHTS.PKL', help='Initialize training from a checkpoint')
     parser.add_argument('--checkpoint', type=int, default=1, help='Checkpointing interval in N_EPOCHS (default: %(default)s)')
     parser.add_argument('--log-interval', type=int, default=200, help='Logging interval in N_PTCLS (default: %(default)s)')
@@ -102,9 +100,7 @@ def save_config(args, dataset, lattice, model, out_config):
                         ind=args.ind,
                         window=args.window,
                         window_r=args.window_r,
-                        datadir=args.datadir,
-                        ctf=args.ctf,
-                        poses=args.poses)
+                        datadir=args.datadir)
     lattice_args = dict(D=lattice.D,
                         extent=lattice.extent,
                         ignore_DC=lattice.ignore_DC)
@@ -214,8 +210,10 @@ def _unparallelize(model):
 def loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta, beta_control=None):
     # reconstruction error
     y = y[dec_mask].view(1,-1)
-    y_recon *= cumulative_weights[dec_mask].view(1,-1)
-    gen_loss = ((y_recon - y) ** 2).mean()
+    # y_recon *= cumulative_weights[dec_mask].view(1,-1)
+    # gen_loss = ((y_recon - y) ** 2).mean()
+    gen_loss = (cumulative_weights[dec_mask].view(1,-1) * ((y_recon - y) ** 2)).mean()
+
 
     # latent loss
     kld = torch.mean(-0.5 * torch.sum(1 + z_logvar - z_mu.pow(2) - z_logvar.exp(), dim=1), dim=0)
