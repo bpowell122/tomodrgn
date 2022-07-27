@@ -191,12 +191,12 @@ def calc_fsc(vol1_path, vol2_path):
     r_max = D // 2  # sphere inscribed within volume box
     r_step = 1  # int(np.min(r[r>0]))
     bins = np.arange(0, r_max, r_step)
-    bin_labels = np.searchsorted(bins, r, side='right')
+    bin_labels = np.searchsorted(bins, r, side='left')  # bin_label=0 is DC, bin_label=r_max is highest included freq, bin_label=r_max+1 is frequencies excluded by D//2 spherical mask
 
     # calculate the FSC via labeled shells
-    num = ndimage.sum(np.real(vol1_ft * np.conjugate(vol2_ft)), labels=bin_labels, index=bins + 1)
-    den1 = ndimage.sum(np.abs(vol1_ft) ** 2, labels=bin_labels, index=bins + 1)
-    den2 = ndimage.sum(np.abs(vol2_ft) ** 2, labels=bin_labels, index=bins + 1)
+    num = ndimage.sum(np.real(vol1_ft * np.conjugate(vol2_ft)), labels=bin_labels, index=bins)
+    den1 = ndimage.sum(np.abs(vol1_ft) ** 2, labels=bin_labels, index=bins)
+    den2 = ndimage.sum(np.abs(vol2_ft) ** 2, labels=bin_labels, index=bins)
     fsc = num / np.sqrt(den1 * den2)
 
     x = bins / D  # x axis should be spatial frequency in 1/px
