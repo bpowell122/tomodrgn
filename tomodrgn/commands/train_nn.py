@@ -85,7 +85,7 @@ def save_checkpoint(model, lattice, optim, epoch, norm, Apix, out_mrc, out_weigh
     }, out_weights)
 
 
-def train(scaler, model, lattice, y, rot, tran, cumulative_weights, dec_mask, optim, ctf_params=None, use_amp=False):
+def train(scaler, model, lattice, y, rot, tran, weights, dec_mask, optim, ctf_params=None, use_amp=False):
     optim.zero_grad()
     model.train()
 
@@ -105,7 +105,7 @@ def train(scaler, model, lattice, y, rot, tran, cumulative_weights, dec_mask, op
             yhat *= ctf_weights[dec_mask].view(1,-1)
 
         # calculate weighted loss
-        loss = (cumulative_weights[dec_mask].view(1,-1)*((yhat - y) ** 2)).mean() # reconstruction loss vs input stack weighted by dose+tilt
+        loss = (weights[dec_mask].view(1,-1)*((yhat - y) ** 2)).mean() # reconstruction loss vs input stack weighted by dose+tilt
 
     # backpropogate loss, update model
     scaler.scale(loss).backward()
@@ -187,6 +187,7 @@ def main(args):
         args = get_latest(args, flog)
     flog(' '.join(sys.argv))
     flog(args)
+    # TODO move this to sbatch
     flog(f'Git revision hash: {utils.check_git_revision_hash("/nobackup/users/bmp/software/tomodrgn/.git")}')
 
     # set the random seed
@@ -226,12 +227,6 @@ def main(args):
     nptcls = data.nptcls
     Apix = data.ptcls[data.ptcls_list[0]].ctf[0,1]
 
-    # save plots of all weighting schemes
-    for i, weighting_scheme_key in enumerate(data.weights_dict.keys()):
-        weights = data.weights_dict[weighting_scheme_key]
-        spatial_frequencies = data.spatial_frequencies
-        dose.plot_weight_distribution(weights, spatial_frequencies, args.outdir, weight_distribution_index=i)
-
     # instantiate model
     lattice = Lattice(D, extent=0.5)
     if args.lazy:
@@ -240,31 +235,37 @@ def main(args):
     else:
         flog(f'Pixels per particle (first particle): {np.prod(data.ptcls[data.ptcls_list[0]].images.shape)} ')
 
-        # determine which pixels to decode (cache by related weights_dict keys)
-        flog(f'Constructing baseline circular lattice for decoder with radius {lattice.D // 2}')
-        lattice_mask = lattice.get_circular_mask(lattice.D // 2)  # reconstruct box-inscribed circle of pixels
-        for weights_key in data.weights_dict.keys():
-            ntilts = data.weights_dict[weights_key].shape[0]
-            if args.skip_zeros_decoder:
-                # decode pixels with 0-weights only (can vary by tilt)
-                dec_mask = data.weights_dict[weights_key] != 0  # mask is currently ntilts x D x D
-                data.dec_mask_dict[weights_key] = dec_mask
-                flog(f'Pixels decoded per particle (+ skip-zeros-decoder mask):  {dec_mask.sum()}')
-            else:
-                # decode pixels within defined circular radius in fourier space (constant for all tilts)
-                dec_mask = lattice_mask.view(1, D, D).repeat(ntilts, 1, 1).cpu().numpy()
-                data.dec_mask_dict[weights_key] = dec_mask
-                flog(f'Pixels decoded per particle (+ fourier circular mask):  {dec_mask.sum()}')
-            assert dec_mask.shape == (ntilts, D, D)
-
-        if args.sample_ntilts:
-            assert args.sample_ntilts <= data.ntilts_range[0], \
-                f'The number of tilts requested to be sampled per particle ({args.sample_ntilts}) ' \
-                f'exceeds the number of tilt images for at least one particle ({data.ntilts_range[0]})'
-            data.ntilts_training = args.sample_ntilts
-            flog(f'Sampling {args.sample_ntilts} tilts per particle')
+    # determine which pixels to decode (cache by related weights_dict keys)
+    flog(f'Constructing baseline circular lattice for decoder with radius {lattice.D // 2}')
+    lattice_mask = lattice.get_circular_mask(lattice.D // 2)  # reconstruct box-inscribed circle of pixels
+    for weights_key in data.weights_dict.keys():
+        ntilts = data.weights_dict[weights_key].shape[0]
+        if args.skip_zeros_decoder:
+            # decode pixels with nonzero weights only (can vary by tilt)
+            dec_mask = data.weights_dict[weights_key] != 0  # mask is currently ntilts x D x D
+            flog(f'Pixels decoded per particle (+ skip-zeros-decoder mask):  {dec_mask.sum()}')
         else:
-            data.ntilts_training = data.ntilts_range[0]
+            # decode pixels within defined circular radius in fourier space (constant for all tilts)
+            dec_mask = lattice_mask.view(1, D, D).repeat(ntilts, 1, 1).cpu().numpy()
+            flog(f'Pixels decoded per particle (+ fourier circular mask):  {dec_mask.sum()}')
+        assert dec_mask.shape == (ntilts, D, D)
+        data.dec_mask_dict[weights_key] = dec_mask
+
+    # save plots of all weighting schemes
+    for i, weights_key in enumerate(data.weights_dict.keys()):
+        weights = data.weights_dict[weights_key]
+        dec_mask = data.dec_mask_dict[weights_key]
+        spatial_frequencies = data.spatial_frequencies
+        dose.plot_weight_distribution(weights * dec_mask, spatial_frequencies, args.outdir, weight_distribution_index=i)
+
+    if args.sample_ntilts:
+        assert args.sample_ntilts <= data.ntilts_range[0], \
+            f'The number of tilts requested to be sampled per particle ({args.sample_ntilts}) ' \
+            f'exceeds the number of tilt images for at least one particle ({data.ntilts_range[0]})'
+        data.ntilts_training = args.sample_ntilts
+        flog(f'Sampling {args.sample_ntilts} tilts per particle')
+    else:
+        data.ntilts_training = data.ntilts_range[0]
 
     # instantiate model
     activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]
