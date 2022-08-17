@@ -414,15 +414,15 @@ class FTPositionalDecoder(nn.Module):
             return self.positional_encoding_linear(coords)
         else:
             raise RuntimeError('Encoding type {} not recognized'.format(self.enc_type))
-        freqs = freqs.view(*[1]*len(coords.shape), -1) # 1 x 1 x D2             # 1 x 1 x 1 x D2         # 1 x 1 x 1 x D2
-        coords = coords.unsqueeze(-1) # B x 3 x 1                               # B x N/2 x 3 x 1        # 1 x B*N x 3 x 1
-        k = coords[...,0:3,:] * freqs # B x 3 x D2                              # B x N/2 x 3 x D2       # 1 x B*N x 3 x D2
-        s = torch.sin(k) # B x 3 x D2                                           # B x N/2 x 3 x D2       # 1 x B*N x 3 x D2
-        c = torch.cos(k) # B x 3 x D2                                           # B x N/2 x 3 x D2       # 1 x B*N x 3 x D2
-        x = torch.cat([s,c], -1) # B x 3 x D                                    # B x N/2 x 3 x D        # 1 x B*N x 3 x D
-        x = x.view(*coords.shape[:-2], self.in_dim-self.zdim) # B x in_dim-zdim # B x N/2 x in_dim-zdim  # 1 x B*N x in_dim-zdim
+        freqs = freqs.view(*[1] * len(coords.shape), -1)  # 1 x 1 x 1 x D2
+        coords = coords.unsqueeze(-1)  # B x N x 3 x 1
+        k = coords[..., 0:3, :] * freqs  # B x N x 3 x D2
+        s = torch.sin(k)  # B x N x 3 x D2
+        c = torch.cos(k)  # B x N x 3 x D2
+        x = torch.cat([s, c], -1)  # B x N x 3 x D
+        x = x.view(*coords.shape[:-2], self.in_dim - self.zdim)  # B x N x in_dim-zdim
         if self.zdim > 0:
-            x = torch.cat([x,coords[...,3:,:].squeeze(-1)], -1)
+            x = torch.cat([x, coords[..., 3:, :].squeeze(-1)], -1)
             assert x.shape[-1] == self.in_dim
         return x
 
@@ -463,20 +463,22 @@ class FTPositionalDecoder(nn.Module):
         '''
         Call forward on central slices only
             i.e. the middle pixel should be (0,0,0)
+
+        lattice: B x N x 3+zdim (generally)
         '''
         # if ignore_DC = False, then the size of the lattice will be odd (since it
         # includes the origin), so we need to evaluate one additional pixel
         with autocast(enabled=self.use_amp):
             if self.use_decoder_symmetry: # lattice: B x N x 3+zdim
                 # get number of pixels in top half of each image
-                c = lattice.shape[-2]//2 # top half
+                c = lattice.shape[-2] // 2 # top half
                 cc = c + 1 if lattice.shape[-2] % 2 == 1 else c # include the origin
 
                 # check that all coordinates are centered around 0
                 assert abs(lattice[...,0:3].mean()) < 1e-4, '{} != 0.0'.format(lattice[...,0:3].mean())
 
                 # allocate B x N array for pixel values to be stored after model evaluated
-                image = torch.empty(lattice.shape[:-1])
+                image = torch.empty(lattice.shape[:-1], device=lattice.device)
 
                 # evaluate model on pixel coordinates for top half of each image
                 top_half = self.decode(lattice[...,0:cc,:])
@@ -490,7 +492,7 @@ class FTPositionalDecoder(nn.Module):
                 return image
 
             else:
-                # lattice: B x ntilts*N x 3+zdim, useful when images are different sizes to avoid ragged tensors
+                # lattice: 1 x B*ntilts*N[mask] x 3+zdim, useful when images are different sizes to avoid ragged tensors
                 # check that all coordinates are centered around 0
                 assert abs(lattice[...,0:3].mean()) < 1e-4, '{} != 0.0'.format(lattice[...,0:3].mean())
 
@@ -505,14 +507,12 @@ class FTPositionalDecoder(nn.Module):
 
     def decode(self, lattice):
         '''Return FT transform'''
-        assert (lattice[...,0:3].abs() - 0.5*(2**0.5) < 1e-3).all(), \
+        assert (lattice[...,0:3].abs() - 0.5 < 1e-4).all(), \
             f'lattice[...,0:3].max(): {lattice[...,0:3].max().to(torch.float32)}; ' \
             f'lattice[...,0:3].min(): {lattice[...,0:3].min().to(torch.float32)}'
         # convention: only evaluate the -z points
         w = lattice[...,2] > 0.0
-        w_zflipper = torch.ones_like(lattice)
-        w_zflipper[...,0:3][w] *= -1
-        lattice = lattice * w_zflipper # avoids "modifying tensor in-place" warnings+errors
+        lattice[..., 0:3][w] = -lattice[..., 0:3][w]  # negate lattice coordinates where z > 0
         result = self.decoder(self.positional_encoding_geom(lattice))
         result[...,1][w] *= -1 # replace with complex conjugate to get correct values for original lattice positions
         return result
@@ -531,29 +531,29 @@ class FTPositionalDecoder(nn.Module):
         assert extent <= 0.5
         if zval is not None:
             zdim = len(zval)
-            z = torch.tensor(zval, dtype=torch.float32)
+            z = torch.tensor(zval, dtype=torch.float32, device=coords.device)
 
-        vol_f = np.zeros((D,D,D),dtype=np.float32)
+        vol_f = np.zeros((D, D, D), dtype=np.float32)
         assert not self.training
         # evaluate the volume by zslice to avoid memory overflows
-        for i, dz in enumerate(np.linspace(-extent,extent,D,endpoint=True,dtype=np.float32)):
-            x = coords + torch.tensor([0,0,dz])
-            keep = x.pow(2).sum(dim=1) <= extent**2
+        for i, dz in enumerate(np.linspace(-extent, extent, D, endpoint=True, dtype=np.float32)):
+            x = coords + torch.tensor([0, 0, dz], device=coords.device)
+            keep = x.pow(2).sum(dim=1) <= extent ** 2
             x = x[keep]
             if zval is not None:
-                x = torch.cat((x,z.expand(x.shape[0],zdim)), dim=-1)
+                x = torch.cat((x, z.expand(x.shape[0], zdim)), dim=-1)
             with torch.no_grad():
                 if dz == 0.0:
                     y = self.forward(x)
                 else:
                     y = self.decode(x)
-                    y = y[...,0] - y[...,1]
-                slice_ = torch.zeros(D**2, device='cpu', dtype=y.dtype)
+                    y = y[..., 0] - y[..., 1]
+                slice_ = torch.zeros(D ** 2, device='cpu', dtype=y.dtype)
                 slice_[keep] = y.cpu()
-                slice_ = slice_.view(D,D).numpy()
+                slice_ = slice_.view(D, D).numpy()
             vol_f[i] = slice_
-        vol_f = vol_f*norm[1]+norm[0]
-        vol = fft.ihtn_center(vol_f[:-1,:-1,:-1]) # remove last +k freq for inverse FFT
+        vol_f = vol_f * norm[1] + norm[0]
+        vol = fft.ihtn_center(vol_f[:-1, :-1, :-1])  # remove last +k freq for inverse FFT
         return vol
 
 class FTSliceDecoder(nn.Module):
