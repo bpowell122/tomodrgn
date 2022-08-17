@@ -43,12 +43,12 @@ def add_args(parser):
     group.add_argument('--window-r', type=float, default=.85,  help='Windowing radius')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
+    group.add_argument('--Apix', type=float, default=1.0, help='Override A/px from input starfile; useful if starfile does not have _rlnDetectorPixelSize col')
 
     group = parser.add_argument_group('Tilt series')
     group.add_argument('--do-dose-weighting', action='store_true', help='Flag to calculate losses per tilt per pixel with dose weighting ')
     group.add_argument('--dose-override', type=float, default=None, help='Manually specify dose in e- / A2 / tilt')
     group.add_argument('--do-tilt-weighting', action='store_true', help='Flag to calculate losses per tilt with cosine(tilt_angle) weighting')
-    group.add_argument('--enable-trans', action='store_true', help='Apply translations in starfile. Not recommended if using centered + re-extracted particles')
     group.add_argument('--sample-ntilts', type=int, default=None, help='Number of tilts to sample from each particle per epoch. Default: min(ntilts) from dataset')
 
     group = parser.add_argument_group('Training parameters')
@@ -153,12 +153,13 @@ def train_batch(scaler, model, lattice, y, rot, tran, cumulative_weights, dec_ma
     optim.zero_grad()
     model.train()
 
-    B = y.size(0)
-    ntilts = y.size(1)
-    D = lattice.D
-    y = y.view(B, ntilts, D, D)
+    B, ntilts, D, D = y.shape
 
     with autocast(enabled=use_amp):
+        if not torch.all(tran == 0):
+            y = lattice.translate_ht(y.view(B * ntilts, -1), tran.view(B * ntilts, 1, 2))
+        y = y.view(B, ntilts, D, D)
+
         z_mu, z_logvar, z, y_recon, ctf_weights = run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params)
         loss, gen_loss, kld = loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta, beta_control)
 
@@ -173,7 +174,7 @@ def run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params=None):
     # encode
     input = y.clone()
 
-    if ctf_params is not None:
+    if not torch.all(ctf_params == 0):
         # phase flip the CTF-corrupted image
         freqs = lattice.freqs2d.unsqueeze(0).expand(B * ntilts, -1, -1) / ctf_params[:,:,1].view(B * ntilts, 1, 1)
         ctf_weights = ctf.compute_ctf(freqs, *torch.split(ctf_params.view(B*ntilts,-1)[:, 2:], 1, 1)).view(B, ntilts, D, D)
@@ -278,8 +279,6 @@ def main(args):
     if args.load == 'latest':
         args = get_latest(args)
     flog(' '.join(sys.argv))
-    flog(args)
-    flog(f'Git revision hash: {utils.check_git_revision_hash(os.path.join("/nobackup/users/bmp/software/tomodrgn", ".git"))}')
 
     # set the random seed
     np.random.seed(args.seed)
@@ -312,34 +311,18 @@ def main(args):
 
     # load the particles + poses + ctf from input starfile
     flog(f'Loading dataset from {args.particles}')
-    if args.lazy:
-        raise NotImplementedError
-        # data = dataset.LazyTiltSeriesMRCData(args.particles, norm=args.norm, invert_data=args.invert_data, ind=ind,
-        #                                      window=args.window, datadir=args.datadir, window_r=args.window_r,
-        #                                      do_dose_weighting=args.do_dose_weighting, dose_override=args.dose_override,
-        #                                      do_tilt_weighting = args.do_tilt_weighting)
-
-    else:
-        data = dataset.TiltSeriesDatasetAllParticles(args.particles, norm=args.norm, invert_data=args.invert_data,
-                                                     ind_ptcl=ind, window=args.window, datadir=args.datadir,
-                                                     window_r=args.window_r, do_dose_weighting=args.do_dose_weighting,
-                                                     dose_override=args.dose_override, do_tilt_weighting=args.do_tilt_weighting)
+    data = dataset.TiltSeriesDatasetMaster(args.particles, norm=args.norm, invert_data=args.invert_data,
+                                           ind_ptcl=ind, window=args.window, datadir=args.datadir,
+                                           window_r=args.window_r, do_dose_weighting=args.do_dose_weighting,
+                                           dose_override=args.dose_override, do_tilt_weighting=args.do_tilt_weighting,
+                                           lazy=args.lazy)
     D = data.D
     nptcls = data.nptcls
-
-    # save plots of all weighting schemes
-    for i, weighting_scheme_key in enumerate(data.weights_dict.keys()):
-        weights = data.weights_dict[weighting_scheme_key]
-        spatial_frequencies = data.spatial_frequencies
-        dose.plot_weight_distribution(weights, spatial_frequencies, args.outdir, weight_distribution_index = i)
+    Apix = data.ptcls[data.ptcls_list[0]].ctf[0,1] if not np.all(data.ptcls[data.ptcls_list[0]].ctf == 0) else args.Apix
+    flog(f'Pixels per particle: {data.ptcls[data.ptcls_list[0]].D ** 2 * data.ptcls[data.ptcls_list[0]].ntilts} ')
 
     # instantiate pixel lattice
     lattice = Lattice(D, extent=0.5)
-    if args.lazy:
-        raise NotImplementedError
-        # flog(f'Pixels per particle (raw data):  {np.prod(data.particles[0][0].get().shape)*Ntilts} ')
-    else:
-        flog(f'Pixels per particle (first particle): {np.prod(data.ptcls[data.ptcls_list[0]].images.shape)} ')
 
     # determine which pixels to encode (equivalently applicable to all particles)
     if args.enc_mask is None:
@@ -364,15 +347,21 @@ def main(args):
         ntilts = data.weights_dict[weights_key].shape[0]
         if args.skip_zeros_decoder:
             # decode pixels with 0-weights only (can vary by tilt)
-            dec_mask = data.weights_dict[weights_key] != 0  # mask is currently ntilts x D x D
-            data.dec_mask_dict[weights_key] = dec_mask
+            dec_mask = (data.weights_dict[weights_key] != 0.0) * lattice_mask.view(1, D, D).cpu().numpy()  # lattice mask excludes DC and > nyquist frequencies; weights mask excludes > optimal dose
             flog(f'Pixels decoded per particle (+ skip-zeros-decoder mask):  {dec_mask.sum()}')
         else:
             # decode pixels within defined circular radius in fourier space (constant for all tilts)
-            dec_mask = lattice_mask.view(1,D,D).repeat(ntilts,1,1).cpu().numpy()
-            data.dec_mask_dict[weights_key] = dec_mask
+            dec_mask = lattice_mask.view(1, D, D).repeat(ntilts, 1, 1).cpu().numpy()
             flog(f'Pixels decoded per particle (+ fourier circular mask):  {dec_mask.sum()}')
         assert dec_mask.shape == (ntilts, D, D)
+        data.dec_mask_dict[weights_key] = dec_mask
+
+    # save plots of all weighting schemes
+    for i, weighting_scheme_key in enumerate(data.weights_dict.keys()):
+        weights = data.weights_dict[weighting_scheme_key]
+        dec_mask = data.dec_mask_dict[weights_key]
+        spatial_frequencies = data.spatial_frequencies
+        dose.plot_weight_distribution(weights * dec_mask, spatial_frequencies, args.outdir, weight_distribution_index=i)
 
     if args.sample_ntilts:
         assert args.sample_ntilts <= data.ntilts_range[0], \
@@ -382,8 +371,6 @@ def main(args):
         flog(f'Sampling {args.sample_ntilts} tilts per particle')
     else:
         data.ntilts_training = data.ntilts_range[0]
-
-
 
     # instantiate model
     activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]
@@ -442,15 +429,15 @@ def main(args):
     elif args.multigpu:
         log(f'WARNING: --multigpu selected, but {torch.cuda.device_count()} GPUs detected')
 
-    # apply translations as final preprocessing step, since we aren't optimizing poses
-    if args.enable_trans:
-        flog('Applying translations as final preprocessing step')
-        for ptcl_id in data.ptcls_list:
-            images = torch.tensor(data.ptcls[ptcl_id].images, device='cpu')
-            ntilts = data.ptcls[ptcl_id].ntilts
-            trans = torch.tensor(data.ptcls[ptcl_id].trans, device='cpu')
-            data.ptcls[ptcl_id].images = lattice.translate_ht(images.view(ntilts, -1), trans.unsqueeze(1))
-    else: flog('Not applying translations')
+    # # apply translations as final preprocessing step, since we aren't optimizing poses
+    # if args.enable_trans:
+    #     flog('Applying translations as final preprocessing step')
+    #     for ptcl_id in data.ptcls_list:
+    #         images = torch.tensor(data.ptcls[ptcl_id].images, device='cpu')
+    #         ntilts = data.ptcls[ptcl_id].ntilts
+    #         trans = torch.tensor(data.ptcls[ptcl_id].trans, device='cpu')
+    #         data.ptcls[ptcl_id].images = lattice.translate_ht(images.view(ntilts, -1), trans.unsqueeze(1))
+    # else: flog('Not applying translations')
 
     # train
     flog('Done all preprocessing; starting training now!')
