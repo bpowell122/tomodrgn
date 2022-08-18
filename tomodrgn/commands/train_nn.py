@@ -56,7 +56,7 @@ def add_args(parser):
     group.add_argument('--wd', type=float, default=0, help='Weight decay in Adam optimizer (default: %(default)s)')
     group.add_argument('--lr', type=float, default=1e-4, help='Learning rate in Adam optimizer (default: %(default)s)')
     group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: mean, std of dataset)')
-    group.add_argument('--amp', action='store_true', help='Use mixed-precision training')
+    group.add_argument('--no-amp', action='store_false', help='Disable use of mixed-precision training')
     group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs')
 
     group = parser.add_argument_group('Network Architecture')
@@ -148,7 +148,7 @@ def save_config(args, dataset, lattice, model, out_config):
                          B=args.batch_size,
                          wd=args.wd,
                          lr=args.lr,
-                         amp=args.amp,
+                         amp=not args.no_amp,
                          multigpu=args.multigpu,
                          lazy=args.lazy,
                          recon_dose_weight=args.recon_dose_weight,
@@ -268,7 +268,7 @@ def main(args):
     optim = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.wd)
 
     # Mixed precision training with AMP
-    use_amp = args.amp
+    use_amp = not args.no_amp
     flog(f'AMP acceleration enabled (autocast + gradscaler) : {use_amp}')
     scaler = GradScaler(enabled=use_amp)
     if use_amp:

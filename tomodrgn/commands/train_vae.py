@@ -60,7 +60,7 @@ def add_args(parser):
     group.add_argument('--beta', default=None, help='Choice of beta schedule or a constant for KLD weight')
     group.add_argument('--beta-control', type=float, help='KL-Controlled VAE gamma. Beta is KL target')
     group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: 0, std of dataset)')
-    group.add_argument('--amp', action='store_true', help='Use mixed-precision training')
+    group.add_argument('--no-amp', action='store_false', help='Disable use of mixed-precision training')
     group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs')
 
     group = parser.add_argument_group('Encoder Network')
@@ -127,7 +127,7 @@ def save_config(args, dataset, lattice, model, out_config):
                          lr=args.lr,
                          beta=args.beta,
                          beta_control=args.beta_control,
-                         amp=args.amp,
+                         amp=not args.no_amp,
                          multigpu=args.multigpu,
                          lazy=args.lazy,
                          recon_dose_weight=args.recon_dose_weight,
@@ -383,7 +383,7 @@ def main(args):
     optim = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.wd)
 
     # Mixed precision training with AMP
-    use_amp = args.amp
+    use_amp = not args.no_amp
     flog(f'AMP acceleration enabled (autocast + gradscaler) : {use_amp}')
     scaler = GradScaler(enabled=use_amp)
     if use_amp:
