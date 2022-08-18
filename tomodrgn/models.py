@@ -137,7 +137,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
                  players, pdim, in_dim, zdim=1,
                  enc_mask=None, enc_type='geom_lowf', enc_dim=None,
                  domain='fourier', activation = nn.ReLU, use_amp=False,
-                 skip_zeros_decoder=False, feat_sigma = None, use_decoder_symmetry = False):
+                 l_dose_mask=False, feat_sigma = None, use_decoder_symmetry = False):
         super(TiltSeriesHetOnlyVAE, self).__init__()
         self.lattice = lattice
         self.ntilts = ntilts
@@ -145,7 +145,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         self.in_dim = in_dim
         self.enc_mask = enc_mask
         self.use_amp = use_amp
-        self.skip_zeros_decoder = skip_zeros_decoder
+        self.l_dose_mask = l_dose_mask
         self.use_decoder_symmetry = use_decoder_symmetry
         self.encoder = TiltSeriesEncoder(in_dim, qlayersA, qdimA, out_dimA, ntilts, qlayersB, qdimB, zdim * 2, activation)
         self.decoder = FTPositionalDecoder(3+zdim, lattice.D, players, pdim, activation, enc_type, enc_dim, use_amp, feat_sigma, use_decoder_symmetry)
@@ -188,7 +188,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
                                      domain=cfg['model_args']['domain'],
                                      activation=activation,
                                      use_amp=cfg['training_args']['amp'],
-                                     skip_zeros_decoder=cfg['model_args']['skip_zeros_decoder'],
+                                     l_dose_mask=cfg['model_args']['l_dose_mask'],
                                      feat_sigma=cfg['model_args']['feat_sigma'],
                                      use_decoder_symmetry=cfg['model_args']['use_decoder_symmetry'])
         if weights is not None:

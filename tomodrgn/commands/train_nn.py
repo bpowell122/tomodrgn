@@ -302,6 +302,7 @@ def main(args):
     model.to(device)
 
     # train
+    flog('Done all preprocessing; starting training now!')
     data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=True)
     for epoch in range(start_epoch, args.num_epochs):
         t2 = dt.now()

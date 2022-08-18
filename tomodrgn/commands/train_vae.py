@@ -211,9 +211,8 @@ def _unparallelize(model):
 def loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta, beta_control=None):
     # reconstruction error
     y = y[dec_mask].view(1,-1)
-    # y_recon *= cumulative_weights[dec_mask].view(1,-1)
-    # gen_loss = ((y_recon - y) ** 2).mean()
-    gen_loss = (cumulative_weights[dec_mask].view(1,-1) * ((y_recon - y) ** 2)).mean()
+    y_recon *= cumulative_weights[dec_mask].view(1,-1)
+    gen_loss = ((y_recon - y) ** 2).mean()
 
 
     # latent loss
@@ -321,8 +320,8 @@ def main(args):
     Apix = data.ptcls[data.ptcls_list[0]].ctf[0,1] if not np.all(data.ptcls[data.ptcls_list[0]].ctf == 0) else args.Apix
     flog(f'Pixels per particle: {data.ptcls[data.ptcls_list[0]].D ** 2 * data.ptcls[data.ptcls_list[0]].ntilts} ')
 
-    # instantiate pixel lattice
-    lattice = Lattice(D, extent=0.5)
+    # instantiate lattice
+    lattice = Lattice(D, extent=args.l_extent, device=device)
 
     # determine which pixels to encode (equivalently applicable to all particles)
     if args.enc_mask is None:
@@ -368,8 +367,9 @@ def main(args):
                                  args.qlayersB, args.qdimB, args.players, args.pdim, in_dim, args.zdim,
                                  enc_mask=enc_mask, enc_type=args.pe_type, enc_dim=args.pe_dim,
                                  domain='fourier', activation=activation, use_amp=args.amp,
-                                 skip_zeros_decoder=args.skip_zeros_decoder, feat_sigma=args.feat_sigma,
+                                 l_dose_mask=args.l_dose_mask, feat_sigma=args.feat_sigma,
                                  use_decoder_symmetry=args.use_decoder_symmetry)
+    model.to(device)
     flog(model)
     flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
     flog('{} parameters in encoder'.format(sum(p.numel() for p in model.encoder.parameters() if p.requires_grad)))
@@ -419,21 +419,10 @@ def main(args):
     elif args.multigpu:
         log(f'WARNING: --multigpu selected, but {torch.cuda.device_count()} GPUs detected')
 
-    # # apply translations as final preprocessing step, since we aren't optimizing poses
-    # if args.enable_trans:
-    #     flog('Applying translations as final preprocessing step')
-    #     for ptcl_id in data.ptcls_list:
-    #         images = torch.tensor(data.ptcls[ptcl_id].images, device='cpu')
-    #         ntilts = data.ptcls[ptcl_id].ntilts
-    #         trans = torch.tensor(data.ptcls[ptcl_id].trans, device='cpu')
-    #         data.ptcls[ptcl_id].images = lattice.translate_ht(images.view(ntilts, -1), trans.unsqueeze(1))
-    # else: flog('Not applying translations')
-
     # train
     flog('Done all preprocessing; starting training now!')
     data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=True)
-    num_epochs = args.num_epochs
-    for epoch in range(start_epoch, num_epochs):
+    for epoch in range(start_epoch, args.num_epochs):
         t2 = dt.now()
         gen_loss_accum = 0
         loss_accum = 0
@@ -451,14 +440,14 @@ def main(args):
                                               ctf_params=batch_ctf, use_amp=use_amp)
 
             # logging
-            gen_loss_accum += gen_loss*len(batch_ptcl_ids)
-            kld_accum += kld*len(batch_ptcl_ids)
-            loss_accum += loss*len(batch_ptcl_ids)
+            gen_loss_accum += gen_loss * len(batch_ptcl_ids)
+            kld_accum += kld * len(batch_ptcl_ids)
+            loss_accum += loss * len(batch_ptcl_ids)
 
             if batch_it % args.log_interval == 0:
-                log(f'# [Train Epoch: {epoch+1}/{num_epochs}] [{batch_it}/{nptcls} subtomos] gen loss={gen_loss:.6f}, kld={kld:.6f}, beta={beta:.6f}, loss={loss:.6f}')
+                log(f'# [Train Epoch: {epoch+1}/{args.num_epochs}] [{batch_it}/{nptcls} subtomos] gen loss={gen_loss:.6f}, kld={kld:.6f}, beta={beta:.6f}, loss={loss:.6f}')
 
-        flog(f'# =====> Epoch: {epoch+1} Average gen loss = {gen_loss_accum/nptcls:.6}, KLD = {kld_accum/nptcls:.6f}, total loss = {loss_accum/nptcls:.6f}; Finished in {dt.now()-t2}')
+        flog(f'# =====> Epoch: {epoch+1} Average gen loss = {gen_loss_accum/batch_it:.6}, KLD = {kld_accum/batch_it:.6f}, total loss = {loss_accum/batch_it:.6f}; Finished in {dt.now()-t2}')
         if args.checkpoint and epoch % args.checkpoint == 0:
             flog(f'GPU memory usage: {utils.check_memory_usage()}')
             out_weights = '{}/weights.{}.pkl'.format(args.outdir,epoch)
@@ -474,10 +463,10 @@ def main(args):
     model.eval()
     with torch.no_grad():
         z_mu, z_logvar = eval_z(model, lattice, data, args.batch_size, device)
-        save_checkpoint(model, optim, num_epochs, z_mu, z_logvar, out_weights, out_z, scaler)
+        save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z, scaler)
 
     td = dt.now() - t1
-    flog('Finished in {} ({} per epoch)'.format(td, td / (num_epochs - start_epoch)))
+    flog('Finished in {} ({} per epoch)'.format(td, td / (args.num_epochs - start_epoch)))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
