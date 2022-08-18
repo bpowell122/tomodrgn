@@ -60,7 +60,7 @@ def add_args(parser):
     group.add_argument('--beta', default=None, help='Choice of beta schedule or a constant for KLD weight')
     group.add_argument('--beta-control', type=float, help='KL-Controlled VAE gamma. Beta is KL target')
     group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: 0, std of dataset)')
-    group.add_argument('--no-amp', action='store_false', help='Disable use of mixed-precision training')
+    group.add_argument('--no-amp', action='store_true', help='Disable use of mixed-precision training')
     group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs')
 
     group = parser.add_argument_group('Encoder Network')
@@ -366,7 +366,7 @@ def main(args):
     model = TiltSeriesHetOnlyVAE(lattice, args.qlayersA, args.qdimA, args.out_dim_A, data.ntilts_training,
                                  args.qlayersB, args.qdimB, args.players, args.pdim, in_dim, args.zdim,
                                  enc_mask=enc_mask, enc_type=args.pe_type, enc_dim=args.pe_dim,
-                                 domain='fourier', activation=activation, use_amp=args.amp,
+                                 domain='fourier', activation=activation, use_amp=not args.no_amp,
                                  l_dose_mask=args.l_dose_mask, feat_sigma=args.feat_sigma,
                                  use_decoder_symmetry=args.use_decoder_symmetry)
     model.to(device)
