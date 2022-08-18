@@ -45,10 +45,11 @@ def add_args(parser):
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
     group.add_argument('--Apix', type=float, default=1.0, help='Override A/px from input starfile; useful if starfile does not have _rlnDetectorPixelSize col')
 
-    group = parser.add_argument_group('Tilt series')
-    group.add_argument('--do-dose-weighting', action='store_true', help='Flag to calculate losses per tilt per pixel with dose weighting ')
+    group.add_argument_group('Tilt series')
+    group.add_argument('--recon-tilt-weight', action='store_true', help='Weight reconstruction loss by cosine(tilt_angle)')
+    group.add_argument('--recon-dose-weight', action='store_true', help='Weight reconstruction loss per tilt per pixel by dose dependent amplitude attenuation')
     group.add_argument('--dose-override', type=float, default=None, help='Manually specify dose in e- / A2 / tilt')
-    group.add_argument('--do-tilt-weighting', action='store_true', help='Flag to calculate losses per tilt with cosine(tilt_angle) weighting')
+    group.add_argument('--l-dose-mask', action='store_true', help='Do not train on frequencies exposed to > 2.5x critical dose. Training lattice is intersection of this with --l-extent')
     group.add_argument('--sample-ntilts', type=int, default=None, help='Number of tilts to sample from each particle per epoch. Default: min(ntilts) from dataset')
 
     group = parser.add_argument_group('Training parameters')
@@ -77,7 +78,6 @@ def add_args(parser):
     group.add_argument('--feat-sigma', type=float, default=0.5, help="Scale for random Gaussian features")
     group.add_argument('--pe-dim', type=int, help='Num features in positional encoding')
     group.add_argument('--activation', choices=('relu','leaky_relu'), default='relu', help='Activation')
-    group.add_argument('--skip-zeros-decoder', action='store_true', help='Ignore fourier pixels exposed to > 2.5x critical dose when reconstructing image for MSE loss')
     group.add_argument('--use-decoder-symmetry', action='store_true', help='Exploit fourier symmetry to only decode half of each image. Reduces GPU memory usage at cost of longer epoch times')
     return parser
 
@@ -119,7 +119,7 @@ def save_config(args, dataset, lattice, model, out_config):
                       pe_dim=args.pe_dim,
                       domain='fourier',
                       activation=args.activation,
-                      skip_zeros_decoder=args.skip_zeros_decoder,
+                      l_dose_mask=args.l_dose_mask,
                       use_decoder_symmetry = args.use_decoder_symmetry)
     training_args = dict(n=args.num_epochs,
                          B=args.batch_size,
@@ -130,9 +130,9 @@ def save_config(args, dataset, lattice, model, out_config):
                          amp=args.amp,
                          multigpu=args.multigpu,
                          lazy=args.lazy,
-                         do_dose_weighting=args.do_dose_weighting,
+                         recon_dose_weight=args.recon_dose_weight,
                          dose_override=args.dose_override,
-                         do_tilt_weighting=args.do_tilt_weighting,
+                         recon_tilt_weight=args.recon_tilt_weight,
                          verbose=args.verbose,
                          log_interval=args.log_interval,
                          checkpoint=args.checkpoint,
@@ -313,9 +313,9 @@ def main(args):
     flog(f'Loading dataset from {args.particles}')
     data = dataset.TiltSeriesDatasetMaster(args.particles, norm=args.norm, invert_data=args.invert_data,
                                            ind_ptcl=ind, window=args.window, datadir=args.datadir,
-                                           window_r=args.window_r, do_dose_weighting=args.do_dose_weighting,
-                                           dose_override=args.dose_override, do_tilt_weighting=args.do_tilt_weighting,
-                                           lazy=args.lazy)
+                                           window_r=args.window_r, recon_dose_weight=args.recon_dose_weight,
+                                           dose_override=args.dose_override, recon_tilt_weight=args.recon_tilt_weight,
+                                           l_dose_mask=args.l_dose_mask, lazy=args.lazy)
     D = data.D
     nptcls = data.nptcls
     Apix = data.ptcls[data.ptcls_list[0]].ctf[0,1] if not np.all(data.ptcls[data.ptcls_list[0]].ctf == 0) else args.Apix
@@ -343,23 +343,13 @@ def main(args):
     # determine which pixels to decode (cache by related weights_dict keys)
     flog(f'Constructing baseline circular lattice for decoder with radius {lattice.D // 2}')
     lattice_mask = lattice.get_circular_mask(lattice.D // 2) # reconstruct box-inscribed circle of pixels
-    for weights_key in data.weights_dict.keys():
-        ntilts = data.weights_dict[weights_key].shape[0]
-        if args.skip_zeros_decoder:
-            # decode pixels with 0-weights only (can vary by tilt)
-            dec_mask = (data.weights_dict[weights_key] != 0.0) * lattice_mask.view(1, D, D).cpu().numpy()  # lattice mask excludes DC and > nyquist frequencies; weights mask excludes > optimal dose
-            flog(f'Pixels decoded per particle (+ skip-zeros-decoder mask):  {dec_mask.sum()}')
-        else:
-            # decode pixels within defined circular radius in fourier space (constant for all tilts)
-            dec_mask = lattice_mask.view(1, D, D).repeat(ntilts, 1, 1).cpu().numpy()
-            flog(f'Pixels decoded per particle (+ fourier circular mask):  {dec_mask.sum()}')
-        assert dec_mask.shape == (ntilts, D, D)
+    for i, weights_key in enumerate(data.weights_dict.keys()):
+        dec_mask = (data.dec_mask_dict[weights_key] * lattice_mask.view(1, D, D).cpu().numpy()).astype(dtype=bool)  # lattice mask excludes DC and > nyquist frequencies; weights mask excludes > optimal dose
         data.dec_mask_dict[weights_key] = dec_mask
+        flog(f'Pixels decoded per particle (--l-dose-mask: {args.l_dose_mask} and --l-extent: {args.l_extent}, mask scheme: {i}):  {dec_mask.sum()}')
 
-    # save plots of all weighting schemes
-    for i, weighting_scheme_key in enumerate(data.weights_dict.keys()):
-        weights = data.weights_dict[weighting_scheme_key]
-        dec_mask = data.dec_mask_dict[weights_key]
+        # save plots of all weighting schemes
+        weights = data.weights_dict[weights_key]
         spatial_frequencies = data.spatial_frequencies
         dose.plot_weight_distribution(weights * dec_mask, spatial_frequencies, args.outdir, weight_distribution_index=i)
 

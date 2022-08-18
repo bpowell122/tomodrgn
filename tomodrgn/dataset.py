@@ -455,8 +455,8 @@ class TiltSeriesDatasetMaster(data.Dataset):
     Currently supports initializing mrcfile from .star exported by warp when generating particleseries
     '''
 
-    def __init__(self, mrcfile, norm=None, invert_data=False, ind_ptcl=None, window=True, datadir=None,
-                 window_r=0.85, do_dose_weighting=False, dose_override=None, do_tilt_weighting=False, lazy=True):
+    def __init__(self, mrcfile, norm=None, invert_data=False, ind_ptcl=None, window=True, datadir=None, window_r=0.85,
+                 recon_dose_weight=False, recon_tilt_weight=False, dose_override=None, l_dose_mask=False, lazy=True):
         log('Parsing metadata...')
         ptcls_star = starfile.TiltSeriesStarfile.load(mrcfile)
 
@@ -467,11 +467,11 @@ class TiltSeriesDatasetMaster(data.Dataset):
         else:
             ptcls_unique_list = ptcls_star.df['_rlnGroupName'].unique().astype(str)
         log(f'Will window images with radius {window_r}')
-        if do_dose_weighting:
+        if recon_dose_weight:
             log('Will calculate weights due to incremental dose; frequencies will be weighted by exposure-dependent amplitude attenuation for pixelwise loss')
         else:
             log('Will not perform dose weighting; all frequencies will be equally weighted for pixelwise loss')
-        if do_tilt_weighting:
+        if recon_tilt_weight:
             log('Will calculate weights due to tilt angle; frequencies will be weighted by cosine(tilt_angle) for pixelwise loss')
         else:
             log('Will not perform tilt weighting; all tilt angles will be equally weighted for pixelwise loss')
@@ -482,6 +482,7 @@ class TiltSeriesDatasetMaster(data.Dataset):
         nptcls = len(ptcls_unique_list)
         ntilts_range = [0, 0]
         weights_dict = {}
+        dec_mask_dict = {}
         utils.print_progress_bar(0, nptcls, prefix='Loading particles:', length=50)
         for i, ptcl_id in enumerate(ptcls_unique_list):
             utils.print_progress_bar(i + 1, nptcls, prefix='Loading particles:', length=50)
@@ -494,29 +495,28 @@ class TiltSeriesDatasetMaster(data.Dataset):
             ptcls_unique_objects[ptcl_id] = ptcl
 
             # check if ptcls_star_subset has corresponding precalculated weights; cache in dict as {input bytes: ntilts x D x D array}
-            if do_tilt_weighting and do_dose_weighting:
-                weights_key = ptcls_star_subset.df[['_rlnCtfScalefactor', '_rlnCtfBfactor']].to_numpy(dtype=float).data.tobytes()
-                if weights_key not in weights_dict.keys():
-                    tilt_weights = ptcls_star_subset.df['_rlnCtfScalefactor'].to_numpy(dtype=float).reshape(ptcl.ntilts,1,1)
-                    dose_weights = dose.calculate_dose_weights(ptcls_star_subset, dose_override, ptcl.ntilts, ptcl.D, ptcl.D, ptcl.D-1, ptcl.D-1)
-                    weights_dict[weights_key] = dose_weights * tilt_weights
+            weights_key = ptcls_star_subset.df[['_rlnCtfScalefactor', '_rlnCtfBfactor']].to_numpy(dtype=float).data.tobytes()
+            if weights_key not in weights_dict.keys():
+                tilt_weights = np.ones((ptcl.ntilts, 1, 1))
+                dose_weights = np.ones((ptcl.ntilts, ptcl.D, ptcl.D))
+                dec_mask = np.ones((ptcl.ntilts, ptcl.D, ptcl.D))
 
-            elif do_tilt_weighting and not do_dose_weighting:
-                weights_key = ptcls_star_subset.df['_rlnCtfScalefactor'].to_numpy(dtype=float).data.tobytes()
-                if weights_key not in weights_dict.keys():
-                    tilt_weights = ptcls_star_subset.df['_rlnCtfScalefactor'].to_numpy(dtype=float).reshape(ptcl.ntilts,1,1)
-                    weights_dict[weights_key] = tilt_weights
+                if recon_tilt_weight:
+                    tilt_weights = ptcls_star_subset.df['_rlnCtfScalefactor'].to_numpy(dtype=float).reshape(ptcl.ntilts, 1, 1)
 
-            elif do_dose_weighting and not do_tilt_weighting:
-                weights_key = ptcls_star_subset.df['_rlnCtfBfactor'].to_numpy(dtype=float).data.tobytes()
-                if weights_key not in weights_dict.keys():
-                    dose_weights = dose.calculate_dose_weights(ptcls_star_subset, dose_override, ptcl.ntilts, ptcl.D, ptcl.D, ptcl.D-1, ptcl.D-1)
-                    weights_dict[weights_key] = dose_weights
-            else:
-                weights_key = 'unity_weights'
-                if weights_key not in weights_dict.keys():
-                    weights_dict[weights_key] = np.ones_like(ptcl.images)
+                if recon_dose_weight or l_dose_mask:
+                    dose_weights = dose.calculate_dose_weights(ptcls_star_subset, dose_override, ptcl.ntilts, ptcl.D, ptcl.D, ptcl.D - 1, ptcl.D - 1)
 
+                    if l_dose_mask:
+                        dec_mask = dose_weights != 0.0
+
+                    if recon_dose_weight:
+                        pass
+                    else:
+                        dose_weights = np.ones((ptcl.ntilts, ptcl.D, ptcl.D))
+
+                weights_dict[weights_key] = dose_weights * tilt_weights
+                dec_mask_dict[weights_key] = dec_mask
             ptcl.weights_key = weights_key
 
             # update min and max number of tilts across all particles
@@ -561,9 +561,9 @@ class TiltSeriesDatasetMaster(data.Dataset):
         self.spatial_frequencies = spatial_frequencies
         self.ntilts_training = ntilts_range[0]
         self.star = ptcls_star
-        self.do_tilt_weighting = do_tilt_weighting
-        self.do_dose_weighting = do_dose_weighting
-        self.dec_mask_dict = {}
+        self.recon_tilt_weight = recon_tilt_weight
+        self.recon_dose_weight = recon_dose_weight
+        self.dec_mask_dict = dec_mask_dict
         self.lazy = lazy
         self.window = window
         self.window_r = window_r
