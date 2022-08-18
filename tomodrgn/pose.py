@@ -3,7 +3,7 @@ import torch.nn as nn
 import numpy as np
 import pickle
 
-from focused_heterogeneity import lie_tools
+from tomodrgn import lie_tools
 from . import utils
 log = utils.log
 

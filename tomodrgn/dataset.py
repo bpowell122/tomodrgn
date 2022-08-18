@@ -10,6 +10,7 @@ from . import mrc
 from . import utils
 from . import starfile
 from . import dose
+from . import lattice
 
 log = utils.log
 
@@ -347,7 +348,6 @@ class LazyTiltSeriesMRCData(data.Dataset):
     def __getitem__(self, index):
         return self.get(index), index
 
-
 class TiltSeriesMRCData(data.Dataset):
     '''
     Class representing an .mrcs particleseries of tilt-related images
@@ -447,3 +447,268 @@ class TiltSeriesMRCData(data.Dataset):
 
     def get(self, index):
         return self.particles[index]
+
+
+class TiltSeriesDatasetMaster(data.Dataset):
+    '''
+    Metaclass responsible for instantiating and querying per-particle object dataset objects
+    Currently supports initializing mrcfile from .star exported by warp when generating particleseries
+    '''
+
+    def __init__(self, mrcfile, norm=None, invert_data=False, ind_ptcl=None, window=True, datadir=None, window_r=0.85,
+                 recon_dose_weight=False, recon_tilt_weight=False, dose_override=None, l_dose_mask=False, lazy=True):
+        log('Parsing metadata...')
+        ptcls_star = starfile.TiltSeriesStarfile.load(mrcfile)
+
+        # evaluate command line arguments affecting preprocessing
+        if ind_ptcl is not None:
+            log('Filtering by supplied indices...')
+            ptcls_unique_list = ptcls_star.df['_rlnGroupName'].unique()[ind_ptcl].astype(str)
+        else:
+            ptcls_unique_list = ptcls_star.df['_rlnGroupName'].unique().astype(str)
+        log(f'Will window images with radius {window_r}')
+        if recon_dose_weight:
+            log('Will calculate weights due to incremental dose; frequencies will be weighted by exposure-dependent amplitude attenuation for pixelwise loss')
+        else:
+            log('Will not perform dose weighting; all frequencies will be equally weighted for pixelwise loss')
+        if recon_tilt_weight:
+            log('Will calculate weights due to tilt angle; frequencies will be weighted by cosine(tilt_angle) for pixelwise loss')
+        else:
+            log('Will not perform tilt weighting; all tilt angles will be equally weighted for pixelwise loss')
+
+        # load and preprocess all particles
+        log('Loading particles...')
+        ptcls_unique_objects = {}
+        nptcls = len(ptcls_unique_list)
+        ntilts_range = [0, 0]
+        weights_dict = {}
+        dec_mask_dict = {}
+        utils.print_progress_bar(0, nptcls, prefix='Loading particles:', length=50)
+        for i, ptcl_id in enumerate(ptcls_unique_list):
+            utils.print_progress_bar(i + 1, nptcls, prefix='Loading particles:', length=50)
+            ptcls_star_subset = starfile.TiltSeriesStarfile(ptcls_star.headers, ptcls_star.df[ptcls_star.df['_rlnGroupName'] == ptcl_id])
+
+            if lazy:
+                ptcl = LazyTiltSeriesDatasetPerParticle(ptcls_star_subset, datadir=datadir)
+            else:
+                ptcl = TiltSeriesDatasetPerParticle(ptcls_star_subset, invert_data=invert_data, window=window, datadir=datadir, window_r=window_r)
+            ptcls_unique_objects[ptcl_id] = ptcl
+
+            # check if ptcls_star_subset has corresponding precalculated weights; cache in dict as {input bytes: ntilts x D x D array}
+            weights_key = ptcls_star_subset.df[['_rlnCtfScalefactor', '_rlnCtfBfactor']].to_numpy(dtype=float).data.tobytes()
+            if weights_key not in weights_dict.keys():
+                tilt_weights = np.ones((ptcl.ntilts, 1, 1))
+                dose_weights = np.ones((ptcl.ntilts, ptcl.D, ptcl.D))
+                dec_mask = np.ones((ptcl.ntilts, ptcl.D, ptcl.D))
+
+                if recon_tilt_weight:
+                    tilt_weights = ptcls_star_subset.df['_rlnCtfScalefactor'].to_numpy(dtype=float).reshape(ptcl.ntilts, 1, 1)
+
+                if recon_dose_weight or l_dose_mask:
+                    dose_weights = dose.calculate_dose_weights(ptcls_star_subset, dose_override, ptcl.ntilts, ptcl.D, ptcl.D, ptcl.D - 1, ptcl.D - 1)
+
+                    if l_dose_mask:
+                        dec_mask = dose_weights != 0.0
+
+                    if recon_dose_weight:
+                        pass
+                    else:
+                        dose_weights = np.ones((ptcl.ntilts, ptcl.D, ptcl.D))
+
+                weights_dict[weights_key] = dose_weights * tilt_weights
+                dec_mask_dict[weights_key] = dec_mask
+            ptcl.weights_key = weights_key
+
+            # update min and max number of tilts across all particles
+            if ptcl.ntilts > any(ntilts_range):
+                ntilts_range[0] = ptcl.ntilts
+                if ptcl.ntilts > ntilts_range[1]:
+                    ntilts_range[1] = ptcl.ntilts
+
+        # check particle boxsize consistency
+        D = list(set([ptcls_unique_objects[ptcl_id].D for ptcl_id in ptcls_unique_list]))
+        assert(len(D) == 1), f'All particles must have the same boxsize! Found boxsizes: {[d-1 for d in D]}'
+        D = D[0]
+        log(f'Loaded {nptcls} {D-1}x{D-1} subtomo particleseries with {ntilts_range[0]} to {ntilts_range[1]} tilts')
+
+        # check how many weighting schemes were found
+        log(f'Found {len(weights_dict.keys())} different weighting schemes')
+
+        # calculate spatial frequencies matrix
+        spatial_frequencies = dose.get_spatial_frequencies(ptcls_star.df, D, D, D-1, D-1)
+
+        # normalize by subsampled mean and stdev
+        if norm is None:
+            random_ptcls_for_normalization = np.random.choice(ptcls_unique_list, min(1000, nptcls // 10), replace=False)
+            if lazy:
+                random_data_for_normalization = np.array([img.get() for ptcl_id in random_ptcls_for_normalization for img in ptcls_unique_objects[ptcl_id].images])
+            else:
+                random_data_for_normalization = np.array([ptcls_unique_objects[ptcl_id].images for ptcl_id in random_ptcls_for_normalization])
+            norm = [np.mean(random_data_for_normalization), np.std(random_data_for_normalization)]
+            norm[0] = 0
+        if not lazy:
+            for ptcl_id in ptcls_unique_objects:
+                ptcls_unique_objects[ptcl_id].images = (ptcls_unique_objects[ptcl_id].images - norm[0]) / norm[1]
+            log(f'Normalized HT by {norm[0]} +/- {norm[1]}')
+
+        self.nptcls = nptcls
+        self.ptcls = ptcls_unique_objects
+        self.ptcls_list = ptcls_unique_list
+        self.norm = norm
+        self.D = D
+        self.ntilts_range = ntilts_range
+        self.weights_dict = weights_dict
+        self.spatial_frequencies = spatial_frequencies
+        self.ntilts_training = ntilts_range[0]
+        self.star = ptcls_star
+        self.recon_tilt_weight = recon_tilt_weight
+        self.recon_dose_weight = recon_dose_weight
+        self.dec_mask_dict = dec_mask_dict
+        self.lazy = lazy
+        self.window = window
+        self.window_r = window_r
+        self.invert_data = invert_data
+
+    def __len__(self):
+        return self.nptcls
+
+    def __getitem__(self, idx_ptcl):
+        # randomly select self.ntilts_training tilt images for a given particle to train
+        ptcl_id = self.ptcls_list[idx_ptcl]
+        ptcl = self.ptcls[ptcl_id]
+        tilt_inds = np.asarray(np.random.choice(ptcl.ntilts, self.ntilts_training, replace=False))
+
+        if self.lazy:
+            images = ptcl.images
+            images = np.asarray([image.get() for image in images])[tilt_inds]
+            if self.window:
+                m = window_mask(self.D - 1, self.window_r, .99)
+                images *= m
+            for i, img in enumerate(images):
+                images[i] = fft.ht2_center(img)
+            if self.invert_data: images *= -1
+            images = fft.symmetrize_ht(images)
+            images = (images - self.norm[0]) / self.norm[1]
+
+        else:
+            images = ptcl.images [tilt_inds]
+
+        rot = ptcl.rot[tilt_inds]
+        trans = 0 if ptcl.trans is None else ptcl.trans[tilt_inds]  # tells train loop to skip translation block, bc no translation params provided and collate_fn does not allow returning None
+        ctf = 0 if ptcl.ctf is None else ptcl.ctf[tilt_inds]  # tells train loop to skip ctf weighting block, bc no ctf params provided and collate_fn does not allow returning None
+        weights = self.weights_dict[ptcl.weights_key][tilt_inds]
+        dec_mask = self.dec_mask_dict[ptcl.weights_key][tilt_inds]
+
+        return images, rot, trans, ctf, weights, dec_mask, ptcl_id
+
+    def get(self, index):
+        return self.ptcls[index]
+
+class TiltSeriesDatasetPerParticle(data.Dataset):
+    '''
+    Class responsible for instantiating a single per-particle object dataset
+    Currently supports initializing mrcfile from .star exported by warp when generating particleseries
+    '''
+    def __init__(self, ptcls_star_subset, invert_data=False, window=True, datadir=None, window_r=0.85):
+
+        images = ptcls_star_subset.get_particles(datadir=datadir, lazy=False)
+
+        ntilts, ny, nx = np.subtract(images.shape, (0, 1, 1))  # get_particles(lazy=False) returns preallocated ny+1, nx+1 array
+        assert ny == nx, "Images must be square"
+        assert ny % 2 == 0, "Image size must be even"
+
+        # Real space window
+        if window:
+            m = window_mask(ny, window_r, .99)
+            images[:,:-1,:-1] *= m
+
+        # compute HT
+        for i, img in enumerate(images):
+            images[i,:-1,:-1] = fft.ht2_center(img[:-1,:-1])
+
+        if invert_data: images *= -1
+
+        # symmetrize HT
+        images = fft.symmetrize_ht(images, preallocated=True)
+        _, ny_ht, nx_ht = images.shape
+
+        # parse rotations
+        euler = np.zeros((ntilts, 3), dtype=np.float32)
+        euler[:, 0] = ptcls_star_subset.df['_rlnAngleRot']
+        euler[:, 1] = ptcls_star_subset.df['_rlnAngleTilt']
+        euler[:, 2] = ptcls_star_subset.df['_rlnAnglePsi']
+        rot = np.asarray([utils.R_from_relion(*x) for x in euler], dtype=np.float32)
+
+        # parse translations (default none for warp-exported particleseries)
+        trans = np.zeros((ntilts, 2), dtype=np.float32)
+        if '_rlnOriginX' in ptcls_star_subset.headers and '_rlnOriginY' in ptcls_star_subset.headers:
+            trans[:, 0] = ptcls_star_subset.df['_rlnOriginX']
+            trans[:, 1] = ptcls_star_subset.df['_rlnOriginY']
+        else:
+            trans = None
+
+        # parse ctf parameters
+        ctf_params = np.zeros((ntilts, 9), dtype=np.float32)
+        ctf_columns = ['_rlnDetectorPixelSize','_rlnDefocusU', '_rlnDefocusV', '_rlnDefocusAngle', '_rlnVoltage', '_rlnSphericalAberration',
+                 '_rlnAmplitudeContrast', '_rlnPhaseShift']
+        if np.all([ctf_column in ptcls_star_subset.headers for ctf_column in ctf_columns]):
+            ctf_params[:, 0] = nx  # first column is real space box size
+            for i, header in enumerate(ctf_columns):
+                ctf_params[:, i + 1] = ptcls_star_subset.df[header]
+        else:
+            ctf_params = None
+
+        self.images = images
+        self.ntilts = ntilts
+        self.D = images.shape[-1]
+        self.weights_key = None
+        self.rot = rot
+        self.trans = trans
+        self.ctf = ctf_params
+
+class LazyTiltSeriesDatasetPerParticle(data.Dataset):
+    '''
+    Class responsible for lazily instantiating a single per-particle object dataset
+    Currently supports initializing mrcfile from .star exported by warp when generating particleseries
+    '''
+    def __init__(self, ptcls_star_subset, datadir=None):
+
+        images = ptcls_star_subset.get_particles(datadir=datadir, lazy=True)
+        ntilts = len(images)
+        ny, nx = images[0].get().shape
+        assert ny == nx, "Images must be square"
+        assert ny % 2 == 0, "Image size must be even"
+
+        # parse rotations
+        euler = np.zeros((ntilts, 3), dtype=np.float32)
+        euler[:, 0] = ptcls_star_subset.df['_rlnAngleRot']
+        euler[:, 1] = ptcls_star_subset.df['_rlnAngleTilt']
+        euler[:, 2] = ptcls_star_subset.df['_rlnAnglePsi']
+        rot = np.asarray([utils.R_from_relion(*x) for x in euler], dtype=np.float32)
+
+        # parse translations (default none for warp-exported particleseries)
+        trans = np.zeros((ntilts, 2), dtype=np.float32)
+        if '_rlnOriginX' in ptcls_star_subset.headers and '_rlnOriginY' in ptcls_star_subset.headers:
+            trans[:, 0] = ptcls_star_subset.df['_rlnOriginX']
+            trans[:, 1] = ptcls_star_subset.df['_rlnOriginY']
+        else:
+            trans = None
+
+        # parse ctf parameters
+        ctf_params = np.zeros((ntilts, 9), dtype=np.float32)
+        ctf_columns = ['_rlnDetectorPixelSize','_rlnDefocusU', '_rlnDefocusV', '_rlnDefocusAngle', '_rlnVoltage', '_rlnSphericalAberration',
+                 '_rlnAmplitudeContrast', '_rlnPhaseShift']
+        if np.all([ctf_column in ptcls_star_subset.headers for ctf_column in ctf_columns]):
+            ctf_params[:, 0] = nx  # first column is real space box size
+            for i, header in enumerate(ctf_columns):
+                ctf_params[:, i + 1] = ptcls_star_subset.df[header]
+        else:
+            ctf_params = None
+
+        self.images = images
+        self.ntilts = ntilts
+        self.D = nx + 1
+        self.weights_key = None
+        self.rot = rot
+        self.trans = trans
+        self.ctf = ctf_params

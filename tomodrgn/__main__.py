@@ -19,20 +19,22 @@ def main():
     import tomodrgn.commands.graph_traversal
     import tomodrgn.commands.view_config
     import tomodrgn.commands.convergence_vae
+    import tomodrgn.commands.convergence_nn
 
     modules = [tomodrgn.commands.downsample,
         tomodrgn.commands.parse_pose_star,
         tomodrgn.commands.parse_ctf_star,
-        tomodrgn.commands.train_nn_ts,
+        tomodrgn.commands.train_nn,
         tomodrgn.commands.backproject_voxel,
-        tomodrgn.commands.train_vae_ts,
+        tomodrgn.commands.train_vae,
         tomodrgn.commands.eval_vol,
         tomodrgn.commands.eval_images,
         tomodrgn.commands.analyze,
         tomodrgn.commands.pc_traversal,
         tomodrgn.commands.graph_traversal,
         tomodrgn.commands.view_config,
-	    tomodrgn.commands.analyze_convergence,
+	    tomodrgn.commands.convergence_vae,
+        tomodrgn.commands.convergence_nn
         ]
 
     subparsers = parser.add_subparsers(title='Choose a command')

@@ -10,11 +10,11 @@ def calculate_dose_weights(particles_df, dose_override, ntilts, ny_ht, nx_ht, nx
     voltage = particles_df.get_tiltseries_voltage()  # kV
     if dose_override is None:
         dose_per_A2_per_tilt = particles_df.get_tiltseries_dose_per_A2_per_tilt(ntilts)  # electrons per square angstrom per tilt micrograph
-        log(f'Dose/A2/tilt series extracted from star file: {dose_per_A2_per_tilt}')
+        # log(f'Dose/A2/tilt series extracted from star file: {dose_per_A2_per_tilt}')
     else:
         # increment scalar dose_override across ntilts
         dose_per_A2_per_tilt = dose_override * np.arange(1, ntilts+1)
-        log(f'Dose/A2/tilt override series supplied by user: {dose_per_A2_per_tilt}')
+        # log(f'Dose/A2/tilt override series supplied by user: {dose_per_A2_per_tilt}')
 
     # code adapted from Grigorieff lab summovie_1.0.2/src/core/electron_dose.f90
     # see also Grant and Grigorieff, eLife (2015) DOI: 10.7554/eLife.06980
@@ -22,7 +22,7 @@ def calculate_dose_weights(particles_df, dose_override, ntilts, ny_ht, nx_ht, nx
     dose_weights = np.zeros((ntilts, ny_ht, nx_ht))
     fourier_pixel_sizes = 1.0 / (np.array([nx, ny]))  # in units of 1/px
     box_center_indices = (np.array([nx, ny]) / 2).astype(int)
-    critical_dose_at_dc = 2 ** 31  # shorthand way to ensure dc component is always weighted ~1
+    critical_dose_at_dc = 0.001 * (2 ** 31)  # shorthand way to ensure dc component is always weighted ~1
     voltage_scaling_factor = 1.0 if voltage == 300 else 0.8  # 1.0 for 300kV, 0.8 for 200kV microscopes
 
     for k, dose_at_end_of_tilt in enumerate(dose_per_A2_per_tilt):
@@ -68,7 +68,7 @@ def calculate_dose_weights(particles_df, dose_override, ntilts, ny_ht, nx_ht, nx
 
 def get_spatial_frequencies(particles_df, ny_ht, nx_ht, nx, ny):
     # return spatial frequencies of ht_sym in 1/A
-    pixel_size = particles_df.get_tiltseries_pixelsize()  # angstroms per pixel
+    pixel_size = float(particles_df['_rlnDetectorPixelSize'].iloc[0])  # angstroms per pixel
     spatial_frequencies = np.zeros((ny_ht, nx_ht))
     fourier_pixel_sizes = 1.0 / (np.array([nx, ny]))  # in units of 1/px
     box_center_indices = (np.array([nx, ny]) / 2).astype(int)  # this might break if nx, ny not even, or nx!=ny
@@ -85,18 +85,19 @@ def get_spatial_frequencies(particles_df, ny_ht, nx_ht, nx, ny):
     return spatial_frequencies
 
 
-def plot_weight_distribution(cumulative_weights, spatial_frequencies, outdir):
+def plot_weight_distribution(cumulative_weights, spatial_frequencies, outdir, weight_distribution_index = None):
     # plot distribution of dose weights across tilts in the spirit of https://doi.org/10.1038/s41467-021-22251-8
 
     ntilts = cumulative_weights.shape[0]
     max_frequency_box_edge = spatial_frequencies[0,spatial_frequencies.shape[0]//2]
-    sorted_frequency_list = sorted(set(spatial_frequencies[spatial_frequencies < max_frequency_box_edge].reshape(-1)))
-    weights_plot = np.empty((len(sorted_frequency_list), ntilts))
+    sorted_frequency_list = sorted(set(spatial_frequencies[spatial_frequencies <= max_frequency_box_edge].reshape(-1)))
+    weights_plot = np.zeros((len(sorted_frequency_list), ntilts))
 
     for i, frequency in enumerate(sorted_frequency_list):
         x, y = np.where(spatial_frequencies == frequency)
         sum_of_weights_at_frequency = cumulative_weights[:, y, x].sum()
-        weights_plot[i, :] = (cumulative_weights[:, y, x] / sum_of_weights_at_frequency).sum(axis=1) # sum across multiple pixels at same frequency
+        if not sum_of_weights_at_frequency == 0:
+            weights_plot[i, :] = (cumulative_weights[:, y, x] / sum_of_weights_at_frequency).sum(axis=1) # sum across multiple pixels at same frequency
 
     colormap = plt.cm.get_cmap('coolwarm').reversed()
     tilt_colors = colormap(np.linspace(0, 1, ntilts))
@@ -113,5 +114,5 @@ def plot_weight_distribution(cumulative_weights, spatial_frequencies, outdir):
     ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
     ax.set_xticklabels([f'1/{1/xtick:.1f}' if xtick != 0.0 else 0 for xtick in ticks_loc])
 
-    plt.savefig(f'{outdir}/cumulative_weights_across_frequencies_by_tilt.png', dpi=300)
+    plt.savefig(f'{outdir}/weighting_scheme_{weight_distribution_index}.png', dpi=300)
 

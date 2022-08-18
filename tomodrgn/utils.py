@@ -191,12 +191,12 @@ def calc_fsc(vol1_path, vol2_path):
     r_max = D // 2  # sphere inscribed within volume box
     r_step = 1  # int(np.min(r[r>0]))
     bins = np.arange(0, r_max, r_step)
-    bin_labels = np.searchsorted(bins, r, side='right')
+    bin_labels = np.searchsorted(bins, r, side='left')  # bin_label=0 is DC, bin_label=r_max is highest included freq, bin_label=r_max+1 is frequencies excluded by D//2 spherical mask
 
     # calculate the FSC via labeled shells
-    num = ndimage.sum(np.real(vol1_ft * np.conjugate(vol2_ft)), labels=bin_labels, index=bins + 1)
-    den1 = ndimage.sum(np.abs(vol1_ft) ** 2, labels=bin_labels, index=bins + 1)
-    den2 = ndimage.sum(np.abs(vol2_ft) ** 2, labels=bin_labels, index=bins + 1)
+    num = ndimage.sum(np.real(vol1_ft * np.conjugate(vol2_ft)), labels=bin_labels, index=bins)
+    den1 = ndimage.sum(np.abs(vol1_ft) ** 2, labels=bin_labels, index=bins)
+    den2 = ndimage.sum(np.abs(vol2_ft) ** 2, labels=bin_labels, index=bins)
     fsc = num / np.sqrt(den1 * den2)
 
     x = bins / D  # x axis should be spatial frequency in 1/px
@@ -210,3 +210,25 @@ def check_memory_usage():
 
 def check_git_revision_hash(repo_path):
     return subprocess.check_output(['git', '--git-dir', repo_path, 'rev-parse', 'HEAD']).decode('ascii').strip()
+
+
+def print_progress_bar(iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '*', end_character = "\r"):
+    """
+    Call in a loop to create terminal progress bar
+    @params:
+        iteration   - Required  : current iteration (Int)
+        total       - Required  : total iterations (Int)
+        prefix      - Optional  : prefix string (Str)
+        suffix      - Optional  : suffix string (Str)
+        decimals    - Optional  : positive number of decimals in percent complete (Int)
+        length      - Optional  : character length of bar (Int)
+        fill        - Optional  : bar fill character (Str)
+        printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
+    """
+    # percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    percent = f'{100 * iteration / float(total):3.{decimals}f}'
+    filled_length = int(length * iteration // total)
+    bar = fill * filled_length + '-' * (length - filled_length)
+    print(f'\r{prefix} |{bar}| {percent}% {suffix}', end = end_character)
+    if iteration == total:
+        print()

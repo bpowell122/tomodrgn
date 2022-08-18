@@ -10,9 +10,10 @@ setup(name='tomodrgn',
       version=version,
       description='tomoDRGN heterogeneity training and analysis',
       author='Barrett Powell',
-      author_email='zhonge@mit.edu',
+      author_email='bmp@mit.edu',
       url='https://github.com/bpowell122/tomodrgn',
       license='GPLv3',
+      zip_safe=False,
       packages=find_packages(),
       entry_points={
           "console_scripts": [
