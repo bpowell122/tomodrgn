@@ -483,59 +483,50 @@ class TiltSeriesDatasetMaster(data.Dataset):
         ntilts_range = [0, 0]
         weights_dict = {}
         utils.print_progress_bar(0, nptcls, prefix='Loading particles:', length=50)
-        for i, ptcl in enumerate(ptcls_unique_list):
+        for i, ptcl_id in enumerate(ptcls_unique_list):
             utils.print_progress_bar(i + 1, nptcls, prefix='Loading particles:', length=50)
-            ptcls_star_subset = starfile.TiltSeriesStarfile(ptcls_star.headers, ptcls_star.df[ptcls_star.df['_rlnGroupName'] == ptcl])
+            ptcls_star_subset = starfile.TiltSeriesStarfile(ptcls_star.headers, ptcls_star.df[ptcls_star.df['_rlnGroupName'] == ptcl_id])
 
             if lazy:
-                ptcls_unique_objects[ptcl] = LazyTiltSeriesDatasetPerParticle(ptcls_star_subset, datadir=datadir)
+                ptcl = LazyTiltSeriesDatasetPerParticle(ptcls_star_subset, datadir=datadir)
             else:
-                ptcls_unique_objects[ptcl] = TiltSeriesDatasetPerParticle(ptcls_star_subset, invert_data=invert_data,
-                                                                      window=window, datadir=datadir, window_r=window_r)
+                ptcl = TiltSeriesDatasetPerParticle(ptcls_star_subset, invert_data=invert_data, window=window, datadir=datadir, window_r=window_r)
+            ptcls_unique_objects[ptcl_id] = ptcl
 
-            # check if ptcls_star_subset has corresponding precalculated weights; cache in dict as ntilts x D x D array
+            # check if ptcls_star_subset has corresponding precalculated weights; cache in dict as {input bytes: ntilts x D x D array}
             if do_tilt_weighting and do_dose_weighting:
                 weights_key = ptcls_star_subset.df[['_rlnCtfScalefactor', '_rlnCtfBfactor']].to_numpy(dtype=float).data.tobytes()
                 if weights_key not in weights_dict.keys():
-                    tilt_weights = ptcls_star_subset.df['_rlnCtfScalefactor'].to_numpy(dtype=float)
-                    dose_weights = dose.calculate_dose_weights(ptcls_star_subset, dose_override,
-                                                               ptcls_unique_objects[ptcl].ntilts,
-                                                               ptcls_unique_objects[ptcl].D,    # ny_ht
-                                                               ptcls_unique_objects[ptcl].D,    # nx_ht
-                                                               ptcls_unique_objects[ptcl].D-1,  # nx
-                                                               ptcls_unique_objects[ptcl].D-1)  # ny
-                    weights = dose_weights * tilt_weights.reshape(ptcls_unique_objects[ptcl].ntilts,1,1)
-                    weights_dict[weights_key] = weights
+                    tilt_weights = ptcls_star_subset.df['_rlnCtfScalefactor'].to_numpy(dtype=float).reshape(ptcl.ntilts,1,1)
+                    dose_weights = dose.calculate_dose_weights(ptcls_star_subset, dose_override, ptcl.ntilts, ptcl.D, ptcl.D, ptcl.D-1, ptcl.D-1)
+                    weights_dict[weights_key] = dose_weights * tilt_weights
 
             elif do_tilt_weighting and not do_dose_weighting:
                 weights_key = ptcls_star_subset.df['_rlnCtfScalefactor'].to_numpy(dtype=float).data.tobytes()
                 if weights_key not in weights_dict.keys():
-                    weights_dict[weights_key] = ptcls_star_subset.df['_rlnCtfScalefactor'].to_numpy(dtype=float).reshape(ptcls_unique_objects[ptcl].ntilts,1,1)
+                    tilt_weights = ptcls_star_subset.df['_rlnCtfScalefactor'].to_numpy(dtype=float).reshape(ptcl.ntilts,1,1)
+                    weights_dict[weights_key] = tilt_weights
 
             elif do_dose_weighting and not do_tilt_weighting:
                 weights_key = ptcls_star_subset.df['_rlnCtfBfactor'].to_numpy(dtype=float).data.tobytes()
                 if weights_key not in weights_dict.keys():
-                    weights_dict[weights_key] = dose.calculate_dose_weights(ptcls_star_subset, dose_override,
-                                                                            ptcls_unique_objects[ptcl].ntilts,
-                                                                            ptcls_unique_objects[ptcl].D,    # ny_ht
-                                                                            ptcls_unique_objects[ptcl].D,    # nx_ht
-                                                                            ptcls_unique_objects[ptcl].D-1,  # nx
-                                                                            ptcls_unique_objects[ptcl].D-1)  # ny
+                    dose_weights = dose.calculate_dose_weights(ptcls_star_subset, dose_override, ptcl.ntilts, ptcl.D, ptcl.D, ptcl.D-1, ptcl.D-1)
+                    weights_dict[weights_key] = dose_weights
             else:
-                weights_key = 'lattice_mask_extent0.5'
+                weights_key = 'unity_weights'
                 if weights_key not in weights_dict.keys():
-                    weights_dict[weights_key] = np.ones_like(ptcls_unique_objects[ptcl].images)
+                    weights_dict[weights_key] = np.ones_like(ptcl.images)
 
-            ptcls_unique_objects[ptcl].weights_key = weights_key
+            ptcl.weights_key = weights_key
 
             # update min and max number of tilts across all particles
-            if ptcls_unique_objects[ptcl].ntilts > any(ntilts_range):
-                ntilts_range[0] = ptcls_unique_objects[ptcl].ntilts
-                if ptcls_unique_objects[ptcl].ntilts > ntilts_range[1]:
-                    ntilts_range[1] = ptcls_unique_objects[ptcl].ntilts
+            if ptcl.ntilts > any(ntilts_range):
+                ntilts_range[0] = ptcl.ntilts
+                if ptcl.ntilts > ntilts_range[1]:
+                    ntilts_range[1] = ptcl.ntilts
 
         # check particle boxsize consistency
-        D = list(set([ptcls_unique_objects[ptcl].D for ptcl in ptcls_unique_list]))
+        D = list(set([ptcls_unique_objects[ptcl_id].D for ptcl_id in ptcls_unique_list]))
         assert(len(D) == 1), f'All particles must have the same boxsize! Found boxsizes: {[d-1 for d in D]}'
         D = D[0]
         log(f'Loaded {nptcls} {D-1}x{D-1} subtomo particleseries with {ntilts_range[0]} to {ntilts_range[1]} tilts')
@@ -550,14 +541,14 @@ class TiltSeriesDatasetMaster(data.Dataset):
         if norm is None:
             random_ptcls_for_normalization = np.random.choice(ptcls_unique_list, min(1000, nptcls // 10), replace=False)
             if lazy:
-                random_data_for_normalization = np.array([img.get() for ptcl in random_ptcls_for_normalization for img in ptcls_unique_objects[ptcl].images])
+                random_data_for_normalization = np.array([img.get() for ptcl_id in random_ptcls_for_normalization for img in ptcls_unique_objects[ptcl_id].images])
             else:
-                random_data_for_normalization = np.array([ptcls_unique_objects[ptcl].images for ptcl in random_ptcls_for_normalization])
+                random_data_for_normalization = np.array([ptcls_unique_objects[ptcl_id].images for ptcl_id in random_ptcls_for_normalization])
             norm = [np.mean(random_data_for_normalization), np.std(random_data_for_normalization)]
             norm[0] = 0
         if not lazy:
-            for ptcl in ptcls_unique_objects:
-                ptcls_unique_objects[ptcl].images = (ptcls_unique_objects[ptcl].images - norm[0]) / norm[1]
+            for ptcl_id in ptcls_unique_objects:
+                ptcls_unique_objects[ptcl_id].images = (ptcls_unique_objects[ptcl_id].images - norm[0]) / norm[1]
             log(f'Normalized HT by {norm[0]} +/- {norm[1]}')
 
         self.nptcls = nptcls
@@ -589,7 +580,7 @@ class TiltSeriesDatasetMaster(data.Dataset):
 
         if self.lazy:
             images = ptcl.images
-            images = np.asarray([image.get() for image in images]) #[tilt_inds]
+            images = np.asarray([image.get() for image in images])[tilt_inds]
             if self.window:
                 m = window_mask(self.D - 1, self.window_r, .99)
                 images *= m
