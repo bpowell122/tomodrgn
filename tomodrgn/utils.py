@@ -220,3 +220,18 @@ def print_progress_bar(iteration, total, prefix = '', suffix = '', decimals = 1,
     sys.stdout.flush()
     if iteration == total:
         print()
+
+def first_n_factors(target, n = 1, lower_bound = None):
+    '''
+    calculate the first `n` factors of a number `target`, with factors no smaller than `lower_bound`
+    useful to calculate an internal "batch size" when dealing with otherwise ragged tensors that can be freely reshaped
+    enables splitting batch along batch_dim > 1, as required for multi-gpu DataParallel
+    '''
+    factors = []
+    upper_bound = target ** 0.5
+    i = 2 if lower_bound is None else lower_bound
+    while (len(factors) < n) and (i <= upper_bound):
+        if not target % i: factors.append(i)
+        i += 1
+    if factors == []: factors = [1]
+    return factors

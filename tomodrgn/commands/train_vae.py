@@ -74,11 +74,11 @@ def add_args(parser):
     group = parser.add_argument_group('Decoder Network')
     group.add_argument('--dec-layers', dest='players', type=int, default=3, help='Number of hidden layers')
     group.add_argument('--dec-dim', dest='pdim', type=int, default=256, help='Number of nodes in hidden layers')
+    group.add_argument('--l-extent', type=float, default=0.5, help='Coordinate lattice size (if not using positional encoding) (default: %(default)s)')
     group.add_argument('--pe-type', choices=('geom_ft','geom_full','geom_lowf','geom_nohighf','linear_lowf', 'gaussian', 'none'), default='geom_lowf', help='Type of positional encoding')
     group.add_argument('--feat-sigma', type=float, default=0.5, help="Scale for random Gaussian features")
     group.add_argument('--pe-dim', type=int, help='Num features in positional encoding')
     group.add_argument('--activation', choices=('relu','leaky_relu'), default='relu', help='Activation')
-    group.add_argument('--use-decoder-symmetry', action='store_true', help='Exploit fourier symmetry to only decode half of each image. Reduces GPU memory usage at cost of longer epoch times')
     return parser
 
 
@@ -119,8 +119,7 @@ def save_config(args, dataset, lattice, model, out_config):
                       pe_dim=args.pe_dim,
                       domain='fourier',
                       activation=args.activation,
-                      l_dose_mask=args.l_dose_mask,
-                      use_decoder_symmetry = args.use_decoder_symmetry)
+                      l_dose_mask=args.l_dose_mask)
     training_args = dict(n=args.num_epochs,
                          B=args.batch_size,
                          wd=args.wd,
@@ -185,16 +184,23 @@ def run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params=None):
     z_mu, z_logvar = _unparallelize(model).encode(input, B, ntilts) # ouput is B x zdim, i.e. one value per ptcl (not per img)
     z = _unparallelize(model).reparameterize(z_mu, z_logvar)
 
-    # decode
-    # model decoding is not vectorized across batch dimension due to uneven numbers of coords from each ptcl to reconstruct after skip_zeros_decoder masking of sample_ntilts different images per ptcl
+    # prepare lattice at masked fourier components
     # TODO reimplement decoding more cleanly and efficiently with NestedTensors when autograd available: https://github.com/pytorch/nestedtensor
-    input_coords = (lattice.coords @ rot).view(B, ntilts, D, D, 3)[dec_mask, :].unsqueeze(0)  # shape 1 x dec_mask.flat() x 3, because dec_mask can have variable # elements per particle
-    ptcl_pixel_counts = [int(i) for i in torch.sum(dec_mask.view(B, -1), dim=1)]
-    img_pixel_counts = [[int(i) for i in torch.sum(dec_mask[j].view(ntilts, -1), dim=1)] for j in range(B)]
+    input_coords = lattice.coords @ rot  # shape B x ntilts x D*D x 3
+    input_coords = input_coords[dec_mask.view(B, ntilts, D * D), :]  # shape np.sum(dec_mask) x 3
+    input_coords = input_coords.unsqueeze(0)  # singleton batch dimension for model to run (dec_mask can have variable # elements per particle, therefore cannot reshape with b > 1)
 
-    # slicing by #pixels per particle after dec_mask is applied to indirectly get regularly sized tensors for model evaluation
-    y_recon = [model(input_coords_ptcl, z[i].unsqueeze(0), img_pixel_counts = img_pixel_counts[i]) for i, input_coords_ptcl in enumerate(input_coords.split(ptcl_pixel_counts, dim=1))]
-    y_recon = torch.cat(y_recon, dim=1)
+    # slicing by #pixels per particle after dec_mask is applied to indirectly get correct tensors subset for concatenating z with matching particle coords
+    ptcl_pixel_counts = [int(i) for i in torch.sum(dec_mask.view(B, -1), dim=1)]
+    input_coords = torch.cat([_unparallelize(model).cat_z(input_coords_ptcl, z[i].unsqueeze(0)) for i, input_coords_ptcl in enumerate(input_coords.split(ptcl_pixel_counts, dim=1))], dim=1)
+
+    # internally reshape such that batch dimension has length > 1, allowing splitting along batch dimension for DataParallel
+    pseudo_batchsize = utils.first_n_factors(input_coords.shape[1], lower_bound=8)[0]
+    input_coords = input_coords.view(pseudo_batchsize, input_coords.shape[1]//pseudo_batchsize, -1)
+
+    # decode
+    y_recon = model(input_coords).view(1, -1)  # 1 x B*ntilts*N[final_mask]
+
 
     if ctf_weights is not None:
         y_recon *= ctf_weights[dec_mask].view(1,-1)
@@ -367,8 +373,7 @@ def main(args):
                                  args.qlayersB, args.qdimB, args.players, args.pdim, in_dim, args.zdim,
                                  enc_mask=enc_mask, enc_type=args.pe_type, enc_dim=args.pe_dim,
                                  domain='fourier', activation=activation, use_amp=not args.no_amp,
-                                 l_dose_mask=args.l_dose_mask, feat_sigma=args.feat_sigma,
-                                 use_decoder_symmetry=args.use_decoder_symmetry)
+                                 l_dose_mask=args.l_dose_mask, feat_sigma=args.feat_sigma)
     model.to(device)
     flog(model)
     flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))

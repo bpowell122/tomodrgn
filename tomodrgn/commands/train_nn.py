@@ -57,7 +57,7 @@ def add_args(parser):
     group.add_argument('--lr', type=float, default=1e-4, help='Learning rate in Adam optimizer (default: %(default)s)')
     group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: mean, std of dataset)')
     group.add_argument('--no-amp', action='store_true', help='Disable use of mixed-precision training')
-    group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs')
+    group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs. Specify GPUs i,j via `export CUDA_VISIBLE_DEVICES=i,j` before tomodrgn train_vae')
 
     group = parser.add_argument_group('Network Architecture')
     group.add_argument('--layers', type=int, default=3, help='Number of hidden layers (default: %(default)s)')
@@ -67,7 +67,6 @@ def add_args(parser):
     group.add_argument('--pe-dim', type=int, help='Num sinusoid features in positional encoding (default: D/2)')
     group.add_argument('--activation', choices=('relu', 'leaky_relu'), default='relu', help='Activation (default: %(default)s)')
     group.add_argument('--feat-sigma', type=float, default=0.5, help="Scale for random Gaussian features")
-    group.add_argument('--use-decoder-symmetry', action='store_true', help='Exploit fourier symmetry to only decode half of each image. Reduces GPU memory usage at cost of longer epoch times')
     return parser
 
 
@@ -98,11 +97,16 @@ def train(scaler, model, lattice, y, rot, tran, weights, dec_mask, optim, ctf_pa
             y = y.view(B, ntilts, D, D)
         y = y[dec_mask].view(1, -1)
 
-        # evaluate model at masked fourier components
+        # prepare lattice at masked fourier components
         input_coords = lattice.coords @ rot  # shape B x ntilts x D*D x 3
-        input_coords = input_coords[dec_mask.view(B, ntilts, D*D), :]  # flat shape np.sum(dec_mask)*3
+        input_coords = input_coords[dec_mask.view(B, ntilts, D*D), :]  # shape np.sum(dec_mask) x 3
         input_coords = input_coords.unsqueeze(0)  # singleton batch dimension for model to run (dec_mask can have variable # elements per particle, therefore cannot reshape with b > 1)
 
+        # internally reshape such that batch dimension has length > 1, allowing splitting along batch dimension for DataParallel
+        pseudo_batchsize = utils.first_n_factors(input_coords.shape[-2], lower_bound=8)[0]
+        input_coords = input_coords.view(pseudo_batchsize, -1, 3)
+
+        # evaluate model
         yhat = model(input_coords).view(1,-1) # 1 x B*ntilts*N[final_mask]
 
         if not torch.all(ctf_params == 0):
@@ -142,8 +146,7 @@ def save_config(args, dataset, lattice, model, out_config):
                       pe_dim=args.pe_dim,
                       domain='fourier',
                       activation=args.activation,
-                      l_dose_mask=args.l_dose_mask,
-                      use_decoder_symmetry=args.use_decoder_symmetry)
+                      l_dose_mask=args.l_dose_mask)
     training_args = dict(n=args.num_epochs,
                          B=args.batch_size,
                          wd=args.wd,
@@ -255,7 +258,7 @@ def main(args):
     # instantiate model
     activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]
     model = models.FTPositionalDecoder(3, lattice.D, args.layers, args.dim, activation, enc_type=args.pe_type, enc_dim=args.pe_dim,
-                                       use_amp=not args.no_amp, feat_sigma=args.feat_sigma, use_decoder_symmetry=args.use_decoder_symmetry)
+                                       use_amp=not args.no_amp, feat_sigma=args.feat_sigma)
     model.to(device)
     flog(model)
     flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
