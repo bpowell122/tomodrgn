@@ -171,17 +171,19 @@ def zero_sphere(vol):
     vol[tmp] = 0
     return vol
 
-def calc_fsc(vol1_path, vol2_path):
+def calc_fsc(vol1_path, vol2_path, mask = None, dilate = 3, dist = 10):
     '''
     Function to calculate the FSC between two volumes
-    vol1 and vol2 should be paths to maps of the same box size
+    vol1: path to volume1.mrc, boxsize D,D,D
+    vol2: path to volume2.mrc, boxsize D,D,D
+    mask: one of [None, 'sphere', 'tight', 'soft', path to mask.mrc with boxsize D,D,D]
+    dilate: int of px to expand tight mask when creating soft mask
+    dist: int of px over which to apply soft edge when creating soft mask
     '''
-    # load masked volumes in fourier space
+    # load masked volumes in real space
     vol1, _ = mrc.parse_mrc(vol1_path)
     vol2, _ = mrc.parse_mrc(vol2_path)
-
-    vol1_ft = fft.fftn_center(vol1)
-    vol2_ft = fft.fftn_center(vol2)
+    assert vol1.shape == vol2.shape
 
     # define fourier grid and label into shells
     D = vol1.shape[0]
@@ -192,6 +194,34 @@ def calc_fsc(vol1_path, vol2_path):
     r_step = 1  # int(np.min(r[r>0]))
     bins = np.arange(0, r_max, r_step)
     bin_labels = np.searchsorted(bins, r, side='left')  # bin_label=0 is DC, bin_label=r_max is highest included freq, bin_label=r_max+1 is frequencies excluded by D//2 spherical mask
+
+    # prepare mask
+    if mask == None:
+        mask = np.ones_like(vol1)
+    elif mask == 'sphere':
+        mask = np.where(r <= D//2, True, False)
+    elif mask == 'tight':
+        mask = np.where(vol1 >= np.percentile(vol1, 99.99) / 2, True, False)
+    elif mask == 'soft':
+        mask = np.where(vol1 >= np.percentile(vol1, 99.99) / 2, True, False)
+        mask = ndimage.morphology.binary_dilation(mask, iterations=dilate)
+        distance_to_mask = ndimage.morphology.distance_transform_edt(~mask)
+        distance_to_mask = np.where(distance_to_mask > dist, dist, distance_to_mask) / dist
+        mask = np.cos((np.pi / 2) * distance_to_mask)
+    elif mask.endswith('.mrc'):
+        assert os.path.exists(os.path.abspath(mask))
+        mask, _ = mrc.parse_mrc(mask)
+    else: raise ValueError
+
+    # apply mask in real space
+    assert mask.shape == vol1.shape, f'Mask shape {mask.shape} does not match volume shape {vol1.shape}'
+    vol1 *= mask
+    vol2 *= mask
+
+    # FFT volumes
+    vol1_ft = fft.fftn_center(vol1)
+    vol2_ft = fft.fftn_center(vol2)
+
 
     # calculate the FSC via labeled shells
     num = ndimage.sum(np.real(vol1_ft * np.conjugate(vol2_ft)), labels=bin_labels, index=bins)
