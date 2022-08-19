@@ -477,15 +477,15 @@ class TiltSeriesDatasetMaster(data.Dataset):
             log('Will not perform tilt weighting; all tilt angles will be equally weighted for pixelwise loss')
 
         # load and preprocess all particles
-        log('Loading particles...')
+        log('Loading and preprocessing particles...')
         ptcls_unique_objects = {}
         nptcls = len(ptcls_unique_list)
         ntilts_range = [0, 0]
         weights_dict = {}
         dec_mask_dict = {}
-        utils.print_progress_bar(0, nptcls, prefix='Loading particles:', length=50)
+        utils.print_progress_bar(0, nptcls, prefix='Loading and preprocessing particles:', length=50)
         for i, ptcl_id in enumerate(ptcls_unique_list):
-            utils.print_progress_bar(i + 1, nptcls, prefix='Loading particles:', length=50)
+            utils.print_progress_bar(i + 1, nptcls, prefix='Loading and preprocessing particles:', length=50)
             ptcls_star_subset = starfile.TiltSeriesStarfile(ptcls_star.headers, ptcls_star.df[ptcls_star.df['_rlnGroupName'] == ptcl_id])
 
             if lazy:
