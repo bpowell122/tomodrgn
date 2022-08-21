@@ -232,27 +232,30 @@ def loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta
     return loss, gen_loss, kld
 
 
-def eval_z(model, lattice, data, batch_size, device):
+def eval_z(model, lattice, data, batch_size, device, use_amp=False):
+    model.eval()
     assert not model.training
-    z_mu_all = []
-    z_logvar_all = []
-    data_generator = DataLoader(data, batch_size=batch_size, shuffle=False)
-    for batch_images, _, _, batch_ctf, _, _, _ in data_generator:
-        y = batch_images.to(device)
-        B = y.size(0)
-        ntilts = y.size(1)
-        D = lattice.D
-        y = y.view(B, ntilts, D, D)
-        if batch_ctf is not None:
-            freqs = lattice.freqs2d.unsqueeze(0).expand(B * ntilts, -1, -1) / batch_ctf[:,:,1].view(B * ntilts, 1, 1)
-            ctf_weights = ctf.compute_ctf(freqs, *torch.split(batch_ctf.view(B*ntilts,-1)[:, 2:], 1, 1)).view(B, ntilts, D, D)
-            y *= ctf_weights.sign() # phase flip by the ctf
-        z_mu, z_logvar = _unparallelize(model).encode(y, B, ntilts)
-        z_mu_all.append(z_mu.detach().cpu().numpy())
-        z_logvar_all.append(z_logvar.detach().cpu().numpy())
-    z_mu_all = np.vstack(z_mu_all)
-    z_logvar_all = np.vstack(z_logvar_all)
-    return z_mu_all, z_logvar_all
+    with torch.no_grad():
+        with autocast(enabled=use_amp):
+            z_mu_all = []
+            z_logvar_all = []
+            data_generator = DataLoader(data, batch_size=batch_size, shuffle=False)
+            for batch_images, _, _, batch_ctf, _, _, _ in data_generator:
+                y = batch_images.to(device)
+                B = y.size(0)
+                ntilts = y.size(1)
+                D = lattice.D
+                y = y.view(B, ntilts, D, D)
+                if batch_ctf is not None:
+                    freqs = lattice.freqs2d.unsqueeze(0).expand(B * ntilts, -1, -1) / batch_ctf[:,:,1].view(B * ntilts, 1, 1)
+                    ctf_weights = ctf.compute_ctf(freqs, *torch.split(batch_ctf.view(B*ntilts,-1)[:, 2:], 1, 1)).view(B, ntilts, D, D)
+                    y *= ctf_weights.sign() # phase flip by the ctf
+                z_mu, z_logvar = _unparallelize(model).encode(y, B, ntilts)
+                z_mu_all.append(z_mu.detach().cpu().numpy())
+                z_logvar_all.append(z_logvar.detach().cpu().numpy())
+            z_mu_all = np.vstack(z_mu_all)
+            z_logvar_all = np.vstack(z_logvar_all)
+            return z_mu_all, z_logvar_all
 
 
 def save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z, scaler):
@@ -455,23 +458,20 @@ def main(args):
         flog(f'# =====> Epoch: {epoch+1} Average gen loss = {gen_loss_accum/batch_it:.6}, KLD = {kld_accum/batch_it:.6f}, total loss = {loss_accum/batch_it:.6f}; Finished in {dt.now()-t2}')
         if args.checkpoint and epoch % args.checkpoint == 0:
             flog(f'GPU memory usage: {utils.check_memory_usage()}')
-            out_weights = '{}/weights.{}.pkl'.format(args.outdir,epoch)
-            out_z = '{}/z.{}.pkl'.format(args.outdir, epoch)
-            model.eval()
-            with torch.no_grad():
-                z_mu, z_logvar = eval_z(model, lattice, data, args.batch_size, device)
-                save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z, scaler)
+            out_weights = f'{args.outdir}/weights.{epoch}.pkl'
+            out_z = f'{args.outdir}/z.{epoch}.pkl'
+            z_mu, z_logvar = eval_z(model, lattice, data, args.batch_size, device, use_amp=use_amp)
+            save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z, scaler)
 
     # save model weights, latent encoding, and evaluate the model on 3D lattice
-    out_weights = '{}/weights.pkl'.format(args.outdir)
-    out_z = '{}/z.pkl'.format(args.outdir)
-    model.eval()
-    with torch.no_grad():
-        z_mu, z_logvar = eval_z(model, lattice, data, args.batch_size, device)
-        save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z, scaler)
+    out_weights = f'{args.outdir}/weights.pkl'
+    out_z = f'{args.outdir}/z.pkl'
+    z_mu, z_logvar = eval_z(model, lattice, data, args.batch_size, device, use_amp=use_amp)
+    save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z, scaler)
 
     td = dt.now() - t1
-    flog('Finished in {} ({} per epoch)'.format(td, td / (args.num_epochs - start_epoch)))
+    flog(f'Finished in {td} ({td / (args.num_epochs - start_epoch)} per epoch)')
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
