@@ -11,15 +11,15 @@ from tomodrgn import starfile, utils
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('input', help='Input .star file')
-    parser.add_argument('--input-type', choices=('warp_particleseries', 'warp_volumeseries', 'm_volumeseries'),
-                        default='warp_particleseries', help='input data .star source (subtomos as images vs as volumes')
-    parser.add_argument('--ind', help='optionally select by indices array (.pkl)')
-    parser.add_argument('--ind-type', choices=('particle', 'image', 'tilt'), default='particle',
+    parser.add_argument('--input-type', choices=('warp_imageseries', 'warp_volumeseries', 'm_volumeseries'),
+                        default='warp_imageseries', help='input data .star format (subtomos as images vs as volumes')
+    parser.add_argument('--ind', help='selected indices array (.pkl)')
+    parser.add_argument('--ind-type', choices=('particle', 'image'), default='particle',
                         help='use indices to filter by particle, by individual image, or by tilt index')
     parser.add_argument('--tomogram', type=str,
                         help='optionally select by individual tomogram name (`all` means write individual star files per tomogram')
     parser.add_argument('--action', choices=('keep', 'drop'), default='keep',
-                        help='keep or remove particles associated with ind/tomogram selection')
+                        help='keep or remove particles associated with ind.pkl')
     parser.add_argument('-o', required=True, help='Output .star file')
     return parser
 
@@ -34,7 +34,7 @@ def check_invert_indices(args, in_ind, all_ind):
     return ind_to_drop
 
 def configure_dataframe_filtering_headers(in_star, args):
-    if args.input_type == 'warp_particleseries':
+    if args.input_type == 'warp_imageseries':
         unique_particle_header = '_rlnGroupName'
         unique_tomo_header = '_rlnImageName'
         assert unique_particle_header in in_star.blocks['data_'].columns, f'Cound not find {unique_particle_header} in star file, please check --input-type'
@@ -59,8 +59,11 @@ def main(args):
     # load filtering selection
     if args.ind:
         print(f'Particles will be filtered by indices : {args.ind}')
+        print(f'Indices will be interpreted as uniquely corresponding per: {args.ind_type}')
         in_ind = utils.load_pkl(args.ind)
-    if args.tomogram:
+    if args.tomogram == 'all':
+        print('Particles will be filtered separately by all tomograms')
+    elif args.tomogram:
         print(f'Particles will be filtered by tomogram : {args.tomogram}')
 
     # configure filtering for input data type
@@ -70,7 +73,7 @@ def main(args):
     if args.ind:
         # what stride / df column to which to apply the indices
         if args.ind_type == 'particle':
-            # indexed per particle, i.e. all_ind with stride = ntilts
+            # indexed per particle
             if unique_particle_header is not None:
                 unique_particles = in_star.blocks['data_'][unique_particle_header].unique()
             else:
@@ -80,7 +83,7 @@ def main(args):
 
             # validate inputs
             assert ind_to_drop.max() < len(unique_particles), 'A supplied index exceeds the number of unique particles detected'
-            assert in_ind.min() >= 0, 'Negative indices are not allowed'
+            assert in_ind.min() >= 0, 'A supplied index is negative which is not valid'
 
             # execute
             particles_to_drop = unique_particles[ind_to_drop]
@@ -92,13 +95,13 @@ def main(args):
 
         elif args.ind_type == 'image':
             # indexed per individual image
-            assert args.input_type == 'warp_particleseries', 'A volumeseries starfile cannot filter on a per-image basis'
+            assert args.input_type == 'warp_imageseries', 'A volumeseries starfile cannot filter on a per-image basis because each row represents a volume'
             all_ind = in_star.blocks['data_'].index.to_numpy()
             ind_to_drop = check_invert_indices(args, in_ind, all_ind)
 
             # validate inputs
             assert in_ind.max() < all_ind.max(), 'A supplied index exceeds maximum index of data_ block'
-            assert in_ind.min() >= 0, 'Negative indices are not allowed'
+            assert in_ind.min() >= 0, 'A supplied index is negative which is not valid'
 
             # execute
             in_star.blocks['data_'].drop(ind_to_drop, in_place=True)
@@ -106,15 +109,15 @@ def main(args):
 
         elif args.ind_type == 'tilt':
             # indexed per tilt, range of [0, ntilts], assumes all particles have same number of tilts in same order
-            assert args.input_type == 'warp_particleseries', 'A volumeseries starfile cannot filter on a per-tilt basis'
+            assert args.input_type == 'warp_imageseries', 'A volumeseries starfile cannot filter on a per-image basis because each row represents a volume'
             ntilts = in_star.blocks['data_']['_rlnGroupName'].value_counts().unique()
-            assert len(ntilts) == 1, 'All particles must have the same number of tilt images'
+            assert len(ntilts) == 1, 'All particles must have the same number of tilt images to filter by tilt index'
             all_ind = np.arange(ntilts)
             ind_to_drop = check_invert_indices(args, in_ind, all_ind)
 
             # validate inputs
-            assert ind_to_drop.max() < ntilts, 'A supplied index exceeds the number of tilt angles detected'
-            assert in_ind.min() >= 0, 'Negative indices are not allowed'
+            assert ind_to_drop.max() < ntilts, 'A supplied index exceeds the number of tilts detected'
+            assert in_ind.min() >= 0, 'A supplied index is negative which is not valid'
 
             # execute
             nimages = in_star.blocks['data_'].max()
