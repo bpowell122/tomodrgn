@@ -3,7 +3,6 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.cuda.amp import autocast
 
 from . import fft
 from tomodrgn import lie_tools
@@ -134,20 +133,17 @@ class HetOnlyVAE(nn.Module):
 class TiltSeriesHetOnlyVAE(nn.Module):
     # No pose inference
     def __init__(self, lattice, qlayersA, qdimA, out_dimA, ntilts, qlayersB, qdimB,
-                 players, pdim, in_dim, zdim=1,
-                 enc_mask=None, enc_type='geom_lowf', enc_dim=None,
-                 domain='fourier', activation = nn.ReLU, use_amp=False,
-                 l_dose_mask=False, feat_sigma = None):
+                 players, pdim, in_dim, zdim=1, enc_mask=None, enc_type='geom_lowf', enc_dim=None,
+                 domain='fourier', activation = nn.ReLU, l_dose_mask=False, feat_sigma = None):
         super(TiltSeriesHetOnlyVAE, self).__init__()
         self.lattice = lattice
         self.ntilts = ntilts
         self.zdim = zdim
         self.in_dim = in_dim
         self.enc_mask = enc_mask
-        self.use_amp = use_amp
         self.l_dose_mask = l_dose_mask
         self.encoder = TiltSeriesEncoder(in_dim, qlayersA, qdimA, out_dimA, ntilts, qlayersB, qdimB, zdim * 2, activation)
-        self.decoder = FTPositionalDecoder(3+zdim, lattice.D, players, pdim, activation, enc_type, enc_dim, use_amp, feat_sigma)
+        self.decoder = FTPositionalDecoder(3+zdim, lattice.D, players, pdim, activation, enc_type, enc_dim, feat_sigma)
 
 
     @classmethod
@@ -186,7 +182,6 @@ class TiltSeriesHetOnlyVAE(nn.Module):
                                      enc_dim=cfg['model_args']['pe_dim'],
                                      domain=cfg['model_args']['domain'],
                                      activation=activation,
-                                     use_amp=cfg['training_args']['amp'],
                                      l_dose_mask=cfg['model_args']['l_dose_mask'],
                                      feat_sigma=cfg['model_args']['feat_sigma'])
         if weights is not None:
@@ -248,7 +243,7 @@ def load_decoder(config, weights=None, device=None):
     c = cfg['model_args']
     D = cfg['lattice_args']['D']
     activation={"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[c['activation']]
-    model = get_decoder(3, D, c['layers'], c['dim'], c['domain'], c['pe_type'], c['pe_dim'], activation, use_amp=cfg['training_args']['amp'], feat_sigma=cfg['model_args']['feat_sigma'])
+    model = get_decoder(3, D, c['layers'], c['dim'], c['domain'], c['pe_type'], c['pe_dim'], activation, feat_sigma=cfg['model_args']['feat_sigma'])
     if weights is not None:
         ckpt = torch.load(weights)
         model.load_state_dict(ckpt['model_state_dict'])
@@ -256,7 +251,7 @@ def load_decoder(config, weights=None, device=None):
         model.to(device)
     return model
 
-def get_decoder(in_dim, D, layers, dim, domain, enc_type, enc_dim=None, activation=nn.ReLU, use_amp=False, feat_sigma=None):
+def get_decoder(in_dim, D, layers, dim, domain, enc_type, enc_dim=None, activation=nn.ReLU, feat_sigma=None):
     if enc_type == 'none':
         if domain == 'hartley':
             model = ResidLinearMLP(in_dim, layers, dim, 1, activation)
@@ -266,7 +261,7 @@ def get_decoder(in_dim, D, layers, dim, domain, enc_type, enc_dim=None, activati
         return model
     else:
         model = PositionalDecoder if domain == 'hartley' else FTPositionalDecoder 
-        return model(in_dim, D, layers, dim, activation, enc_type=enc_type, enc_dim=enc_dim, use_amp=use_amp, feat_sigma=feat_sigma)
+        return model(in_dim, D, layers, dim, activation, enc_type=enc_type, enc_dim=enc_dim, feat_sigma=feat_sigma)
  
 class PositionalDecoder(nn.Module):
     def __init__(self, in_dim, D, nlayers, hidden_dim, activation, enc_type='linear_lowf', enc_dim=None):
@@ -362,7 +357,7 @@ class PositionalDecoder(nn.Module):
         return vol
 
 class FTPositionalDecoder(nn.Module):
-    def __init__(self, in_dim, D, nlayers, hidden_dim, activation, enc_type='linear_lowf', enc_dim=None, use_amp=False, feat_sigma=None):
+    def __init__(self, in_dim, D, nlayers, hidden_dim, activation, enc_type='linear_lowf', enc_dim=None, feat_sigma=None):
         super(FTPositionalDecoder, self).__init__()
         assert in_dim >= 3
         self.zdim = in_dim - 3
@@ -373,7 +368,6 @@ class FTPositionalDecoder(nn.Module):
         self.enc_dim = self.D2 if enc_dim is None else enc_dim
         self.in_dim = 3 * (self.enc_dim) * 2 + self.zdim
         self.decoder = ResidLinearMLP(self.in_dim, nlayers, hidden_dim, 2, activation)
-        self.use_amp = use_amp
 
         if enc_type == "gaussian":
             # We construct 3 * self.enc_dim random vector frequences, to match the original positional encoding:
@@ -453,17 +447,15 @@ class FTPositionalDecoder(nn.Module):
     def forward(self, lattice):
         '''
         lattice: B x N x 3+zdim (generally)
+        lattice: 1 x B*ntilts*N[mask] x 3+zdim, useful when images are different sizes to avoid ragged tensors
         '''
-        with autocast(enabled=self.use_amp):
-            # lattice: 1 x B*ntilts*N[mask] x 3+zdim, useful when images are different sizes to avoid ragged tensors
+        # evaluate model on all pixel coordinates for each image
+        full_image = self.decode(lattice)
 
-            # evaluate model on all pixel coordinates for each image
-            full_image = self.decode(lattice)
+        # return hartley information (FT real - FT imag) for each image
+        image = full_image[...,0] - full_image[...,1]
 
-            # return hartley information (FT real - FT imag) for each image
-            image = full_image[...,0] - full_image[...,1]
-
-            return image
+        return image
 
 
     def decode(self, lattice):

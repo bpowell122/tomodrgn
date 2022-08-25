@@ -257,8 +257,8 @@ def main(args):
 
     # instantiate model
     activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]
-    model = models.FTPositionalDecoder(3, lattice.D, args.layers, args.dim, activation, enc_type=args.pe_type, enc_dim=args.pe_dim,
-                                       use_amp=not args.no_amp, feat_sigma=args.feat_sigma)
+    model = models.FTPositionalDecoder(3, lattice.D, args.layers, args.dim, activation,
+                                       enc_type=args.pe_type, enc_dim=args.pe_dim, feat_sigma=args.feat_sigma)
     model.to(device)
     flog(model)
     flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))

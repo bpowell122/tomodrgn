@@ -375,8 +375,8 @@ def main(args):
     model = TiltSeriesHetOnlyVAE(lattice, args.qlayersA, args.qdimA, args.out_dim_A, data.ntilts_training,
                                  args.qlayersB, args.qdimB, args.players, args.pdim, in_dim, args.zdim,
                                  enc_mask=enc_mask, enc_type=args.pe_type, enc_dim=args.pe_dim,
-                                 domain='fourier', activation=activation, use_amp=not args.no_amp,
-                                 l_dose_mask=args.l_dose_mask, feat_sigma=args.feat_sigma)
+                                 domain='fourier', activation=activation, l_dose_mask=args.l_dose_mask,
+                                 feat_sigma=args.feat_sigma)
     model.to(device)
     flog(model)
     flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
