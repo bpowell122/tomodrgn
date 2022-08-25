@@ -2,9 +2,8 @@
 
 import argparse
 import numpy as np
-import sys, os
+import os
 import pickle
-log = print
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -19,27 +18,23 @@ def load_pkl(x):
 
 def main(args):
     x = load_pkl(args.input)
-    if args.first:
-        assert args.ind is None
-        ind = np.arange(args.first)
-    else:
-        assert args.first is None
+
+    assert args.ind or args.first, '--ind and/or --first must be specified'
+
+    if args.ind and args.first:
+        print(f'Loading indices: {args.ind}')
         ind = load_pkl(args.ind)
+        print(f'Further filtering by first: {args.first}')
+        ind_first = np.arange(args.first)
+        ind = ind[ind_first]
+    elif args.first:
+        print(f'Filtering by first: {args.first}')
+        ind = np.arange(args.first)
 
-    # pose.pkl contains a tuple of rotations and translations
-    if type(x) == tuple:
-        log('Detected pose.pkl')
-        log(f'Old shape: {[xx.shape for xx in x]}')
-        x = (xx[ind] for xx in x)
-        x = tuple(x)
-        log(f'New shape: {[xx.shape for xx in x]}')
-
-    # all other cryodrgn pkls 
-    else:
-        log(f'Old shape: {x.shape}')
-        x = x[ind]
-        log(f'New shape: {x.shape}')
-    log(f'Saving {args.o}')
+    print(f'Old shape: {x.shape}')
+    x = x[ind]
+    print(f'New shape: {x.shape}')
+    print(f'Saving {args.o}')
     pickle.dump(x, open(args.o,'wb'))
 
 if __name__ == '__main__':
