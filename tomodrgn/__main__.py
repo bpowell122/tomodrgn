@@ -18,7 +18,6 @@ def main():
     import tomodrgn.commands.view_config
     import tomodrgn.commands.convergence_vae
     import tomodrgn.commands.convergence_nn
-    import tomodrgn.commands.filter_pkl
     import tomodrgn.commands.filter_star
 
     modules = [tomodrgn.commands.downsample,
@@ -33,7 +32,6 @@ def main():
                tomodrgn.commands.view_config,
                tomodrgn.commands.convergence_vae,
                tomodrgn.commands.convergence_nn,
-               tomodrgn.commands.filter_pkl,
                tomodrgn.commands.filter_star]
 
     subparsers = parser.add_subparsers(title='Choose a command')
