@@ -29,7 +29,7 @@ def add_args(parser):
     group.add_argument('--z-start', type=np.float32, nargs='*', help='Specify a starting z-value')
     group.add_argument('--z-end', type=np.float32, nargs='*', help='Specify an ending z-value')
     group.add_argument('-n', type=int, default=10, help='Number of structures between [z_start, z_end]')
-    group.add_argument('--zfile', help='Text file with z-values to evaluate')
+    group.add_argument('--zfile', help='Text/.pkl file with z-values to evaluate')
 
     group = parser.add_argument_group('Volume arguments')
     group.add_argument('--Apix', type=float, default=1, help='Pixel size to add to .mrc header (default: %(default)s A/pix)')
@@ -101,7 +101,10 @@ def main(args):
             z *= ((args.z_end - args.z_start)/(args.n-1))
             z += args.z_start
         else:
-            z = np.loadtxt(args.zfile).reshape(-1, zdim)
+            if args.zfile.endswith('.pkl'):
+                z = utils.load_pkl(args.zfile)
+            else:
+                z = np.loadtxt(args.zfile).reshape(-1, zdim)
 
         if not os.path.exists(args.o):
             os.makedirs(args.o)
