@@ -7,8 +7,6 @@ def main():
     parser.add_argument('--version', action='version', version='tomoDRGN '+tomodrgn.__version__)
 
     import tomodrgn.commands.downsample
-    import tomodrgn.commands.parse_pose_star
-    import tomodrgn.commands.parse_ctf_star
     import tomodrgn.commands.backproject_voxel
     import tomodrgn.commands.train_nn
     import tomodrgn.commands.train_vae
@@ -20,22 +18,23 @@ def main():
     import tomodrgn.commands.view_config
     import tomodrgn.commands.convergence_vae
     import tomodrgn.commands.convergence_nn
+    import tomodrgn.commands.filter_pkl
+    import tomodrgn.commands.filter_star
 
     modules = [tomodrgn.commands.downsample,
-        tomodrgn.commands.parse_pose_star,
-        tomodrgn.commands.parse_ctf_star,
-        tomodrgn.commands.train_nn,
-        tomodrgn.commands.backproject_voxel,
-        tomodrgn.commands.train_vae,
-        tomodrgn.commands.eval_vol,
-        tomodrgn.commands.eval_images,
-        tomodrgn.commands.analyze,
-        tomodrgn.commands.pc_traversal,
-        tomodrgn.commands.graph_traversal,
-        tomodrgn.commands.view_config,
-	    tomodrgn.commands.convergence_vae,
-        tomodrgn.commands.convergence_nn
-        ]
+               tomodrgn.commands.train_nn,
+               tomodrgn.commands.backproject_voxel,
+               tomodrgn.commands.train_vae,
+               tomodrgn.commands.eval_vol,
+               tomodrgn.commands.eval_images,
+               tomodrgn.commands.analyze,
+               tomodrgn.commands.pc_traversal,
+               tomodrgn.commands.graph_traversal,
+               tomodrgn.commands.view_config,
+               tomodrgn.commands.convergence_vae,
+               tomodrgn.commands.convergence_nn,
+               tomodrgn.commands.filter_pkl,
+               tomodrgn.commands.filter_star]
 
     subparsers = parser.add_subparsers(title='Choose a command')
     subparsers.required = 'True'
