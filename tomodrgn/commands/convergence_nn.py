@@ -1,13 +1,18 @@
+'''
+Assess convergence of a decoder-only network relative to an external volume by FSC
+'''
+
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse, os, fnmatch
 from tomodrgn import utils
 
 def add_args(parser):
-    parser.add_argument('training_directory', type=os.path.abspath, help='cryodrgn train_nn directory containing reconstruct.N.mrc')
+    parser.add_argument('training_directory', type=os.path.abspath, help='train_nn directory containing reconstruct.N.mrc')
     parser.add_argument('reference_volume', type=os.path.abspath, help='volume against which to calculate FSC')
     parser.add_argument('--max-epoch', type=int, help='Maximum epoch for which to calculate FSCs')
-    parser.add_argument('--ignore-dc', action='store_true', help='Skip calculating FSC for DC component')
+    parser.add_argument('--include-dc', action='store_true', help='Include FSC calculation for DC component, default False because DC component default excluded during training')
+    parser.add_argument('--fsc-mask', choices=(None, 'sphere', 'tight', 'soft'), default='soft', help='Type of mask applied to volumes before calculating FSC')
     return parser
 
 
@@ -40,8 +45,8 @@ def main(args):
     fscs = []
     for vol in reconstruction_vols:
         flog(f'Processing volume: {vol}')
-        x, fsc = utils.calc_fsc(args.reference_volume, vol)
-        if args.ignore_dc:
+        x, fsc = utils.calc_fsc(args.reference_volume, vol, mask=args.fsc_mask)
+        if not args.include_dc:
             x = x[1:]
             fsc = fsc[1:]
         fscs.append(fsc)
