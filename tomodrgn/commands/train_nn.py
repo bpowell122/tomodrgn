@@ -52,9 +52,9 @@ def add_args(parser):
 
     group = parser.add_argument_group('Training parameters')
     group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs (default: %(default)s)')
-    group.add_argument('-b', '--batch-size', type=int, default=8, help='Minibatch size (default: %(default)s)')
+    group.add_argument('-b', '--batch-size', type=int, default=1, help='Minibatch size (default: %(default)s)')
     group.add_argument('--wd', type=float, default=0, help='Weight decay in Adam optimizer (default: %(default)s)')
-    group.add_argument('--lr', type=float, default=1e-4, help='Learning rate in Adam optimizer (default: %(default)s)')
+    group.add_argument('--lr', type=float, default=0.0002, help='Learning rate in Adam optimizer (default: %(default)s)')
     group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: mean, std of dataset)')
     group.add_argument('--no-amp', action='store_true', help='Disable use of mixed-precision training')
     group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs. Specify GPUs i,j via `export CUDA_VISIBLE_DEVICES=i,j` before tomodrgn train_vae')
