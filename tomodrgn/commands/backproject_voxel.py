@@ -1,13 +1,11 @@
 '''
-Backproject cryo-EM images
+Backproject 2-D images to form unfiltered 3-D reconstruction
 '''
 
 import argparse
-import numpy as np
-import sys, os
+import os
 import time
-import pickle
-
+import numpy as np
 import torch
 
 from tomodrgn import utils
@@ -15,27 +13,21 @@ from tomodrgn import mrc
 from tomodrgn import fft
 from tomodrgn import dataset
 from tomodrgn import ctf
-
-from tomodrgn.pose import PoseTracker
+from tomodrgn import starfile
 from tomodrgn.lattice import Lattice
 
 log = utils.log
 
 def add_args(parser):
-    parser.add_argument('particles', type=os.path.abspath, help='Input particles (.mrcs, .star, .cs, or .txt)')
-    parser.add_argument('--poses', type=os.path.abspath, required=True, help='Image poses (.pkl)')
-    parser.add_argument('--ctf', metavar='pkl', type=os.path.abspath, help='CTF parameters (.pkl) for phase flipping images')
+    parser.add_argument('particles', type=os.path.abspath, help='Input particles_imageseries.star')
     parser.add_argument('-o', type=os.path.abspath, required=True, help='Output .mrc file')
 
     group = parser.add_argument_group('Dataset loading options')
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
-    group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
-    group.add_argument('--ind',help='Indices to iterate over (pkl)')
-    group.add_argument('--first', type=int, default=10000, help='Backproject the first N images (default: %(default)s)')
+    group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths star file')
+    group.add_argument('--ind', type=os.path.abspath, help='Indices to iterate over (pkl)')
+    group.add_argument('--first', type=int, default=10000, help='Backproject the first N images')
 
-    group = parser.add_argument_group('Tilt series options')
-    group.add_argument('--tilt', help='Tilt series .mrcs image stack')
-    group.add_argument('--tilt-deg', type=float, default=45, help='Right-handed x-axis tilt offset in degrees (default: %(default)s)')
     return parser
 
 def add_slice(V, counts, ff_coord, ff, D):
@@ -70,40 +62,56 @@ def main(args):
     ## set the device
     use_cuda = torch.cuda.is_available()
     device = torch.device('cuda' if use_cuda else 'cpu')
-    log('Use cuda {}'.format(use_cuda))
+    log(f'Use cuda {use_cuda}')
     if use_cuda:
         torch.set_default_tensor_type(torch.cuda.FloatTensor)
     else:
         log('WARNING: No GPUs detected')
 
-    # load the particles
+    # load the star file
+    ptcls_star = starfile.TiltSeriesStarfile.load(args.particles)
+    df_grouped = ptcls_star.df.groupby('_rlnGroupName')
+    ind_imgs = np.array([df_grouped.get_group(ptcl).index for ptcl in df_grouped.groups], dtype=object)
+
     if args.ind is not None:
-        args.ind = utils.load_pkl(args.ind).astype(int)
-    if args.tilt is None:
-        data = dataset.LazyMRCData(args.particles, norm=(0,1), invert_data=args.invert_data, datadir=args.datadir, ind=args.ind)
-        tilt = None
-    else:
-        data = dataset.TiltMRCData(args.particles, args.tilt, norm=(0,1), invert_data=args.invert_data, datadir=args.datadir, ind=args.ind)
-        tilt = torch.tensor(utils.xrot(args.tilt_deg).astype(np.float32))
+        ind_ptcls = np.array(utils.load_pkl(args.ind))
+        ind_imgs = ind_imgs[ind_ptcls]
+        ptcls_star.df = ptcls_star.df.iloc[ind_imgs.flatten()]
+
+    # lazily load particle images and filter by ind.pkl, if applicable
+    data = dataset.LazyMRCData(args.particles, norm=(0,1), invert_data=args.invert_data, datadir=args.datadir)
+    data.particles = [data.particles[i] for i in ind_imgs.flatten().astype(int)]
     D = data.D
-    Nimg = data.N
+    Nimg = ind_imgs.flatten().shape[0]
 
-    lattice = Lattice(D, extent=D//2)
+    # Load poses (from pre-filtered dataframe)
+    rots_columns = ['_rlnAngleRot', '_rlnAngleTilt', '_rlnAnglePsi']
+    euler = ptcls_star.df[rots_columns].to_numpy(dtype=np.float32)
+    rots = np.asarray([utils.R_from_relion(*x) for x in euler], dtype=np.float32)
 
-    posetracker = PoseTracker.load(args.poses, Nimg, D, None, args.ind)
+    trans_columns = ['rlnOriginX', '_rlnOriginY']
+    if np.all([trans_column in ptcls_star.headers for trans_column in trans_columns]):
+        trans = ptcls_star.df[trans_columns].to_numpy(dtype=np.float32)
+    else:
+        trans = None
 
-    if args.ctf is not None:
-        log('Loading ctf params from {}'.format(args.ctf))
-        ctf_params = ctf.load_ctf_for_training(D-1, args.ctf)
+    # Load CTF (from pre-filtered dataframe)
+    ctf_columns = ['_rlnDetectorPixelSize', '_rlnDefocusU', '_rlnDefocusV', '_rlnDefocusAngle', '_rlnVoltage', '_rlnSphericalAberration',
+                   '_rlnAmplitudeContrast', '_rlnPhaseShift']
+    if np.all([ctf_column in ptcls_star.headers for ctf_column in ctf_columns]):
+        ctf_params = ptcls_star.df[ctf_columns].to_numpy(dtype=np.float32)
         ctf_params = torch.tensor(ctf_params)
-        if args.ind is not None: ctf_params = ctf_params[args.ind]
-    else: ctf_params = None
+    else:
+        ctf_params = None
     Apix = ctf_params[0,0] if ctf_params is not None else 1
 
+    # instantiate lattice
+    lattice = Lattice(D, extent=D//2)
+    mask = lattice.get_circular_mask(D//2)
+
+    # instantiate volume
     V = torch.zeros((D,D,D))
     counts = torch.zeros((D,D,D))
-    
-    mask = lattice.get_circular_mask(D//2)
 
     if args.first:
         args.first = min(args.first, Nimg)
@@ -112,13 +120,10 @@ def main(args):
         iterator = range(Nimg)
 
     for ii in iterator:
-        if ii%100==0: log('image {}'.format(ii))
-        r, t = posetracker.get_pose(ii)
-        ff = data.get(ii)
-        if tilt is not None:
-            ff, ff_tilt = ff # EW
-        ff = torch.tensor(ff)
-        ff = ff.view(-1)[mask]
+        if ii%100==0: log(f'image {ii}')
+        r = rots[ii]
+        t = trans[ii] if trans is not None else None
+        ff = torch.tensor(data.get(ii)).view(-1)[mask]
         if ctf_params is not None:
             freqs = lattice.freqs2d/ctf_params[ii,0]
             c = ctf.compute_ctf(freqs, *ctf_params[ii,1:]).view(-1)[mask]
@@ -128,19 +133,8 @@ def main(args):
         ff_coord = lattice.coords[mask] @ r
         add_slice(V, counts, ff_coord, ff, D)
 
-        # tilt series
-        if args.tilt is not None:
-            ff_tilt = torch.tensor(ff_tilt)
-            ff_tilt = ff_tilt.view(-1)[mask]
-            if ctf_params is not None:
-                ff_tilt *= c.sign()
-            if t is not None:
-                ff_tilt = lattice.translate_ht(ff_tilt.view(1,-1), t.view(1,1,2), mask).view(-1)
-            ff_coord = lattice.coords[mask] @ tilt @ r
-            add_slice(V, counts, ff_coord, ff_tilt, D)
-
     td = time.time()-t1
-    log('Backprojected {} images in {}s ({}s per image)'.format(len(iterator), td, td/Nimg ))
+    log(f'Backprojected {len(iterator)} images in {td}s ({td/Nimg}s per image)')
     counts[counts == 0] = 1
     V /= counts
     V = fft.ihtn_center(V[0:-1,0:-1,0:-1].cpu().numpy())
