@@ -19,6 +19,7 @@ def main():
     import tomodrgn.commands.convergence_vae
     import tomodrgn.commands.convergence_nn
     import tomodrgn.commands.filter_star
+    import tomodrgn.commands.subtomo2chimerax
 
     modules = [tomodrgn.commands.downsample,
                tomodrgn.commands.train_nn,
@@ -32,7 +33,8 @@ def main():
                tomodrgn.commands.view_config,
                tomodrgn.commands.convergence_vae,
                tomodrgn.commands.convergence_nn,
-               tomodrgn.commands.filter_star]
+               tomodrgn.commands.filter_star,
+               tomodrgn.commands.subtomo2chimerax]
 
     subparsers = parser.add_subparsers(title='Choose a command')
     subparsers.required = 'True'
