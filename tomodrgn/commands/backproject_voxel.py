@@ -88,10 +88,12 @@ def main(args):
     rots_columns = ['_rlnAngleRot', '_rlnAngleTilt', '_rlnAnglePsi']
     euler = ptcls_star.df[rots_columns].to_numpy(dtype=np.float32)
     rots = np.asarray([utils.R_from_relion(*x) for x in euler], dtype=np.float32)
+    rots = torch.from_numpy(rots).to(device)
 
     trans_columns = ['rlnOriginX', '_rlnOriginY']
     if np.all([trans_column in ptcls_star.headers for trans_column in trans_columns]):
         trans = ptcls_star.df[trans_columns].to_numpy(dtype=np.float32)
+        trans = torch.from_numpy(trans).to(device)
     else:
         trans = None
 
@@ -100,7 +102,7 @@ def main(args):
                    '_rlnAmplitudeContrast', '_rlnPhaseShift']
     if np.all([ctf_column in ptcls_star.headers for ctf_column in ctf_columns]):
         ctf_params = ptcls_star.df[ctf_columns].to_numpy(dtype=np.float32)
-        ctf_params = torch.tensor(ctf_params)
+        ctf_params = torch.tensor(ctf_params).to(device)
     else:
         ctf_params = None
     Apix = ctf_params[0,0] if ctf_params is not None else 1
