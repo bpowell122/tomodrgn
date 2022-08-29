@@ -480,7 +480,7 @@ class TiltSeriesDatasetMaster(data.Dataset):
         log('Loading and preprocessing particles...')
         ptcls_unique_objects = {}
         nptcls = len(ptcls_unique_list)
-        ntilts_range = [0, 0]
+        ntilts_range = None
         weights_dict = {}
         dec_mask_dict = {}
         utils.print_progress_bar(0, nptcls, prefix='Progress:', length=50)
@@ -495,41 +495,48 @@ class TiltSeriesDatasetMaster(data.Dataset):
             ptcls_unique_objects[ptcl_id] = ptcl
 
             # check if ptcls_star_subset has corresponding precalculated weights; cache in dict as {input bytes: ntilts x D x D array}
-            weights_key = ptcls_star_subset.df[['_rlnCtfScalefactor', '_rlnCtfBfactor']].to_numpy(dtype=float).data.tobytes()
+            weight_informing_cols = ['_rlnCtfScalefactor', '_rlnCtfBfactor']
+            if np.all([col in ptcls_star_subset.headers for col in weight_informing_cols]):
+                weights_key = ptcls_star_subset.df[weight_informing_cols].to_numpy(dtype=float).data.tobytes()
+            else:
+                weights_key = ptcl.ntilts
             if weights_key not in weights_dict.keys():
                 tilt_weights = np.ones((ptcl.ntilts, 1, 1))
                 dose_weights = np.ones((ptcl.ntilts, ptcl.D, ptcl.D))
                 dec_mask = np.ones((ptcl.ntilts, ptcl.D, ptcl.D))
 
-                if recon_tilt_weight:
-                    tilt_weights = ptcls_star_subset.df['_rlnCtfScalefactor'].to_numpy(dtype=float).reshape(ptcl.ntilts, 1, 1)
+                if weights_key != 'no_weighting_information_therefore_uniform':
+                    if recon_tilt_weight:
+                        tilt_weights = ptcls_star_subset.df['_rlnCtfScalefactor'].to_numpy(dtype=float).reshape(ptcl.ntilts, 1, 1)
 
-                if recon_dose_weight or l_dose_mask:
-                    dose_weights = dose.calculate_dose_weights(ptcls_star_subset, dose_override, ptcl.ntilts, ptcl.D, ptcl.D, ptcl.D - 1, ptcl.D - 1)
+                    if recon_dose_weight or l_dose_mask:
+                        dose_weights = dose.calculate_dose_weights(ptcls_star_subset, dose_override, ptcl.ntilts, ptcl.D, ptcl.D, ptcl.D - 1, ptcl.D - 1)
 
-                    if l_dose_mask:
-                        dec_mask = dose_weights != 0.0
+                        if l_dose_mask:
+                            dec_mask = dose_weights != 0.0
 
-                    if recon_dose_weight:
-                        pass
-                    else:
-                        dose_weights = np.ones((ptcl.ntilts, ptcl.D, ptcl.D))
+                        if recon_dose_weight:
+                            pass
+                        else:
+                            dose_weights = np.ones((ptcl.ntilts, ptcl.D, ptcl.D))
 
                 weights_dict[weights_key] = dose_weights * tilt_weights
                 dec_mask_dict[weights_key] = dec_mask
             ptcl.weights_key = weights_key
 
             # update min and max number of tilts across all particles
-            if ptcl.ntilts > any(ntilts_range):
+            if ntilts_range is None:
+                ntilts_range = np.array([ptcl.ntilts, ptcl.ntilts])
+            if ptcl.ntilts < ntilts_range[0]:
                 ntilts_range[0] = ptcl.ntilts
-                if ptcl.ntilts > ntilts_range[1]:
-                    ntilts_range[1] = ptcl.ntilts
+            if ptcl.ntilts > ntilts_range[1]:
+                ntilts_range[1] = ptcl.ntilts
 
         # check particle boxsize consistency
         D = list(set([ptcls_unique_objects[ptcl_id].D for ptcl_id in ptcls_unique_list]))
         assert(len(D) == 1), f'All particles must have the same boxsize! Found boxsizes: {[d-1 for d in D]}'
         D = D[0]
-        log(f'Loaded {nptcls} {D-1}x{D-1} subtomo particleseries with {ntilts_range[0]} to {ntilts_range[1]} tilts')
+        log(f'Loaded {nptcls} {D-1}x{D-1} subtomo particleseries with {ntilts_range[0]} (min) to {ntilts_range[1]} (max) tilts per particle')
 
         # check how many weighting schemes were found
         log(f'Found {len(weights_dict.keys())} different weighting schemes')
@@ -543,7 +550,8 @@ class TiltSeriesDatasetMaster(data.Dataset):
             if lazy:
                 random_data_for_normalization = np.array([img.get() for ptcl_id in random_ptcls_for_normalization for img in ptcls_unique_objects[ptcl_id].images])
             else:
-                random_data_for_normalization = np.array([ptcls_unique_objects[ptcl_id].images for ptcl_id in random_ptcls_for_normalization])
+                random_data_for_normalization = np.array([ptcls_unique_objects[ptcl_id].images.flatten() for ptcl_id in random_ptcls_for_normalization], dtype=object)
+                random_data_for_normalization = np.hstack(random_data_for_normalization.flatten())  # dealing with arrays with different ntilts
             norm = [np.mean(random_data_for_normalization), np.std(random_data_for_normalization)]
             norm[0] = 0
         if not lazy:

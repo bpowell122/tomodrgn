@@ -1,0 +1,90 @@
+(tomodrgn) [bmp@node2023 tomodrgn_unittest_data]$ python /nobackup/users/bmp/software/simptcl/project3d.py ../input_vols/10076_classE_32.mrc 10076_classE_32_clean.mrcs --healpy-grid 0 --t-extent 4 --out-pose pose_classE.pkl --tilt-series tilt_scheme_classE.txt 
+2022-08-27 15:30:20     Namespace(b=20, healpy_grid=0, in_pose=None, is_mask=False, mrc='/nobackup/users/bmp/experiments/tomodrgn_sim/input_vols/10076_classE_32.mrc', out_png=None, out_pose='/nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/pose_classE.pkl', outstack='/nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/10076_classE_32_clean.mrcs', seed=None, so3_random=None, stage_tilt=None, t_extent=4.0, tilt_series='/nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/tilt_scheme_classE.txt', verbose=False)
+2022-08-27 15:30:20     Warning: /nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/pose_classE.pkl already exists. Will overwrite at the end of this script. [CTRL]+[C] to cancel.
+2022-08-27 15:30:20     Use cuda True
+2022-08-27 15:30:20     Loaded (32, 32, 32) volume
+2022-08-27 15:30:23     Loaded tilt scheme from /nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/tilt_scheme_classE.txt with 10 tilts: [  0.   3.  -3.  -6.   6.   9.  -9. -12.  12.  15.]
+2022-08-27 15:30:23     Generating 72 rotations at resolution level 0
+2022-08-27 15:30:23     Composing rotations with stage tilt series
+2022-08-27 15:30:25     Generating translations between +/- 4.0 pixels
+2022-08-27 15:30:25     Processing...
+2022-08-27 15:30:25     Projected 720 images in 4.88001012802124s (0.006777791844473945s per image)
+2022-08-27 15:30:25     Saving /nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/10076_classE_32_clean.mrcs
+2022-08-27 15:30:25     Saving /nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/pose_classE.pkl
+
+
+(tomodrgn) [bmp@node2023 tomodrgn_unittest_data]$ python /nobackup/users/bmp/software/simptcl/acn.py 10076_classE_32_clean.mrcs 10076_classE_32_sim.mrcs --out-ctf ctf_classE.pkl --Apix 13.1 --ps 90 --df-std 4000 --no-astigmatism --tilt-series tilt_scheme_classE.txt --dose 3
+2022-08-27 15:32:58     Namespace(Apix=13.1, ang=0, b=100, b_factor=None, cs=2.7, ctf=None, df_std=4000.0, dfu=15000, dfv=15000, dose=3.0, invert=True, kv=300, no_astigmatism=True, normalize=False, out_ctf='/nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/ctf_classE.pkl', out_png=None, outstack='/nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/10076_classE_32_sim.mrcs', particles='/nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/10076_classE_32_clean.mrcs', ps=90.0, seed=None, snr1=1.4, snr2=0.1, std1=None, std2=None, tilt_series='/nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/tilt_scheme_classE.txt', verbose=False, wgh=0.1)
+2022-08-27 15:32:58     Use cuda True
+2022-08-27 15:32:58     Loading particles from /nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/10076_classE_32_clean.mrcs ...
+2022-08-27 15:32:58     Loaded 720 32x32 particles
+2022-08-27 15:32:58     Normalizing input stack to 0-mean...
+2022-08-27 15:32:58     Calculating standard deviation of input stack...
+2022-08-27 15:32:58     Input stack standard deviation: 2.1059277057647705
+2022-08-27 15:32:58     Will add s1 (structural noise) with stdev 1.7798337606777594 targeting SNR 1.4
+2022-08-27 15:32:58     Will add s2 (shot noise) with stdev 6.659528137869581 targeting SNR 0.1
+2022-08-27 15:32:58     Final SNR: 0.055999999999999994
+2022-08-27 15:32:58     CTF pkl file not specified; using CTF parameters specified at command line
+2022-08-27 15:32:58     Jiggling defocus values by stdev 4000.0
+2022-08-27 15:32:58     Loaded tilt scheme from /nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/tilt_scheme_classE.txt with 10 tilts: [  0.   3.  -3.  -6.   6.   9.  -9. -12.  12.  15.]
+2022-08-27 15:32:58     Using tilt scheme to calculate further attenuation of SNR due to increasing tilt
+2022-08-27 15:32:58     Using dose 3.0e-/A2/tilt and tilt scheme to calculate exposure dependent amplitude attenuation of each spatial frequency
+2022-08-27 15:33:01     Done all configuration steps; starting processing now!
+2022-08-27 15:33:01     Added CTF and noise to 720 images in 0.09128141403198242s (0.0001267797417110867s per image)
+2022-08-27 15:33:01     Writing image stack to /nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/10076_classE_32_sim.mrcs
+2022-08-27 15:33:01     Writing ctf parameters to /nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/ctf_classE.pkl
+2022-08-27 15:33:01     Done!
+
+(tomodrgn) [bmp@node2023 tomodrgn_unittest_data]$ python /nobackup/users/bmp/software/simptcl/write_starfile.py 10076_classE_32_clean.mrcs -o 10076_classE_32_clean.star --poses pose_classE.pkl --tilt-series tilt_scheme_classE.txt --group-index 1 --Apix 13.1
+2022-08-27 15:33:59     Read in data for 720 images
+2022-08-27 15:33:59     Wrote: /nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/10076_classE_32_clean.star
+
+(tomodrgn) [bmp@node2023 tomodrgn_unittest_data]$ python /nobackup/users/bmp/software/simptcl/write_starfile.py 10076_classE_32_sim.mrcs -o 10076_classE_32_sim.star --poses pose_classE.pkl --tilt-series tilt_scheme_classE.txt --group-index 1 --Apix 13.1 --ctf ctf_classE.pkl --dose 3
+2022-08-27 15:34:28     Read in data for 720 images
+2022-08-27 15:34:28     Wrote: /nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/10076_classE_32_sim.star
+
+
+(tomodrgn) [bmp@node2023 tomodrgn_unittest_data]$ python /nobackup/users/bmp/software/simptcl/project3d.py ../input_vols/10076_classD_32.mrc 10076_classD_32_clean.mrcs --healpy-grid 0 --t-extent 4 --out-pose pose_classD.pkl --tilt-series tilt_scheme_classD.txt
+2022-08-27 15:35:53     Namespace(b=20, healpy_grid=0, in_pose=None, is_mask=False, mrc='/nobackup/users/bmp/experiments/tomodrgn_sim/input_vols/10076_classD_32.mrc', out_png=None, out_pose='/nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/pose_classD.pkl', outstack='/nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/10076_classD_32_clean.mrcs', seed=None, so3_random=None, stage_tilt=None, t_extent=4.0, tilt_series='/nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/tilt_scheme_classD.txt', verbose=False)
+2022-08-27 15:35:53     Use cuda True
+2022-08-27 15:35:53     Loaded (32, 32, 32) volume
+2022-08-27 15:35:56     Loaded tilt scheme from /nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/tilt_scheme_classD.txt with 8 tilts: [  0.   3.  -3.  -6.   6.   9.  -9. -12.]
+2022-08-27 15:35:56     Generating 72 rotations at resolution level 0
+2022-08-27 15:35:56     Composing rotations with stage tilt series
+2022-08-27 15:35:58     Generating translations between +/- 4.0 pixels
+2022-08-27 15:35:58     Processing...
+2022-08-27 15:35:58     Projected 576 images in 4.7086663246154785s (0.00817476792467965s per image)
+2022-08-27 15:35:58     Saving /nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/10076_classD_32_clean.mrcs
+2022-08-27 15:35:58     Saving /nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/pose_classD.pkl
+
+(tomodrgn) [bmp@node2023 tomodrgn_unittest_data]$ python /nobackup/users/bmp/software/simptcl/acn.py 10076_classD_32_clean.mrcs 10076_classD_32_sim.mrcs --out-ctf ctf_classD.pkl --Apix 13.1 --ps 90 --df-std 4000 --no-astigmatism --tilt-series tilt_scheme_classD.txt --dose 2
+2022-08-27 15:36:34     Namespace(Apix=13.1, ang=0, b=100, b_factor=None, cs=2.7, ctf=None, df_std=4000.0, dfu=15000, dfv=15000, dose=2.0, invert=True, kv=300, no_astigmatism=True, normalize=False, out_ctf='/nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/ctf_classD.pkl', out_png=None, outstack='/nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/10076_classD_32_sim.mrcs', particles='/nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/10076_classD_32_clean.mrcs', ps=90.0, seed=None, snr1=1.4, snr2=0.1, std1=None, std2=None, tilt_series='/nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/tilt_scheme_classD.txt', verbose=False, wgh=0.1)
+2022-08-27 15:36:34     Use cuda True
+2022-08-27 15:36:34     Loading particles from /nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/10076_classD_32_clean.mrcs ...
+2022-08-27 15:36:34     Loaded 576 32x32 particles
+2022-08-27 15:36:34     Normalizing input stack to 0-mean...
+2022-08-27 15:36:34     Calculating standard deviation of input stack...
+2022-08-27 15:36:34     Input stack standard deviation: 2.1900253295898438
+2022-08-27 15:36:34     Will add s1 (structural noise) with stdev 1.8509092252660784 targeting SNR 1.4
+2022-08-27 15:36:34     Will add s2 (shot noise) with stdev 6.925468174964855 targeting SNR 0.1
+2022-08-27 15:36:34     Final SNR: 0.055999999999999994
+2022-08-27 15:36:34     CTF pkl file not specified; using CTF parameters specified at command line
+2022-08-27 15:36:34     Jiggling defocus values by stdev 4000.0
+2022-08-27 15:36:34     Loaded tilt scheme from /nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/tilt_scheme_classD.txt with 8 tilts: [  0.   3.  -3.  -6.   6.   9.  -9. -12.]
+2022-08-27 15:36:34     Using tilt scheme to calculate further attenuation of SNR due to increasing tilt
+2022-08-27 15:36:34     Using dose 2.0e-/A2/tilt and tilt scheme to calculate exposure dependent amplitude attenuation of each spatial frequency
+2022-08-27 15:36:37     Done all configuration steps; starting processing now!
+2022-08-27 15:36:37     Added CTF and noise to 576 images in 0.07976841926574707s (0.00013848683900303312s per image)
+2022-08-27 15:36:37     Writing image stack to /nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/10076_classD_32_sim.mrcs
+2022-08-27 15:36:37     Writing ctf parameters to /nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/ctf_classD.pkl
+2022-08-27 15:36:37     Done!
+
+(tomodrgn) [bmp@node2023 tomodrgn_unittest_data]$ python /nobackup/users/bmp/software/simptcl/write_starfile.py 10076_classD_32_clean.mrcs -o 10076_classD_32_clean.star --poses pose_classD.pkl --tilt-series tilt_scheme_classD.txt --group-index 0 --Apix 13.1
+2022-08-27 15:37:07     Read in data for 576 images
+2022-08-27 15:37:07     Wrote: /nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/10076_classD_32_clean.star
+
+(tomodrgn) [bmp@node2023 tomodrgn_unittest_data]$ python /nobackup/users/bmp/software/simptcl/write_starfile.py 10076_classD_32_sim.mrcs -o 10076_classD_32_sim.star --poses pose_classD.pkl --tilt-series tilt_scheme_classD.txt --group-index 0 --Apix 13.1 --ctf ctf_classD.pkl --dose 2
+2022-08-27 15:37:39     Read in data for 576 images
+2022-08-27 15:37:39     Wrote: /nobackup/users/bmp/experiments/tomodrgn_sim/tomodrgn_unittest_data/10076_classD_32_sim.star
+
+

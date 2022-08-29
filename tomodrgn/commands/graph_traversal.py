@@ -5,8 +5,8 @@ import torch
 import argparse
 import pickle
 import numpy as np
-import os
-
+import os, sys
+from tomodrgn import utils
 from heapq import heappush, heappop
 
 def add_args(parser):
@@ -16,9 +16,10 @@ def add_args(parser):
     parser.add_argument('--avg-neighbors', type=float, default=5)
     parser.add_argument('--batch-size', type=int, default=1000)
     parser.add_argument('--max-images', type=int, default=None)
-    parser.add_argument('-o', metavar='PATH.TXT', type=os.path.abspath, required=True, help='Output .txt file for path indices')
-    parser.add_argument('--out-z', metavar='Z.PATH.TXT', type=os.path.abspath, required=True, help='Output .txt file for path z-values')
+    parser.add_argument('-o', type=os.path.abspath, required=True, help='Output .txt or .pkl file for path indices')
+    parser.add_argument('--out-z', type=os.path.abspath, required=True, help='Output .txt or .pkl file for path z-values')
     return parser
+
 
 class Graph(object):
 
@@ -73,7 +74,6 @@ class Graph(object):
         return None, None
 
 
-
 def main(args):
     data_np = pickle.load(open(args.data, 'rb'))
     data = torch.from_numpy(data_np)
@@ -101,7 +101,7 @@ def main(args):
         batch_dist = n2[i:i+B] + n2.t() - 2 * torch.mm(data[i:i+B], data.t())
         ndist[i:i+B], neighbors[i:i+B] = batch_dist.topk(args.max_neighbors, dim=-1, largest=False)
 
-    assert ndist.min() >= -1e-3, ndist.min()
+    # assert ndist.min() >= -1e-3, ndist.min()
 
     # convert d^2 to d
     ndist = ndist.clamp(min=0).pow(0.5)
@@ -154,9 +154,19 @@ def main(args):
     if not os.path.exists(os.path.dirname(args.o)):
         os.makedirs(os.path.dirname(args.o))
     print(args.o)
-    np.savetxt(args.o,full_path,fmt='%d')
+    if args.o.endswith('.txt'):
+        np.savetxt(args.o, full_path, fmt='%d')
+    elif args.o.endswith('.pkl'):
+        utils.save_pkl(full_path, args.o)
+    else:
+        sys.exit(f'Output format {args.o} not recognized')
     print(args.out_z)
-    np.savetxt(args.out_z, data_np[full_path])
+    if args.out_z.endswith('.txt'):
+        np.savetxt(args.out_z, data_np[full_path])
+    elif args.out_z.endswith('.pkl'):
+        utils.save_pkl(data_np[full_path], args.out_z)
+    else:
+        sys.exit(f'Output format {args.out_z} not recognized')
 
 
 if __name__ == '__main__':

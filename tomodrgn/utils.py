@@ -171,12 +171,12 @@ def zero_sphere(vol):
     vol[tmp] = 0
     return vol
 
-def calc_fsc(vol1_path, vol2_path, mask = None, dilate = 3, dist = 10):
+def calc_fsc(vol1_path, vol2_path, mask = 'none', dilate = 3, dist = 10):
     '''
     Function to calculate the FSC between two volumes
     vol1: path to volume1.mrc, boxsize D,D,D
     vol2: path to volume2.mrc, boxsize D,D,D
-    mask: one of [None, 'sphere', 'tight', 'soft', path to mask.mrc with boxsize D,D,D]
+    mask: one of ['none', 'sphere', 'tight', 'soft', path to mask.mrc with boxsize D,D,D]
     dilate: int of px to expand tight mask when creating soft mask
     dist: int of px over which to apply soft edge when creating soft mask
     '''
@@ -196,7 +196,7 @@ def calc_fsc(vol1_path, vol2_path, mask = None, dilate = 3, dist = 10):
     bin_labels = np.searchsorted(bins, r, side='left')  # bin_label=0 is DC, bin_label=r_max is highest included freq, bin_label=r_max+1 is frequencies excluded by D//2 spherical mask
 
     # prepare mask
-    if mask == None:
+    if mask == 'none':
         mask = np.ones_like(vol1)
     elif mask == 'sphere':
         mask = np.where(r <= D//2, True, False)

@@ -33,7 +33,7 @@ def add_args(parser):
     parser.add_argument('--load', metavar='WEIGHTS.PKL', help='Initialize training from a checkpoint')
     parser.add_argument('--checkpoint', type=int, default=1, help='Checkpointing interval in N_EPOCHS (default: %(default)s)')
     parser.add_argument('--log-interval', type=int, default=200, help='Logging interval in N_PTCLS (default: %(default)s)')
-    parser.add_argument('-v', '--verbose', action='store_true', help='Increaes verbosity')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Increases verbosity')
     parser.add_argument('--seed', type=int, default=np.random.randint(0,100000), help='Random seed')
 
     group = parser.add_argument_group('Dataset loading')
@@ -54,9 +54,9 @@ def add_args(parser):
 
     group = parser.add_argument_group('Training parameters')
     group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs')
-    group.add_argument('-b','--batch-size', type=int, default=8, help='Minibatch size')
+    group.add_argument('-b','--batch-size', type=int, default=1, help='Minibatch size')
     group.add_argument('--wd', type=float, default=0, help='Weight decay in Adam optimizer')
-    group.add_argument('--lr', type=float, default=1e-4, help='Learning rate in Adam optimizer')
+    group.add_argument('--lr', type=float, default=0.0002, help='Learning rate in Adam optimizer')
     group.add_argument('--beta', default=None, help='Choice of beta schedule or a constant for KLD weight')
     group.add_argument('--beta-control', type=float, help='KL-Controlled VAE gamma. Beta is KL target')
     group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: 0, std of dataset)')
@@ -240,17 +240,21 @@ def eval_z(model, lattice, data, batch_size, device, use_amp=False):
             z_mu_all = []
             z_logvar_all = []
             data_generator = DataLoader(data, batch_size=batch_size, shuffle=False)
-            for batch_images, _, _, batch_ctf, _, _, _ in data_generator:
-                y = batch_images.to(device)
-                B = y.size(0)
-                ntilts = y.size(1)
-                D = lattice.D
-                y = y.view(B, ntilts, D, D)
-                if batch_ctf is not None:
+            for batch_images, _, batch_tran, batch_ctf, _, _, _ in data_generator:
+                B, ntilts, D, D = batch_images.shape
+
+                # correct for translations
+                if not torch.all(batch_tran == 0):
+                    batch_images = lattice.translate_ht(batch_images.view(B * ntilts, -1), batch_tran.view(B * ntilts, 1, 2))
+                batch_images = batch_images.view(B, ntilts, D, D)
+
+                # correct for CTF via phase flipping
+                if not torch.all(batch_ctf == 0):
                     freqs = lattice.freqs2d.unsqueeze(0).expand(B * ntilts, -1, -1) / batch_ctf[:,:,1].view(B * ntilts, 1, 1)
                     ctf_weights = ctf.compute_ctf(freqs, *torch.split(batch_ctf.view(B*ntilts,-1)[:, 2:], 1, 1)).view(B, ntilts, D, D)
-                    y *= ctf_weights.sign() # phase flip by the ctf
-                z_mu, z_logvar = _unparallelize(model).encode(y, B, ntilts)
+                    batch_images *= ctf_weights.sign()
+
+                z_mu, z_logvar = _unparallelize(model).encode(batch_images, B, ntilts)
                 z_mu_all.append(z_mu.detach().cpu().numpy())
                 z_logvar_all.append(z_logvar.detach().cpu().numpy())
             z_mu_all = np.vstack(z_mu_all)
@@ -326,8 +330,6 @@ def main(args):
                                            l_dose_mask=args.l_dose_mask, lazy=args.lazy)
     D = data.D
     nptcls = data.nptcls
-    Apix = data.ptcls[data.ptcls_list[0]].ctf[0,1] if not np.all(data.ptcls[data.ptcls_list[0]].ctf == 0) else args.Apix
-    flog(f'Pixels per particle: {data.ptcls[data.ptcls_list[0]].D ** 2 * data.ptcls[data.ptcls_list[0]].ntilts} ')
 
     # instantiate lattice
     lattice = Lattice(D, extent=args.l_extent, device=device)
@@ -349,7 +351,7 @@ def main(args):
     flog(f'Pixels encoded per tilt (+ enc-mask):  {in_dim.sum()}')
 
     # determine which pixels to decode (cache by related weights_dict keys)
-    flog(f'Constructing baseline circular lattice for decoder with radius {lattice.D // 2}')
+    flog(f'Constructing circular coordinate lattice for decoder with radius {lattice.D // 2} px')
     lattice_mask = lattice.get_circular_mask(lattice.D // 2) # reconstruct box-inscribed circle of pixels
     for i, weights_key in enumerate(data.weights_dict.keys()):
         dec_mask = (data.dec_mask_dict[weights_key] * lattice_mask.view(1, D, D).cpu().numpy()).astype(dtype=bool)  # lattice mask excludes DC and > nyquist frequencies; weights mask excludes > optimal dose
@@ -366,9 +368,9 @@ def main(args):
             f'The number of tilts requested to be sampled per particle ({args.sample_ntilts}) ' \
             f'exceeds the number of tilt images for at least one particle ({data.ntilts_range[0]})'
         data.ntilts_training = args.sample_ntilts
-        flog(f'Sampling {args.sample_ntilts} tilts per particle')
     else:
         data.ntilts_training = data.ntilts_range[0]
+    flog(f'Sampling {data.ntilts_training} tilts per particle')
 
     # instantiate model
     activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]
@@ -456,7 +458,7 @@ def main(args):
                 log(f'# [Train Epoch: {epoch+1}/{args.num_epochs}] [{batch_it}/{nptcls} subtomos] gen loss={gen_loss:.6f}, kld={kld:.6f}, beta={beta:.6f}, loss={loss:.6f}')
 
         flog(f'# =====> Epoch: {epoch+1} Average gen loss = {gen_loss_accum/batch_it:.6}, KLD = {kld_accum/batch_it:.6f}, total loss = {loss_accum/batch_it:.6f}; Finished in {dt.now()-t2}')
-        if args.checkpoint and epoch % args.checkpoint == 0:
+        if args.checkpoint and (epoch+1) % args.checkpoint == 0:
             flog(f'GPU memory usage: {utils.check_memory_usage()}')
             out_weights = f'{args.outdir}/weights.{epoch}.pkl'
             out_z = f'{args.outdir}/z.{epoch}.pkl'

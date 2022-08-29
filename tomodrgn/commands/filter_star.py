@@ -8,16 +8,16 @@ import numpy as np
 import copy
 from tomodrgn import starfile, utils
 
-def parse_args():
-    parser = argparse.ArgumentParser(description=__doc__)
+def add_args(parser):
     parser.add_argument('input', help='Input .star file')
-    parser.add_argument('--input-type', choices=('warp_imageseries', 'warp_volumeseries', 'm_volumeseries'),
-                        default='warp_imageseries', help='input data .star format (subtomos as images vs as volumes')
+    parser.add_argument('--tomo-id-col', type=str, default='_rlnMicrographName', help='Name of column in input starfile with unique values per tomogram')
+    parser.add_argument('--ptcl-id-col', type=str, default='_rlnGroupName', help='Name of column in input starfile with unique values per particle, '
+                                                                                 'if `index` then each row is treated as a unique particle')
     parser.add_argument('--ind', help='selected indices array (.pkl)')
     parser.add_argument('--ind-type', choices=('particle', 'image'), default='particle',
                         help='use indices to filter by particle, by individual image, or by tilt index')
     parser.add_argument('--tomogram', type=str,
-                        help='optionally select by individual tomogram name (`all` means write individual star files per tomogram')
+                        help='optionally select by individual tomogram name (if `all` then writes individual star files per tomogram')
     parser.add_argument('--action', choices=('keep', 'drop'), default='keep',
                         help='keep or remove particles associated with ind.pkl')
     parser.add_argument('-o', required=True, help='Output .star file')
@@ -33,21 +33,6 @@ def check_invert_indices(args, in_ind, all_ind):
         ind_to_drop = in_ind
     return ind_to_drop
 
-def configure_dataframe_filtering_headers(in_star, args):
-    if args.input_type == 'warp_imageseries':
-        unique_particle_header = '_rlnGroupName'
-        unique_tomo_header = '_rlnImageName'
-        assert unique_particle_header in in_star.blocks['data_'].columns, f'Cound not find {unique_particle_header} in star file, please check --input-type'
-        assert unique_tomo_header in in_star.blocks['data_'].columns, f'Cound not find {unique_tomo_header} in star file, please check --input-type'
-    elif args.input_type == 'warp_volumeseries':
-        unique_particle_header = None # each row is a unique particle
-        unique_tomo_header = '_rlnMicrographName'
-        assert unique_tomo_header in in_star.blocks['data_'].columns, f'Cound not find {unique_tomo_header} in star file, please check --input-type'
-    elif args.input_type == 'm_volumeseries':
-        unique_particle_header = None # each row is a unique particle
-        unique_tomo_header = '_rlnMicrographName'
-        assert unique_tomo_header in in_star.blocks['data_'].columns, f'Cound not find {unique_tomo_header} in star file, please check --input-type'
-    return unique_particle_header, unique_tomo_header
 
 def main(args):
     # ingest star file
@@ -67,8 +52,13 @@ def main(args):
         print(f'Particles will be filtered by tomogram : {args.tomogram}')
 
     # configure filtering for input data type
-    unique_particle_header, unique_tomo_header = configure_dataframe_filtering_headers(in_star, args)
-
+    unique_tomo_header = args.tomo_id_col
+    assert unique_tomo_header in in_star.blocks['data_'].columns, f'{unique_tomo_header} not found in starfile `data_` block'
+    if args.ptcl_id_col == 'index':
+        unique_particle_header = None
+    else:
+        unique_particle_header = args.ptcl_id_col
+        assert unique_particle_header in in_star.blocks['data_'].columns, f'{unique_particle_header} not found in starfile `data_` block'
 
     if args.ind:
         # what stride / df column to which to apply the indices
@@ -149,4 +139,7 @@ def main(args):
     in_star.write(args.o)
 
 if __name__ == '__main__':
-    main(parse_args().parse_args())
+    parser = argparse.ArgumentParser(description=__doc__)
+    args = add_args(parser).parse_args()
+    utils._verbose = args.verbose
+    main(args)

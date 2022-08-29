@@ -485,14 +485,14 @@ def generate_volumes(workdir, outdir, epochs, Apix, flip, invert, downsample, cu
         analysis.gen_volumes(weights, config, zfile, volsdir, Apix=Apix, flip=flip, invert=invert, downsample=downsample, cuda=cuda)
 
 
-def mask_volume(volpath, outpath, Apix, thresh=None, dilate=3, dist=10):
+def mask_volume(volpath, vol_outpath, Apix, mask_outpath=None, thresh=None, dilate=3, dist=10):
     '''
     Helper function to generate a loose mask around the input density
     Density is thresholded to 50% maximum intensity, dilated outwards, and a soft cosine edge is applied
 
     Inputs
         volpath: an absolute path to the volume to be used for masking
-        outpath: an absolute path to write out the mask mrc
+        outpath: an absolute path to write out the masked volume mrc
         thresh: what intensity threshold between [0, 100] to apply
         dilate: how far to dilate the thresholded density outwards
         dist: how far the cosine edge extends from the density
@@ -512,10 +512,10 @@ def mask_volume(volpath, outpath, Apix, thresh=None, dilate=3, dist=10):
     assert np.all(z >= 0)
     assert np.all(z <= 1)
 
-    # used to write out mask separately from masked volume, now apply and save the masked vol to minimize future I/O
-    # mrc.write(outpath, z.astype(np.float32))
     vol *= z
-    mrc.write(outpath, vol.astype(np.float32), Apix=Apix)
+    mrc.write(vol_outpath, vol.astype(np.float32), Apix=Apix)
+    if mask_outpath is not None:
+        mrc.write(mask_outpath, z.astype(np.float32))
 
 
 def mask_volumes(outdir, epochs, labels, max_threads, LOG, Apix, thresh=None, dilate=3, dist=10):
@@ -615,37 +615,6 @@ def calculate_FSCs(outdir, epochs, labels, img_size, chimerax_colors, LOG):
     TODO: accelerate via multiprocessing (create iterable list of calc_fsc calls?)
 
     '''
-    def calc_fsc(vol1_path, vol2_path):
-        '''
-        Helper function to calculate the FSC between two (assumed masked) volumes
-        vol1 and vol2 should be maps of the same box size, structured as numpy arrays with ndim=3, i.e. by loading with tomodrgn.mrc.parse_mrc
-        '''
-        # load masked volumes in fourier space
-        vol1, _ = mrc.parse_mrc(vol1_path)
-        vol2, _ = mrc.parse_mrc(vol2_path)
-
-        vol1_ft = fft.fftn_center(vol1)
-        vol2_ft = fft.fftn_center(vol2)
-
-        # define fourier grid and label into shells
-        D = vol1.shape[0]
-        x = np.arange(-D // 2, D // 2)
-        x0, x1, x2 = np.meshgrid(x, x, x, indexing='ij')
-        r = np.sqrt(x0 ** 2 + x1 ** 2 + x2 ** 2)
-        r_max = D // 2  # sphere inscribed within volume box
-        r_step = 1  # int(np.min(r[r>0]))
-        bins = np.arange(0, r_max, r_step)
-        bin_labels = np.searchsorted(bins, r, side='right')
-
-        # calculate the FSC via labeled shells
-        num = ndimage.sum(np.real(vol1_ft * np.conjugate(vol2_ft)), labels=bin_labels, index=bins + 1)
-        den1 = ndimage.sum(np.abs(vol1_ft) ** 2, labels=bin_labels, index=bins + 1)
-        den2 = ndimage.sum(np.abs(vol2_ft) ** 2, labels=bin_labels, index=bins + 1)
-        fsc = num / np.sqrt(den1 * den2)
-
-        x = bins / D  # x axis should be spatial frequency in 1/px
-        return x, fsc
-
     # calculate masked FSCs for all volumes
     fsc_masked = np.zeros((len(labels), len(epochs) - 1, img_size // 2))
 
@@ -656,7 +625,7 @@ def calculate_FSCs(outdir, epochs, labels, img_size, chimerax_colors, LOG):
             vol1_path = outdir + '/vols.{}/vol_{:03d}.masked.mrc'.format(epochs[i], cluster)
             vol2_path = outdir + '/vols.{}/vol_{:03d}.masked.mrc'.format(epochs[i + 1], cluster)
 
-            x, fsc_masked[cluster, i, :] = calc_fsc(vol1_path, vol2_path)
+            x, fsc_masked[cluster, i, :] = utils.calc_fsc(vol1_path, vol2_path, mask='soft')
 
     utils.save_pkl(fsc_masked, outdir + '/fsc_masked.pkl')
     utils.save_pkl(x, outdir + '/fsc_xaxis.pkl')
@@ -700,78 +669,8 @@ def calculate_FSCs(outdir, epochs, labels, img_size, chimerax_colors, LOG):
     flog(f'Saved map-map FSC (Nyquist) plot to {outdir}/plots/07_decoder_FSC-nyquist.png', LOG)
 
 
-def make_mask_union(outdir, dilate, thresh, epochs, labels):
-    if thresh is None:
-        thresh = []
-        for epoch in epochs:
-            for cluster in range(len(labels)):
-                vol = mrc.parse_mrc(f'{outdir}/vols.{epoch}/vol_{cluster:03d}.mrc')[0]
-                thresh.append(np.percentile(vol, 99.99) / 2)
-        thresh = np.mean(thresh)
-    log(f'Threshold: {thresh}')
-    log(f'Dilating mask by: {dilate}')
-
-    def binary_mask(vol):
-        x = (vol >= thresh).astype(bool)
-        x = binary_dilation(x, iterations=dilate)
-        return x
-
-    # combine all masks by taking their union
-    vol = mrc.parse_mrc(f'{outdir}/kmeans{K}/vol_000.mrc')[0]
-    mask = ~binary_mask(vol)
-    for epoch in epochs:
-        for cluster in range(len(labels)):
-            vol = mrc.parse_mrc(f'{outdir}/vols.{epoch}/vol_{cluster:03d}.mrc')[0]
-            mask *= ~binary_mask(vol)
-    mask = ~mask
-
-    # save mask
-    out_mrc = f'{outdir}/mask_global.mrc'
-    log(f'Saving {out_mrc}')
-    mrc.write(out_mrc, mask.astype(np.float32))
-
-    # view slices
-    out_png = f'{outdir}/mask_global_slices.png'
-    D = vol.shape[0]
-    fig, ax = plt.subplots(1, 3, figsize=(10, 8))
-    ax[0].imshow(mask[D // 2, :, :])
-    ax[1].imshow(mask[:, D // 2, :])
-    ax[2].imshow(mask[:, :, D // 2])
-    plt.savefig(out_png)
-
 def calculate_nxn_gold_standard_FSCs(outdir, epochs, labels, img_size, chimerax_colors, LOG):
-
-    def calc_fsc(vol1, vol2):
-        '''
-        Helper function to calculate the FSC between two (assumed masked) volumes
-        vol1 and vol2 should be maps of the same box size, structured as numpy arrays with ndim=3, i.e. by loading with tomodrgn.mrc.parse_mrc
-        '''
-        # load masked volumes in fourier space
-        vol1_ft = fft.fftn_center(vol1)
-        vol2_ft = fft.fftn_center(vol2)
-
-        # define fourier grid and label into shells
-        D = vol1.shape[0]
-        x = np.arange(-D // 2, D // 2)
-        x0, x1, x2 = np.meshgrid(x, x, x, indexing='ij')
-        r = np.sqrt(x0 ** 2 + x1 ** 2 + x2 ** 2)
-        r_max = D // 2  # sphere inscribed within volume box
-        r_step = 1  # int(np.min(r[r>0]))
-        bins = np.arange(0, r_max, r_step)
-        bin_labels = np.searchsorted(bins, r, side='right')
-
-        # calculate the FSC via labeled shells
-        num = ndimage.sum(np.real(vol1_ft * np.conjugate(vol2_ft)), labels=bin_labels, index=bins + 1)
-        den1 = ndimage.sum(np.abs(vol1_ft) ** 2, labels=bin_labels, index=bins + 1)
-        den2 = ndimage.sum(np.abs(vol2_ft) ** 2, labels=bin_labels, index=bins + 1)
-        fsc = num / np.sqrt(den1 * den2)
-
-        x = bins / D  # x axis should be spatial frequency in 1/px
-        if np.all(fsc >=0.143):
-            gold_standard_res = x[-1]
-        else:
-            gold_standard_res = x[np.argmax(fsc < 0.143)]
-        return gold_standard_res
+# TODO expand this functionality as potential convergence criterion
 
     # calculate masked FSCs for all volumes
     fsc_gold_standard = np.zeros((len(epochs)-1, len(labels), len(labels)))
@@ -786,7 +685,7 @@ def calculate_nxn_gold_standard_FSCs(outdir, epochs, labels, img_size, chimerax_
         efficient_matrix_inds = np.triu_indices(len(labels), 1)
         inds_A, inds_B = efficient_matrix_inds
         for ind_A, ind_B in zip(inds_A, inds_B):
-            fsc_gold_standard[i, ind_A, ind_B] = calc_fsc(vols[ind_A], vols[ind_B])
+            fsc_gold_standard[i, ind_A, ind_B] = utils.calc_fsc(vols[ind_A], vols[ind_B], mask='soft')
 
     utils.save_pkl(fsc_gold_standard, outdir + '/fsc_nxn.pkl')
 
@@ -924,8 +823,7 @@ def main(args):
     flog(f'Finished in {dt.now() - t1}', LOG)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     epilog='Example usage: $ tomodrgn analyze_convergence 01_128_8D_256 49',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    add_args(parser)
-    main(parser.parse_args())
+    parser = argparse.ArgumentParser(description=__doc__)
+    args = add_args(parser).parse_args()
+    utils._verbose = args.verbose
+    main(args)

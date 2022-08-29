@@ -12,7 +12,7 @@ def add_args(parser):
     parser.add_argument('reference_volume', type=os.path.abspath, help='volume against which to calculate FSC')
     parser.add_argument('--max-epoch', type=int, help='Maximum epoch for which to calculate FSCs')
     parser.add_argument('--include-dc', action='store_true', help='Include FSC calculation for DC component, default False because DC component default excluded during training')
-    parser.add_argument('--fsc-mask', choices=(None, 'sphere', 'tight', 'soft'), default='soft', help='Type of mask applied to volumes before calculating FSC')
+    parser.add_argument('--fsc-mask', choices=('none', 'sphere', 'tight', 'soft'), default='soft', help='Type of mask applied to volumes before calculating FSC')
     return parser
 
 

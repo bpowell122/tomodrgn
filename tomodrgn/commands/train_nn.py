@@ -29,8 +29,8 @@ def add_args(parser):
     parser.add_argument('particles', type=os.path.abspath, help='Input particles (.mrcs, .star, .cs, or .txt)')
     parser.add_argument('-o', '--outdir', type=os.path.abspath, required=True, help='Output directory to save model')
     parser.add_argument('--load', metavar='WEIGHTS.PKL', help='Initialize training from a checkpoint')
-    parser.add_argument('--checkpoint', type=int, default=1, help='Checkpointing interval in N_EPOCHS (default: %(default)s)')
-    parser.add_argument('--log-interval', type=int, default=200, help='Logging interval in N_PTCLS (default: %(default)s)')
+    parser.add_argument('--checkpoint', type=int, default=1, help='Checkpointing interval in N_EPOCHS')
+    parser.add_argument('--log-interval', type=int, default=200, help='Logging interval in N_PTCLS')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increases verbosity')
     parser.add_argument('--seed', type=int, default=np.random.randint(0, 100000), help='Random seed')
 
@@ -38,7 +38,7 @@ def add_args(parser):
     group.add_argument('--ind', type=os.path.abspath, help='Filter particle stack by these indices')
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
     group.add_argument('--no-window', dest='window', action='store_false', help='Turn off real space windowing of dataset')
-    group.add_argument('--window-r', type=float, default=.85, help='Windowing radius (default: %(default)s)')
+    group.add_argument('--window-r', type=float, default=.85, help='Windowing radius')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory')
     group.add_argument('--Apix', type=float, default=1.0, help='Override A/px from input starfile; useful if starfile does not have _rlnDetectorPixelSize col')
@@ -51,21 +51,21 @@ def add_args(parser):
     group.add_argument('--sample-ntilts', type=int, default=None, help='Number of tilts to sample from each particle per epoch. Default: min(ntilts) from dataset')
 
     group = parser.add_argument_group('Training parameters')
-    group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs (default: %(default)s)')
-    group.add_argument('-b', '--batch-size', type=int, default=1, help='Minibatch size (default: %(default)s)')
-    group.add_argument('--wd', type=float, default=0, help='Weight decay in Adam optimizer (default: %(default)s)')
-    group.add_argument('--lr', type=float, default=0.0002, help='Learning rate in Adam optimizer (default: %(default)s)')
+    group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs')
+    group.add_argument('-b', '--batch-size', type=int, default=1, help='Minibatch size')
+    group.add_argument('--wd', type=float, default=0, help='Weight decay in Adam optimizer')
+    group.add_argument('--lr', type=float, default=0.0002, help='Learning rate in Adam optimizer (scale linearly with --batch-size)')
     group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: mean, std of dataset)')
     group.add_argument('--no-amp', action='store_true', help='Disable use of mixed-precision training')
     group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs. Specify GPUs i,j via `export CUDA_VISIBLE_DEVICES=i,j` before tomodrgn train_vae')
 
     group = parser.add_argument_group('Network Architecture')
-    group.add_argument('--layers', type=int, default=3, help='Number of hidden layers (default: %(default)s)')
-    group.add_argument('--dim', type=int, default=256, help='Number of nodes in hidden layers (default: %(default)s)')
-    group.add_argument('--l-extent', type=float, default=0.5, help='Coordinate lattice size (if not using positional encoding) (default: %(default)s)')
+    group.add_argument('--layers', type=int, default=3, help='Number of hidden layers')
+    group.add_argument('--dim', type=int, default=256, help='Number of nodes in hidden layers')
+    group.add_argument('--l-extent', type=float, default=0.5, help='Coordinate lattice size (if not using positional encoding)')
     group.add_argument('--pe-type', choices=('geom_ft','geom_full','geom_lowf','geom_nohighf','linear_lowf', 'gaussian', 'none'), default='geom_lowf', help='Type of positional encoding')
     group.add_argument('--pe-dim', type=int, help='Num sinusoid features in positional encoding (default: D/2)')
-    group.add_argument('--activation', choices=('relu', 'leaky_relu'), default='relu', help='Activation (default: %(default)s)')
+    group.add_argument('--activation', choices=('relu', 'leaky_relu'), default='relu', help='Activation')
     group.add_argument('--feat-sigma', type=float, default=0.5, help="Scale for random Gaussian features")
     return parser
 
@@ -227,7 +227,7 @@ def main(args):
                                            l_dose_mask=args.l_dose_mask, lazy=args.lazy)
     D = data.D
     nptcls = data.nptcls
-    Apix = data.ptcls[data.ptcls_list[0]].ctf[0,1] if not np.all(data.ptcls[data.ptcls_list[0]].ctf == 0) else args.Apix
+    Apix = data.ptcls[data.ptcls_list[0]].ctf[0,1] if data.ptcls[data.ptcls_list[0]].ctf is not None else args.Apix
     flog(f'Pixels per particle: {data.ptcls[data.ptcls_list[0]].D ** 2 * data.ptcls[data.ptcls_list[0]].ntilts} ')
 
     # instantiate lattice
@@ -251,9 +251,9 @@ def main(args):
             f'The number of tilts requested to be sampled per particle ({args.sample_ntilts}) ' \
             f'exceeds the number of tilt images for at least one particle ({data.ntilts_range[0]})'
         data.ntilts_training = args.sample_ntilts
-        flog(f'Sampling {args.sample_ntilts} tilts per particle for training')
     else:
         data.ntilts_training = data.ntilts_range[0]
+    flog(f'Sampling {data.ntilts_training} tilts per particle for training')
 
     # instantiate model
     activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]

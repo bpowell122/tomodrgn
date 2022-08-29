@@ -1,5 +1,7 @@
 '''
 Downsample an image stack or volume by clipping fourier frequencies
+CAUTION: Not explicitly checked for tomoDRGN compatibility.
+Recommended to re-extract particles at different box size in Warp rather than use this script
 '''
 
 import argparse
