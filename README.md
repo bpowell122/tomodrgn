@@ -35,10 +35,14 @@ TomoDRGN shares essentially all of cryoDRGN's dependencies, with the addition of
     cd tomodrgn
     python setup.py install
 
+    # Optional: verify code/dependency functionality (~10 minutes)
+    cd testing
+    bash ./unittest.sh
+
 ## Example usage
 Below are minimal examples of various common tomoDRGN commands. By design, syntax parallels cryoDRGN's syntax where possible. All commands require initialization of the conda environment: `conda activate tomodrgn`
 
-1. Train a decoder-only network to learn a homogeneous structure: `tomodrgn train_nn particles_imageseries.star --outdir 01_nn_particles --batch-size 1 --num-epochs 30`
+1. Train a decoder-only network to learn a homogeneous structure: `tomodrgn train_nn particles_imageseries.star --outdir 01_nn_particles --num-epochs 30`
     <details> 
         <summary> Click to see all options: <code> tomodrgn train_nn --help </code> </summary>
    
@@ -58,79 +62,80 @@ Below are minimal examples of various common tomoDRGN commands. By design, synta
                          [--feat-sigma FEAT_SIGMA]
                          particles
 
-       Train a NN to model a 3D density map given 2D images from a tilt series with
-       consensus pose assignments
-
-       positional arguments:
-         particles             Input particles (.mrcs, .star, .cs, or .txt)
-    
-       optional arguments:
-         -h, --help            show this help message and exit
-         -o OUTDIR, --outdir OUTDIR
-                               Output directory to save model (default: None)
-         --load WEIGHTS.PKL    Initialize training from a checkpoint (default: None)
-         --checkpoint CHECKPOINT
-                               Checkpointing interval in N_EPOCHS (default: 1)
-         --log-interval LOG_INTERVAL
-                               Logging interval in N_PTCLS (default: 200)
-         -v, --verbose         Increases verbosity (default: False)
-         --seed SEED           Random seed (default: 1605)
-    
-       Dataset loading:
-         --ind IND             Filter particle stack by these indices (default: None)
-         --uninvert-data       Do not invert data sign (default: True)
-         --no-window           Turn off real space windowing of dataset (default:
-                               True)
-         --window-r WINDOW_R   Windowing radius (default: 0.85)
-         --datadir DATADIR     Path prefix to particle stack if loading relative
-                               paths from a .star or .cs file (default: None)
-         --lazy                Lazy loading if full dataset is too large to fit in
-                               memory (default: False)
-         --Apix APIX           Override A/px from input starfile; useful if starfile
-                               does not have _rlnDetectorPixelSize col (default: 1.0)
-         --recon-tilt-weight   Weight reconstruction loss by cosine(tilt_angle)
-                               (default: False)
-         --recon-dose-weight   Weight reconstruction loss per tilt per pixel by dose
-                               dependent amplitude attenuation (default: False)
-         --dose-override DOSE_OVERRIDE
-                               Manually specify dose in e- / A2 / tilt (default:
-                               None)
-         --l-dose-mask         Do not train on frequencies exposed to > 2.5x critical
-                               dose. Training lattice is intersection of this with
-                               --l-extent (default: False)
-         --sample-ntilts SAMPLE_NTILTS
-                               Number of tilts to sample from each particle per
-                               epoch. Default: min(ntilts) from dataset (default:
-                               None)
-    
-       Training parameters:
-         -n NUM_EPOCHS, --num-epochs NUM_EPOCHS
-                               Number of training epochs (default: 20)
-         -b BATCH_SIZE, --batch-size BATCH_SIZE
-                               Minibatch size (default: 8)
-         --wd WD               Weight decay in Adam optimizer (default: 0)
-         --lr LR               Learning rate in Adam optimizer (default: 0.0001)
-         --norm NORM NORM      Data normalization as shift, 1/scale (default: mean,
-                               std of dataset) (default: None)
-         --no-amp              Disable use of mixed-precision training (default:
-                               False)
-         --multigpu            Parallelize training across all detected GPUs. Specify
-                               GPUs i,j via `export CUDA_VISIBLE_DEVICES=i,j` before
-                               tomodrgn train_vae (default: False)
-    
-       Network Architecture:
-         --layers LAYERS       Number of hidden layers (default: 3)
-         --dim DIM             Number of nodes in hidden layers (default: 256)
-         --l-extent L_EXTENT   Coordinate lattice size (if not using positional
-                               encoding) (default: 0.5)
-         --pe-type {geom_ft,geom_full,geom_lowf,geom_nohighf,linear_lowf,gaussian,none}
-                               Type of positional encoding (default: geom_lowf)
-         --pe-dim PE_DIM       Num sinusoid features in positional encoding (default:
-                               D/2) (default: None)
-         --activation {relu,leaky_relu}
-                               Activation (default: relu)
-         --feat-sigma FEAT_SIGMA
-                               Scale for random Gaussian features (default: 0.5)
+        Train a NN to model a 3D density map given 2D images from a tilt series with
+        consensus pose assignments
+        
+        positional arguments:
+          particles             Input particles (.mrcs, .star, .cs, or .txt)
+        
+        optional arguments:
+          -h, --help            show this help message and exit
+          -o OUTDIR, --outdir OUTDIR
+                                Output directory to save model (default: None)
+          --load WEIGHTS.PKL    Initialize training from a checkpoint (default: None)
+          --checkpoint CHECKPOINT
+                                Checkpointing interval in N_EPOCHS (default: 1)
+          --log-interval LOG_INTERVAL
+                                Logging interval in N_PTCLS (default: 200)
+          -v, --verbose         Increases verbosity (default: False)
+          --seed SEED           Random seed (default: 30429)
+        
+        Dataset loading:
+          --ind IND             Filter particle stack by these indices (default: None)
+          --uninvert-data       Do not invert data sign (default: True)
+          --no-window           Turn off real space windowing of dataset (default:
+                                True)
+          --window-r WINDOW_R   Windowing radius (default: 0.85)
+          --datadir DATADIR     Path prefix to particle stack if loading relative
+                                paths from a .star or .cs file (default: None)
+          --lazy                Lazy loading if full dataset is too large to fit in
+                                memory (default: False)
+          --Apix APIX           Override A/px from input starfile; useful if starfile
+                                does not have _rlnDetectorPixelSize col (default: 1.0)
+          --recon-tilt-weight   Weight reconstruction loss by cosine(tilt_angle)
+                                (default: False)
+          --recon-dose-weight   Weight reconstruction loss per tilt per pixel by dose
+                                dependent amplitude attenuation (default: False)
+          --dose-override DOSE_OVERRIDE
+                                Manually specify dose in e- / A2 / tilt (default:
+                                None)
+          --l-dose-mask         Do not train on frequencies exposed to > 2.5x critical
+                                dose. Training lattice is intersection of this with
+                                --l-extent (default: False)
+          --sample-ntilts SAMPLE_NTILTS
+                                Number of tilts to sample from each particle per
+                                epoch. Default: min(ntilts) from dataset (default:
+                                None)
+        
+        Training parameters:
+          -n NUM_EPOCHS, --num-epochs NUM_EPOCHS
+                                Number of training epochs (default: 20)
+          -b BATCH_SIZE, --batch-size BATCH_SIZE
+                                Minibatch size (default: 1)
+          --wd WD               Weight decay in Adam optimizer (default: 0)
+          --lr LR               Learning rate in Adam optimizer (scale linearly with
+                                --batch-size) (default: 0.0002)
+          --norm NORM NORM      Data normalization as shift, 1/scale (default: mean,
+                                std of dataset) (default: None)
+          --no-amp              Disable use of mixed-precision training (default:
+                                False)
+          --multigpu            Parallelize training across all detected GPUs. Specify
+                                GPUs i,j via `export CUDA_VISIBLE_DEVICES=i,j` before
+                                tomodrgn train_vae (default: False)
+        
+        Network Architecture:
+          --layers LAYERS       Number of hidden layers (default: 3)
+          --dim DIM             Number of nodes in hidden layers (default: 256)
+          --l-extent L_EXTENT   Coordinate lattice size (if not using positional
+                                encoding) (default: 0.5)
+          --pe-type {geom_ft,geom_full,geom_lowf,geom_nohighf,linear_lowf,gaussian,none}
+                                Type of positional encoding (default: geom_lowf)
+          --pe-dim PE_DIM       Num sinusoid features in positional encoding (default:
+                                D/2) (default: None)
+          --activation {relu,leaky_relu}
+                                Activation (default: relu)
+          --feat-sigma FEAT_SIGMA
+                                Scale for random Gaussian features (default: 0.5)
     </details>
 
 2. Assess convergence of a decoder-only network relative to an external volume: `tomodrgn convergence_nn 01_nn_particles sta_reference_volume.mrc`
@@ -138,14 +143,16 @@ Below are minimal examples of various common tomoDRGN commands. By design, synta
         <summary> Click to see all options: <code> tomodrgn convergence_nn --help </code> </summary>
 
         usage: tomodrgn convergence_nn [-h] [--max-epoch MAX_EPOCH] [--include-dc]
-                               [--fsc-mask {None,sphere,tight,soft}]
+                               [--fsc-mask {none,sphere,tight,soft}]
                                training_directory reference_volume
-        Assess convergence of a decoder-only network relative to an external volume by FSC
-   
+
+        Assess convergence of a decoder-only network relative to an external volume by
+        FSC
+        
         positional arguments:
           training_directory    train_nn directory containing reconstruct.N.mrc
           reference_volume      volume against which to calculate FSC
-   
+        
         optional arguments:
           -h, --help            show this help message and exit
           --max-epoch MAX_EPOCH
@@ -154,53 +161,55 @@ Below are minimal examples of various common tomoDRGN commands. By design, synta
           --include-dc          Include FSC calculation for DC component, default
                                 False because DC component default excluded during
                                 training (default: False)
-          --fsc-mask {None,sphere,tight,soft}
+          --fsc-mask {none,sphere,tight,soft}
                                 Type of mask applied to volumes before calculating FSC
                                 (default: soft)
     </details>
 
-3. Train a VAE to simultaneously learn a latent heterogeneity landscape and a volume-generative decoder: `tomodrgn train_vae particles_imageseries.star --zdim 8 --outdir 02_vae_z8_box256 --batch-size 1 --num-epochs 30`
+3. Train a VAE to simultaneously learn a latent heterogeneity landscape and a volume-generative decoder: `tomodrgn train_vae particles_imageseries.star --zdim 8 --outdir 02_vae_z8 --num-epochs 30`
    <details> 
         <summary> Click to see all options: <code> tomodrgn train_vae --help </code> </summary>
    
         usage: tomodrgn train_vae [-h] -o OUTDIR --zdim ZDIM [--load WEIGHTS.PKL]
-                             [--checkpoint CHECKPOINT]
-                             [--log-interval LOG_INTERVAL] [-v] [--seed SEED]
-                             [--ind PKL] [--uninvert-data] [--no-window]
-                             [--window-r WINDOW_R] [--datadir DATADIR] [--lazy]
-                             [--Apix APIX] [--recon-tilt-weight]
-                             [--recon-dose-weight]
-                             [--dose-override DOSE_OVERRIDE] [--l-dose-mask]
-                             [--sample-ntilts SAMPLE_NTILTS] [-n NUM_EPOCHS]
-                             [-b BATCH_SIZE] [--wd WD] [--lr LR] [--beta BETA]
-                             [--beta-control BETA_CONTROL] [--norm NORM NORM]
-                             [--no-amp] [--multigpu] [--enc-layers-A QLAYERSA]
-                             [--enc-dim-A QDIMA] [--out-dim-A OUT_DIM_A]
-                             [--enc-layers-B QLAYERSB] [--enc-dim-B QDIMB]
-                             [--enc-mask ENC_MASK] [--dec-layers PLAYERS]
-                             [--dec-dim PDIM] [--l-extent L_EXTENT]
-                             [--pe-type {geom_ft,geom_full,geom_lowf,geom_nohighf,linear_lowf,gaussian,none}]
-                             [--feat-sigma FEAT_SIGMA] [--pe-dim PE_DIM]
-                             [--activation {relu,leaky_relu}]
-                             particles
-   
-        Train a VAE for heterogeneous reconstruction with known pose for tomography data
+                          [--checkpoint CHECKPOINT]
+                          [--log-interval LOG_INTERVAL] [-v] [--seed SEED]
+                          [--ind PKL] [--uninvert-data] [--no-window]
+                          [--window-r WINDOW_R] [--datadir DATADIR] [--lazy]
+                          [--Apix APIX] [--recon-tilt-weight]
+                          [--recon-dose-weight]
+                          [--dose-override DOSE_OVERRIDE] [--l-dose-mask]
+                          [--sample-ntilts SAMPLE_NTILTS] [-n NUM_EPOCHS]
+                          [-b BATCH_SIZE] [--wd WD] [--lr LR] [--beta BETA]
+                          [--beta-control BETA_CONTROL] [--norm NORM NORM]
+                          [--no-amp] [--multigpu] [--enc-layers-A QLAYERSA]
+                          [--enc-dim-A QDIMA] [--out-dim-A OUT_DIM_A]
+                          [--enc-layers-B QLAYERSB] [--enc-dim-B QDIMB]
+                          [--enc-mask ENC_MASK] [--dec-layers PLAYERS]
+                          [--dec-dim PDIM] [--l-extent L_EXTENT]
+                          [--pe-type {geom_ft,geom_full,geom_lowf,geom_nohighf,linear_lowf,gaussian,none}]
+                          [--feat-sigma FEAT_SIGMA] [--pe-dim PE_DIM]
+                          [--activation {relu,leaky_relu}]
+                          particles
+
+        Train a VAE for heterogeneous reconstruction with known pose for tomography
+        data
         
         positional arguments:
-        particles             Input particles (.mrcs, .star, .cs, or .txt)
+          particles             Input particles (.mrcs, .star, .cs, or .txt)
         
         optional arguments:
           -h, --help            show this help message and exit
-          -o OUTDIR, --outdir OUTDIR Output directory to save model (default: None)
+          -o OUTDIR, --outdir OUTDIR
+                                Output directory to save model (default: None)
           --zdim ZDIM           Dimension of latent variable (default: None)
           --load WEIGHTS.PKL    Initialize training from a checkpoint (default: None)
           --checkpoint CHECKPOINT
-                              Checkpointing interval in N_EPOCHS (default: 1)
+                                Checkpointing interval in N_EPOCHS (default: 1)
           --log-interval LOG_INTERVAL
-                              Logging interval in N_PTCLS (default: 200)
-          -v, --verbose         Increaes verbosity (default: False)
-          --seed SEED           Random seed (default: 50236)
-   
+                                Logging interval in N_PTCLS (default: 200)
+          -v, --verbose         Increases verbosity (default: False)
+          --seed SEED           Random seed (default: 27017)
+        
         Dataset loading:
           --ind PKL             Filter particle stack by these indices (default: None)
           --uninvert-data       Do not invert data sign (default: True)
@@ -232,9 +241,9 @@ Below are minimal examples of various common tomoDRGN commands. By design, synta
           -n NUM_EPOCHS, --num-epochs NUM_EPOCHS
                                 Number of training epochs (default: 20)
           -b BATCH_SIZE, --batch-size BATCH_SIZE
-                                Minibatch size (default: 8)
+                                Minibatch size (default: 1)
           --wd WD               Weight decay in Adam optimizer (default: 0)
-          --lr LR               Learning rate in Adam optimizer (default: 0.0001)
+          --lr LR               Learning rate in Adam optimizer (default: 0.0002)
           --beta BETA           Choice of beta schedule or a constant for KLD weight
                                 (default: None)
           --beta-control BETA_CONTROL
@@ -277,7 +286,7 @@ Below are minimal examples of various common tomoDRGN commands. By design, synta
                                 Activation (default: relu)
    </details>
 
-4. Assess convergence of a VAE model after 30 epochs training using internal / self-consistency heuristics: `tomodrgn convergence_vae 02_vae_z8_box256 29`
+4. Assess convergence of a VAE model after 30 epochs training using internal / self-consistency heuristics: `tomodrgn convergence_vae 02_vae_z8 29`
    <details> 
         <summary> Click to see all options: <code> tomodrgn convergence_vae --help </code> </summary>
 
@@ -298,7 +307,7 @@ Below are minimal examples of various common tomoDRGN commands. By design, synta
                                 [--dilate DILATE] [--dist DIST]
                                 workdir epoch
 
-        Visualize convergence and training dynamics
+        Assess convergence and training dynamics of a heterogeneous VAE network
         
         positional arguments:
           workdir               Directory with tomoDRGN results
@@ -380,16 +389,16 @@ Below are minimal examples of various common tomoDRGN commands. By design, synta
                                 falling edge from dilated mask boundary (default: 10)
     </details>
 
-5. Run standard analysis of a VAE model after 30 epochs training (PCA and UMAP of latent space, volume generation along PC's, _k_-means sampling of latent space and generation of corresponding volumes): `tomodrgn analyze 02_vae_z8_box256 29 --Apix 3.5`
+5. Run standard analysis of a VAE model after 30 epochs training (PCA and UMAP of latent space, volume generation along PC's, _k_-means sampling of latent space and generation of corresponding volumes): `tomodrgn analyze 02_vae_z8 29 --Apix 3.5`
    <details> 
         <summary> Click to see all options: <code> tomodrgn analyze --help </code> </summary>
 
         usage: tomodrgn analyze [-h] [--device DEVICE] [-o OUTDIR] [--skip-vol]
-                                [--skip-umap] [--Apix APIX] [--flip] [--invert]
-                                [-d DOWNSAMPLE] [--pc PC] [--pc-ondata]
-                                [--ksample KSAMPLE]
-                                workdir epoch
-        
+                        [--skip-umap] [--Apix APIX] [--flip] [--invert]
+                        [-d DOWNSAMPLE] [--pc PC] [--pc-ondata]
+                        [--ksample KSAMPLE]
+                        workdir epoch
+
         Visualize latent space and generate volumes
         
         positional arguments:
@@ -420,7 +429,7 @@ Below are minimal examples of various common tomoDRGN commands. By design, synta
           --ksample KSAMPLE     Number of kmeans samples to generate (default: 20)
    </details>
 
-6. Interactive analysis of a VAE model: run `jupyter notebook` to open `tomoDRGN_viz+filt_template.ipynb` placed in `02_vae_z8_box256/analyze.29` by `tomodrgn analyze`.
+6. Interactive analysis of a VAE model: run `jupyter notebook` to open `tomoDRGN_viz+filt_template.ipynb` placed in `02_vae_z8/analyze.29` by `tomodrgn analyze`.
     <details> 
         <summary> Click to see two ways to run jupyter notebook </summary>
     To run a local instance of Jupyter Notebook (e.g. you are viewing a monitor directly connected to a computer with direct access to the filesystem containing 02_vae_z8_box256 and the tomodrgn conda environment):
@@ -435,20 +444,16 @@ Below are minimal examples of various common tomoDRGN commands. By design, synta
          jupyter notebook 02_vae_z8_box256/analyze.29/tomoDRGN_viz+filt_template.ipynb --no-browser --port 8888
    </details>
 
-7. Generate 3-D volumes from (per-particle) unique positions in latent space: `tomodrgn eval_vol 02_vae_z8_box256/weights.pkl --config 02_vae_z8_box256/config.pkl -o 02_vae_z8_box256/tomogram_vols --zfile 02_vae_z8_box256/z.pkl --downsample 64`. This command can benefit from per-tomomgram `z.pkl` filtering within `tomoDRGN_viz+filt_template.ipynb` to create volumes for all particles associated with a particular tomogram.
-
-8. Write a ChimeraX script to place per-particle volumes in the spatial context of a chosen tomogram with optional color mapping: `tomodrgn subtomo2chimerax particles_volumeseries.star -o mytomogram_tomodrgnvols.cxs --tomoname mytomogram.tomostar --vols-dir 02_vae_z8_box256/tomogram_vols --coloring-labels  02_vae_z8_box256/analyze.29/kmeans20/labels.pkl`
-
-9. Filter a star file by particle indices identified and written by `tomoDRGN_viz+filt_template.ipynb`: `tomodrgn filter_star particles.star --ind ind.pkl --outstar particles_filt.star`
+7. Filter a star file (imageseries or volumeseries) by particle indices identified and written by `tomoDRGN_viz+filt_template.ipynb`: `tomodrgn filter_star particles.star --ind ind.pkl --outstar particles_filt.star`
     <details> 
         <summary> Click to see all options: <code> tomodrgn filter_star --help </code> </summary>
 
-        usage: filter_star.py [-h]
-                              [--input-type {warp_particleseries,warp_volumeseries,m_volumeseries}]
-                              [--ind IND] [--ind-type {particle,image,tilt}]
-                              [--tomogram TOMOGRAM] [--action {keep,drop}] -o O
-                              input
-        
+        usage: tomodrgn filter_star [-h] [--tomo-id-col TOMO_ID_COL]
+                            [--ptcl-id-col PTCL_ID_COL] [--ind IND]
+                            [--ind-type {particle,image}]
+                            [--tomogram TOMOGRAM] [--action {keep,drop}] -o O
+                            input
+
         Filter a .star file generated by Warp subtomogram export
         
         positional arguments:
@@ -456,19 +461,189 @@ Below are minimal examples of various common tomoDRGN commands. By design, synta
         
         optional arguments:
           -h, --help            show this help message and exit
-          --input-type {warp_particleseries,warp_volumeseries,m_volumeseries}
-                                input data .star source (subtomos as images vs as
-                                volumes
-          --ind IND             optionally select by indices array (.pkl)
-          --ind-type {particle,image,tilt}
-                                use indices to filter by particle, by individual
-                                image, or by tilt index
-          --tomogram TOMOGRAM   optionally select by individual tomogram name (`all`
-                                means write individual star files per tomogram
-          --action {keep,drop}  keep or remove particles associated with ind/tomogram
-                                selection
-          -o O                  Output .star file
+          --tomo-id-col TOMO_ID_COL
+                                Name of column in input starfile with unique values
+                                per tomogram (default: _rlnMicrographName)
+          --ptcl-id-col PTCL_ID_COL
+                                Name of column in input starfile with unique values
+                                per particle, if `index` then each row is treated as a
+                                unique particle (default: _rlnGroupName)
+          --ind IND             selected indices array (.pkl) (default: None)
+          --ind-type {particle,image}
+                                use indices to filter by particle or by individual
+                                image (default: particle)
+          --tomogram TOMOGRAM   optionally select by individual tomogram name (if
+                                `all` then writes individual star files per tomogram
+                                (default: None)
+          --action {keep,drop}  keep or remove particles associated with ind.pkl
+                                (default: keep)
+          -o O                  Output .star file (default: None)
     </details>
+
+8. Generate 3-D volumes from (per-particle) unique positions in latent space: `tomodrgn eval_vol 02_vae_z8/weights.pkl --config 02_vae_z8/config.pkl -o 02_vae_z8/tomogram_vols --zfile 02_vae_z8/z.pkl --downsample 64`. This command can benefit from per-tomomgram `z.pkl` filtering within `tomoDRGN_viz+filt_template.ipynb` to create volumes for all particles associated with a particular tomogram.
+    <details> 
+        <summary> Click to see all options: <code> tomodrgn eval_vol --help </code> </summary>
+
+        usage: tomodrgn eval_vol [-h] -c CONFIG -o O [--prefix PREFIX] [--no-amp] [-v]
+                         [-z [Z [Z ...]]] [--z-start [Z_START [Z_START ...]]]
+                         [--z-end [Z_END [Z_END ...]]] [-n N] [--zfile ZFILE]
+                         [--Apix APIX] [--flip] [--invert] [-d DOWNSAMPLE]
+                         weights
+
+        Evaluate the decoder at specified values of z
+        
+        positional arguments:
+          weights               Model weights.pkl from train_vae
+        
+        optional arguments:
+          -h, --help            show this help message and exit
+          -c CONFIG, --config CONFIG
+                                config.pkl file from train_vae (default: None)
+          -o O                  Output .mrc or directory (default: None)
+          --prefix PREFIX       Prefix when writing out multiple .mrc files (default:
+                                vol_)
+          --no-amp              Disable use of mixed-precision training (default:
+                                False)
+          -v, --verbose         Increases verbosity (default: False)
+        
+        Specify z values:
+          -z [Z [Z ...]]        Specify one z-value (default: None)
+          --z-start [Z_START [Z_START ...]]
+                                Specify a starting z-value (default: None)
+          --z-end [Z_END [Z_END ...]]
+                                Specify an ending z-value (default: None)
+          -n N                  Number of structures between [z_start, z_end]
+                                (default: 10)
+          --zfile ZFILE         Text/.pkl file with z-values to evaluate (default:
+                                None)
+        
+        Volume arguments:
+          --Apix APIX           Pixel size to add to output .mrc header (default: 1)
+          --flip                Flip handedness of output volume (default: False)
+          --invert              Invert contrast of output volume (default: False)
+          -d DOWNSAMPLE, --downsample DOWNSAMPLE
+                                Downsample volumes to this box size (pixels) (default:
+                                None)
+    </details>
+
+9. Write a ChimeraX script to place tomoDRGN-generated individual particle volumes in the spatial context of a chosen tomogram with optional color mapping: `tomodrgn subtomo2chimerax particles_volumeseries.star -o mytomogram_tomodrgnvols.cxs --tomoname mytomogram.tomostar --vols-dir 02_vae_z8/tomogram_vols --coloring-labels  02_vae_z8/analyze.29/kmeans20/labels.pkl`
+    <details> 
+        <summary> Click to see all options: <code> tomodrgn subtomo2chimerax --help </code> </summary>
+
+        usage: tomodrgn subtomo2chimerax [-h] -o OUTFILE [--tomoname TOMONAME]
+                                 [--tomo-id-col TOMO_ID_COL]
+                                 [--star-apix-override STAR_APIX_OVERRIDE]
+                                 --vols-dir VOLS_DIR
+                                 [--vols-apix-override VOLS_APIX_OVERRIDE]
+                                 [--ind IND]
+                                 [--vols-render-level VOLS_RENDER_LEVEL]
+                                 [--coloring-labels COLORING_LABELS]
+                                 [--matplotlib-colormap MATPLOTLIB_COLORMAP]
+                                 starfile
+
+        Create a .cxs script for ChimeraX to arrange uniquely generated tomoDRGN
+        volumes into tomogram with optional label-based color mapping Adapted from
+        relionsubtomo2ChimeraX.py, written by Huy Bui, McGill University, doi:
+        https://doi.org/10.5281/zenodo.6820119
+        
+        positional arguments:
+          starfile              Input particle_volumeseries starfile from Warp
+                                subtomogram export
+        
+        optional arguments:
+          -h, --help            show this help message and exit
+          -o OUTFILE, --outfile OUTFILE
+                                Output .cxc script to be opened in ChimeraX (default:
+                                None)
+          --tomoname TOMONAME   Name of tomogram in input starfile for which to
+                                display tomoDRGN vols in ChimeraX (default: None)
+          --tomo-id-col TOMO_ID_COL
+                                Name of column in input starfile to filter by
+                                --tomoname (default: _rlnMicrographName)
+          --star-apix-override STAR_APIX_OVERRIDE
+                                Override pixel size of input particle_volumeseries
+                                starfile (A/px) (default: None)
+          --vols-dir VOLS_DIR   Path to tomoDRGN reconstructed volumes (default: None)
+          --vols-apix-override VOLS_APIX_OVERRIDE
+                                Override pixel size of tomoDRGN-reconstructed particle
+                                volumes (A/px) (default: None)
+          --ind IND             Ind.pkl used in training run that produced volumes in
+                                vols-dir (if applicable) (default: None)
+        
+        ChimeraX rendering options:
+          --vols-render-level VOLS_RENDER_LEVEL
+                                Isosurface level to render all tomoDRGN reconstructed
+                                volumes in ChimeraX (default: 0.7)
+          --coloring-labels COLORING_LABELS
+                                labels.pkl file used to assign colors to each volume
+                                (typically kmeans labels.pkl (default: None)
+          --matplotlib-colormap MATPLOTLIB_COLORMAP
+                                Name of colormap to sample labels, from https://matplo
+                                tlib.org/stable/tutorials/colors/colormaps.html
+                                (default: tab20)
+    </details>
+
+10. Generate latent embeddings for new images using a pretrained model: `tomodrgn eval_images particles_imageseries_new.star 02_vae_z8/weights.pkl -c 02_vae_z8/config.pkl --out-z 02_vae_z8/eval_images/z.pkl`
+    <details> 
+        <summary> Click to see all options: <code> tomodrgn eval_images --help </code> </summary>
+
+        usage: tomodrgn eval_images [-h] -c CONFIG --out-z PKL
+                            [--log-interval LOG_INTERVAL] [-b BATCH_SIZE] [-v]
+                            [--lazy]
+                            particles weights
+
+        Evaluate z for a stack of images
+        
+        positional arguments:
+          particles             Input particles (.mrcs, .star, .cs, or .txt)
+          weights               Model weights
+        
+        optional arguments:
+          -h, --help            show this help message and exit
+          -c CONFIG, --config CONFIG
+                                config.pkl file from train_vae (default: None)
+          --out-z PKL           Output pickle for z (default: None)
+          --log-interval LOG_INTERVAL
+                                Logging interval in N_IMGS (default: 1000)
+          -b BATCH_SIZE, --batch-size BATCH_SIZE
+                                Minibatch size (default: 64)
+          -v, --verbose         Increases verbosity (default: False)
+        
+        Dataset loading:
+          --lazy                Lazy loading if full dataset is too large to fit in
+                                memory (default: False)
+    </details>
+
+11. Find particle indices and latent embeddings most directly connecting chosen "anchor" particles in latent space: `tomodrgn graph_traversal 02_vae_z8/z.pkl --anchors 137 10 20 -o 02_vae_z8/graph_traversal/path.txt --out-z 02_vae_z8/graph_traversal/z.path.txt`
+    <details> 
+        <summary> Click to see all options: <code> tomodrgn graph_traversal --help </code> </summary>
+
+        usage: tomodrgn graph_traversal [-h] --anchors ANCHORS [ANCHORS ...]
+                                [--max-neighbors MAX_NEIGHBORS]
+                                [--avg-neighbors AVG_NEIGHBORS]
+                                [--batch-size BATCH_SIZE]
+                                [--max-images MAX_IMAGES] -o O --out-z OUT_Z
+                                data
+
+        Find shortest path along nearest neighbor graph
+        
+        positional arguments:
+          data                  Input z.pkl embeddings
+        
+        optional arguments:
+          -h, --help            show this help message and exit
+          --anchors ANCHORS [ANCHORS ...]
+                                Index of anchor points (default: None)
+          --max-neighbors MAX_NEIGHBORS
+          --avg-neighbors AVG_NEIGHBORS
+          --batch-size BATCH_SIZE
+          --max-images MAX_IMAGES
+          -o O                  Output .txt or .pkl file for path indices (default:
+                                None)
+          --out-z OUT_Z         Output .txt or .pkl file for path z-values (default:
+                                None)
+    </details>
+
 
 ## Training requirements and limitations
 TomoDRGN model training requires as inputs:
@@ -477,8 +652,8 @@ TomoDRGN model training requires as inputs:
 
 At the moment, the only tested workflow to generate these inputs is Warp+IMOD tomogram generation, STA using RELION 3.1, followed by subtomogram extraction as image series in Warp (making use of the excellent [dynamo2warp](https://github.com/alisterburt/dynamo2m) tools from Alister Burt). We are actively seeking to expand the range of validated workflows; please let us know if you have success with a novel approach.
 
-## Additional details about required inputs
-TomoDRGN requires a number of specific metadata values to be supplied in the star file (a sample star file is provided in the `tomodrgn/testing/data` folder). Users testing upstream workflows that do not conclude with 2D particle extraction in Warp should ensure their RELION 3.0 format star files contain the following headers:
+## Additional details about required inputs for train_vae
+TomoDRGN requires a number of specific metadata values to be supplied in the star file (a sample star file is provided at `tomodrgn/testing/data/10076_both_32_sim.star`). Users testing upstream workflows that do not conclude with 2D particle extraction in Warp should ensure their RELION 3.0 format star files contain the following headers:
 * `_rlnGroupName`: used to identify multiple tilt images associated with the same particle, equal to a unique value per particle
 * `_rlnCtfScalefactor`: used to calculate stage tilt of each image, equal to `cosine(stage_tilt_radians)` as defined in Warp
 * `_rlnCtfBfactor`: used to calculate cumulative dose imparted to each image, equal to `dose_e-_per_A2 * -4` as defined in Warp

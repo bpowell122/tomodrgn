@@ -15,7 +15,7 @@ def add_args(parser):
                                                                                  'if `index` then each row is treated as a unique particle')
     parser.add_argument('--ind', help='selected indices array (.pkl)')
     parser.add_argument('--ind-type', choices=('particle', 'image'), default='particle',
-                        help='use indices to filter by particle, by individual image, or by tilt index')
+                        help='use indices to filter by particle or by individual image')
     parser.add_argument('--tomogram', type=str,
                         help='optionally select by individual tomogram name (if `all` then writes individual star files per tomogram')
     parser.add_argument('--action', choices=('keep', 'drop'), default='keep',

@@ -1,5 +1,5 @@
 '''
-Visualize convergence and training dynamics
+Assess convergence and training dynamics of a heterogeneous VAE network
 '''
 
 import argparse

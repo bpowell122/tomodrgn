@@ -26,7 +26,7 @@ vlog = utils.vlog
 
 
 def add_args(parser):
-    parser.add_argument('particles', type=os.path.abspath, help='Input particles (.mrcs, .star, .cs, or .txt)')
+    parser.add_argument('particles', type=os.path.abspath, help='Input particles_imageseries.star')
     parser.add_argument('-o', '--outdir', type=os.path.abspath, required=True, help='Output directory to save model')
     parser.add_argument('--load', metavar='WEIGHTS.PKL', help='Initialize training from a checkpoint')
     parser.add_argument('--checkpoint', type=int, default=1, help='Checkpointing interval in N_EPOCHS')
