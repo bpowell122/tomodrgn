@@ -548,10 +548,9 @@ class TiltSeriesDatasetMaster(data.Dataset):
         if norm is None:
             random_ptcls_for_normalization = np.random.choice(ptcls_unique_list, min(1000, nptcls // 10), replace=False)
             if lazy:
-                random_data_for_normalization = np.array([img.get() for ptcl_id in random_ptcls_for_normalization for img in ptcls_unique_objects[ptcl_id].images])
+                random_data_for_normalization = np.hstack([img.get().flatten() for ptcl_id in random_ptcls_for_normalization for img in ptcls_unique_objects[ptcl_id].images])
             else:
-                random_data_for_normalization = np.array([ptcls_unique_objects[ptcl_id].images.flatten() for ptcl_id in random_ptcls_for_normalization], dtype=object)
-                random_data_for_normalization = np.hstack(random_data_for_normalization.flatten())  # dealing with arrays with different ntilts
+                random_data_for_normalization = np.hstack([ptcls_unique_objects[ptcl_id].images.flatten() for ptcl_id in random_ptcls_for_normalization]) # dealing with arrays with different ntilts
             norm = [np.mean(random_data_for_normalization), np.std(random_data_for_normalization)]
             norm[0] = 0
         if not lazy:
