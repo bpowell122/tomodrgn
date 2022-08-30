@@ -31,7 +31,6 @@ def add_args(parser):
     group = parser.add_argument_group('Extra arguments for volume generation')
     group.add_argument('--Apix', type=float, default=1, help='Pixel size to add to .mrc header (default: %(default)s A/pix)')
     group.add_argument('--flip', action='store_true', help='Flip handedness of output volumes')
-    group.add_argument('--invert', action='store_true', help='Invert contrast of output volumes')
     group.add_argument('-d','--downsample', type=int, help='Downsample volumes to this box size (pixels)')
     group.add_argument('--pc', type=int, default=2, help='Number of principal component traversals to generate (default: %(default)s)')
     group.add_argument('--pc-ondata', action='store_true', help='Find closest on-data latent point to each PC percentile')
@@ -186,7 +185,7 @@ def main(args):
     z = utils.load_pkl(zfile)
     zdim = z.shape[1]
 
-    vol_args = dict(Apix=args.Apix, downsample=args.downsample, flip=args.flip, cuda=args.device, invert=args.invert)
+    vol_args = dict(Apix=args.Apix, downsample=args.downsample, flip=args.flip, cuda=args.device, invert=not utils.load_pkl(config)['dataset_args']['invert_data'])
     vg = VolumeGenerator(weights, config, vol_args, skip_vol=args.skip_vol)
 
     if zdim == 1:
