@@ -1,15 +1,15 @@
 '''
 Downsample an image stack or volume by clipping fourier frequencies
-CAUTION: Not explicitly checked for tomoDRGN compatibility.
 Recommended to re-extract particles at different box size in Warp rather than use this script
 '''
 
 import argparse
 import numpy as np
-import sys, os
+import os
 import math
-import multiprocessing as mp
-from multiprocessing import Pool
+import torch
+from torch.utils import data
+from torch.utils.data import DataLoader
 
 from tomodrgn import utils
 from tomodrgn import mrc
@@ -22,12 +22,12 @@ def add_args(parser):
     parser.add_argument('mrcs', help='Input particles or volume (.mrc, .mrcs, .star, or .txt)')
     parser.add_argument('-D', type=int, required=True, help='New box size in pixels, must be even')
     parser.add_argument('-o', metavar='MRCS', type=os.path.abspath, required=True, help='Output projection stack (.mrcs)')
-    parser.add_argument('-b', type=int, default=5000, help='Batch size for processing images (default: %(default)s)')
+    parser.add_argument('-b', type=int, default=5000, help='Batch size for processing images')
     parser.add_argument('--is-vol',action='store_true', help='Flag if input .mrc is a volume')
-    parser.add_argument('--chunk', type=int, help='Chunksize (in # of images) to split particle stack when saving')
+    parser.add_argument('--chunk', type=int, help='Chunksize (in # of images) to split particle stack when loading and saving if stack too large for system memory')
+    parser.add_argument('--lazy', action='store_true', help='Lazily load images on the fly if stack too large for system memory')
     parser.add_argument('--relion31', action='store_true', help='Flag for relion3.1 star format')
-    parser.add_argument('--datadir', help='Optionally provide path to input .mrcs if loading from a .star or .cs file')
-    parser.add_argument('--max-threads', type=int, default=16, help='Maximum number of CPU cores for parallelization (default: %(default)s)')
+    parser.add_argument('--datadir', help='Optionally provide path to input .mrcs if loading from a .star file')
     return parser
 
 def mkbasedir(out):
@@ -38,53 +38,62 @@ def warnexists(out):
     if os.path.exists(out):
         log('Warning: {} already exists. Overwriting.'.format(out))
 
+class ImageDataset(data.Dataset):
+    '''
+    Quick dataset class to shovel particle images into pytorch dataloader
+    Benefit = more parallelized FFT computations using GPU
+    '''
+    def __init__(self, particles, N):
+        self.particles = particles
+        self.N = N
+
+    def __len__(self):
+        return self.N
+
+    def __getitem__(self, index):
+        if type(self.particles[index]) is mrc.LazyImage:
+            return index, self.particles[index].get()
+        else:
+            return index, self.particles[index]
+
+
 def main(args):
+    log(args)
+
     mkbasedir(args.o)
     warnexists(args.o)
     assert (args.o.endswith('.mrcs') or args.o.endswith('mrc')), "Must specify output in .mrc(s) file format"
 
-    lazy = not args.is_vol
+    use_cuda =  torch.cuda.is_available()
+    torch.set_grad_enabled(False)
+    if use_cuda:
+        torch.set_default_tensor_type(torch.cuda.FloatTensor)
+        log(f'Using GPU for downsampling')
+
+    log(f'Loading {args.mrcs}')
+    lazy = args.lazy
     old = dataset.load_particles(args.mrcs, lazy=lazy, datadir=args.datadir, relion31=args.relion31)
+    N = len(old)
 
     oldD = old[0].get().shape[0] if lazy else old.shape[-1]
-    assert args.D <= oldD, f'New box size {args.D} cannot be larger than the original box size {oldD}'
-    assert args.D % 2 == 0, 'New box size must be even'
-    
-    D = args.D
-    start = int(oldD/2 - D/2)
-    stop = int(oldD/2 + D/2)
+    newD = args.D
+    assert newD <= oldD, f'New box size {newD} cannot be larger than the original box size {oldD}'
+    assert newD % 2 == 0, 'New box size must be even'
 
-    def _combine_imgs(imgs):
-        ret = []
-        for img in imgs:
-            img.shape = (1,*img.shape) # (D,D) -> (1,D,D)
-        cur = imgs[0]
-        for img in imgs[1:]:
-            if img.fname == cur.fname and img.offset == cur.offset + 4*np.product(cur.shape):
-                cur.shape = (cur.shape[0] + 1, *cur.shape[1:])
-            else:
-                ret.append(cur)
-                cur = img
-        ret.append(cur)
-        return ret
+    start = int(oldD/2 - newD/2)
+    stop = int(oldD/2 + newD/2)
 
-    def downsample_images(imgs):
-        if lazy:
-            imgs = _combine_imgs(imgs)
-            imgs = np.concatenate([i.get() for i in imgs])
-        with Pool(min(args.max_threads, mp.cpu_count())) as p:
-            oldft = np.asarray(p.map(fft.ht2_center, imgs))
-            newft = oldft[:, start:stop, start:stop]
-            new = np.asarray(p.map(fft.iht2_center, newft))
-        return new
+    def downsample_images(batch_original, start, stop):
+        batch_original = torch.fft.fftshift(torch.fft.fft2(torch.fft.fftshift(batch_original, dim=(-1, -2))), dim=(-1, -2))
+        batch_original = batch_original.real - batch_original.imag
 
-    def downsample_in_batches(old, b):
-        new = np.empty((len(old), D, D), dtype=np.float32)
-        for ii in range(math.ceil(len(old)/b)):
-            log(f'Processing batch {ii}')
-            new[ii*b:(ii+1)*b,:,:] = downsample_images(old[ii*b:(ii+1)*b])
-        return new
+        batch_new = batch_original[:, start:stop, start:stop]
 
+        batch_new = torch.fft.fftshift(torch.fft.fft2(torch.fft.fftshift(batch_new, dim=(-1, -2))), dim=(-1, -2))
+        batch_new /= (batch_new.shape[-1] * batch_new.shape[-2])
+        return batch_new.real - batch_new.imag
+
+    log('Downsampling...')
     ### Downsample volume ###
     if args.is_vol:
         oldft = fft.htn_center(old)
@@ -97,23 +106,40 @@ def main(args):
 
     ### Downsample images ###
     elif args.chunk is None:
-        new = downsample_in_batches(old, args.b)
+        new = np.empty((N, newD, newD), dtype=np.float32)
+
+        particle_dataset = ImageDataset(old, N)
+        data_generator = DataLoader(particle_dataset, batch_size=args.b, shuffle=False)
+        for batch_idx, batch_ptcls in data_generator:
+            log(f'Processing indices {batch_idx[0]} - {batch_idx[-1]}')
+            batch_new = downsample_images(batch_ptcls, start, stop)
+            new[batch_idx.cpu().numpy()] = batch_new.cpu().numpy()
+
         log(new.shape)
         log('Saving {}'.format(args.o))
         mrc.write(args.o, new.astype(np.float32), is_vol=False)
 
     ### Downsample images, saving chunks of N images ###
     else:
+        assert args.b <= args.chunk
         nchunks = math.ceil(len(old)/args.chunk)
         out_mrcs = ['.{}'.format(i).join(os.path.splitext(args.o)) for i in range(nchunks)]
         chunk_names = [os.path.basename(x) for x in out_mrcs]
         for i in range(nchunks):
-            log('Processing chunk {}'.format(i))
-            chunk = old[i*args.chunk:(i+1)*args.chunk]
-            new = downsample_in_batches(chunk, args.b)
+            log(f'Processing chunk {i}')
+            chunk = old[i*args.chunk: (i+1)*args.chunk]
+            new = np.empty((len(chunk), newD, newD), dtype=np.float32)
+
+            particle_dataset = ImageDataset(chunk, len(chunk))
+            data_generator = DataLoader(particle_dataset, batch_size=args.b, shuffle=False)
+            for batch_idx, batch_ptcls in data_generator:
+                batch_new = downsample_images(batch_ptcls, start, stop)
+                new[batch_idx.cpu().numpy()] = batch_new.cpu().numpy()
+
             log(new.shape)
             log(f'Saving {out_mrcs[i]}')
             mrc.write(out_mrcs[i], new, is_vol=False)
+
         # Write a text file with all chunks
         out_txt = '{}.txt'.format(os.path.splitext(args.o)[0])
         log(f'Saving {out_txt}')
