@@ -645,11 +645,15 @@ def calculate_FSCs(outdir, epochs, labels, img_size, chimerax_colors, LOG):
                 legend.append(f'epoch {epochs[i+1]}')
         except IndexError:
             pass
-
-    x_center, y_center = n_cols//2, n_rows//2
-    axes[y_center, 0].set_ylabel('FSC')
-    axes[-1,x_center].set_xlabel('frequency (1/px)')
-    axes[-1, 0].legend(legend, loc='lower left', ncol=2, fontsize=6.5)
+    if n_rows >= 2:
+        x_center, y_center = n_cols//2, n_rows//2
+        axes[y_center, 0].set_ylabel('FSC')
+        axes[-1,x_center].set_xlabel('frequency (1/px)')
+        axes[-1, 0].legend(legend, loc='lower left', ncol=2, fontsize=6.5)
+    else:
+        axes[0].set_ylabel('FSC')
+        axes[0].set_xlabel('frequency (1/px')
+        axes[0].legend(legend, loc='lower left', ncol=2, fontsize=6.5)
     plt.subplots_adjust(hspace=0.3)
     plt.subplots_adjust(wspace=0.1)
     plt.savefig(outdir + '/plots/06_decoder_FSC.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
