@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from setuptools import setup, find_packages
+from setuptools import setup, find_namespace_packages
 import os,sys
 sys.path.insert(0, f'{os.path.dirname(__file__)}/tomodrgn')
 import tomodrgn
@@ -14,7 +14,7 @@ setup(name='tomodrgn',
       url='https://github.com/bpowell122/tomodrgn',
       license='GPLv3',
       zip_safe=False,
-      packages=find_packages(),
+      packages=find_namespace_packages(where='templates'),
       entry_points={
           "console_scripts": [
             "tomodrgn = tomodrgn.__main__:main",
