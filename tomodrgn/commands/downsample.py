@@ -133,6 +133,7 @@ def main(args):
             particle_dataset = ImageDataset(chunk, len(chunk))
             data_generator = DataLoader(particle_dataset, batch_size=args.b, shuffle=False)
             for batch_idx, batch_ptcls in data_generator:
+                log(f'Processing chunk indices {batch_idx[0]} - {batch_idx[-1]}')
                 batch_new = downsample_images(batch_ptcls, start, stop)
                 new[batch_idx.cpu().numpy()] = batch_new.cpu().numpy()
 
