@@ -82,13 +82,13 @@ def add_args(parser):
     return parser
 
 
-def get_latest(args):
+def get_latest(args, flog):
     # assumes args.num_epochs > latest checkpoint
-    log('Detecting latest checkpoint...')
+    flog('Detecting latest checkpoint...')
     weights = [f'{args.outdir}/weights.{i}.pkl' for i in range(args.num_epochs)]
     weights = [f for f in weights if os.path.exists(f)]
     args.load = weights[-1]
-    log(f'Loading {args.load}')
+    flog(f'Loading {args.load}')
     return args
 
 
@@ -171,7 +171,7 @@ def train_batch(scaler, model, lattice, y, rot, tran, cumulative_weights, dec_ma
 
 def run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params=None):
     # encode
-    input = y.clone()
+    input = y
 
     if not torch.all(ctf_params == 0):
         # phase flip the CTF-corrupted image
@@ -219,7 +219,6 @@ def loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta
     y = y[dec_mask].view(1,-1)
     y_recon *= cumulative_weights[dec_mask].view(1,-1)
     gen_loss = ((y_recon - y) ** 2).mean()
-
 
     # latent loss
     kld = torch.mean(-0.5 * torch.sum(1 + z_logvar - z_mu.pow(2) - z_logvar.exp(), dim=1), dim=0)
@@ -289,8 +288,9 @@ def main(args):
         return utils.flog(msg, LOG)
 
     if args.load == 'latest':
-        args = get_latest(args)
+        args = get_latest(args, flog)
     flog(' '.join(sys.argv))
+    flog(args)
 
     # set the random seed
     np.random.seed(args.seed)
@@ -411,12 +411,12 @@ def main(args):
         checkpoint = torch.load(args.load)
         model.load_state_dict(checkpoint['model_state_dict'])
         optim.load_state_dict(checkpoint['optimizer_state_dict'])
+        start_epoch = checkpoint['epoch']+1
+        assert start_epoch < args.num_epochs
         try:
             scaler.load_state_dict(checkpoint['scaler'])
         except:
             flog('No GradScaler instance found in specified checkpoint; creating new GradScaler')
-        start_epoch = checkpoint['epoch']+1
-        model.train()
     else:
         start_epoch = 0
 
