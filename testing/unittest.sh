@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 ### Test all primary tomoDRGN commands for error-free functionality (relatively) quickly
 
 # set shell output
@@ -15,8 +16,10 @@ tomodrgn backproject_voxel data/10076_classE_32_clean.star -o output/00_backproj
 tomodrgn train_nn data/10076_classE_32_clean.star -o output/01_nn_classE_clean --uninvert-data --seed 42 --Apix 13.1
 # Test train_nn for simulated particles (testing CTF correction and noisy data learning) --> should get noisier 50S ribosome volume and loss ~0.88
 tomodrgn train_nn data/10076_classE_32_sim.star -o output/02_nn_classE_sim --uninvert-data --seed 42
+# Test train_nn for simulated particles (testing lazy loading) --> should get noisier 50S ribosome volume and loss ~0.88
+tomodrgn train_nn data/10076_classE_32_sim.star -o output/03_nn_classE_sim_lazy --uninvert-data --seed 42 --lazy
 # Test train_nn for simulated particles (testing dose/tilt masking/weighting with dose override) --> should get similar ribosome volume, loss ~0.91, 3068 pixels decoded per particle down from 7960 without --l-dose-mask
-tomodrgn train_nn data/10076_classE_32_sim.star -o output/03_nn_classE_sim_dosetiltweightmask --uninvert-data --seed 42 --l-dose-mask --recon-dose-weight --recon-tilt-weight --dose-override 100
+tomodrgn train_nn data/10076_classE_32_sim.star -o output/04_nn_classE_sim_dosetiltweightmask --uninvert-data --seed 42 --l-dose-mask --recon-dose-weight --recon-tilt-weight --dose-override 100
 
 ### CONVERGENCE_NN ###
 # Test convergence_nn for simulated particles (testing fsc calculation and convergence with no mask) --> should get fsc 0.5 around 0.32, fsc integral around 0.2707
@@ -32,11 +35,14 @@ tomodrgn convergence_nn output/02_nn_classE_sim data/10076_classE_32.mrc --fsc-m
 # Test train_vae for clean particles (testing heterogeneity learning and working with different n_tilts per dataset) --> should get loss around 0.12/30.46/0.12 using 8 tilts per particle
 tomodrgn train_vae data/10076_both_32_clean.star -o output/04_vae_both_clean --zdim 8 --uninvert-data --seed 42 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3
 # Test train_vae for simulated particles (testing heterogeneity learning in noisy context) --> should get loss around 0.90/16.52/0.90 using 8 tilts per particle
-tomodrgn train_vae data/10076_both_32_sim.star -o output/05_vae_both_sim --zdim 8 --uninvert-data --seed 42 --log-interval 50 -n 50 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3
+tomodrgn train_vae data/10076_both_32_sim.star -o output/05_vae_both_sim --zdim 8 --uninvert-data --seed 42 --log-interval 50 -n 50 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 - -dec-dim 256 --dec-layers 3
+# Test train_vae for simulated particles (testing lazy loading) --> should get loss around 0.90/16.52/0.90 using 8 tilts per particle
+tomodrgn train_vae data/10076_both_32_sim.star -o output/05_vae_both_sim --zdim 8 --uninvert-data --seed 42 --log-interval 50 -n 50 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 --lazy
 # Test train_vae for simulated particles (testing multiple dose/tilt masking/weighting schemes) --> should get loss around 0.90/15.98/0.90 using 8 tilts per particle
 tomodrgn train_vae data/10076_both_32_sim.star -o output/06_vae_both_sim_dosetiltweightmask --zdim 8 --uninvert-data --seed 42 --l-dose-mask --recon-dose-weight --recon-tilt-weight --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3
 # Test train_vae for simulated particles with no heterogeneity --> should get featureless continuous latent space
 tomodrgn train_vae data/10076_classE_32_sim.star -o output/07_vae_classE_sim --zdim 8 --uninvert-data --seed 42 --log-interval 50 -n 50 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3
+
 
 ### CONVERGENCE_VAE ###
 # Test convergence_vae for simulated particles
