@@ -546,9 +546,17 @@ class TiltSeriesDatasetMaster(data.Dataset):
 
         # normalize by subsampled mean and stdev
         if norm is None:
-            random_ptcls_for_normalization = np.random.choice(ptcls_unique_list, min(1000, nptcls // 10), replace=False)
+            random_ptcls_for_normalization = np.random.choice(ptcls_unique_list, min(1000, nptcls), replace=False)
             if lazy:
                 random_data_for_normalization = np.hstack([img.get().flatten() for ptcl_id in random_ptcls_for_normalization for img in ptcls_unique_objects[ptcl_id].images])
+                random_data_for_normalization = random_data_for_normalization.reshape((-1, D-1, D-1))
+                if window:
+                    m = window_mask(D-1, window_r, .99)
+                    random_data_for_normalization *= m
+                for i, img in enumerate(random_data_for_normalization):
+                    random_data_for_normalization[i] = fft.ht2_center(img)
+                if invert_data: random_data_for_normalization *= -1
+                random_data_for_normalization = fft.symmetrize_ht(random_data_for_normalization)
             else:
                 random_data_for_normalization = np.hstack([ptcls_unique_objects[ptcl_id].images.flatten() for ptcl_id in random_ptcls_for_normalization]) # dealing with arrays with different ntilts
             norm = [np.mean(random_data_for_normalization), np.std(random_data_for_normalization)]
@@ -579,11 +587,14 @@ class TiltSeriesDatasetMaster(data.Dataset):
     def __len__(self):
         return self.nptcls
 
-    def __getitem__(self, idx_ptcl):
+    def __getitem__(self, idx_ptcl, shuffle=True):
         # randomly select self.ntilts_training tilt images for a given particle to train
         ptcl_id = self.ptcls_list[idx_ptcl]
         ptcl = self.ptcls[ptcl_id]
-        tilt_inds = np.asarray(np.random.choice(ptcl.ntilts, self.ntilts_training, replace=False))
+        if shuffle:
+            tilt_inds = np.asarray(np.random.choice(ptcl.ntilts, self.ntilts_training, replace=False))
+        else:
+            tilt_inds = np.arange(self.ntilts_training)  # take first ntilts_training images for deterministic loading/debugging
 
         if self.lazy:
             images = ptcl.images
