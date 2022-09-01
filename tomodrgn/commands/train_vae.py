@@ -242,6 +242,11 @@ def eval_z(model, lattice, data, batch_size, device, use_amp=False):
             for batch_images, _, batch_tran, batch_ctf, _, _, _ in data_generator:
                 B, ntilts, D, D = batch_images.shape
 
+                # transfer to GPU
+                batch_images = batch_images.to(device)
+                batch_tran = batch_tran.to(device)
+                batch_ctf = batch_ctf.to(device)
+
                 # correct for translations
                 if not torch.all(batch_tran == 0):
                     batch_images = lattice.translate_ht(batch_images.view(B * ntilts, -1), batch_tran.view(B * ntilts, 1, 2))
@@ -296,14 +301,8 @@ def main(args):
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
-    # set the device
-    use_cuda = torch.cuda.is_available()
-    device = torch.device('cuda' if use_cuda else 'cpu')
-    flog('Use cuda {}'.format(use_cuda))
-    if use_cuda:
-        torch.set_default_tensor_type(torch.cuda.FloatTensor)
-    else:
-        log('WARNING: No GPUs detected')
+    ## set the device
+    device = utils.get_default_device()
 
     # set beta schedule
     if args.beta is None:
@@ -443,6 +442,14 @@ def main(args):
             batch_it += len(batch_ptcl_ids) # total number of ptcls seen
             global_it = nptcls*epoch + batch_it
             beta = beta_schedule(global_it)
+
+            # transfer to GPU
+            batch_images = batch_images.to(device)
+            batch_rot = batch_rot.to(device)
+            batch_trans = batch_trans.to(device)
+            batch_ctf = batch_ctf.to(device)
+            batch_weights = batch_weights.to(device)
+            batch_dec_mask = batch_dec_mask.to(device)
 
             # training minibatch
             loss, gen_loss, kld = train_batch(scaler, model, lattice, batch_images, batch_rot, batch_trans,

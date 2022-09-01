@@ -60,13 +60,7 @@ def main(args):
         os.makedirs(os.path.dirname(args.o))
 
     ## set the device
-    use_cuda = torch.cuda.is_available()
-    device = torch.device('cuda' if use_cuda else 'cpu')
-    log(f'Use cuda {use_cuda}')
-    if use_cuda:
-        torch.set_default_tensor_type(torch.cuda.FloatTensor)
-    else:
-        log('WARNING: No GPUs detected')
+    device = utils.get_default_device()
 
     # load the star file
     ptcls_star = starfile.TiltSeriesStarfile.load(args.particles)
@@ -108,12 +102,12 @@ def main(args):
     Apix = ctf_params[0,0] if ctf_params is not None else 1
 
     # instantiate lattice
-    lattice = Lattice(D, extent=D//2)
+    lattice = Lattice(D, extent=D//2, device=device)
     mask = lattice.get_circular_mask(D//2)
 
     # instantiate volume
-    V = torch.zeros((D,D,D))
-    counts = torch.zeros((D,D,D))
+    V = torch.zeros((D,D,D), device=device)
+    counts = torch.zeros((D,D,D), device=device)
 
     if args.first:
         args.first = min(args.first, Nimg)
@@ -125,7 +119,7 @@ def main(args):
         if ii%100==0: log(f'image {ii}')
         r = rots[ii]
         t = trans[ii] if trans is not None else None
-        ff = torch.tensor(data.get(ii)).view(-1)[mask]
+        ff = torch.tensor(data.get(ii), device=device).view(-1)[mask]
         if ctf_params is not None:
             freqs = lattice.freqs2d/ctf_params[ii,0]
             c = ctf.compute_ctf(freqs, *ctf_params[ii,1:]).view(-1)[mask]

@@ -60,13 +60,9 @@ def main(args):
     if not os.path.exists(os.path.dirname(args.out_z)):
         os.makedirs(os.path.dirname(args.out_z))
 
-    # set the device
-    use_cuda = torch.cuda.is_available()
-    log('Use cuda {}'.format(use_cuda))
-    if use_cuda:
-        torch.set_default_tensor_type(torch.cuda.FloatTensor)
-    else:
-        log('WARNING: No GPUs detected')
+    ## set the device
+    device = utils.get_default_device()
+    torch.set_grad_enabled(False)
 
     log(args)
     cfg = utils.load_pkl(args.config)
@@ -93,7 +89,7 @@ def main(args):
     data.ntilts_training = cfg['dataset_args']['ntilts']
 
     # instantiate model and lattice
-    model, lattice = TiltSeriesHetOnlyVAE.load(cfg, args.weights)
+    model, lattice = TiltSeriesHetOnlyVAE.load(cfg, args.weights, device=device)
 
     # evaluation loop
     model.eval()
@@ -102,7 +98,13 @@ def main(args):
     batch_it = 0
     data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=False)
     for batch_images, _, batch_trans, batch_ctf, _, _, batch_ptcl_ids in data_generator:
-        batch_it += len(batch_ptcl_ids)  # total number of ptcls seen
+        # impression counting
+        batch_it += len(batch_ptcl_ids)
+
+        # transfer to GPU
+        batch_images = batch_images.to(device)
+        batch_trans = batch_trans.to(device)
+        batch_ctf = batch_ctf.to(device)
 
         z_mu, z_logvar = eval_batch(model, lattice, batch_images, batch_trans, ctf_params=batch_ctf)
         z_mu_all.append(z_mu)

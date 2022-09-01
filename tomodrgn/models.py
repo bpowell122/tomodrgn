@@ -161,7 +161,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         '''
         cfg = utils.load_pkl(config) if type(config) is str else config
         ntilts = cfg['dataset_args']['ntilts']
-        lat = lattice.Lattice(cfg['lattice_args']['D'], extent=cfg['lattice_args']['extent'])
+        lat = lattice.Lattice(cfg['lattice_args']['D'], extent=cfg['lattice_args']['extent'], device=device)
         c = cfg['model_args']
         if cfg['model_args']['enc_mask'] > 0:
             enc_mask = lat.get_circular_mask(c['enc_mask'])
@@ -367,7 +367,7 @@ class FTPositionalDecoder(nn.Module):
         self.enc_type = enc_type
         self.enc_dim = self.D2 if enc_dim is None else enc_dim
         self.in_dim = 3 * (self.enc_dim) * 2 + self.zdim
-        self.decoder = ResidLinearMLP(self.in_dim, nlayers, hidden_dim, 2, activation)
+        self.decoder = ResidLinearMLP(self.in_dim, nlayers, hidden_dim, 2, activation)  # TODO try replacing outdim 2 with 8 for (possible) AMP TensorCore speedup, ignoring indices 3-8
 
         if enc_type == "gaussian":
             # We construct 3 * self.enc_dim random vector frequences, to match the original positional encoding:
@@ -386,7 +386,7 @@ class FTPositionalDecoder(nn.Module):
         '''Expand coordinates in the Fourier basis with geometrically spaced wavelengths from 2/D to 2pi'''
         if self.enc_type == "gaussian":
             return self.random_fourier_encoding(coords)
-        freqs = torch.arange(self.enc_dim, dtype=torch.float)
+        freqs = torch.arange(self.enc_dim, dtype=torch.float, device=coords.device)
         if self.enc_type == 'geom_ft':
             freqs = self.DD*np.pi*(2./self.DD)**(freqs/(self.enc_dim-1)) # option 1: 2/D to 1 
         elif self.enc_type == 'geom_full':
@@ -401,6 +401,7 @@ class FTPositionalDecoder(nn.Module):
             raise RuntimeError('Encoding type {} not recognized'.format(self.enc_type))
         freqs = freqs.view(*[1] * len(coords.shape), -1)  # 1 x 1 x 1 x D2
         coords = coords.unsqueeze(-1)  # B x N x 3 x 1
+
         k = coords[..., 0:3, :] * freqs  # B x N x 3 x D2
         s = torch.sin(k)  # B x N x 3 x D2
         c = torch.cos(k)  # B x N x 3 x D2
@@ -431,7 +432,7 @@ class FTPositionalDecoder(nn.Module):
 
     def positional_encoding_linear(self, coords):
         '''Expand coordinates in the Fourier basis, i.e. cos(k*n/N), sin(k*n/N), n=0,...,N//2'''
-        freqs = torch.arange(1, self.D2+1, dtype=torch.float) 
+        freqs = torch.arange(1, self.D2+1, dtype=torch.float, device=coords.device)
         freqs = freqs.view(*[1]*len(coords.shape), -1) # 1 x 1 x D2
         coords = coords.unsqueeze(-1) # B x 3 x 1
         k = coords[...,0:3,:] * freqs # B x 3 x D2
@@ -465,7 +466,7 @@ class FTPositionalDecoder(nn.Module):
             f'lattice[...,0:3].min(): {lattice[...,0:3].min().to(torch.float32)}'
         # convention: only evaluate the -z points
         w = lattice[...,2] > 0.0
-        w_zflipper = torch.ones_like(lattice)
+        w_zflipper = torch.ones_like(lattice, device=lattice.device)
         w_zflipper[..., 0:3][w] *= -1
         lattice = lattice * w_zflipper  # avoids "modifying tensor in-place" warnings+errors
         # lattice[..., 0:3][w] = -lattice[..., 0:3][w]  # negate lattice coordinates where z > 0

@@ -206,11 +206,11 @@ def main(args):
     ## set the device
     use_cuda = torch.cuda.is_available()
     device = torch.device('cuda' if use_cuda else 'cpu')
-    flog('Use cuda {}'.format(use_cuda))
-    if use_cuda:
-        torch.set_default_tensor_type(torch.cuda.FloatTensor)
-    else:
-        flog('WARNING: No GPUs detected')
+    log(f'Use cuda {use_cuda}')
+    log(f'Using device {device}')
+    if not use_cuda:
+        log('WARNING: No GPUs detected')
+    # device = utils.get_default_device()
 
     # load the particle indices
     if args.ind is not None:
@@ -302,7 +302,6 @@ def main(args):
         model = nn.DataParallel(model)
     elif args.multigpu:
         flog(f'WARNING: --multigpu selected, but {torch.cuda.device_count()} GPUs detected')
-    model.to(device)
 
     # train
     flog('Done all preprocessing; starting training now!')
@@ -314,6 +313,14 @@ def main(args):
         for batch_images, batch_rot, batch_trans, batch_ctf, batch_weights, batch_dec_mask, batch_ptcl_ids in data_generator:
             # impression counting
             batch_it += len(batch_ptcl_ids)
+
+            # transfer to GPU
+            batch_images = batch_images.to(device)
+            batch_rot = batch_rot.to(device)
+            batch_trans = batch_trans.to(device)
+            batch_ctf = batch_ctf.to(device)
+            batch_weights = batch_weights.to(device)
+            batch_dec_mask = batch_dec_mask.to(device)
 
             # training minibatch
             loss_item = train(scaler, model, lattice, batch_images, batch_rot, batch_trans, batch_weights, batch_dec_mask, optim, ctf_params=batch_ctf, use_amp=use_amp)

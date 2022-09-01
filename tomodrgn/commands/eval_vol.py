@@ -51,12 +51,8 @@ def main(args):
     t1 = dt.now()
 
     ## set the device
-    use_cuda = torch.cuda.is_available()
-    log('Use cuda {}'.format(use_cuda))
-    if use_cuda:
-        torch.set_default_tensor_type(torch.cuda.FloatTensor)
-    else:
-        log('WARNING: No GPUs detected')
+    device = utils.get_default_device()
+    torch.set_grad_enabled(False)
 
     log(args)
     cfg = utils.load_pkl(args.config)
@@ -71,7 +67,7 @@ def main(args):
         assert args.downsample % 2 == 0, "Boxsize must be even"
         assert args.downsample <= D - 1, "Must be smaller than original box size"
     
-    model, lattice = TiltSeriesHetOnlyVAE.load(cfg, args.weights)
+    model, lattice = TiltSeriesHetOnlyVAE.load(cfg, args.weights, device=device)
     model.eval()
 
     use_amp = not args.no_amp

@@ -81,9 +81,9 @@ def main(args):
     if args.max_images is not None:
         data = data[:args.max_images]
 
-    use_cuda = torch.cuda.is_available()
-    print(f'Use cuda {use_cuda}')
-    device = torch.device('cuda' if use_cuda else 'cpu')
+    ## set the device
+    device = utils.get_default_device()
+    torch.set_grad_enabled(False)
     data = data.to(device)
 
     N, D = data.shape

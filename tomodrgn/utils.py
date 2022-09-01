@@ -7,6 +7,7 @@ import functools
 from . import mrc, fft
 from scipy import ndimage
 import subprocess
+import torch
 
 _verbose = False
 
@@ -240,6 +241,15 @@ def check_memory_usage():
 
 def check_git_revision_hash(repo_path):
     return subprocess.check_output(['git', '--git-dir', repo_path, 'rev-parse', 'HEAD']).decode('ascii').strip()
+
+
+def get_default_device():
+    use_cuda = torch.cuda.is_available()
+    device = torch.device('cuda' if use_cuda else 'cpu')
+    log(f'Use cuda {use_cuda}')
+    if not use_cuda:
+        log('WARNING: No GPUs detected')
+    return device
 
 
 def print_progress_bar(iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '*', end_character = "\r"):

@@ -64,11 +64,10 @@ def main(args):
     warnexists(args.o)
     assert (args.o.endswith('.mrcs') or args.o.endswith('mrc')), "Must specify output in .mrc(s) file format"
 
-    use_cuda =  torch.cuda.is_available()
+
+    ## set the device
+    device = utils.get_default_device()
     torch.set_grad_enabled(False)
-    if use_cuda:
-        torch.set_default_tensor_type(torch.cuda.FloatTensor)
-        log(f'Using GPU for downsampling')
 
     log(f'Loading {args.mrcs}')
     lazy = args.lazy
@@ -112,6 +111,7 @@ def main(args):
         data_generator = DataLoader(particle_dataset, batch_size=args.b, shuffle=False)
         for batch_idx, batch_ptcls in data_generator:
             log(f'Processing indices {batch_idx[0]} - {batch_idx[-1]}')
+            batch_ptcls.to(device)
             batch_new = downsample_images(batch_ptcls, start, stop)
             new[batch_idx.cpu().numpy()] = batch_new.cpu().numpy()
 

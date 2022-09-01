@@ -153,13 +153,13 @@ class EvenLattice(Lattice):
         x0, x1 = np.meshgrid(np.linspace(-1, 1, D, endpoint=False), 
                              np.linspace(-1, 1, D, endpoint=False))
         coords = np.stack([x0.ravel(),x1.ravel(),np.zeros(D**2)],1).astype(np.float32)
-        self.coords = torch.tensor(coords)
+        self.coords = torch.tensor(coords, device=device)
         self.extent = extent
         self.D = D
         self.D2 = int(D/2)
 
         c = 2/(D-1)*(D/2) -1 
-        self.center = torch.tensor([c,c]) # pixel coordinate for img[D/2,D/2]
+        self.center = torch.tensor([c,c], device=device) # pixel coordinate for img[D/2,D/2]
         
         self.square_mask = {}
         self.circle_mask = {}
