@@ -619,12 +619,10 @@ def subset_ptcls_and_render(df, tomo_name_for_df):
         df['original_index'] = df.index
         df_subset = df[df['_rlnMicrographName'] == tomo_name_for_df]
 
-        # only use numeric columns from df_subset for plotting
-        df_subset = df_subset.apply(pd.to_numeric, errors='ignore')
-        df_subset_numeric = df_subset.select_dtypes(include=[np.number]).copy()
-        df_subset_numeric = df_subset_numeric.reset_index(drop=True)
+        # reset index
+        df_subset = df_subset.reset_index(drop=True)
 
-        return df_subset_numeric
+        return df_subset
 
     def pose_to_vector(df):
         # TODO: implement symmetry parsing
@@ -652,7 +650,7 @@ def subset_ptcls_and_render(df, tomo_name_for_df):
     def generate_colormap_from_column(df_subset_selected_column, colormap=None):
         # derive colormap from selected column
         cmap = plt.get_cmap(colormap)
-        metric = df_subset_numeric[df_subset_selected_column]
+        metric = df[df_subset_selected_column]
         normalized_metric = (metric - metric.min()) / (metric.max() - metric.min())
         return cmap(normalized_metric)
 
@@ -665,17 +663,25 @@ def subset_ptcls_and_render(df, tomo_name_for_df):
             colors = 'dodgerblue'
         quiverplot.color = colors
         if show_selection_checkbox.value:
-            subset_value_range.min = df_subset_numeric[column_selection.value].min()
-            subset_value_range.max = df_subset_numeric[column_selection.value].max()
-            subset_value_range.value = [df_subset_numeric[column_selection.value].min(),
-                                        df_subset_numeric[column_selection.value].max()]
+            old_min = subset_value_range.min
+            old_max = subset_value_range.max
+            new_min = df[column_selection.value].min()
+            new_max = df[column_selection.value].max()
+
+            subset_value_range.min = min(old_min, new_min)  # update lower bound to temp value to avoid "setting max < min" error
+            subset_value_range.max = max(old_max, new_max)  # update upper bound to temp value to avoid "setting min > max" error
+
+            subset_value_range.min = new_min
+            subset_value_range.max = new_max
+            subset_value_range.value = [new_min, new_max]
+
             update_subset_quiver()
 
     # subset dataframe by selected tomo
-    df_subset_numeric = subset_df(df, tomo_name_for_df)
+    df_subset = subset_df(df, tomo_name_for_df)
 
     # create interactive widgets for main plot
-    column_selection = widgets.Dropdown(options=df_subset_numeric,
+    column_selection = widgets.Dropdown(options=df_subset,
                                         description='Color by:',
                                         disabled=False)
     colormaps = [('None', None),
@@ -695,11 +701,11 @@ def subset_ptcls_and_render(df, tomo_name_for_df):
     # TODO: replace FloatRangeSlider with textbox for pd.query custom selection by user
     show_selection_checkbox = widgets.Checkbox(value=False,
                                                description='Overlay subset plot')
-    subset_value_range = widgets.FloatRangeSlider(value=[df_subset_numeric[column_selection.value].min(),
-                                                         df_subset_numeric[column_selection.value].max()],
+    subset_value_range = widgets.FloatRangeSlider(value=[df_subset[column_selection.value].min(),
+                                                         df_subset[column_selection.value].max()],
                                                   description='Subset values',
-                                                  min=df_subset_numeric[column_selection.value].min(),
-                                                  max=df_subset_numeric[column_selection.value].max(),
+                                                  min=df_subset[column_selection.value].min(),
+                                                  max=df_subset[column_selection.value].max(),
                                                   continuous_update=False,
                                                   orientation='horizontal',
                                                   readout=True,
@@ -729,11 +735,9 @@ def subset_ptcls_and_render(df, tomo_name_for_df):
         selected_col = column_selection.value
 
         if not invert_selection:
-            selected_ptcls = df_subset_numeric[(df_subset_numeric[selected_col] >= subset_min)
-                                               & (df_subset_numeric[selected_col] <= subset_max)]
+            selected_ptcls = df_subset[(df_subset[selected_col] >= subset_min) & (df_subset[selected_col] <= subset_max)]
         else:
-            selected_ptcls = df_subset_numeric[(df_subset_numeric[selected_col] <= subset_min)
-                                               | (df_subset_numeric[selected_col] >= subset_max)]
+            selected_ptcls = df_subset[(df_subset[selected_col] <= subset_min) | (df_subset[selected_col] >= subset_max)]
 
         x_new, y_new, z_new, xv_new, yv_new, zv_new = pose_to_vector(selected_ptcls)
 
@@ -755,7 +759,7 @@ def subset_ptcls_and_render(df, tomo_name_for_df):
     # create plot
     # markers = ['arrow', 'box', 'diamond', 'sphere', 'point_2d', 'square_2d', 'triangle_2d']
     # TODO: add popup of particle index in df when ipyvolume-0.6.0alpha10 is available on conda-forge
-    x, y, z, xv, yv, zv = pose_to_vector(df_subset_numeric)
+    x, y, z, xv, yv, zv = pose_to_vector(df_subset)
     ipv.gcf()
     quiverplot = ipv.quiver(x, y, z, xv, yv, zv, size=4, color='dodgerblue')
     quiverplot_selected = ipv.quiver(x, y, z, xv, yv, zv, size=0, color='red', marker='sphere')
