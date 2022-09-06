@@ -39,12 +39,12 @@ tomodrgn convergence_nn output/02_nn_classE_sim data/10076_classE_32.mrc --fsc-m
 ### TRAIN_VAE ###
 # Test train_vae for clean particles (testing heterogeneity learning and working with different n_tilts per dataset) --> should get loss around 0.12/30.46/0.12 using 8 tilts per particle
 tomodrgn train_vae data/10076_both_32_clean.star -o output/05_vae_both_clean --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3
-# Test train_vae for simulated particles (testing lazy loading) --> should get loss around 0.90/16.52/0.90 using 8 tilts per particle
-tomodrgn train_vae data/10076_both_32_sim.star -o output/06_vae_both_sim --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 --lazy
 # Test train_vae for simulated particles (testing heterogeneity learning in noisy context) --> should get loss around 0.90/16.52/0.90 using 8 tilts per particle
 tomodrgn train_vae data/10076_both_32_sim.star -o output/06_vae_both_sim --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 -n 50
 # Test train_vae for simulated particles (testing multiple dose/tilt masking/weighting schemes) --> should get loss around 0.90/15.98/0.90 using 8 tilts per particle
 tomodrgn train_vae data/10076_both_32_sim.star -o output/07_vae_both_sim_dosetiltweightmask --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 --l-dose-mask --recon-dose-weight --recon-tilt-weight --dose-override 100
+# Test train_vae for simulated particles (testing lazy loading) --> should get loss around 0.90/16.52/0.90 using 8 tilts per particle
+tomodrgn train_vae data/10076_both_32_sim.star -o output/07_vae_both_sim_dosetiltweightmask --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 --lazy --l-dose-mask --recon-dose-weight --recon-tilt-weight --dose-override 100
 # Test train_vae for simulated particles with no heterogeneity --> should get featureless continuous latent space
 tomodrgn train_vae data/10076_classE_32_sim.star -o output/08_vae_classE_sim --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 -n 50
 
