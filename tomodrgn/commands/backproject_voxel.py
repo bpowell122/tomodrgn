@@ -84,7 +84,7 @@ def main(args):
     rots = np.asarray([utils.R_from_relion(*x) for x in euler], dtype=np.float32)
     rots = torch.from_numpy(rots).to(device)
 
-    trans_columns = ['rlnOriginX', '_rlnOriginY']
+    trans_columns = ['_rlnOriginX', '_rlnOriginY']
     if np.all([trans_column in ptcls_star.headers for trans_column in trans_columns]):
         trans = ptcls_star.df[trans_columns].to_numpy(dtype=np.float32)
         trans = torch.from_numpy(trans).to(device)
