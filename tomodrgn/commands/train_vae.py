@@ -279,8 +279,8 @@ def save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z, sca
         }, out_weights)
     # save z
     with open(out_z,'wb') as f:
-        pickle.dump(z_mu, f)
-        pickle.dump(z_logvar, f)
+        pickle.dump(z_mu.astype(np.float32), f)
+        pickle.dump(z_logvar.astype(np.float32), f)
 
 
 def main(args):
