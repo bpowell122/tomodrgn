@@ -19,6 +19,7 @@ from . import starfile
 import ipyvolume as ipv
 import ipywidgets as widgets
 from PIL import Image
+import traitlets
 
 
 log = utils.log
@@ -616,11 +617,11 @@ def rescale_df_coordinates(df, tomo_max_xyz_nm=(680, 680, 510), tomo_pixelsize=1
 def subset_ptcls_and_render(df, tomo_name_for_df):
     def subset_df(df, tomo_name_for_df):
         # subset selected tomogram from dropdown
-        df['original_index'] = df.index
         df_subset = df[df['_rlnMicrographName'] == tomo_name_for_df]
 
         # reset index
         df_subset = df_subset.reset_index(drop=True)
+        df['index_this_tomo_particles'] = df.index
 
         return df_subset
 
@@ -647,6 +648,27 @@ def subset_ptcls_and_render(df, tomo_name_for_df):
 
         return x, y, z, xv, yv, zv
 
+    class ParticleLabelPopup(ipv.ui.Popup):
+        # index_all_ptcls is a list corresponding to the unfiltered particle indices for all tomograms
+        # value is the index of the hovered point among all points in the plot
+
+        index_all_ptcls = traitlets.List().tag(sync=True)
+        sel_column = traitlets.Unicode().tag(sync=True)
+        sel_column_values = traitlets.List().tag(sync=True)
+
+        template_file = None  # disable the loading from file
+        @traitlets.default("template")
+        def _default_template(self):
+            return """
+                    <template>
+                        <div :style="{padding: '4px', 'background-color': 'black', color: 'white'}">
+                            Particle {{index_all_ptcls[value]}}
+                            <br>
+                            {{sel_column}}: {{sel_column_values[value]}}
+                        </div>
+                    </template>
+                    """
+
     def generate_colormap_from_column(df_subset_selected_column, colormap=None):
         # derive colormap from selected column
         cmap = plt.get_cmap(colormap)
@@ -656,17 +678,28 @@ def subset_ptcls_and_render(df, tomo_name_for_df):
 
     def selcolumn_dropdown_eventhandler(change):
         df_subset_selected_column = column_selection.value
+
+        # update popup extra data
+        popup.sel_column = df_subset_selected_column
+        popup.sel_column_values = df_subset.loc[:, df_subset_selected_column].to_list()
+
+        # update the colormap
         colormap = colormap_selection.value
         if colormap is not None:
             colors = generate_colormap_from_column(df_subset_selected_column, colormap)
         else:
             colors = 'dodgerblue'
         quiverplot.color = colors
+
+        # update the subset selection slider values
         if show_selection_checkbox.value:
             old_min = subset_value_range.min
             old_max = subset_value_range.max
             new_min = df[column_selection.value].min()
             new_max = df[column_selection.value].max()
+
+            if (old_min == new_min) and (old_max == new_max):
+                return
 
             subset_value_range.min = min(old_min, new_min)  # update lower bound to temp value to avoid "setting max < min" error
             subset_value_range.max = max(old_max, new_max)  # update upper bound to temp value to avoid "setting min > max" error
@@ -675,7 +708,7 @@ def subset_ptcls_and_render(df, tomo_name_for_df):
             subset_value_range.max = new_max
             subset_value_range.value = [new_min, new_max]
 
-            update_subset_quiver()
+        update_subset_quiver()
 
     # subset dataframe by selected tomo
     df_subset = subset_df(df, tomo_name_for_df)
@@ -758,13 +791,18 @@ def subset_ptcls_and_render(df, tomo_name_for_df):
 
     # create plot
     # markers = ['arrow', 'box', 'diamond', 'sphere', 'point_2d', 'square_2d', 'triangle_2d']
-    # TODO: add popup of particle index in df when ipyvolume-0.6.0alpha10 is available on conda-forge
     x, y, z, xv, yv, zv = pose_to_vector(df_subset)
     ipv.gcf()
     quiverplot = ipv.quiver(x, y, z, xv, yv, zv, size=4, color='dodgerblue')
-    quiverplot_selected = ipv.quiver(x, y, z, xv, yv, zv, size=0, color='red', marker='sphere')
+    quiverplot_selected = ipv.quiver(x, y, z, xv, yv, zv, size=0, color='red', marker='sphere', alpha=0.5)
     widgets.jslink((size, 'value'), (quiverplot, 'size'))
     widgets.jslink((subset_size, 'value'), (quiverplot_selected, 'size'))
+
+    popup = ParticleLabelPopup()
+    popup.index_all_ptcls = df_subset.loc[:, 'index_all_tomos_particles'].to_list()  # get index of hovered particle relative to all particles
+    popup.sel_column = column_selection.value
+    popup.sel_column_values = df_subset.loc[:, popup.sel_column].to_list()
+    quiverplot.popup = popup
 
     # define UI layout
     quiverplot_widgets = widgets.HBox([column_selection, colormap_selection, size])
