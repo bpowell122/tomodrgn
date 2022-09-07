@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from setuptools import setup, find_namespace_packages
+from setuptools import setup
 import os,sys
 sys.path.insert(0, f'{os.path.dirname(__file__)}/tomodrgn')
 import tomodrgn
@@ -14,13 +14,17 @@ setup(name='tomodrgn',
       url='https://github.com/bpowell122/tomodrgn',
       license='GPLv3',
       zip_safe=False,
-      packages=find_namespace_packages(where='templates'),
+      package_dir={
+          "tomodrgn": "tomodrgn",
+          "tomodrgn.commands": "tomodrgn/commands",
+          "tomodrgn.templates": "tomodrgn/templates",
+          },
       entry_points={
           "console_scripts": [
             "tomodrgn = tomodrgn.__main__:main",
             ],
       },
-      include_package_data = True,
+      include_package_data=True,
       python_requires='>=3.7',
       install_requires=[
         'torch>=1.0.0',
@@ -31,9 +35,13 @@ setup(name='tomodrgn',
         'scikit-learn',
         'seaborn',
         'cufflinks',
-        'jupyterlab',
         'umap-learn',
         'ipywidgets',
-        'ipyvolume'
+        'ipyvolume',
+        'plotly',
+        'pillow',
+        'healpy',
+        'typing_extensions>=3.7.4',
+        'ipyvolume>=0.6.0a10'
         ]
      )
