@@ -42,6 +42,7 @@ setup(name='tomodrgn',
         'pillow',
         'healpy',
         'typing_extensions>=3.7.4',
-        'ipyvolume>=0.6.0a10'
+        'ipyvolume>=0.6.0a10',
+        'traitlets'
         ]
      )
