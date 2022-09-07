@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from . import utils
+from tomodrgn import utils
 log = utils.log
 
 def compute_ctf(freqs, dfu, dfv, dfang, volt, cs, w, phase_shift=0, bfactor=None):

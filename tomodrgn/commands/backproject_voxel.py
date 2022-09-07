@@ -8,12 +8,7 @@ import time
 import numpy as np
 import torch
 
-from tomodrgn import utils
-from tomodrgn import mrc
-from tomodrgn import fft
-from tomodrgn import dataset
-from tomodrgn import ctf
-from tomodrgn import starfile
+from tomodrgn import utils, mrc, fft, dataset, ctf, starfile
 from tomodrgn.lattice import Lattice
 
 log = utils.log

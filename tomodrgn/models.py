@@ -4,10 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from . import fft
-from tomodrgn import lie_tools
-from . import utils
-from . import lattice
+from tomodrgn import fft, lie_tools, utils, lattice
 
 log = utils.log
 

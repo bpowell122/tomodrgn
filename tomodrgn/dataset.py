@@ -1,16 +1,10 @@
 import numpy as np
-import torch
 from torch.utils import data
 import os
 import multiprocessing as mp
 from multiprocessing import Pool
 
-from . import fft
-from . import mrc
-from . import utils
-from . import starfile
-from . import dose
-from . import lattice
+from tomodrgn import fft, mrc, utils, starfile, dose
 
 log = utils.log
 

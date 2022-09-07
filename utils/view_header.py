@@ -1,11 +1,8 @@
 '''View the header of a .mrc or .mrcs file'''
 
 import argparse
-import numpy as np
-import sys, os
 
-from tomodrgn import mrc
-from tomodrgn import utils
+from tomodrgn import mrc, utils
 
 log = utils.log
 

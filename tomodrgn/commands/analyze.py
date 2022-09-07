@@ -4,8 +4,7 @@ Visualize latent space and generate volumes
 
 import argparse
 import numpy as np
-import sys, os
-import pickle
+import os
 import shutil
 from datetime import datetime as dt
 
@@ -15,8 +14,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 import tomodrgn
-from tomodrgn import analysis
-from tomodrgn import utils
+from tomodrgn import analysis, utils
 
 log = utils.log
 

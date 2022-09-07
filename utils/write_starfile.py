@@ -7,9 +7,7 @@ import os
 import numpy as np
 import pandas as pd
 
-from tomodrgn import dataset
-from tomodrgn import utils
-from tomodrgn import starfile
+from tomodrgn import dataset, utils, starfile
 log = utils.log
 
 IMAGE_HEADERS = ['_rlnImageName']

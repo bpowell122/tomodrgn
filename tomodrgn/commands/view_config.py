@@ -3,14 +3,11 @@ Display config information of a tomoDRGN job
 '''
 
 import argparse
-import numpy as np
-import sys, os
+import os
 import pickle
-import subprocess
-from datetime import datetime as dt
+from pprint import pprint
 
 from tomodrgn import utils
-from pprint import pprint
 
 log = utils.log
 

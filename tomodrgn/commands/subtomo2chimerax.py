@@ -9,9 +9,7 @@ import numpy as np
 import argparse
 import matplotlib.cm
 
-from tomodrgn import starfile
-from tomodrgn import utils
-from tomodrgn import mrc
+from tomodrgn import starfile, utils, mrc
 
 log = utils.log
 

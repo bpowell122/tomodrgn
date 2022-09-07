@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from . import utils
+from tomodrgn import utils
 
 log = utils.log
 

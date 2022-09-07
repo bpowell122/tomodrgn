@@ -1,4 +1,4 @@
-from . import utils
+from tomodrgn import utils
 
 def overwrite_config(config_pkl, args):
     config = utils.load_pkl(config_pkl)

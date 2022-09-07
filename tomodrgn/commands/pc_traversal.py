@@ -4,11 +4,9 @@ Generate trajectory along PCs
 
 import argparse
 import numpy as np
-import sys, os
+import os
 import pickle
 from scipy.spatial.distance import cdist
-from sklearn.decomposition import PCA
-import matplotlib.pyplot as plt
 
 from tomodrgn import analysis
 

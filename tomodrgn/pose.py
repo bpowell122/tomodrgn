@@ -3,8 +3,7 @@ import torch.nn as nn
 import numpy as np
 import pickle
 
-from tomodrgn import lie_tools
-from . import utils
+from tomodrgn import lie_tools, utils
 log = utils.log
 
 class PoseTracker(nn.Module):

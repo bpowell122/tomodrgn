@@ -7,9 +7,8 @@ import pandas as pd
 from datetime import datetime as dt
 import os
 
-from . import mrc
-from .mrc import LazyImage
-from . import utils
+from tomodrgn import mrc, utils
+from tomodrgn.mrc import LazyImage
 log = utils.log
 
 class Starfile():

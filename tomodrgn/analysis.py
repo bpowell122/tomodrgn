@@ -1,20 +1,16 @@
-import os
 import numpy as np
-import pickle
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import subprocess
 
-from scipy.spatial.distance import cdist, pdist
+from scipy.spatial.distance import cdist
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
 
-from . import utils
-from . import mrc
-from . import starfile
+from tomodrgn import utils, mrc
 
 import ipyvolume as ipv
 import ipywidgets as widgets

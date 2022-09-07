@@ -11,10 +11,7 @@ import pprint
 import torch
 from torch.utils.data import DataLoader
 
-from tomodrgn import utils
-from tomodrgn import dataset
-from tomodrgn import config
-from tomodrgn import ctf
+from tomodrgn import utils, dataset, ctf
 from tomodrgn.models import TiltSeriesHetOnlyVAE
 
 log = utils.log

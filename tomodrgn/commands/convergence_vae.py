@@ -9,11 +9,11 @@ from matplotlib import pyplot as plt
 import random
 from datetime import datetime as dt
 import umap
-from tomodrgn import analysis, starfile, utils, mrc, fft
+from tomodrgn import analysis, utils, mrc
 from scipy.spatial import distance_matrix
 from scipy.ndimage.filters import maximum_filter, gaussian_filter
 from scipy.ndimage.morphology import distance_transform_edt, binary_dilation
-from scipy import stats, ndimage
+from scipy import stats
 from string import ascii_uppercase
 import multiprocessing
 import itertools

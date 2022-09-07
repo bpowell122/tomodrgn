@@ -1,15 +1,9 @@
 '''View the top 9 images in a particle stack'''
 
 import argparse
-import numpy as np
-import sys, os
-
-import matplotlib
 import matplotlib.pyplot as plt
 
-from tomodrgn import utils
-from tomodrgn import mrc
-from tomodrgn import analysis
+from tomodrgn import mrc, analysis
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)

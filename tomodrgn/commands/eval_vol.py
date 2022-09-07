@@ -10,8 +10,7 @@ import pprint
 import torch
 from torch.cuda.amp import autocast
 
-from tomodrgn import mrc
-from tomodrgn import utils
+from tomodrgn import mrc, utils
 from tomodrgn.models import TiltSeriesHetOnlyVAE
 
 log = utils.log

@@ -4,7 +4,7 @@ import numpy as np
 import pickle
 import collections
 import functools
-from . import mrc, fft
+from tomodrgn import mrc, fft
 from scipy import ndimage
 import subprocess
 import torch
