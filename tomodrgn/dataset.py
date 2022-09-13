@@ -450,7 +450,8 @@ class TiltSeriesDatasetMaster(data.Dataset):
     '''
 
     def __init__(self, mrcfile, norm=None, invert_data=False, ind_ptcl=None, window=True, datadir=None, window_r=0.85,
-                 recon_dose_weight=False, recon_tilt_weight=False, dose_override=None, l_dose_mask=False, lazy=True):
+                 recon_dose_weight=False, recon_tilt_weight=False, dose_override=None, l_dose_mask=False, lazy=True,
+                 sequential_tilt_sampling=False):
         log('Parsing metadata...')
         ptcls_star = starfile.TiltSeriesStarfile.load(mrcfile)
 
@@ -531,6 +532,10 @@ class TiltSeriesDatasetMaster(data.Dataset):
         assert(len(D) == 1), f'All particles must have the same boxsize! Found boxsizes: {[d-1 for d in D]}'
         D = D[0]
         log(f'Loaded {nptcls} {D-1}x{D-1} subtomo particleseries with {ntilts_range[0]} (min) to {ntilts_range[1]} (max) tilts per particle')
+        if sequential_tilt_sampling:
+            log(f'Will sample {ntilts_range[0]} tilt images sequentially per particle')
+        else:
+            log(f'Will sample {ntilts_range[0]} tilt images randomly per particle')
 
         # check how many weighting schemes were found
         log(f'Found {len(weights_dict.keys())} different weighting schemes')
@@ -577,18 +582,19 @@ class TiltSeriesDatasetMaster(data.Dataset):
         self.window = window
         self.window_r = window_r
         self.invert_data = invert_data
+        self.sequential_tilt_sampling = sequential_tilt_sampling
 
     def __len__(self):
         return self.nptcls
 
-    def __getitem__(self, idx_ptcl, shuffle=True):
+    def __getitem__(self, idx_ptcl, sequential_tilt_sampling=False):
         # randomly select self.ntilts_training tilt images for a given particle to train
         ptcl_id = self.ptcls_list[idx_ptcl]
         ptcl = self.ptcls[ptcl_id]
-        if shuffle:
-            tilt_inds = np.asarray(np.random.choice(ptcl.ntilts, self.ntilts_training, replace=False))
-        else:
+        if sequential_tilt_sampling:
             tilt_inds = np.arange(self.ntilts_training)  # take first ntilts_training images for deterministic loading/debugging
+        else:
+            tilt_inds = np.asarray(np.random.choice(ptcl.ntilts, self.ntilts_training, replace=False))
 
         if self.lazy:
             images = ptcl.images

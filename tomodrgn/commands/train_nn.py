@@ -44,6 +44,7 @@ def add_args(parser):
     group.add_argument('--dose-override', type=float, default=None, help='Manually specify dose in e- / A2 / tilt')
     group.add_argument('--l-dose-mask', action='store_true', help='Do not train on frequencies exposed to > 2.5x critical dose. Training lattice is intersection of this with --l-extent')
     group.add_argument('--sample-ntilts', type=int, default=None, help='Number of tilts to sample from each particle per epoch. Default: min(ntilts) from dataset')
+    group.add_argument('--sequential-tilt-sampling', action='store_true', help='Supply particle images of one particle to encoder in starfile order')
 
     group = parser.add_argument_group('Training parameters')
     group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs')
@@ -109,10 +110,8 @@ def train(scaler, model, lattice, y, rot, tran, weights, dec_mask, optim, ctf_pa
             ctf_weights = ctf.compute_ctf(freqs, *torch.split(ctf_params.view(B*ntilts,-1)[:, 2:], 1, 1)).view(B,ntilts,D,D)
             yhat *= ctf_weights[dec_mask].view(1,-1)
 
-        yhat *= weights[dec_mask].view(1,-1)
-
         # calculate weighted loss
-        loss = ((yhat - y) ** 2).mean()  # input loss vs reconstruction weighted by ctf and tilt + dose-dependent amplitude attenuation
+        loss = (weights[dec_mask].view(1,-1) * ((yhat - y) ** 2)).mean()  # input loss vs reconstruction differences weighted by ctf and tilt + dose-dependent amplitude attenuation
 
     # backpropagate loss, update model
     scaler.scale(loss).backward()
@@ -130,7 +129,8 @@ def save_config(args, dataset, lattice, model, out_config):
                         ind=args.ind,
                         window=args.window,
                         window_r=args.window_r,
-                        datadir=args.datadir)
+                        datadir=args.datadir,
+                        sequential_tilt_sampling=args.sequential_tilt_sampling)
     lattice_args = dict(D=lattice.D,
                         extent=lattice.extent,
                         ignore_DC=lattice.ignore_DC)
@@ -219,7 +219,7 @@ def main(args):
                                            ind_ptcl=ind, window=args.window, datadir=args.datadir,
                                            window_r=args.window_r, recon_dose_weight=args.recon_dose_weight,
                                            dose_override=args.dose_override, recon_tilt_weight=args.recon_tilt_weight,
-                                           l_dose_mask=args.l_dose_mask, lazy=args.lazy)
+                                           l_dose_mask=args.l_dose_mask, lazy=args.lazy, sequential_tilt_sampling=args.sequential_tilt_sampling)
     D = data.D
     nptcls = data.nptcls
     Apix = data.ptcls[data.ptcls_list[0]].ctf[0,1] if data.ptcls[data.ptcls_list[0]].ctf is not None else args.Apix

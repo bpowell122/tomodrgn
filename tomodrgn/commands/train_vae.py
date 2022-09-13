@@ -47,6 +47,7 @@ def add_args(parser):
     group.add_argument('--dose-override', type=float, default=None, help='Manually specify dose in e- / A2 / tilt')
     group.add_argument('--l-dose-mask', action='store_true', help='Do not train on frequencies exposed to > 2.5x critical dose. Training lattice is intersection of this with --l-extent')
     group.add_argument('--sample-ntilts', type=int, default=None, help='Number of tilts to sample from each particle per epoch. Default: min(ntilts) from dataset')
+    group.add_argument('--sequential-tilt-sampling', action='store_true', help='Supply particle images of one particle to encoder in starfile order')
 
     group = parser.add_argument_group('Training parameters')
     group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs')
@@ -96,7 +97,8 @@ def save_config(args, dataset, lattice, model, out_config):
                         ind=args.ind,
                         window=args.window,
                         window_r=args.window_r,
-                        datadir=args.datadir)
+                        datadir=args.datadir,
+                        sequential_tilt_sampling=args.sequential_tilt_sampling)
     lattice_args = dict(D=lattice.D,
                         extent=lattice.extent,
                         ignore_DC=lattice.ignore_DC)
@@ -213,8 +215,7 @@ def _unparallelize(model):
 def loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta, beta_control=None):
     # reconstruction error
     y = y[dec_mask].view(1,-1)
-    y_recon *= cumulative_weights[dec_mask].view(1,-1)
-    gen_loss = ((y_recon - y) ** 2).mean()
+    gen_loss = (cumulative_weights[dec_mask].view(1,-1) * ((y_recon - y) ** 2)).mean()
 
     # latent loss
     kld = torch.mean(-0.5 * torch.sum(1 + z_logvar - z_mu.pow(2) - z_logvar.exp(), dim=1), dim=0)
@@ -322,7 +323,7 @@ def main(args):
                                            ind_ptcl=ind, window=args.window, datadir=args.datadir,
                                            window_r=args.window_r, recon_dose_weight=args.recon_dose_weight,
                                            dose_override=args.dose_override, recon_tilt_weight=args.recon_tilt_weight,
-                                           l_dose_mask=args.l_dose_mask, lazy=args.lazy)
+                                           l_dose_mask=args.l_dose_mask, lazy=args.lazy, sequential_tilt_sampling=args.sequential_tilt_sampling)
     D = data.D
     nptcls = data.nptcls
 

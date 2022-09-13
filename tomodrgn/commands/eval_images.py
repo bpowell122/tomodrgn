@@ -28,6 +28,7 @@ def add_args(parser):
 
     group = parser.add_argument_group('Dataset loading')
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory')
+    group.add_argument('--sequential-tilt-sampling', action='store_true', help='Supply particle images of one particle to encoder in starfile order')
 
     return parser
 
@@ -80,7 +81,8 @@ def main(args):
                                            dose_override=cfg['training_args']['dose_override'],
                                            recon_tilt_weight=cfg['training_args']['recon_tilt_weight'],
                                            l_dose_mask=cfg['model_args']['l_dose_mask'],
-                                           lazy=args.lazy)
+                                           lazy=args.lazy,
+                                           sequential_tilt_sampling=args.sequential_tilt_sampling)
 
     nptcls = data.nptcls
     data.ntilts_training = cfg['dataset_args']['ntilts']
