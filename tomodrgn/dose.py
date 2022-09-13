@@ -87,4 +87,5 @@ def plot_weight_distribution(cumulative_weights, spatial_frequencies, outdir, we
     ax.set_xticklabels([f'1/{1/xtick:.1f}' if xtick != 0.0 else 0 for xtick in ticks_loc])
 
     plt.savefig(f'{outdir}/weighting_scheme_{weight_distribution_index}.png', dpi=300)
+    plt.close()
 
