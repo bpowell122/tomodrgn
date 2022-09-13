@@ -60,7 +60,7 @@ def main(args):
     # load the star file
     ptcls_star = starfile.TiltSeriesStarfile.load(args.particles)
     df_grouped = ptcls_star.df.groupby('_rlnGroupName')
-    ind_imgs = np.array([df_grouped.get_group(ptcl).index for ptcl in df_grouped.groups], dtype=object)
+    ind_imgs = np.array([df_grouped.get_group(ptcl).index.to_numpy() for ptcl in df_grouped.groups], dtype=object)
 
     if args.ind is not None:
         ind_ptcls = np.array(utils.load_pkl(args.ind))
