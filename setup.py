@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from setuptools import setup
+from setuptools import setup, find_namespace_packages
 import os,sys
 sys.path.insert(0, f'{os.path.dirname(__file__)}/tomodrgn')
 import tomodrgn
@@ -14,17 +14,23 @@ setup(name='tomodrgn',
       url='https://github.com/bpowell122/tomodrgn',
       license='GPLv3',
       zip_safe=False,
-      package_dir={
-          "tomodrgn": "tomodrgn",
-          "tomodrgn.commands": "tomodrgn/commands",
-          "tomodrgn.templates": "tomodrgn/templates",
-          },
+      packages=find_namespace_packages(where='.',
+                                       include=['tomodrgn*', 'testing*'],
+                                       exclude=['testing.output*']),
+      # packages=find_packages(where='.',
+      #                        exclude=['*output*']),
+      # package_dir={
+      #     "tomodrgn": "tomodrgn",
+      #     "tomodrgn.commands": "tomodrgn/commands",
+      #     "tomodrgn.templates": "tomodrgn/templates",
+      #     },
+      package_data={"tomodrgn.templates": ["*.ipynb"]},
       entry_points={
           "console_scripts": [
             "tomodrgn = tomodrgn.__main__:main",
             ],
       },
-      include_package_data=True,
+      # include_package_data=True,
       python_requires='>=3.7',
       install_requires=[
         'torch>=1.0.0',
