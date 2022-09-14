@@ -48,6 +48,7 @@ def add_args(parser):
     group = parser.add_argument_group('Volume generation arguments')
     group.add_argument('--Apix', type = float, default = 1.0, help='A/pix of output volume')
     group.add_argument('--flip', action='store_true', help='Flip handedness of output volume')
+    group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
     group.add_argument('-d','--downsample', type=int, help='Downsample volumes to this box size (pixels). Recommended for boxes > 250-300px')
     group.add_argument('--cuda', type = int, default = None, help='Specify cuda device for volume generation')
     group.add_argument('--skip-volgen', action = 'store_true', help='Skip volume generation. Requires that volumes already exist for downstream CC + FSC calcs')
@@ -83,6 +84,53 @@ def plot_loss(logfile, outdir, E, LOG):
                 transparent=True,
                 bbox_inches='tight')
     flog(f'Saved total loss plot to {outdir}/plots/00_total_loss.png', LOG)
+
+
+def encoder_latent_pca(workdir, outdir, epochs, LOG):
+    '''Calculates PCA of all particles' latent embeddings at selected epochs'''
+
+    for epoch in epochs:
+        flog(f'Now calculating PCA for epoch {epoch}', LOG)
+        z = utils.load_pkl(workdir + f'/z.{epoch}.pkl')
+        pc, _ = analysis.run_pca(z)
+        utils.save_pkl(pc, outdir + f'/pcs/pc.{epoch}.pkl')
+
+    n_cols = int(np.ceil(len(epochs) ** 0.5))
+    n_rows = int(np.ceil(len(epochs) / n_cols))
+
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(2 * n_cols, 2 * n_rows), sharex='all', sharey='all')
+    fig.tight_layout()
+
+    for i, ax in enumerate(axes.flat):
+        try:
+            pc = utils.load_pkl(outdir + '/pcs/pc.{}.pkl'.format(epochs[i]))
+            toplot = ax.hexbin(pc[:, 0], pc[:, 1], bins='log', mincnt=1)
+            ax.set_title('epoch {}'.format(epochs[i]))
+        except IndexError:
+            pass
+        except FileNotFoundError:
+            flog(f'Could not find file {outdir}/pcs/pc.{epochs[i]}.pkl', LOG)
+            pass
+
+    if len(axes.shape) == 1:
+        axes[0].set_ylabel('PC1')
+        for a in axes[:]: a.set_xlabel('PC2')
+    else:
+        assert len(axes.shape) == 2  # there are more than one row and column of axes
+        for a in axes[:, 0]: a.set_ylabel('PC1')
+        for a in axes[-1, :]: a.set_xlabel('PC2')
+    fig.subplots_adjust(right=0.96)
+    cbar_ax = fig.add_axes([0.98, 0.15, 0.02, 0.7])
+    cbar = fig.colorbar(toplot, cax=cbar_ax)
+    cbar.ax.set_ylabel('particle density', rotation=90)
+
+    plt.subplots_adjust(wspace=0.1)
+    plt.subplots_adjust(hspace=0.3)
+    plt.savefig(outdir + '/plots/01_encoder_pcs.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
+    flog(f'Saved PCA plots to {outdir}/plots/01_encoder_pcs.png', LOG)
+    plt.clf()
+
+    pass
 
 
 def encoder_latent_umaps(workdir, outdir, epochs, n_particles_total, subset, random_seed, use_umap_gpu, random_state, n_epochs_umap, LOG):
@@ -148,7 +196,7 @@ def encoder_latent_umaps(workdir, outdir, epochs, n_particles_total, subset, ran
         except IndexError:
             pass
         except FileNotFoundError:
-            flog(f'Could not find file {outdir}/umaps/umap.{epoch}.pkl', LOG)
+            flog(f'Could not find file {outdir}/umaps/umap.{epochs[i]}.pkl', LOG)
             pass
 
     if len(axes.shape) == 1:
@@ -165,8 +213,9 @@ def encoder_latent_umaps(workdir, outdir, epochs, n_particles_total, subset, ran
 
     plt.subplots_adjust(wspace=0.1)
     plt.subplots_adjust(hspace=0.3)
-    plt.savefig(outdir + '/plots/01_encoder_umaps.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
-    flog(f'Saved UMAP distribution plot to {outdir}/plots/01_encoder_umaps.png', LOG)
+    plt.savefig(outdir + '/plots/02_encoder_umaps.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
+    flog(f'Saved UMAP distribution plot to {outdir}/plots/02_encoder_umaps.png', LOG)
+    plt.clf()
 
 
 def encoder_latent_shifts(workdir, outdir, epochs, E, LOG):
@@ -216,9 +265,9 @@ def encoder_latent_shifts(workdir, outdir, epochs, E, LOG):
         ax.plot(np.arange(2,E+1), vector_metrics[:,i])
         ax.set_xlabel('epoch')
         ax.set_ylabel(metrics[i])
-    plt.savefig(outdir+'/plots/02_encoder_latent_vector_shifts.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
-
+    plt.savefig(outdir+'/plots/03_encoder_latent_vector_shifts.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
     flog(f'Saved latent vector shifts plots to {outdir}/plots/02_encoder_latent_vector_shifts.png', LOG)
+    plt.clf()
 
 
 def sketch_via_umap_local_maxima(outdir, E, LOG, n_bins=30, smooth=True, smooth_width=1, pruned_maxima=12, radius=5, final_maxima=10):
@@ -392,8 +441,9 @@ def sketch_via_umap_local_maxima(outdir, E, LOG, n_bins=30, smooth=True, smooth_
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
 
-    plt.savefig(outdir + '/plots/03_decoder_UMAP-sketching.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
+    plt.savefig(outdir + '/plots/04_decoder_UMAP-sketching.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
     flog(f'Saved latent sketching plot to {outdir}/plots/03_decoder_UMAP-sketching.png', LOG)
+    plt.clf()
 
     return binned_ptcls_mask, labels
 
@@ -467,8 +517,9 @@ def follow_candidate_particles(workdir, outdir, epochs, n_dim, binned_ptcls_mask
     plt.subplots_adjust(wspace=0.1)
     plt.subplots_adjust(hspace=0.25)
 
-    plt.savefig(outdir + '/plots/04_decoder_maxima-sketch-consistency.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
+    plt.savefig(outdir + '/plots/05_decoder_maxima-sketch-consistency.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
     flog(f'Saved plot tracking representative latent encodings through epochs {epochs} to {outdir}/plots/04_decoder_maxima-sketch-consistency.png', LOG)
+    plt.clf()
 
 
 def generate_volumes(workdir, outdir, epochs, Apix, flip, invert, downsample, cuda, LOG):
@@ -592,8 +643,9 @@ def calculate_CCs(outdir, epochs, labels, chimerax_colors, LOG):
         ax.plot(epochs[1:], cc_masked[i,:], c=chimerax_colors[i] * 0.75, linewidth=2.5)
     ax.legend(labels, ncol=3, fontsize='x-small')
 
-    plt.savefig(outdir + '/plots/05_decoder_CC.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
+    plt.savefig(outdir + '/plots/06_decoder_CC.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
     flog(f'Saved map-map correlation plot to {outdir}/plots/05_decoder_CC.png', LOG)
+    plt.clf()
 
 
 def calculate_FSCs(outdir, epochs, labels, img_size, chimerax_colors, LOG):
@@ -656,8 +708,9 @@ def calculate_FSCs(outdir, epochs, labels, img_size, chimerax_colors, LOG):
         axes[0].legend(legend, loc='lower left', ncol=2, fontsize=6.5)
     plt.subplots_adjust(hspace=0.3)
     plt.subplots_adjust(wspace=0.1)
-    plt.savefig(outdir + '/plots/06_decoder_FSC.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
+    plt.savefig(outdir + '/plots/07_decoder_FSC.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
     flog(f'Saved map-map FSC plot to {outdir}/plots/06_decoder_FSC.png', LOG)
+    plt.clf()
 
     # plot all FSCs at Nyquist only
     fig, ax = plt.subplots(1, 1)
@@ -668,8 +721,9 @@ def calculate_FSCs(outdir, epochs, labels, img_size, chimerax_colors, LOG):
         ax.plot(epochs[1:], fsc_masked[i, :, -1], c=chimerax_colors[i] * 0.75, linewidth=2.5)
     ax.legend(labels, ncol=3, fontsize='x-small')
 
-    plt.savefig(outdir + '/plots/07_decoder_FSC-nyquist.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
+    plt.savefig(outdir + '/plots/08_decoder_FSC-nyquist.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
     flog(f'Saved map-map FSC (Nyquist) plot to {outdir}/plots/07_decoder_FSC-nyquist.png', LOG)
+    plt.clf()
 
 
 def calculate_nxn_gold_standard_FSCs(outdir, epochs, labels, img_size, chimerax_colors, LOG):
@@ -725,6 +779,7 @@ def main(args):
         outdir = f'{workdir}/convergence.{E}'
     os.makedirs(outdir, exist_ok=True)
     os.makedirs(outdir + '/plots', exist_ok=True)
+    os.makedirs(outdir + '/pcs', exist_ok=True)
     os.makedirs(outdir + '/umaps', exist_ok=True)
     os.makedirs(outdir + '/repr_particles', exist_ok=True)
     LOG = f'{outdir}/convergence.log'
@@ -755,9 +810,13 @@ def main(args):
                                  (153, 191, 229),
                                  (204, 204, 153)), 255)
 
-    # Convergence 1: total loss
-    flog('Convergence 1: plotting total loss curve ...', LOG)
+    # Convergence 0: total loss
+    flog('Convergence 0: plotting total loss curve ...', LOG)
     plot_loss(logfile, outdir, E, LOG)
+
+    # Convergence 1: PCA latent
+    flog(f'Convergence 1: calculating and plotting PCA of epochs {epochs}', LOG)
+    encoder_latent_pca(workdir, outdir, epochs, LOG)
 
     # Convergence 2: UMAP latent embeddings
     if args.skip_umap:
@@ -802,7 +861,7 @@ def main(args):
         flog(f'Generating volumes at representative latent encodings for epochs {epochs} ...', LOG)
         Apix = args.Apix
         flip = args.flip
-        invert = not config_file['dataset_args']['invert_data']
+        invert = args.invert_data  #not config_file['dataset_args']['invert_data']
         downsample = args.downsample
         cuda = args.cuda
         generate_volumes(workdir, outdir, epochs, Apix, flip, invert, downsample, cuda, LOG)
