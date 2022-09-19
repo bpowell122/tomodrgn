@@ -74,10 +74,18 @@ def plot_loss(logfile, outdir, E, LOG):
         png of total loss vs epochs
     '''
 
-    loss = analysis.parse_loss(logfile)
-    plt.plot(loss[:E])
-    plt.xlabel('epoch')
-    plt.ylabel('total loss')
+    losses = analysis.parse_all_losses(logfile)
+    labels = ['reconstruction loss', 'latent loss', 'total loss']
+
+    fig, axes = plt.subplots(1, 3, figsize=(6, 2), sharex='all')
+
+    for i, ax in enumerate(axes.flat):
+        ax.plot(losses[i][:E])
+        ax.set_ylabel(labels[i])
+
+    axes[1].set_xlabel('epoch')
+
+    plt.tight_layout()
     plt.savefig(outdir + '/plots/00_total_loss.png',
                 dpi=300,
                 format='png',

@@ -32,6 +32,23 @@ def parse_loss(f):
         loss = np.asarray(loss).astype(np.float32)
     return loss
 
+def parse_all_losses(file_name):
+    '''Parse MSE + KLD + Total losses from run.log'''
+    with open(file_name) as f:
+        lines = f.readlines()
+    lines = [x for x in lines if '====' in x]
+
+    loss_mse = [x.split()[10][:-1] for x in lines]
+    loss_mse = np.asarray(loss_mse).astype(np.float32)
+
+    loss_kld = [x.split()[13][:-1] for x in lines]
+    loss_kld = np.asarray(loss_kld).astype(np.float32)
+
+    loss_total = [x.split()[17][:-1] for x in lines]
+    loss_total = np.asarray(loss_total).astype(np.float32)
+
+    return loss_mse, loss_kld, loss_total
+
 ### Dimensionality reduction ###
 
 def run_pca(z):
