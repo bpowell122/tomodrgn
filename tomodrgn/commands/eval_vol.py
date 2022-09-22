@@ -17,7 +17,7 @@ log = utils.log
 vlog = utils.vlog
 
 def add_args(parser):
-    parser.add_argument('weights', help='Model weights.pkl from train_vae')
+    parser.add_argument('-w', '--weights', help='Model weights from train_vae')
     parser.add_argument('-c', '--config', required=True, help='config.pkl file from train_vae')
     parser.add_argument('-o', type=os.path.abspath, required=True, help='Output .mrc or directory')
     parser.add_argument('--prefix', default='vol_', help='Prefix when writing out multiple .mrc files')

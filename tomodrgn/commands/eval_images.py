@@ -1,5 +1,5 @@
 '''
-Evaluate z for a stack of images
+Evaluate z for a stack of images using the config.pkl and weights.pkl of a pretrained model
 '''
 import numpy as np
 import os
@@ -19,7 +19,7 @@ vlog = utils.vlog
 
 def add_args(parser):
     parser.add_argument('particles', type=os.path.abspath, help='Input particles (.mrcs, .star, .cs, or .txt)')
-    parser.add_argument('weights', help='Model weights')
+    parser.add_argument('-w', '--weights', help='Model weights')
     parser.add_argument('-c', '--config', required=True, help='config.pkl file from train_vae')
     parser.add_argument('--out-z', metavar='PKL', type=os.path.abspath, required=True, help='Output pickle for z')
     parser.add_argument('--log-interval', type=int, default=1000, help='Logging interval in N_IMGS (default: %(default)s)')
@@ -27,7 +27,10 @@ def add_args(parser):
     parser.add_argument('-v','--verbose',action='store_true',help='Increases verbosity')
 
     group = parser.add_argument_group('Dataset loading')
+    group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
+    group.add_argument('--ind', type=os.path.abspath, help='Filter particle stack by these indices')
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory')
+    group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
     group.add_argument('--sequential-tilt-sampling', action='store_true', help='Supply particle images of one particle to encoder in starfile order')
 
     return parser
@@ -71,17 +74,17 @@ def main(args):
 
     # load the particles
     data = dataset.TiltSeriesDatasetMaster(args.particles,
+                                           datadir=args.datadir,
+                                           ind_ptcl=args.ind,
+                                           lazy=args.lazy,
+                                           invert_data=args.invert_data,
                                            norm=cfg['dataset_args']['norm'],
-                                           invert_data=cfg['dataset_args']['invert_data'],
-                                           ind_ptcl=cfg['dataset_args']['ind'],
                                            window=cfg['dataset_args']['window'],
-                                           datadir=cfg['dataset_args']['datadir'],
                                            window_r=cfg['dataset_args']['window_r'],
                                            recon_dose_weight=cfg['training_args']['recon_dose_weight'],
                                            dose_override=cfg['training_args']['dose_override'],
                                            recon_tilt_weight=cfg['training_args']['recon_tilt_weight'],
                                            l_dose_mask=cfg['model_args']['l_dose_mask'],
-                                           lazy=args.lazy,
                                            sequential_tilt_sampling=args.sequential_tilt_sampling)
 
     nptcls = data.nptcls
