@@ -169,7 +169,7 @@ def train_batch(scaler, model, lattice, y, rot, tran, cumulative_weights, dec_ma
 
 def run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params=None):
     # encode
-    input = y
+    input = y.clone()
 
     if not torch.all(ctf_params == 0):
         # phase flip the CTF-corrupted image
