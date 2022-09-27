@@ -432,7 +432,7 @@ def gen_volumes(weights, config, zfile, outdir, cuda=None,
         downsample (int or None): Generate volumes at this box size
         invert (bool): Invert contrast of output volumes
     '''
-    cmd = f'tomodrgn eval_vol {weights} --config {config} --zfile {zfile} -o {outdir}'
+    cmd = f'tomodrgn eval_vol --weights {weights} --config {config} --zfile {zfile} -o {outdir}'
     if Apix is not None:
         cmd += f' --Apix {Apix}'
     if flip:
