@@ -61,7 +61,7 @@ tomodrgn analyze output/08_vae_classE_sim 49 --Apix 13.1 --ksample 2
 
 ### EVAL_VOL ###
 # Test eval_vol for all particles --> should get director with 144 unique volumes
-tomodrgn eval_vol output/06_vae_both_sim/weights.pkl -c output/06_vae_both_sim/config.pkl -o output/06_vae_both_sim/eval_vol_allz --zfile output/06_vae_both_sim/z.pkl --Apix 13.1 --invert
+tomodrgn eval_vol --weights output/06_vae_both_sim/weights.pkl -c output/06_vae_both_sim/config.pkl -o output/06_vae_both_sim/eval_vol_allz --zfile output/06_vae_both_sim/z.pkl --Apix 13.1 --invert
 
 ### SUBTOMO2CHIMERAX ###
 # Test subtomo2chimerax for classD/classE volumes separately --> in ChimeraX should show all classE volumes to left (small X coord, label 1, light blue) and all classD volumes to right (large X coord, label 0, dark blue)
@@ -75,9 +75,9 @@ tomodrgn filter_star data/10076_both_32_sim_vols.star --tomo-id-col _rlnImageNam
 
 ### EVAL_IMAGES ###
 # Test eval_images with same images + weights as 08_vae_classE_sim --> z_all.pkl should be very close to z.pkl even with undertrained network 07 and different random image ordering
-tomodrgn eval_images data/10076_classE_32_sim.star output/08_vae_classE_sim/weights.pkl -c output/08_vae_classE_sim/config.pkl --out-z output/08_vae_classE_sim/eval_images/z_all.pkl
+tomodrgn eval_images data/10076_classE_32_sim.star --weights output/08_vae_classE_sim/weights.pkl -c output/08_vae_classE_sim/config.pkl --out-z output/08_vae_classE_sim/eval_images/z_all.pkl
 # Test eval_images, should eventually compare this output (z_all.pkl) to that of 06_vae_both_sim/z.pkl for similarity given random sampled ntilts
-tomodrgn eval_images data/10076_both_32_sim.star output/06_vae_both_sim/weights.pkl -c output/06_vae_both_sim/config.pkl --out-z output/06_vae_both_sim/eval_images/z_all.pkl
+tomodrgn eval_images data/10076_both_32_sim.star --weights output/06_vae_both_sim/weights.pkl -c output/06_vae_both_sim/config.pkl --out-z output/06_vae_both_sim/eval_images/z_all.pkl
 
 ### GRAPH_TRAVERSAL ###
 # Test graph_traversal --> should either report path indices and distance between neighbors or find no path
