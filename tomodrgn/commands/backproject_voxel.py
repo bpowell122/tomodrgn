@@ -69,7 +69,8 @@ def main(args):
 
     # lazily load particle images and filter by ind.pkl, if applicable
     data = dataset.LazyMRCData(args.particles, norm=(0,1), invert_data=args.invert_data, datadir=args.datadir)
-    data.particles = [data.particles[i] for i in ind_imgs.flatten().astype(int)]
+    # data.particles = [data.particles[i] for i in ind_imgs.flatten().astype(int)]
+    data.particles = [data.particles[i.flatten().astype(int)] for i in ind_imgs]
     D = data.D
     Nimg = ind_imgs.flatten().shape[0]
 

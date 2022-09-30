@@ -215,15 +215,15 @@ def main(args):
         ind = None
 
     # load the particles
-    data = dataset.TiltSeriesDatasetMaster(args.particles, norm=args.norm, invert_data=args.invert_data,
-                                           ind_ptcl=ind, window=args.window, datadir=args.datadir,
-                                           window_r=args.window_r, recon_dose_weight=args.recon_dose_weight,
-                                           dose_override=args.dose_override, recon_tilt_weight=args.recon_tilt_weight,
-                                           l_dose_mask=args.l_dose_mask, lazy=args.lazy, sequential_tilt_sampling=args.sequential_tilt_sampling)
+    data = dataset.TiltSeriesMRCData(args.particles, norm=args.norm, invert_data=args.invert_data,
+                                     ind_ptcl=ind, window=args.window, datadir=args.datadir,
+                                     window_r=args.window_r, recon_dose_weight=args.recon_dose_weight,
+                                     dose_override=args.dose_override, recon_tilt_weight=args.recon_tilt_weight,
+                                     l_dose_mask=args.l_dose_mask, lazy=args.lazy, sequential_tilt_sampling=args.sequential_tilt_sampling)
     D = data.D
     nptcls = data.nptcls
-    Apix = data.ptcls[data.ptcls_list[0]].ctf[0,1] if data.ptcls[data.ptcls_list[0]].ctf is not None else args.Apix
-    flog(f'Pixels per particle: {data.ptcls[data.ptcls_list[0]].D ** 2 * data.ptcls[data.ptcls_list[0]].ntilts} ')
+    Apix = data.ctf_params[0,1] if data.ctf_params is not None else args.Apix
+    flog(f'Pixels per particle: {data.D ** 2 * data.ntilts_training} ')
 
     # instantiate lattice
     lattice = Lattice(D, extent=args.l_extent, device=device)
@@ -305,9 +305,9 @@ def main(args):
         t2 = dt.now()
         loss_accum = 0
         batch_it = 0
-        for batch_images, batch_rot, batch_trans, batch_ctf, batch_weights, batch_dec_mask, batch_ptcl_ids in data_generator:
+        for batch_images, batch_rot, batch_trans, batch_ctf, batch_weights, batch_dec_mask, _ in data_generator:
             # impression counting
-            batch_it += len(batch_ptcl_ids)
+            batch_it += len(batch_images)
 
             # transfer to GPU
             batch_images = batch_images.to(device)
@@ -319,7 +319,7 @@ def main(args):
 
             # training minibatch
             loss_item = train(scaler, model, lattice, batch_images, batch_rot, batch_trans, batch_weights, batch_dec_mask, optim, ctf_params=batch_ctf, use_amp=use_amp)
-            loss_accum += loss_item * len(batch_ptcl_ids)
+            loss_accum += loss_item * len(batch_images)
             if batch_it % args.log_interval == 0:
                 flog(f'# [Train Epoch: {epoch+1}/{args.num_epochs}] [{batch_it}/{nptcls} particles]  loss={loss_item:.6f}')
 

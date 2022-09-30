@@ -234,7 +234,13 @@ class TiltSeriesStarfile():
         return len(unique_ptcls), int(ntilts)
 
     def get_tiltseries_pixelsize(self):
-        pixel_size = float(self.df['_rlnDetectorPixelSize'].iloc[0]) # expects pixel size in A/px
+        # expects pixel size in A/px
+        if '_rlnPixelSize' in self.df.columns:
+            pixel_size = float(self.df['_rlnPixelSize'].iloc[0])
+        elif '_rlnDetectorPixelSize' in self.df.columns:
+            pixel_size = float(self.df['_rlnDetectorPixelSize'].iloc[0])
+        else:
+            raise ValueError
         return pixel_size
 
     def get_tiltseries_voltage(self):
@@ -256,6 +262,36 @@ class TiltSeriesStarfile():
         # see: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4559595/
         cosine_weights = self.df['_rlnCtfScalefactor'].iloc[0:ntilts].to_numpy(dtype=float)
         return cosine_weights
+
+    def get_ptcl_img_indices(self):
+        df_grouped = self.df.groupby('_rlnGroupName')
+        ptcl_to_img_ind = np.array([df_grouped.get_group(ptcl).index.to_numpy() for ptcl in df_grouped.groups], dtype=object)
+        return ptcl_to_img_ind
+
+    def get_image_size(self, datadir=None):
+        images = self.df['_rlnImageName']
+        images = [x.split('@') for x in images]  # format is index@path_to_mrc
+        mrcs = [x[1] for x in images]
+        if datadir is not None:
+            mrcs = prefix_paths(mrcs, datadir)
+        for path in set(mrcs):
+            assert os.path.exists(path), f'{path} not found'
+        header = mrc.parse_header(mrcs[0])
+        return header.D  # image size along one dimension in pixels
+
+
+def get_tiltseries_dose_per_A2_per_tilt(df, ntilts=None):
+    # extract dose in e-/A2 from _rlnCtfBfactor column of Warp starfile (scaled by -4)
+    # detects nonuniform dose, due to differential exposure during data collection or excluding tilts during processing
+    if ntilts is not None:
+        ntilts = len(df)
+    dose_series = df['_rlnCtfBfactor'].iloc[0:ntilts].to_numpy(dtype=float)/-4
+    constant_dose_series = np.linspace(dose_series[0], dose_series[-1], num=ntilts, endpoint=True)
+    constant_dose_step = np.allclose(dose_series, constant_dose_series, atol=0.01)
+    if not constant_dose_step:
+        vlog('Caution: non-uniform dose detected between each tilt image. Check whether this is expected!')
+    return dose_series
+
 
 class GenericStarfile():
     '''

@@ -31,6 +31,8 @@ def add_args(parser):
     parser.add_argument('--log-interval', type=int, default=200, help='Logging interval in N_PTCLS (default: %(default)s)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increases verbosity')
     parser.add_argument('--seed', type=int, default=np.random.randint(0,100000), help='Random seed')
+    parser.add_argument('--pose', type=os.path.abspath, help='Optionally override star file poses with cryodrgn-format pose.pkl')
+    parser.add_argument('--ctf', type=os.path.abspath, help='Optionally override star file CTF with cryodrgn-format ctf.pkl')
 
     group = parser.add_argument_group('Dataset loading')
     group.add_argument('--ind', type=os.path.abspath, metavar='PKL', help='Filter particle stack by these indices')
@@ -146,6 +148,7 @@ def save_config(args, dataset, lattice, model, out_config):
                     version=tomodrgn.__version__)
         pickle.dump(meta, f)
 
+
 def train_batch(scaler, model, lattice, y, rot, tran, cumulative_weights, dec_mask, optim, beta, beta_control=None, ctf_params=None, use_amp=False):
     optim.zero_grad()
     model.train()
@@ -175,7 +178,7 @@ def run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params=None):
         # phase flip the CTF-corrupted image
         freqs = lattice.freqs2d.unsqueeze(0).expand(B * ntilts, -1, -1) / ctf_params[:,:,1].view(B * ntilts, 1, 1)
         ctf_weights = ctf.compute_ctf(freqs, *torch.split(ctf_params.view(B*ntilts,-1)[:, 2:], 1, 1)).view(B, ntilts, D, D)
-        input *= ctf_weights.sign() # phase flip by the ctf to be all positive amplitudes
+        input *= ctf_weights.sign()  # phase flip by the ctf to be all positive amplitudes
     else:
         ctf_weights = None
 
@@ -198,7 +201,6 @@ def run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params=None):
 
     # decode
     y_recon = model(input_coords).view(1, -1)  # 1 x B*ntilts*N[final_mask]
-
 
     if ctf_weights is not None:
         y_recon *= ctf_weights[dec_mask].view(1,-1)
@@ -228,7 +230,7 @@ def loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta
     return loss, gen_loss, kld
 
 
-def eval_z(model, lattice, data, batch_size, device, use_amp=False):
+def eval_z(model, lattice, data, batch_size, device, use_amp=False, expanded_ind_rebased=None, ctf_params=None):
     model.eval()
     assert not model.training
     with torch.no_grad():
@@ -241,8 +243,8 @@ def eval_z(model, lattice, data, batch_size, device, use_amp=False):
 
                 # transfer to GPU
                 batch_images = batch_images.to(device)
-                batch_tran = batch_tran.to(device)
                 batch_ctf = batch_ctf.to(device)
+                batch_tran = batch_tran.to(device)
 
                 # correct for translations
                 if not torch.all(batch_tran == 0):
@@ -319,13 +321,25 @@ def main(args):
 
     # load the particles + poses + ctf from input starfile
     flog(f'Loading dataset from {args.particles}')
-    data = dataset.TiltSeriesDatasetMaster(args.particles, norm=args.norm, invert_data=args.invert_data,
-                                           ind_ptcl=ind, window=args.window, datadir=args.datadir,
-                                           window_r=args.window_r, recon_dose_weight=args.recon_dose_weight,
-                                           dose_override=args.dose_override, recon_tilt_weight=args.recon_tilt_weight,
-                                           l_dose_mask=args.l_dose_mask, lazy=args.lazy, sequential_tilt_sampling=args.sequential_tilt_sampling)
+    data = dataset.TiltSeriesMRCData(args.particles, norm=args.norm, invert_data=args.invert_data,
+                                     ind_ptcl=ind, window=args.window, datadir=args.datadir,
+                                     window_r=args.window_r, recon_dose_weight=args.recon_dose_weight,
+                                     dose_override=args.dose_override, recon_tilt_weight=args.recon_tilt_weight,
+                                     l_dose_mask=args.l_dose_mask, lazy=args.lazy, sequential_tilt_sampling=args.sequential_tilt_sampling)
     D = data.D
     nptcls = data.nptcls
+
+    if args.pose is not None:
+        rot, trans = utils.load_pkl(args.pose)
+        assert rot.shape == (data.nimgs,3,3)
+        if trans is not None:
+            assert trans.shape == (data.nimgs,2)
+        data.trans = np.asarray(trans, dtype=np.float32)
+        data.rot = np.asarray(rot, dtype=np.float32)
+    if args.ctf is not None:
+        ctf_params = utils.load_pkl(args.ctf)
+        assert ctf_params.shape == (data.nimgs,9)
+        data.ctf_params = np.asarray(ctf_params, dtype=np.float32)
 
     # instantiate lattice
     lattice = Lattice(D, extent=args.l_extent, device=device)
@@ -434,9 +448,10 @@ def main(args):
         loss_accum = 0
         kld_accum = 0
         batch_it = 0
-        for batch_images, batch_rot, batch_trans, batch_ctf, batch_weights, batch_dec_mask, batch_ptcl_ids in data_generator:
+
+        for batch_images, batch_rot, batch_trans, batch_ctf, batch_weights, batch_dec_mask, _ in data_generator:
             # impression counting
-            batch_it += len(batch_ptcl_ids) # total number of ptcls seen
+            batch_it += len(batch_images) # total number of ptcls seen
             global_it = nptcls*epoch + batch_it
             beta = beta_schedule(global_it)
 
@@ -454,9 +469,9 @@ def main(args):
                                               ctf_params=batch_ctf, use_amp=use_amp)
 
             # logging
-            gen_loss_accum += gen_loss * len(batch_ptcl_ids)
-            kld_accum += kld * len(batch_ptcl_ids)
-            loss_accum += loss * len(batch_ptcl_ids)
+            gen_loss_accum += gen_loss * len(batch_images)
+            kld_accum += kld * len(batch_images)
+            loss_accum += loss * len(batch_images)
 
             if batch_it % args.log_interval == 0:
                 log(f'# [Train Epoch: {epoch+1}/{args.num_epochs}] [{batch_it}/{nptcls} subtomos] gen loss={gen_loss:.6f}, kld={kld:.6f}, beta={beta:.6f}, loss={loss:.6f}')

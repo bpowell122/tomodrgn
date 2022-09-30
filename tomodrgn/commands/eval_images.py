@@ -73,19 +73,19 @@ def main(args):
     zdim = cfg['model_args']['zdim']
 
     # load the particles
-    data = dataset.TiltSeriesDatasetMaster(args.particles,
-                                           datadir=args.datadir,
-                                           ind_ptcl=args.ind,
-                                           lazy=args.lazy,
-                                           invert_data=args.invert_data,
-                                           norm=cfg['dataset_args']['norm'],
-                                           window=cfg['dataset_args']['window'],
-                                           window_r=cfg['dataset_args']['window_r'],
-                                           recon_dose_weight=cfg['training_args']['recon_dose_weight'],
-                                           dose_override=cfg['training_args']['dose_override'],
-                                           recon_tilt_weight=cfg['training_args']['recon_tilt_weight'],
-                                           l_dose_mask=cfg['model_args']['l_dose_mask'],
-                                           sequential_tilt_sampling=args.sequential_tilt_sampling)
+    data = dataset.TiltSeriesMRCData(args.particles,
+                                     datadir=args.datadir,
+                                     ind_ptcl=args.ind,
+                                     lazy=args.lazy,
+                                     invert_data=args.invert_data,
+                                     norm=cfg['dataset_args']['norm'],
+                                     window=cfg['dataset_args']['window'],
+                                     window_r=cfg['dataset_args']['window_r'],
+                                     recon_dose_weight=cfg['training_args']['recon_dose_weight'],
+                                     dose_override=cfg['training_args']['dose_override'],
+                                     recon_tilt_weight=cfg['training_args']['recon_tilt_weight'],
+                                     l_dose_mask=cfg['model_args']['l_dose_mask'],
+                                     sequential_tilt_sampling=args.sequential_tilt_sampling)
 
     nptcls = data.nptcls
     data.ntilts_training = cfg['dataset_args']['ntilts']

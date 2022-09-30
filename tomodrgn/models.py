@@ -206,7 +206,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
     def cat_z(self, coords, z):
         '''
         coords: B x ntilts*D*D[mask] x 3 image coordinates
-        z: B x zdim latent coordinate (repeated for ntilts)
+        z: B x zdim latent coordinate
         returns: B x ntilts*D*D[mask] x 3+zdim
         '''
         assert coords.size(0) == z.size(0)
@@ -480,7 +480,7 @@ class FTPositionalDecoder(nn.Module):
             D: size of lattice
             extent: extent of lattice [-extent, extent]
             norm: data normalization 
-            zval: value of latent (zdim x 1)
+            zval: value of latent (zdim x 1) ... or 1 x zdim from eval_vol?
         '''
         assert extent <= 0.5
         if zval is not None:
