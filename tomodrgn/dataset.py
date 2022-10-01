@@ -390,7 +390,7 @@ class TiltSeriesMRCData(data.Dataset):
                 if recon_dose_weight or l_dose_mask:
                     voltage = ptcls_star.get_tiltseries_voltage()
                     if dose_override is None:
-                        dose_series = starfile.get_tiltseries_dose_per_A2_per_tilt(group)
+                        dose_series = starfile.get_tiltseries_dose_per_A2_per_tilt(group, ntilts)
                     else:
                         # increment scalar dose_override across ntilts
                         dose_series = dose_override * np.arange(1, ntilts + 1)
