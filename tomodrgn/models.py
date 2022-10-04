@@ -195,12 +195,142 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         eps = torch.randn_like(std)
         return eps * std + mu
 
+    # def encode(self, batch, B, ntilts):
+    #     # input batch is of shape B x ntilts x D x D
+    #     batch = batch.view(B,ntilts,-1)  # B x ntilts x D*D
+    #     if self.enc_mask is not None:
+    #         batch = batch[:,:,self.enc_mask] # B x ntilts x D*D[mask]
+    #     z = self.encoder(batch, B)
+    #     return z[:, :self.zdim], z[:, self.zdim:] # B x zdim
+
+    # trying an order-invariant aggregator via mean or median for encB
     def encode(self, batch, B, ntilts):
         # input batch is of shape B x ntilts x D x D
         batch = batch.view(B,ntilts,-1)  # B x ntilts x D*D
         if self.enc_mask is not None:
             batch = batch[:,:,self.enc_mask] # B x ntilts x D*D[mask]
-        z = self.encoder(batch, B)
+        intermediate = self.encoder.forward_encA(batch)
+
+        # order-invariant aggregation along outdimA dimension
+        intermediate = torch.mean(intermediate, dim=1)
+        # intermediate = torch.quantile(intermediate, q=0.5, dim=1)  # TODO quantile should be more robust to outliers, such as partially occluded particles, but is not (currently) supported for dtype float16
+
+        z = self.encoder.forward_encB(intermediate)
+        return z[:, :self.zdim], z[:, self.zdim:] # B x zdim
+
+    def cat_z(self, coords, z):
+        '''
+        coords: B x ntilts*D*D[mask] x 3 image coordinates
+        z: B x zdim latent coordinate
+        returns: B x ntilts*D*D[mask] x 3+zdim
+        '''
+        assert coords.size(0) == z.size(0)
+        z = z.view(z.size(0), *([1] * (coords.ndimension() - 2)), self.zdim)
+        z = torch.cat((coords, z.expand(*coords.shape[:-1], self.zdim)), dim=-1)
+        return z
+
+    def decode(self, coords_z):
+        '''
+        coords_z: B x ntilts*D*D[critical_exposure_mask] x 3 image coordinates + zdim
+        '''
+        return self.decoder(coords_z)
+
+    # Need forward func for DataParallel -- TODO: refactor
+    def forward(self, *args, **kwargs):
+        return self.decode(*args, **kwargs)
+
+
+class TiltSeriesHetOnlyVAE2(nn.Module):
+    '''
+    TODO adds 3-D positional information to each pixel when encoding
+    '''
+    # No pose inference
+    def __init__(self, lattice, qlayersA, qdimA, out_dimA, ntilts, qlayersB, qdimB,
+                 players, pdim, in_dim, zdim=1, enc_mask=None, enc_type='geom_lowf', enc_dim=None,
+                 domain='fourier', activation = nn.ReLU, l_dose_mask=False, feat_sigma = None):
+        super().__init__()
+        self.lattice = lattice
+        self.ntilts = ntilts
+        self.zdim = zdim
+        self.in_dim = in_dim
+        self.enc_mask = enc_mask
+        self.l_dose_mask = l_dose_mask
+        self.encoder = TiltSeriesEncoder(in_dim, qlayersA, qdimA, out_dimA, ntilts, qlayersB, qdimB, zdim * 2, activation)
+        self.decoder = FTPositionalDecoder(3+zdim, lattice.D, players, pdim, activation, enc_type, enc_dim, feat_sigma)
+
+
+    @classmethod
+    def load(self, config, weights=None, device=None):
+        '''Instantiate a model from a config.pkl
+
+        Inputs:
+            config (str, dict): Path to config.pkl or loaded config.pkl
+            weights (str): Path to weights.pkl
+            device: torch.device object
+
+        Returns:
+            HetOnlyVAE instance, Lattice instance
+        '''
+        cfg = utils.load_pkl(config) if type(config) is str else config
+        ntilts = cfg['dataset_args']['ntilts']
+        lat = lattice.Lattice(cfg['lattice_args']['D'], extent=cfg['lattice_args']['extent'], device=device)
+        c = cfg['model_args']
+        if cfg['model_args']['enc_mask'] > 0:
+            enc_mask = lat.get_circular_mask(c['enc_mask'])
+            in_dim = int(enc_mask.sum())
+        else:
+            assert c['enc_mask'] == -1
+            enc_mask = None
+            in_dim = lat.D ** 2
+        activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[cfg['model_args']['activation']]
+        model = TiltSeriesHetOnlyVAE(lat,
+                                     cfg['model_args']['qlayersA'], cfg['model_args']['qdimA'],
+                                     cfg['model_args']['out_dimA'], ntilts,
+                                     cfg['model_args']['qlayersB'], cfg['model_args']['qdimB'],
+                                     cfg['model_args']['players'], cfg['model_args']['pdim'],
+                                     in_dim, cfg['model_args']['zdim'],
+                                     enc_mask=enc_mask,
+                                     enc_type=cfg['model_args']['pe_type'],
+                                     enc_dim=cfg['model_args']['pe_dim'],
+                                     domain=cfg['model_args']['domain'],
+                                     activation=activation,
+                                     l_dose_mask=cfg['model_args']['l_dose_mask'],
+                                     feat_sigma=cfg['model_args']['feat_sigma'])
+        if weights is not None:
+            ckpt = torch.load(weights)
+            model.load_state_dict(ckpt['model_state_dict'])
+        if device is not None:
+            model.to(device)
+        return model, lat
+
+    def reparameterize(self, mu, logvar):
+        if not self.training:
+            return mu
+        std = torch.exp(.5 * logvar)
+        eps = torch.randn_like(std)
+        return eps * std + mu
+
+    # def encode(self, batch, B, ntilts):
+    #     # input batch is of shape B x ntilts x D x D
+    #     batch = batch.view(B,ntilts,-1)  # B x ntilts x D*D
+    #     if self.enc_mask is not None:
+    #         batch = batch[:,:,self.enc_mask] # B x ntilts x D*D[mask]
+    #     z = self.encoder(batch, B)
+    #     return z[:, :self.zdim], z[:, self.zdim:] # B x zdim
+
+    # trying an order-invariant aggregator via mean or median for encB
+    def encode(self, batch, B, ntilts):
+        # input batch is of shape B x ntilts x D x D
+        batch = batch.view(B,ntilts,-1)  # B x ntilts x D*D
+        if self.enc_mask is not None:
+            batch = batch[:,:,self.enc_mask] # B x ntilts x D*D[mask]
+        intermediate = self.encoder.forward_encA(batch)
+
+        # order-invariant aggregation along outdimA dimension
+        # intermediate = torch.mean(intermediate, dim=1)
+        intermediate = torch.quantile(intermediate, q=0.5, dim=1)  # quantile should be more robust to outliers, such as partially occluded particles
+
+        z = self.encoder.forward_encB(intermediate)
         return z[:, :self.zdim], z[:, self.zdim:] # B x zdim
 
     def cat_z(self, coords, z):
@@ -800,12 +930,24 @@ class TiltSeriesEncoder(nn.Module):
         # encoder1 encodes each identically-masked tilt image separately
         # encoder2 merges ntilts-concatenated encoder1 information and encodes further to latent space
         self.encoder1 = ResidLinearMLP(in_dim, nlayersA, hidden_dimA, out_dimA, activation)
-        self.encoder2 = ResidLinearMLP(out_dimA*ntilts, nlayersB, hidden_dimB, out_dim, activation)
+        self.encoder2 = ResidLinearMLP(out_dimA, nlayersB, hidden_dimB, out_dim, activation)
 
     def forward(self, batch, B):
         # input image batch of shape B x ntilts x D*D[lattice_circular_mask]
         batch_enc = self.encoder1(batch)
         z = self.encoder2(batch_enc.view(B, -1)) #reshape to encode all tilts of one ptcl together
+        return z
+
+    def forward_encA(self, batch):
+        # input image batch of shape B x ntilts x D*D[lattice_circular_mask]
+        batch_enc = self.encoder1(batch)
+        # output of shape B x ntilts x out_dim_A
+        return batch_enc
+
+    def forward_encB(self, batch):
+        # input image batch of shape B x out_dim_A
+        z = self.encoder2(batch)
+        # output of shape B x zdim
         return z
 
 class ResidLinearMLP(nn.Module):
