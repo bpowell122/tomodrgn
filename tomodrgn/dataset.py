@@ -260,15 +260,18 @@ class TiltSeriesMRCData(data.Dataset):
                  recon_dose_weight=False, recon_tilt_weight=False, dose_override=None, l_dose_mask=False, lazy=True,
                  sequential_tilt_sampling=False):
 
-        log('Parsing metadata...')
+        log('Parsing star file...')
         ptcls_star = starfile.TiltSeriesStarfile.load(mrcfile)
 
         # evaluate command line arguments affecting preprocessing
+        ptcls_unique_list = ptcls_star.df['_rlnGroupName'].unique().astype(str)
+        log(f'Found {len(ptcls_unique_list)} particles')
         if ind_ptcl is not None:
             log('Filtering particles by supplied indices...')
-            ptcl_to_img_ind = ptcls_star.get_ptcl_img_indices()
-            row_ind_to_drop = ptcl_to_img_ind[ind_ptcl].flatten().astype(int)
-            ptcls_star.df = ptcls_star.df.drop(row_ind_to_drop, axis=0).reset_index(drop=True)
+            ptcls_unique_list = ptcls_unique_list[ind_ptcl]
+            ptcls_star.df = ptcls_star.df[ptcls_star.df['_rlnGroupName'].isin(ptcls_unique_list)]
+            ptcls_star.df.reset_index(drop=True)
+            log(f'Found {len(ptcls_unique_list)} particles after filtering')
         ptcls_to_imgs_ind = ptcls_star.get_ptcl_img_indices()  # either instantiate for the first time or update after ind_ptcl filtering
         ntilts_set = set(ptcls_star.df.groupby('_rlnGroupName').size().values)
         ntilts_min = min(ntilts_set)
@@ -289,7 +292,6 @@ class TiltSeriesMRCData(data.Dataset):
         log('Loading particles...')
         particles = ptcls_star.get_particles(datadir=datadir, lazy=lazy)
         nx = ptcls_star.get_image_size(datadir=datadir)
-        ptcls_unique_list = ptcls_star.df['_rlnGroupName'].unique().astype(str)
         nimgs = len(particles)
         nptcls = len(ptcls_unique_list)
         if not lazy:
