@@ -55,7 +55,7 @@ def add_args(parser):
     group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs')
     group.add_argument('-b','--batch-size', type=int, default=1, help='Minibatch size')
     group.add_argument('--wd', type=float, default=0, help='Weight decay in Adam optimizer')
-    group.add_argument('--lr', type=float, default=0.0002, help='Learning rate in Adam optimizer')
+    group.add_argument('--lr', type=float, default=0.0002, help='Learning rate in Adam optimizer. Should co-scale linearly with batch size.')
     group.add_argument('--beta', default=None, help='Choice of beta schedule or a constant for KLD weight')
     group.add_argument('--beta-control', type=float, help='KL-Controlled VAE gamma. Beta is KL target')
     group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: 0, std of dataset)')
@@ -79,6 +79,12 @@ def add_args(parser):
     group.add_argument('--feat-sigma', type=float, default=0.5, help="Scale for random Gaussian features")
     group.add_argument('--pe-dim', type=int, help='Num features in positional encoding')
     group.add_argument('--activation', choices=('relu','leaky_relu'), default='relu', help='Activation')
+
+    group = parser.add_argument_group('Dataloader arguments')
+    group.add_argument('--num-workers', type=int, default=0, help='Number of workers to use when batching particles for training. Has moderate impact on epoch time')
+    group.add_argument('--prefetch-factor', type=int, default=2, help='Number of particles to prefetch per worker for training. Has moderate impact on epoch time')
+    group.add_argument('--persistent-workers', action='store_true', help='Whether to persist workers after dataset has been fully consumed. Has minimal impact on run time')
+    group.add_argument('--pin-memory', action='store_true', help='Whether to use pinned memory for dataloader. Has large impact on epoch time. Recommended.')
     return parser
 
 
@@ -238,7 +244,8 @@ def eval_z(model, lattice, data, batch_size, device, use_amp=False, expanded_ind
         with autocast(enabled=use_amp):
             z_mu_all = []
             z_logvar_all = []
-            data_generator = DataLoader(data, batch_size=batch_size, shuffle=False)
+            data_generator = DataLoader(data, batch_size=batch_size, shuffle=False, num_workers=args.num_workers, prefetch_factor=args.prefetch_factor, persistent_workers=args.persistent_workers,
+                                        pin_memory=args.pin_memory)
             for batch_images, _, batch_tran, batch_ctf, _, _, _ in data_generator:
                 B, ntilts, D, D = batch_images.shape
 
@@ -443,7 +450,7 @@ def main(args):
 
     # train
     flog('Done all preprocessing; starting training now!')
-    data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=True)
+    data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, prefetch_factor=args.prefetch_factor, persistent_workers=args.persistent_workers, pin_memory=args.pin_memory)
     for epoch in range(start_epoch, args.num_epochs):
         t2 = dt.now()
         gen_loss_accum = 0

@@ -50,7 +50,7 @@ def add_args(parser):
     group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs')
     group.add_argument('-b', '--batch-size', type=int, default=1, help='Minibatch size')
     group.add_argument('--wd', type=float, default=0, help='Weight decay in Adam optimizer')
-    group.add_argument('--lr', type=float, default=0.0002, help='Learning rate in Adam optimizer (scale linearly with --batch-size)')
+    group.add_argument('--lr', type=float, default=0.0002, help='Learning rate in Adam optimizer. Should co-scale linearly with batch size.')
     group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: mean, std of dataset)')
     group.add_argument('--no-amp', action='store_true', help='Disable use of mixed-precision training')
     group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs. Specify GPUs i,j via `export CUDA_VISIBLE_DEVICES=i,j` before tomodrgn train_vae')
@@ -63,6 +63,12 @@ def add_args(parser):
     group.add_argument('--pe-dim', type=int, help='Num sinusoid features in positional encoding (default: D/2)')
     group.add_argument('--activation', choices=('relu', 'leaky_relu'), default='relu', help='Activation')
     group.add_argument('--feat-sigma', type=float, default=0.5, help="Scale for random Gaussian features")
+
+    group = parser.add_argument_group('Dataloader arguments')
+    group.add_argument('--num-workers', type=int, default=0, help='Number of workers to use when batching particles for training. Has moderate impact on epoch time')
+    group.add_argument('--prefetch-factor', type=int, default=2, help='Number of particles to prefetch per worker for training. Has moderate impact on epoch time')
+    group.add_argument('--persistent-workers', action='store_true', help='Whether to persist workers after dataset has been fully consumed. Has minimal impact on run time')
+    group.add_argument('--pin-memory', action='store_true', help='Whether to use pinned memory for dataloader. Has large impact on epoch time. Recommended.')
     return parser
 
 
@@ -300,7 +306,7 @@ def main(args):
 
     # train
     flog('Done all preprocessing; starting training now!')
-    data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=True)
+    data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, prefetch_factor=args.prefetch_factor, persistent_workers=args.persistent_workers, pin_memory=args.pin_memory)
     for epoch in range(start_epoch, args.num_epochs):
         t2 = dt.now()
         loss_accum = 0
