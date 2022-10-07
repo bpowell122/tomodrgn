@@ -188,13 +188,10 @@ class TiltSeriesStarfile():
                 if line.strip() == '':
                     break
                 body.append(line)
-            # put data into an array and instantiate as dataframe
-            words = [l.strip().split() for l in body]
-            words = np.array(words)
-            assert words.shape[1] == len(
-                headers), f"Error in parsing. Number of columns {words.shape[1]} != number of headers {len(headers)}"
-            data = {h: words[:, i] for i, h in enumerate(headers)}
-            df = pd.DataFrame(data=data)
+        # put data into an array and instantiate as dataframe
+        words = [l.strip().split() for l in body]
+        df = pd.DataFrame(words, columns=headers)
+        df = guess_dtypes(df)  # guessing dtypes to float/int/str per column to reduce object memory utilization
         return self(headers, df)
 
     def get_particles(self, datadir=None, lazy=False):
