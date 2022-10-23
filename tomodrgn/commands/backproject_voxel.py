@@ -20,7 +20,7 @@ def add_args(parser):
     group = parser.add_argument_group('Dataset loading options')
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths star file')
-    group.add_argument('--ind', type=os.path.abspath, help='Indices to iterate over (pkl)')
+    group.add_argument('--ind', type=os.path.abspath, help='Indices of which particles to backproject corresponding tilt images (pkl)')
     group.add_argument('--first', type=int, default=10000, help='Backproject the first N images')
 
     return parser
@@ -59,20 +59,20 @@ def main(args):
 
     # load the star file
     ptcls_star = starfile.TiltSeriesStarfile.load(args.particles)
-    df_grouped = ptcls_star.df.groupby('_rlnGroupName')
-    ind_imgs = np.array([df_grouped.get_group(ptcl).index.to_numpy() for ptcl in df_grouped.groups], dtype=object)
+    ptcls_to_imgs_ind = ptcls_star.get_ptcl_img_indices()
 
     if args.ind is not None:
         ind_ptcls = np.array(utils.load_pkl(args.ind))
-        ind_imgs = ind_imgs[ind_ptcls]
-        ptcls_star.df = ptcls_star.df.iloc[ind_imgs.flatten()]
+        ind_imgs = ptcls_to_imgs_ind[ind_ptcls].flatten().astype(int)
+        ptcls_star.df = ptcls_star.df.iloc[ind_imgs].reset_index()
+
+    ind_imgs = ptcls_to_imgs_ind.flatten().astype(int)
 
     # lazily load particle images and filter by ind.pkl, if applicable
     data = dataset.LazyMRCData(args.particles, norm=(0,1), invert_data=args.invert_data, datadir=args.datadir)
-    # data.particles = [data.particles[i] for i in ind_imgs.flatten().astype(int)]
-    data.particles = [data.particles[i.flatten().astype(int)] for i in ind_imgs]
+    data.particles = [data.particles[i] for i in ind_imgs]
     D = data.D
-    Nimg = ind_imgs.flatten().shape[0]
+    Nimg = ind_imgs.shape[0]
 
     # Load poses (from pre-filtered dataframe)
     rots_columns = ['_rlnAngleRot', '_rlnAngleTilt', '_rlnAnglePsi']
