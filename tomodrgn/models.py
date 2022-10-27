@@ -3,8 +3,9 @@
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.cuda.amp import autocast
 
-from tomodrgn import fft, lie_tools, utils, lattice
+from tomodrgn import fft, lie_tools, utils, lattice, set_transformer
 
 log = utils.log
 
@@ -131,7 +132,8 @@ class TiltSeriesHetOnlyVAE(nn.Module):
     # No pose inference
     def __init__(self, lattice, qlayersA, qdimA, out_dimA, ntilts, qlayersB, qdimB, players, pdim,
                  in_dim, zdim=1, enc_mask=None, enc_type='geom_lowf', enc_dim=None, domain='fourier',
-                 activation = nn.ReLU, l_dose_mask=False, feat_sigma = None, pooling_function='mean'):
+                 activation = nn.ReLU, l_dose_mask=False, feat_sigma = None, pooling_function='mean',
+                 set_encoder=False, num_seeds=1, num_inds=32, num_heads=4, layer_norm=False):
         super(TiltSeriesHetOnlyVAE, self).__init__()
         self.lattice = lattice
         self.ntilts = ntilts
@@ -139,7 +141,8 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         self.in_dim = in_dim
         self.enc_mask = enc_mask
         self.l_dose_mask = l_dose_mask
-        self.encoder = TiltSeriesEncoder(in_dim, qlayersA, qdimA, out_dimA, qlayersB, qdimB, zdim * 2, activation, pooling_function=pooling_function)
+        self.encoder = TiltSeriesEncoder(in_dim, qlayersA, qdimA, out_dimA, qlayersB, qdimB, zdim * 2, activation,
+                                         pooling_function, set_encoder, num_seeds, num_inds, num_heads, layer_norm)
         self.decoder = FTPositionalDecoder(3+zdim, lattice.D, players, pdim, activation, enc_type, enc_dim, feat_sigma)
 
 
@@ -180,7 +183,14 @@ class TiltSeriesHetOnlyVAE(nn.Module):
                                      domain=cfg['model_args']['domain'],
                                      activation=activation,
                                      l_dose_mask=cfg['model_args']['l_dose_mask'],
-                                     feat_sigma=cfg['model_args']['feat_sigma'])
+                                     feat_sigma=cfg['model_args']['feat_sigma'],
+                                     pooling_function=cfg['model_args']['pooling_function'],
+                                     set_encoder=cfg['model_args']['set_encoder'],
+                                     num_seeds=cfg['model_args']['num_seeds'],
+                                     num_inds=cfg['model_args']['num_inds'],
+                                     num_heads=cfg['model_args']['num_heads'],
+                                     layer_norm=cfg['model_args']['layer_norm'])
+
         if weights is not None:
             ckpt = torch.load(weights)
             model.load_state_dict(ckpt['model_state_dict'])
@@ -795,41 +805,59 @@ class TiltEncoder(nn.Module):
 
 class TiltSeriesEncoder(nn.Module):
     def __init__(self, in_dim, nlayersA, hidden_dimA, out_dimA, nlayersB,
-                 hidden_dimB, out_dim, activation, pooling_function):
+                 hidden_dimB, out_dim, activation, pooling_function, set_encoder,
+                 num_seeds, num_inds, num_heads, layer_norm):
         super(TiltSeriesEncoder, self).__init__()
         self.in_dim = in_dim
         assert nlayersA+nlayersB > 2
         # encoder1 encodes each identically-masked tilt image separately
         # encoder2 merges ntilts-concatenated encoder1 information and encodes further to latent space
         self.encoder1 = ResidLinearMLP(in_dim, nlayersA, hidden_dimA, out_dimA, activation)
-        self.encoder2 = ResidLinearMLP(out_dimA, nlayersB, hidden_dimB, out_dim, activation)
-        if pooling_function == 'max':
-            self.pooling_function = torch.max
-            self.pooling_function_kwargs = {'dim':1}
-        elif pooling_function == 'median':
-            # TODO quantile should be more robust to outliers, such as partially occluded particles, but is not (currently) supported for dtype float16
-            # therefore to run with median pooling, amp must be disabled
-            self.pooling_function = torch.quantile
-            self.pooling_function_kwargs = {'dim':1, 'q':0.5}
-        elif pooling_function == 'mean':
-            self.pooling_function = torch.mean
-            self.pooling_function_kwargs = {'dim':1}
+        self.set_encoder = set_encoder
+        if not set_encoder:
+            self.encoder2 = ResidLinearMLP(out_dimA, nlayersB, hidden_dimB, out_dim, activation)
+            if pooling_function == 'max':
+                self.pooling_function = torch.max
+                self.pooling_function_kwargs = {'dim':1}
+            elif pooling_function == 'median':
+                # TODO quantile should be more robust to outliers, such as partially occluded particles, but is not (currently) supported for dtype float16
+                # therefore to run with median pooling, amp must be disabled
+                self.pooling_function = torch.quantile
+                self.pooling_function_kwargs = {'dim':1, 'q':0.5}
+            elif pooling_function == 'mean':
+                self.pooling_function = torch.mean
+                self.pooling_function_kwargs = {'dim':1}
+            else:
+                raise ValueError
         else:
-            raise ValueError
+            # out_dimA = input shape[-1]
+            # num_outputs = num_seeds for PMA --> default 1
+            # dim_output = output shape [-1]
+            # num_inds = ISAB block m dimensionality (not currently used) --> default 32
+            # dim_hidden = hidden dimensionality of attention mechanism, aka nv or dim_K --> default 128
+            # num_heads = number of heads for self-attention (maybe set to ntilts?) --> default 4
+            # ln = bool for layer normalization --> default False
+            self.encoder2 = set_transformer.SetTransformer(out_dimA, num_outputs=num_seeds, dim_output=out_dim, num_inds=num_inds,
+                                                           dim_hidden=hidden_dimB, num_heads=num_heads, ln=layer_norm)
 
     def forward(self, batch):
         # input: B x ntilts x D*D[lattice_circular_mask]
         batch_tilts_intermediate = self.encoder1(batch)
 
-        # input: B x ntilts x out_dim_A
-        batch_pooledtilts = self.pooling_function(batch_tilts_intermediate, **self.pooling_function_kwargs)
-        if type(batch_pooledtilts) is not torch.Tensor:
-            # some torch pooling functions return a tuple of values and indices
-            batch_pooledtilts = batch_pooledtilts[0]
-        batch_pooledtilts = torch.nn.functional.relu(batch_pooledtilts)
+        if not self.set_encoder:
+            # input: B x ntilts x out_dim_A
+            batch_pooledtilts = self.pooling_function(batch_tilts_intermediate, **self.pooling_function_kwargs)
+            if type(batch_pooledtilts) is not torch.Tensor:
+                # some torch pooling functions return a tuple of values and indices
+                batch_pooledtilts = batch_pooledtilts[0]
+            batch_pooledtilts = torch.nn.functional.relu(batch_pooledtilts)
 
-        # input: B x out_dim_A
-        z = self.encoder2(batch_pooledtilts) #reshape to encode all tilts of one ptcl together
+            # input: B x out_dim_A
+            z = self.encoder2(batch_pooledtilts) #reshape to encode all tilts of one ptcl together
+
+        else:
+            with autocast(enabled=False):
+                z = self.encoder2(batch_tilts_intermediate).squeeze(0)
         return z  # B x zdim
 
 

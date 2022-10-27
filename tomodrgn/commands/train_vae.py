@@ -71,6 +71,13 @@ def add_args(parser):
     group.add_argument('--enc-mask', type=int, help='Circular mask of image for encoder (default: D/2; -1 for no mask)')
     group.add_argument('--pooling-function', type=str, choices=('max', 'mean', 'median'), default='mean', help='Function used to pool features along ntilts dimension after encA')
 
+    group = parser.add_argument_group('Set transformer args')
+    group.add_argument('--set-encoder', action='store_true', help='whether to use set transformer for encoder B')
+    group.add_argument('--num-seeds', type=int, default=1, help='number of seeds for PMA')
+    group.add_argument('--num-inds', type=int, default=32, help='dimensionality for ISAB m block')
+    group.add_argument('--num-heads', type=int, default=4, help='number of heads for multi head attention blocks')
+    group.add_argument('--layer-norm', action='store_true', help='whether to apply layer normalization in the set transformer block')
+
     group = parser.add_argument_group('Decoder Network')
     group.add_argument('--dec-layers', dest='players', type=int, default=3, help='Number of hidden layers')
     group.add_argument('--dec-dim', dest='pdim', type=int, default=256, help='Number of nodes in hidden layers')
@@ -126,7 +133,13 @@ def save_config(args, dataset, lattice, model, out_config):
                       pe_dim=args.pe_dim,
                       domain='fourier',
                       activation=args.activation,
-                      l_dose_mask=args.l_dose_mask)
+                      l_dose_mask=args.l_dose_mask,
+                      pooling_function=args.pooling_function,
+                      set_encoder=args.set_encoder,
+                      num_seeds=args.num_seeds,
+                      num_inds=args.num_inds,
+                      num_heads=args.num_heads,
+                      layer_norm=args.layer_norm)
     training_args = dict(n=args.num_epochs,
                          B=args.batch_size,
                          wd=args.wd,
@@ -168,13 +181,15 @@ def train_batch(scaler, model, lattice, y, rot, tran, cumulative_weights, dec_ma
         y = y.view(B, ntilts, D, D)
 
         z_mu, z_logvar, z, y_recon, ctf_weights = run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params)
-        loss, gen_loss, kld = loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta, beta_control)
+        loss, gen_loss, kld_loss = loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta, beta_control)
 
-    scaler.scale(loss).backward()
+    # scaler.scale(loss).backward()
+    scaler.scale(gen_loss).backward(retain_graph=True)
+    scaler.scale(kld_loss).backward()
     scaler.step(optim)
     scaler.update()
 
-    return loss.item(), gen_loss.item(), kld.item()
+    return loss.item(), gen_loss.item(), kld_loss.item()
 
 
 def run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params=None):
@@ -228,23 +243,24 @@ def loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta
 
     # latent loss
     kld = torch.mean(-0.5 * torch.sum(1 + z_logvar - z_mu.pow(2) - z_logvar.exp(), dim=1), dim=0)
+    if beta_control is None:
+        kld_loss = beta * kld / dec_mask.sum().float()
+    else:
+        kld_loss = beta_control * (beta - kld)**2 / dec_mask.sum().float()
 
     # total loss
-    if beta_control is None:
-        loss = gen_loss + beta * kld / dec_mask.sum().float()
-    else:
-        loss = gen_loss + beta_control * (beta - kld)**2 / dec_mask.sum().float()
-    return loss, gen_loss, kld
+    loss = gen_loss + kld_loss
+    return loss, gen_loss, kld_loss
 
 
-def eval_z(model, lattice, data, batch_size, device, use_amp=False, expanded_ind_rebased=None, ctf_params=None):
+def eval_z(model, lattice, data, args, device, use_amp=False, expanded_ind_rebased=None, ctf_params=None):
     model.eval()
     assert not model.training
     with torch.no_grad():
         with autocast(enabled=use_amp):
             z_mu_all = []
             z_logvar_all = []
-            data_generator = DataLoader(data, batch_size=batch_size, shuffle=False, num_workers=args.num_workers, prefetch_factor=args.prefetch_factor, persistent_workers=args.persistent_workers,
+            data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, prefetch_factor=args.prefetch_factor, persistent_workers=args.persistent_workers,
                                         pin_memory=args.pin_memory)
             for batch_images, _, batch_tran, batch_ctf, _, _, _ in data_generator:
                 B, ntilts, D, D = batch_images.shape
@@ -397,7 +413,9 @@ def main(args):
                                  args.qlayersB, args.qdimB, args.players, args.pdim, in_dim, args.zdim,
                                  enc_mask=enc_mask, enc_type=args.pe_type, enc_dim=args.pe_dim,
                                  domain='fourier', activation=activation, l_dose_mask=args.l_dose_mask,
-                                 feat_sigma=args.feat_sigma, pooling_function=args.pooling_function)
+                                 feat_sigma=args.feat_sigma, pooling_function=args.pooling_function,
+                                 set_encoder=args.set_encoder, num_seeds=args.num_seeds, num_inds=args.num_inds,
+                                 num_heads=args.num_heads, layer_norm=args.layer_norm)
     model.to(device)
     flog(model)
     flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
@@ -409,7 +427,7 @@ def main(args):
     save_config(args, data, lattice, model, out_config)
 
     # instantiate optimizer
-    optim = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.wd)
+    optim = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.wd, eps=1e-4)  # https://github.com/pytorch/pytorch/issues/40497#issuecomment-1084807134
 
     # Mixed precision training with AMP
     use_amp = not args.no_amp
@@ -490,13 +508,13 @@ def main(args):
             flog(f'GPU memory usage: {utils.check_memory_usage()}')
             out_weights = f'{args.outdir}/weights.{epoch}.pkl'
             out_z = f'{args.outdir}/z.{epoch}.pkl'
-            z_mu, z_logvar = eval_z(model, lattice, data, args.batch_size, device, use_amp=use_amp)
+            z_mu, z_logvar = eval_z(model, lattice, data, args, device, use_amp=use_amp)
             save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z, scaler)
 
     # save model weights, latent encoding, and evaluate the model on 3D lattice
     out_weights = f'{args.outdir}/weights.pkl'
     out_z = f'{args.outdir}/z.pkl'
-    z_mu, z_logvar = eval_z(model, lattice, data, args.batch_size, device, use_amp=use_amp)
+    z_mu, z_logvar = eval_z(model, lattice, data, args, device, use_amp=use_amp)
     save_checkpoint(model, optim, epoch, z_mu, z_logvar, out_weights, out_z, scaler)
 
     td = dt.now() - t1
