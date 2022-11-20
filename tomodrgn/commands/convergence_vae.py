@@ -4,8 +4,12 @@ Assess convergence and training dynamics of a heterogeneous VAE network
 
 import argparse
 import sys, os
+import glob
 import numpy as np
+import pandas as pd
+import matplotlib
 from matplotlib import pyplot as plt
+import seaborn as sns
 import random
 from datetime import datetime as dt
 import umap
@@ -22,10 +26,11 @@ try:
 except ImportError:
     pass
 flog = utils.flog
+log = utils.log
 
 def add_args(parser):
     parser.add_argument('workdir', type=os.path.abspath, help='Directory with tomoDRGN results')
-    parser.add_argument('epoch', type=int, help='Latest epoch number N to analyze convergence (0-based indexing, corresponding to z.N.pkl, weights.N.pkl')
+    parser.add_argument('epoch', type=str, help='Latest epoch number N to analyze convergence (0-based indexing, corresponding to z.N.pkl, weights.N.pkl), "latest" for last detected epoch')
     parser.add_argument('-o', '--outdir', type=os.path.abspath, help='Output directory for convergence analysis results (default: [workdir]/convergence.[epoch])')
     parser.add_argument('--epoch-interval', type=int, default=5, help='Interval of epochs between calculating most convergence heuristics')
 
@@ -609,6 +614,17 @@ def mask_volumes(outdir, epochs, labels, max_threads, LOG, Apix, thresh=None, di
         p.starmap(mask_volume, args, 4)
 
 
+def calc_cc(vol1, vol2):
+    '''
+    Helper function to calculate the zero-mean correlation coefficient as defined in eq 2 in https://journals.iucr.org/d/issues/2018/09/00/kw5139/index.html
+    vol1 and vol2 should be maps of the same box size, structured as numpy arrays with ndim=3, i.e. by loading with tomodrgn.mrc.parse_mrc
+    '''
+    zmean1 = (vol1 - np.mean(vol1))
+    zmean2 = (vol2 - np.mean(vol2))
+    cc = (np.sum(zmean1 ** 2) ** -0.5) * (np.sum(zmean2 ** 2) ** -0.5) * np.sum(zmean1 * zmean2)
+    return cc
+
+
 def calculate_CCs(outdir, epochs, labels, chimerax_colors, LOG):
     '''
     Returns the masked map-map correlation between temporally sequential volume pairs outdir/vols.{epochs}, for each class in labels
@@ -622,15 +638,6 @@ def calculate_CCs(outdir, epochs, labels, chimerax_colors, LOG):
     Outputs:
         plot.png of sequential volume pairs map-map CC for each class in labels across training epochs
     '''
-    def calc_cc(vol1, vol2):
-        '''
-        Helper function to calculate the zero-mean correlation coefficient as defined in eq 2 in https://journals.iucr.org/d/issues/2018/09/00/kw5139/index.html
-        vol1 and vol2 should be maps of the same box size, structured as numpy arrays with ndim=3, i.e. by loading with tomodrgn.mrc.parse_mrc
-        '''
-        zmean1 = (vol1 - np.mean(vol1))
-        zmean2 = (vol2 - np.mean(vol2))
-        cc = (np.sum(zmean1 ** 2) ** -0.5) * (np.sum(zmean2 ** 2) ** -0.5) * np.sum(zmean1 * zmean2)
-        return cc
 
     cc_masked = np.zeros((len(labels), len(epochs) - 1))
 
@@ -670,9 +677,6 @@ def calculate_FSCs(outdir, epochs, labels, img_size, chimerax_colors, LOG):
     Outputs:
         plot.png of sequential volume pairs map-map FSC for each class in labels across training epochs
         plot.png of sequential volume pairs map-map FSC at Nyquist for each class in labels across training epochs
-
-    TODO: accelerate via multiprocessing (create iterable list of calc_fsc calls?)
-
     '''
     # calculate masked FSCs for all volumes
     fsc_masked = np.zeros((len(labels), len(epochs) - 1, img_size // 2))
@@ -684,7 +688,7 @@ def calculate_FSCs(outdir, epochs, labels, img_size, chimerax_colors, LOG):
             vol1_path = outdir + '/vols.{}/vol_{:03d}.masked.mrc'.format(epochs[i], cluster)
             vol2_path = outdir + '/vols.{}/vol_{:03d}.masked.mrc'.format(epochs[i + 1], cluster)
 
-            x, fsc_masked[cluster, i, :] = utils.calc_fsc(vol1_path, vol2_path, mask='soft')
+            x, fsc_masked[cluster, i, :] = utils.calc_fsc(vol1_path, vol2_path, mask='none')
 
     utils.save_pkl(fsc_masked, outdir + '/fsc_masked.pkl')
     utils.save_pkl(x, outdir + '/fsc_xaxis.pkl')
@@ -734,34 +738,67 @@ def calculate_FSCs(outdir, epochs, labels, img_size, chimerax_colors, LOG):
     plt.clf()
 
 
-def calculate_nxn_gold_standard_FSCs(outdir, epochs, labels, img_size, chimerax_colors, LOG):
-# TODO expand this functionality as potential convergence criterion
+def calculate_CCs_by_epoch(outdir, epochs, labels, LOG):
 
-    # calculate masked FSCs for all volumes
-    fsc_gold_standard = np.zeros((len(epochs)-1, len(labels), len(labels)))
-    mask = mrc.parse_mrc(f'{outdir}/mask_global.mrc')[0].astype(bool)
+    # calculate pairwise correlation coefficients for all volumes in a given epoch
+    map_map_score = np.ones((len(epochs), len(labels), len(labels)))
 
-    for i in range(len(epochs) - 1):
-        vols = np.array([mrc.parse_mrc(f'{outdir}/vols.{epochs[i]}/vol_{cluster:03d}.mrc')[0][mask] for cluster in range(len(labels))])
-        vols[vols < 0] = 0
+    for i in range(len(epochs)):
+        flog(f'Working on pairwise CCs for epoch {epochs[i]}', LOG)
+        vols = np.array([mrc.parse_mrc(f'{outdir}/vols.{epochs[i]}/vol_{cluster:03d}.masked.mrc')[0] for cluster in range(len(labels))])
+        # vols[vols < 0] = 0
 
-        # construct matrix to store all-to-all FSCs between a given epoch's volumes
         # skip symmetric-equivalent and self-self FSC calculations
         efficient_matrix_inds = np.triu_indices(len(labels), 1)
         inds_A, inds_B = efficient_matrix_inds
+
+        # calculate the FSCs and save the 0.5 correlation resolution
         for ind_A, ind_B in zip(inds_A, inds_B):
-            fsc_gold_standard[i, ind_A, ind_B] = utils.calc_fsc(vols[ind_A], vols[ind_B], mask='soft')
+            map_map_score[i, ind_A, ind_B] = calc_cc(vols[ind_A], vols[ind_B])
+            map_map_score[i, ind_B, ind_A] = map_map_score[i, ind_A, ind_B]
 
-    utils.save_pkl(fsc_gold_standard, outdir + '/fsc_nxn.pkl')
+        # visualize and save as a heatmap
+        df = pd.DataFrame(map_map_score[i], index=[label for label in labels], columns=[label for label in labels])
+        sns.clustermap(df, annot=True, fmt='0.2f', figsize=(6, 6), vmin=0.75, vmax=1.0)
+        plt.savefig(f'{outdir}/plots/temp_{i}.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
+        plt.close()
 
-    # visualize nxn fsc distribution via violin plot per epoch
-    # visualize nxn fsc distribution via variance within each epoch
+    utils.save_pkl(map_map_score, outdir + '/fsc_pairwise.pkl')
+
+    n_cols = int(np.ceil(len(epochs) ** 0.5))
+    n_rows = int(np.ceil(len(epochs) / n_cols))
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(2 * n_cols, 2 * n_rows), sharex='all', sharey='all')
+    fig.tight_layout()
+
+    for i, ax in enumerate(axes.ravel()):
+        path = f'{outdir}/plots/temp_{i}.png'
+        if os.path.isfile(path):
+            ax.imshow(matplotlib.image.imread(path))
+            ax.set_title(f'epoch {epochs[i]}')
+            os.remove(path)
+        else:
+            pass
+        ax.set_axis_off()
+
+    plt.savefig(f'{outdir}/plots/09_pairwise_FSC_matrix_epoch.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
+    flog(f'Saved pairwise map-map FSC heatmap to {outdir}/plots/09_pairwise_FSC_matrix_epoch.png', LOG)
+    plt.close('all')
+
+
+def get_latest(workdir):
+    # assumes args.num_epochs > latest checkpoint
+    log('Detecting latest checkpoint...')
+    files = glob.glob(f'{workdir}/z.*.pkl')
+    epochs = [int(file.split('.')[-2]) for file in files]  # should be a string-formatted number
+    E = max(epochs)
+    return int(E)
+
 
 def main(args):
     t1 = dt.now()
 
     # Configure paths
-    E = args.epoch
+    E = get_latest(args.workdir) if args.epoch == 'latest' else int(args.epoch)
     sampling = args.epoch_interval
     epochs = np.arange(4, E+1, sampling)
     if epochs[-1] != E:
@@ -889,6 +926,9 @@ def main(args):
     if args.downsample:
         img_size = args.downsample
     calculate_FSCs(outdir, epochs, labels, img_size, chimerax_colors, LOG)
+
+    flog(f'Calculating pairwise map-map CCs at each epoch in {epochs} ...', LOG)
+    calculate_CCs_by_epoch(outdir, epochs, labels, LOG)
 
     flog(f'Finished in {dt.now() - t1}', LOG)
 
