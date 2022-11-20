@@ -57,6 +57,7 @@ def add_args(parser):
     group.add_argument('-d','--downsample', type=int, help='Downsample volumes to this box size (pixels). Recommended for boxes > 250-300px')
     group.add_argument('--cuda', type = int, default = None, help='Specify cuda device for volume generation')
     group.add_argument('--skip-volgen', action = 'store_true', help='Skip volume generation. Requires that volumes already exist for downstream CC + FSC calcs')
+    group.add_argument('--ground-truth', type = os.path.abspath, nargs='+', default=None, help='Relative path containing wildcards to ground_truth_vols*.mrc for map-map CC calcs')
 
     group = parser.add_argument_group('Mask generation arguments')
     group.add_argument('--max-threads', type=int, default=8, help='Max number of threads used to parallelize mask generation')
@@ -748,11 +749,11 @@ def calculate_CCs_by_epoch(outdir, epochs, labels, LOG):
         vols = np.array([mrc.parse_mrc(f'{outdir}/vols.{epochs[i]}/vol_{cluster:03d}.masked.mrc')[0] for cluster in range(len(labels))])
         # vols[vols < 0] = 0
 
-        # skip symmetric-equivalent and self-self FSC calculations
+        # skip symmetric-equivalent and self-self CC calculations
         efficient_matrix_inds = np.triu_indices(len(labels), 1)
         inds_A, inds_B = efficient_matrix_inds
 
-        # calculate the FSCs and save the 0.5 correlation resolution
+        # calculate the CCs and save the 0.5 correlation resolution
         for ind_A, ind_B in zip(inds_A, inds_B):
             map_map_score[i, ind_A, ind_B] = calc_cc(vols[ind_A], vols[ind_B])
             map_map_score[i, ind_B, ind_A] = map_map_score[i, ind_A, ind_B]
@@ -763,7 +764,7 @@ def calculate_CCs_by_epoch(outdir, epochs, labels, LOG):
         plt.savefig(f'{outdir}/plots/temp_{i}.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
         plt.close()
 
-    utils.save_pkl(map_map_score, outdir + '/fsc_pairwise.pkl')
+    utils.save_pkl(map_map_score, outdir + '/cc_pairwise.pkl')
 
     n_cols = int(np.ceil(len(epochs) ** 0.5))
     n_rows = int(np.ceil(len(epochs) / n_cols))
@@ -780,8 +781,54 @@ def calculate_CCs_by_epoch(outdir, epochs, labels, LOG):
             pass
         ax.set_axis_off()
 
-    plt.savefig(f'{outdir}/plots/09_pairwise_FSC_matrix_epoch.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
-    flog(f'Saved pairwise map-map FSC heatmap to {outdir}/plots/09_pairwise_FSC_matrix_epoch.png', LOG)
+    plt.savefig(f'{outdir}/plots/09_pairwise_CC_matrix_epoch.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
+    flog(f'Saved pairwise map-map CC clustermap to {outdir}/plots/09_pairwise_CC_matrix_epoch.png', LOG)
+    plt.close('all')
+
+
+def calculate_ground_truth_CCs(outdir, epochs, labels, LOG, ground_truth_paths):
+
+    # get all ground truth vols
+    gt_vols = sorted(ground_truth_paths)
+    gt_labels = [os.path.splitext(os.path.basename(gt_vol))[0] for gt_vol in gt_vols]
+    gt_vols = np.array([mrc.parse_mrc(gt_vol)[0] for gt_vol in gt_vols])
+
+    # calculate pairwise correlation coefficients for all volumes in a given epoch
+    map_map_score = np.ones((len(epochs), len(gt_vols), len(labels)))
+
+    for i in range(len(epochs)):
+        flog(f'Working on ground-truth CCs for epoch {epochs[i]}', LOG)
+        vols = np.array([mrc.parse_mrc(f'{outdir}/vols.{epochs[i]}/vol_{cluster:03d}.masked.mrc')[0] for cluster in range(len(labels))])
+
+        for j in range(len(gt_vols)):
+            for k in range(len(vols)):
+                map_map_score[i, j, k] = calc_cc(gt_vols[j], vols[k])
+
+        # visualize and save as a heatmap
+        df = pd.DataFrame(map_map_score[i], index=[label for label in gt_labels], columns=[label for label in labels])
+        sns.clustermap(df, annot=True, fmt='0.2f', figsize=(len(vols), len(gt_vols)), vmin=np.min(map_map_score), vmax=1.0, row_cluster=False)
+        plt.savefig(f'{outdir}/plots/temp_{i}.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
+        plt.close()
+
+    utils.save_pkl(map_map_score, outdir + '/cc_groundtruth.pkl')
+
+    n_cols = int(np.ceil(len(epochs) ** 0.5))
+    n_rows = int(np.ceil(len(epochs) / n_cols))
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(len(vols), len(gt_vols)), sharex='all', sharey='all')
+
+    for i, ax in enumerate(axes.ravel()):
+        path = f'{outdir}/plots/temp_{i}.png'
+        if os.path.isfile(path):
+            ax.imshow(matplotlib.image.imread(path))
+            ax.set_title(f'epoch {epochs[i]}')
+            os.remove(path)
+        else:
+            pass
+        ax.set_axis_off()
+
+    fig.tight_layout()
+    plt.savefig(f'{outdir}/plots/10_groundtruth_CC_matrix_epoch.png', dpi=300*n_cols, format='png', transparent=True, bbox_inches='tight')
+    flog(f'Saved ground truth map-map CC clustermap to {outdir}/plots/10_groundtruth_CC_matrix_epoch.png', LOG)
     plt.close('all')
 
 
@@ -929,6 +976,11 @@ def main(args):
 
     flog(f'Calculating pairwise map-map CCs at each epoch in {epochs} ...', LOG)
     calculate_CCs_by_epoch(outdir, epochs, labels, LOG)
+
+    if args.ground_truth is not None:
+        flog(f'Calculating ground truth map-map CCs at each epoch in {epochs}', LOG)
+        flog(f'Using ground truth maps {args.ground_truth} ...', LOG)
+        calculate_ground_truth_CCs(outdir, epochs, labels, LOG, args.ground_truth)
 
     flog(f'Finished in {dt.now() - t1}', LOG)
 
