@@ -286,6 +286,12 @@ def eval_z(model, lattice, data, args, device, use_amp=False, expanded_ind_rebas
                 z_logvar_all.append(z_logvar.detach().cpu().numpy())
             z_mu_all = np.vstack(z_mu_all)
             z_logvar_all = np.vstack(z_logvar_all)
+
+            if np.any(z_mu_all == np.nan) or np.any(z_mu_all == np.inf):
+                nan_count = np.sum(np.isnan(z_mu_all))
+                inf_count = np.sum(np.isinf(z_mu_all))
+                sys.exit(f'Latent evaluation at end of epoch failed: z.pkl would contain {nan_count} NaN and {inf_count} Inf')
+
             return z_mu_all, z_logvar_all
 
 
