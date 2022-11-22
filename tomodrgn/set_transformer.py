@@ -47,19 +47,6 @@ class SAB(nn.Module):
         return self.mab(X, X)
 
 
-class ISAB(nn.Module):
-    def __init__(self, dim_in, dim_out, num_heads, num_inds, ln=False):
-        super(ISAB, self).__init__()
-        self.I = nn.Parameter(torch.Tensor(1, num_inds, dim_out))
-        nn.init.xavier_uniform_(self.I)
-        self.mab0 = MAB(dim_out, dim_in, dim_out, num_heads, ln=ln)
-        self.mab1 = MAB(dim_in, dim_out, dim_out, num_heads, ln=ln)
-
-    def forward(self, X):
-        H = self.mab0(self.I.repeat(X.size(0), 1, 1), X)
-        return self.mab1(X, H)
-
-
 class PMA(nn.Module):
     def __init__(self, dim, num_heads, num_seeds, ln=False):
         super(PMA, self).__init__()
@@ -72,11 +59,15 @@ class PMA(nn.Module):
 
 
 class SetTransformer(nn.Module):
-    def __init__(self, dim_input, num_outputs, dim_output, num_inds=32, dim_hidden=128, num_heads=4, ln=False):
+    def __init__(self, dim_input, num_outputs, dim_output, dim_hidden=128, num_heads=4, ln=False):
+        # dim_input is node count for layer 1 (should be out_dim_A, in paper this was 512 from VGG)
+        # num_outputs is PMA num_seeds (k, should be 1?? or 2?? or large like 100??, can sweep)
+        # dim_output is final dim of output (should be 2x zdim if directly used for VAE reparamaterization)
+        # dim_hidden is node count for all hidden layers (can sweep)
+        # num_heads is the number of heads for multihead attention in SAB (can maybe sweep, but gave errors in past)
+
         super(SetTransformer, self).__init__()
         self.enc = nn.Sequential(
-                # ISAB(dim_input, dim_hidden, num_heads, num_inds, ln=ln),
-                # ISAB(dim_hidden, dim_hidden, num_heads, num_inds, ln=ln))
                 SAB(dim_input, dim_hidden, num_heads, ln=ln),
                 SAB(dim_hidden, dim_hidden, num_heads, ln=ln))
         self.dec = nn.Sequential(
@@ -86,6 +77,6 @@ class SetTransformer(nn.Module):
                 nn.Linear(dim_hidden, dim_output))
 
     def forward(self, X):
-        # input: X of shape (n, dx) --> (ntilts, out_dim_A)
+        # input: X of shape (n, dx) --> (B, ntilts, out_dim_A)
         # output: Z of
         return self.dec(self.enc(X))

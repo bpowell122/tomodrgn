@@ -69,12 +69,10 @@ def add_args(parser):
     group.add_argument('--enc-layers-B', dest='qlayersB', type=int, default=3, help='Number of hidden layers encoding merged tilts')
     group.add_argument('--enc-dim-B', dest='qdimB', type=int, default=512, help='Number of nodes in hidden layers encoding merged tilts')
     group.add_argument('--enc-mask', type=int, help='Circular mask of image for encoder (default: D/2; -1 for no mask)')
-    group.add_argument('--pooling-function', type=str, choices=('max', 'mean', 'median'), default='mean', help='Function used to pool features along ntilts dimension after encA')
+    group.add_argument('--pooling-function', type=str, choices=('concatenate', 'max', 'mean', 'median', 'set_encoder'), default='concatenate', help='Function used to pool features along ntilts dimension after encA')
 
     group = parser.add_argument_group('Set transformer args')
-    group.add_argument('--set-encoder', action='store_true', help='whether to use set transformer for encoder B')
     group.add_argument('--num-seeds', type=int, default=1, help='number of seeds for PMA')
-    group.add_argument('--num-inds', type=int, default=32, help='dimensionality for ISAB m block')
     group.add_argument('--num-heads', type=int, default=4, help='number of heads for multi head attention blocks')
     group.add_argument('--layer-norm', action='store_true', help='whether to apply layer normalization in the set transformer block')
 
@@ -135,9 +133,7 @@ def save_config(args, dataset, lattice, model, out_config):
                       activation=args.activation,
                       l_dose_mask=args.l_dose_mask,
                       pooling_function=args.pooling_function,
-                      set_encoder=args.set_encoder,
                       num_seeds=args.num_seeds,
-                      num_inds=args.num_inds,
                       num_heads=args.num_heads,
                       layer_norm=args.layer_norm)
     training_args = dict(n=args.num_epochs,
@@ -420,8 +416,7 @@ def main(args):
                                  enc_mask=enc_mask, enc_type=args.pe_type, enc_dim=args.pe_dim,
                                  domain='fourier', activation=activation, l_dose_mask=args.l_dose_mask,
                                  feat_sigma=args.feat_sigma, pooling_function=args.pooling_function,
-                                 set_encoder=args.set_encoder, num_seeds=args.num_seeds, num_inds=args.num_inds,
-                                 num_heads=args.num_heads, layer_norm=args.layer_norm)
+                                 num_seeds=args.num_seeds, num_heads=args.num_heads, layer_norm=args.layer_norm)
     model.to(device)
     flog(model)
     flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
