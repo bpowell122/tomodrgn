@@ -172,18 +172,21 @@ def zero_sphere(vol):
     vol[tmp] = 0
     return vol
 
-def calc_fsc(vol1_path, vol2_path, mask = 'none', dilate = 3, dist = 10):
+def calc_fsc(vol1, vol2, mask = 'none', dilate = 3, dist = 10):
     '''
     Function to calculate the FSC between two volumes
-    vol1: path to volume1.mrc, boxsize D,D,D
-    vol2: path to volume2.mrc, boxsize D,D,D
+    vol1: path to volume1.mrc, boxsize D,D,D, or ndarray of vol1 voxels
+    vol2: path to volume2.mrc, boxsize D,D,D, or ndarray of vol2 voxels
     mask: one of ['none', 'sphere', 'tight', 'soft', path to mask.mrc with boxsize D,D,D]
     dilate: int of px to expand tight mask when creating soft mask
     dist: int of px over which to apply soft edge when creating soft mask
     '''
     # load masked volumes in real space
-    vol1, _ = mrc.parse_mrc(vol1_path)
-    vol2, _ = mrc.parse_mrc(vol2_path)
+    if type(vol1) == np.ndarray:
+        pass
+    else:
+        vol1, _ = mrc.parse_mrc(vol1)
+        vol2, _ = mrc.parse_mrc(vol2)
     assert vol1.shape == vol2.shape
 
     # define fourier grid and label into shells
