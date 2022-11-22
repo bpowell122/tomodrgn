@@ -549,7 +549,7 @@ def generate_volumes(workdir, outdir, epochs, Apix, flip, invert, downsample, cu
         analysis.gen_volumes(weights, config, zfile, volsdir, Apix=Apix, flip=flip, invert=invert, downsample=downsample, cuda=cuda)
 
 
-def mask_volume(volpath, vol_outpath, Apix, mask_outpath=None, thresh=None, dilate=3, dist=10):
+def mask_volume(volpath, vol_outpath, Apix, mask_outpath=None, thresh=None, dilate=None, dist=None):
     '''
     Helper function to generate a loose mask around the input density
     Density is thresholded to 50% maximum intensity, dilated outwards, and a soft cosine edge is applied
@@ -565,12 +565,19 @@ def mask_volume(volpath, vol_outpath, Apix, mask_outpath=None, thresh=None, dila
        volume.masked.mrc written to outdir
     '''
     vol = mrc.parse_mrc(volpath)[0]
+
+    # read in or estimate soft mask generation parameters
+    D = vol.shape[0]
     thresh = np.percentile(vol, 99.99) / 2 if thresh is None else thresh
+    dilate = int(np.ceil(D / 20)) if dilate is None else dilate
+    dist = int(np.ceil(D / 20)) if dist is None else dist
+
+    # apply soft mask generation parameters
     x = (vol >= thresh).astype(bool)
     x = binary_dilation(x, iterations=dilate)
     y = distance_transform_edt(~x.astype(bool))
     y[y > dist] = dist
-    z = np.cos(np.pi * y / dist / 2)
+    z = np.cos( (np.pi / 2) * (y / dist) )
 
     # check that mask is in range [0,1]
     assert np.all(z >= 0)
