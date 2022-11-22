@@ -280,7 +280,7 @@ def encoder_latent_shifts(workdir, outdir, epochs, E, LOG):
         ax.set_xlabel('epoch')
         ax.set_ylabel(metrics[i])
     plt.savefig(outdir+'/plots/03_encoder_latent_vector_shifts.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
-    flog(f'Saved latent vector shifts plots to {outdir}/plots/02_encoder_latent_vector_shifts.png', LOG)
+    flog(f'Saved latent vector shifts plots to {outdir}/plots/03_encoder_latent_vector_shifts.png', LOG)
     plt.clf()
 
 
@@ -456,7 +456,7 @@ def sketch_via_umap_local_maxima(outdir, E, LOG, n_bins=30, smooth=True, smooth_
         ax.spines['right'].set_visible(False)
 
     plt.savefig(outdir + '/plots/04_decoder_UMAP-sketching.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
-    flog(f'Saved latent sketching plot to {outdir}/plots/03_decoder_UMAP-sketching.png', LOG)
+    flog(f'Saved latent sketching plot to {outdir}/plots/04_decoder_UMAP-sketching.png', LOG)
     plt.clf()
 
     return binned_ptcls_mask, labels
@@ -532,7 +532,7 @@ def follow_candidate_particles(workdir, outdir, epochs, n_dim, binned_ptcls_mask
     plt.subplots_adjust(hspace=0.25)
 
     plt.savefig(outdir + '/plots/05_decoder_maxima-sketch-consistency.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
-    flog(f'Saved plot tracking representative latent encodings through epochs {epochs} to {outdir}/plots/04_decoder_maxima-sketch-consistency.png', LOG)
+    flog(f'Saved plot tracking representative latent encodings through epochs {epochs} to {outdir}/plots/05_decoder_maxima-sketch-consistency.png', LOG)
     plt.clf()
 
 
@@ -651,23 +651,23 @@ def calculate_CCs(outdir, epochs, labels, chimerax_colors, LOG):
 
     for i in range(len(epochs) - 1):
         for cluster in np.arange(len(labels)):
-            vol1, _ = mrc.parse_mrc(outdir + '/vols.{}/vol_{:03d}.masked.mrc'.format(epochs[i], cluster))
-            vol2, _ = mrc.parse_mrc(outdir + '/vols.{}/vol_{:03d}.masked.mrc'.format(epochs[i + 1], cluster))
+            vol1, _ = mrc.parse_mrc(outdir + '/vols.{}/vol_{:03d}.mrc'.format(epochs[i], cluster))
+            vol2, _ = mrc.parse_mrc(outdir + '/vols.{}/vol_{:03d}.mrc'.format(epochs[i + 1], cluster))
 
             cc_masked[cluster, i] = calc_cc(vol1, vol2)
 
-    utils.save_pkl(cc_masked, outdir + '/cc_masked.pkl')
+    utils.save_pkl(cc_masked, outdir + '/cc.pkl')
 
     fig, ax = plt.subplots(1, 1)
 
     ax.set_xlabel('epoch')
-    ax.set_ylabel('masked CC')
+    ax.set_ylabel('correlation coefficient')
     for i in range(len(labels)):
         ax.plot(epochs[1:], cc_masked[i,:], c=chimerax_colors[i] * 0.75, linewidth=2.5)
     ax.legend(labels, ncol=3, fontsize='x-small')
 
     plt.savefig(outdir + '/plots/06_decoder_CC.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
-    flog(f'Saved map-map correlation plot to {outdir}/plots/05_decoder_CC.png', LOG)
+    flog(f'Saved map-map correlation plot to {outdir}/plots/06_decoder_CC.png', LOG)
     plt.clf()
 
 
@@ -693,12 +693,12 @@ def calculate_FSCs(outdir, epochs, labels, img_size, chimerax_colors, LOG):
         flog(f'Calculating all FSCs for cluster {cluster}', LOG)
 
         for i in range(len(epochs) - 1):
-            vol1_path = outdir + '/vols.{}/vol_{:03d}.masked.mrc'.format(epochs[i], cluster)
-            vol2_path = outdir + '/vols.{}/vol_{:03d}.masked.mrc'.format(epochs[i + 1], cluster)
+            vol1_path = outdir + '/vols.{}/vol_{:03d}.mrc'.format(epochs[i], cluster)
+            vol2_path = outdir + '/vols.{}/vol_{:03d}.mrc'.format(epochs[i + 1], cluster)
 
             x, fsc_masked[cluster, i, :] = utils.calc_fsc(vol1_path, vol2_path, mask='none')
 
-    utils.save_pkl(fsc_masked, outdir + '/fsc_masked.pkl')
+    utils.save_pkl(fsc_masked, outdir + '/fsc.pkl')
     utils.save_pkl(x, outdir + '/fsc_xaxis.pkl')
 
     # plot all fscs
@@ -729,20 +729,20 @@ def calculate_FSCs(outdir, epochs, labels, img_size, chimerax_colors, LOG):
     plt.subplots_adjust(hspace=0.3)
     plt.subplots_adjust(wspace=0.1)
     plt.savefig(outdir + '/plots/07_decoder_FSC.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
-    flog(f'Saved map-map FSC plot to {outdir}/plots/06_decoder_FSC.png', LOG)
+    flog(f'Saved map-map FSC plot to {outdir}/plots/07_decoder_FSC.png', LOG)
     plt.clf()
 
     # plot all FSCs at Nyquist only
     fig, ax = plt.subplots(1, 1)
 
     ax.set_xlabel('epoch')
-    ax.set_ylabel('masked FSC at nyquist')
+    ax.set_ylabel('FSC at nyquist')
     for i in range(len(labels)):
         ax.plot(epochs[1:], fsc_masked[i, :, -1], c=chimerax_colors[i] * 0.75, linewidth=2.5)
     ax.legend(labels, ncol=3, fontsize='x-small')
 
     plt.savefig(outdir + '/plots/08_decoder_FSC-nyquist.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
-    flog(f'Saved map-map FSC (Nyquist) plot to {outdir}/plots/07_decoder_FSC-nyquist.png', LOG)
+    flog(f'Saved map-map FSC (Nyquist) plot to {outdir}/plots/08_decoder_FSC-nyquist.png', LOG)
     plt.clf()
 
 
@@ -753,7 +753,7 @@ def calculate_CCs_by_epoch(outdir, epochs, labels, LOG):
 
     for i in range(len(epochs)):
         flog(f'Working on pairwise CCs for epoch {epochs[i]}', LOG)
-        vols = np.array([mrc.parse_mrc(f'{outdir}/vols.{epochs[i]}/vol_{cluster:03d}.masked.mrc')[0] for cluster in range(len(labels))])
+        vols = np.array([mrc.parse_mrc(f'{outdir}/vols.{epochs[i]}/vol_{cluster:03d}.mrc')[0] for cluster in range(len(labels))])
         # vols[vols < 0] = 0
 
         # skip symmetric-equivalent and self-self CC calculations
@@ -805,7 +805,7 @@ def calculate_ground_truth_CCs(outdir, epochs, labels, LOG, ground_truth_paths):
 
     for i in range(len(epochs)):
         flog(f'Working on ground-truth CCs for epoch {epochs[i]}', LOG)
-        vols = np.array([mrc.parse_mrc(f'{outdir}/vols.{epochs[i]}/vol_{cluster:03d}.masked.mrc')[0] for cluster in range(len(labels))])
+        vols = np.array([mrc.parse_mrc(f'{outdir}/vols.{epochs[i]}/vol_{cluster:03d}.mrc')[0] for cluster in range(len(labels))])
 
         for j in range(len(gt_vols)):
             for k in range(len(vols)):
