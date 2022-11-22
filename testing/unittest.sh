@@ -48,6 +48,13 @@ tomodrgn train_vae data/10076_both_32_sim.star -o output/07_vae_both_sim_dosetil
 # Test train_vae for simulated particles with no heterogeneity --> should get featureless continuous latent space
 tomodrgn train_vae data/10076_classE_32_sim.star -o output/08_vae_classE_sim --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 -n 50
 
+### TRAIN_VAE ALL ENCODER B OPTIONS ###
+# Test train_vae for non-error functionality, correct encoderB dimensions and pooling, and basic heterogeneity learning
+tomodrgn train_vae data/10076_both_32_clean.star -o output/09_vae_both_clean_concatenate --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 -n 5 --enc-layers-A 2 --out-dim-A 64 --pooling-function concatenate --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3
+tomodrgn train_vae data/10076_both_32_clean.star -o output/10_vae_both_clean_max --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 -n 5 --enc-layers-A 2 --out-dim-A 64 --pooling-function max --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3
+tomodrgn train_vae data/10076_both_32_clean.star -o output/11_vae_both_clean_mean --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 -n 5 --enc-layers-A 2 --out-dim-A 64 --pooling-function mean --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3
+tomodrgn train_vae data/10076_both_32_clean.star -o output/12_vae_both_clean_median --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 -n 5 --enc-layers-A 2 --out-dim-A 64 --pooling-function median --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3
+tomodrgn train_vae data/10076_both_32_clean.star -o output/13_vae_both_clean_setencoder --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 -n 5 --enc-layers-A 2 --out-dim-A 64 --pooling-function set_encoder --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 --num-seeds 1 --num-heads 2 --layer-norm  # may require --no-amp
 
 ### CONVERGENCE_VAE ###
 # Test convergence_vae for simulated particles
