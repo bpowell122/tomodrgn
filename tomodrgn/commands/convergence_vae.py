@@ -852,14 +852,16 @@ def main(args):
     t1 = dt.now()
 
     # Configure paths
+    workdir = args.workdir
+    config = f'{workdir}/config.pkl'
+    logfile = f'{workdir}/run.log'
+    assert glob.glob(f'{args.workdir}/weights*.pkl'), f'No weights.*.pkl files detected in {args.workdir}; exiting...'
+    assert glob.glob(f'{args.workdir}/z*.pkl'), f'No z.*.pkl files detected in {args.workdir}; exiting...'
     E = get_latest(args.workdir) if args.epoch == 'latest' else int(args.epoch)
     sampling = args.epoch_interval
     epochs = np.arange(4, E+1, sampling)
     if epochs[-1] != E:
         epochs = np.append(epochs, E)
-    workdir = args.workdir
-    config = f'{workdir}/config.pkl'
-    logfile = f'{workdir}/run.log'
 
     # assert all required files are locatable
     for i in range(E):

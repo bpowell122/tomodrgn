@@ -27,6 +27,7 @@ def main(args):
             reconstruction_vols.append(os.path.abspath(os.path.join(args.training_directory, file)))
     reconstruction_vols = sorted(reconstruction_vols, key=lambda x: int(os.path.splitext(x)[0].split('.')[-1]))
     epochs = [i for i in range(len(reconstruction_vols))]
+    assert epochs, f'No reconstruct.*.mrc files detected in {args.training_directory}; exiting...'
     flog(f'Found {len(epochs)} epochs to compute FSC')
 
     if args.max_epoch:
