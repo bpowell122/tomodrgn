@@ -270,7 +270,7 @@ class TiltSeriesMRCData(data.Dataset):
             log('Filtering particles by supplied indices...')
             ptcls_unique_list = ptcls_unique_list[ind_ptcl]
             ptcls_star.df = ptcls_star.df[ptcls_star.df['_rlnGroupName'].isin(ptcls_unique_list)]
-            ptcls_star.df.reset_index(drop=True)
+            ptcls_star.df = ptcls_star.df.reset_index(drop=True)
             log(f'Found {len(ptcls_unique_list)} particles after filtering')
         ptcls_to_imgs_ind = ptcls_star.get_ptcl_img_indices()  # either instantiate for the first time or update after ind_ptcl filtering
         ntilts_set = set(ptcls_star.df.groupby('_rlnGroupName').size().values)
