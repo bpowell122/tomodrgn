@@ -498,7 +498,8 @@ class FTPositionalDecoder(nn.Module):
             zdim = len(zval)
             z = torch.tensor(zval, dtype=torch.float32, device=coords.device)
 
-        vol_f = np.zeros((D, D, D), dtype=np.float32)
+        vol_f = torch.zeros((D, D, D), dtype=coords.dtype, device=coords.device, requires_grad=False)
+        slice_ = torch.zeros((D ** 2), dtype=coords.dtype, device=coords.device, requires_grad=False)
         assert not self.training
         # evaluate the volume by zslice to avoid memory overflows
         for i, dz in enumerate(np.linspace(-extent, extent, D, endpoint=True, dtype=np.float32)):
@@ -513,10 +514,9 @@ class FTPositionalDecoder(nn.Module):
                 else:
                     y = self.decode(x)
                     y = y[..., 0] - y[..., 1]
-                slice_ = torch.zeros(D ** 2, device='cpu', dtype=y.dtype)
-                slice_[keep] = y.cpu()
-                slice_ = slice_.view(D, D).numpy()
-            vol_f[i] = slice_
+                slice_[keep] = y.to(slice_.dtype)
+                vol_f[i] = slice_.view(D, D)
+        vol_f = vol_f.cpu().numpy()
         vol_f = vol_f * norm[1] + norm[0]
         vol = fft.ihtn_center(vol_f[:-1, :-1, :-1])  # remove last +k freq for inverse FFT
         return vol
