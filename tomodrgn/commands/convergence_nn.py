@@ -102,6 +102,8 @@ def main(args):
     plt.clf()
     plot_and_save(x, fscs.T[:,-1], 'spatial frequency (1/px)', 'fsc', f'{outdir}/convergence_nn_fullfsc_final.png')
 
+    utils.save_pkl((x, fscs), f'{outdir}/freqs_fscs.pkl')
+
     flog('Done!')
     os.rename(LOG, f'{outdir}/convergence_nn.log')
 
