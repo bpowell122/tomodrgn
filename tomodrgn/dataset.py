@@ -323,7 +323,9 @@ class TiltSeriesMRCData(data.Dataset):
                 random_imgs_for_normalization = np.random.choice(np.arange(nimgs), size=nimgs//100, replace=False)
                 norm = [np.mean(particles[random_imgs_for_normalization]), np.std(particles[random_imgs_for_normalization])]
                 norm[0] = 0
-            particles = (particles - norm[0]) / norm[1]
+            # particles = (particles - norm[0]) / norm[1]
+            particles -= norm[0]  # zero mean
+            particles /= norm[1]  # unit stdev, separate line required to avoid redundant memory allocation
             log(f'Normalized HT by {norm[0]} +/- {norm[1]}')
             log(f'Finished loading and preprocessing {nptcls} {nx}x{nx} subtomo particleseries in memory')
         else:
