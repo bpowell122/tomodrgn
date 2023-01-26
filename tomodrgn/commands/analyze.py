@@ -33,7 +33,7 @@ def add_args(parser):
     group.add_argument('--pc', type=int, default=2, help='Number of principal component traversals to generate (default: %(default)s)')
     group.add_argument('--pc-ondata', action='store_true', help='Find closest on-data latent point to each PC percentile')
     group.add_argument('--ksample', type=int, default=20, help='Number of kmeans samples to generate (default: %(default)s)')
-    group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
+    group.add_argument('--invert', action='store_true', help='Invert contrast of output volumes')
     return parser
 
 def analyze_z1(z, outdir, vg):
@@ -184,7 +184,7 @@ def main(args):
     z = utils.load_pkl(zfile)
     zdim = z.shape[1]
 
-    vol_args = dict(Apix=args.Apix, downsample=args.downsample, flip=args.flip, cuda=args.device, invert=args.invert_data)
+    vol_args = dict(Apix=args.Apix, downsample=args.downsample, flip=args.flip, cuda=args.device, invert=args.invert)
     vg = VolumeGenerator(weights, config, vol_args, skip_vol=args.skip_vol)
 
     if zdim == 1:

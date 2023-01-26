@@ -34,7 +34,7 @@ def add_args(parser):
     group = parser.add_argument_group('Volume arguments')
     group.add_argument('--Apix', type=float, default=1, help='Pixel size to add to output .mrc header')
     group.add_argument('--flip', action='store_true', help='Flip handedness of output volume')
-    group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
+    group.add_argument('--invert', action='store_true', help='Invert contrast of output volume')
     group.add_argument('-d','--downsample', type=int, help='Downsample volumes to this box size (pixels)')
 
     return parser
@@ -105,7 +105,7 @@ def main(args):
                     out_mrc = f'{args.o}/{args.prefix}{i:03d}.mrc'
                     if args.flip:
                         vol = vol[::-1]
-                    if args.invert_data:
+                    if args.invert:
                         vol *= -1
                     mrc.write(out_mrc, vol.astype(np.float32), Apix=args.Apix)
 
@@ -121,7 +121,7 @@ def main(args):
                     vol = model.decoder.eval_volume(lattice.coords, lattice.D, lattice.extent, norm, z)
                 if args.flip:
                     vol = vol[::-1]
-                if args.invert_data:
+                if args.invert:
                     vol *= -1
                 mrc.write(args.o, vol.astype(np.float32), Apix=args.Apix)
 
