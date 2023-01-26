@@ -47,6 +47,7 @@ tomodrgn train_vae data/10076_both_32_sim.star -o output/07_vae_both_sim_dosetil
 tomodrgn train_vae data/10076_both_32_sim.star -o output/07_vae_both_sim_dosetiltweightmask --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 --lazy --l-dose-mask --recon-dose-weight --recon-tilt-weight --dose-override 100
 # Test train_vae for simulated particles with no heterogeneity --> should get featureless continuous latent space
 tomodrgn train_vae data/10076_classE_32_sim.star -o output/08_vae_classE_sim --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 -n 50
+# TODO add --ind testing option (second class only?)
 
 ### TRAIN_VAE ALL ENCODER B OPTIONS ###
 # Test train_vae for non-error functionality, correct encoderB dimensions and pooling, and basic heterogeneity learning
@@ -58,17 +59,17 @@ tomodrgn train_vae data/10076_both_32_clean.star -o output/13_vae_both_clean_set
 
 ### CONVERGENCE_VAE ###
 # Test convergence_vae for simulated particles
-tomodrgn convergence_vae output/06_vae_both_sim 49 --Apix 13.1 --random-seed 42 --final-maxima 2 --ground-truth data/10076_class*_32.mrc --uninvert-data
+tomodrgn convergence_vae output/06_vae_both_sim 49 --Apix 13.1 --random-seed 42 --final-maxima 2 --ground-truth data/10076_class*_32.mrc
 
 ### ANALYZE ###
 # Test analyze for simulated particles (testing latent learning) --> should get noisy/continuous UMAP, kmeans2 with two distinct ribosome volumes, and pc1 showing dynamics in 50S ribosome belly occupancy
-tomodrgn analyze output/06_vae_both_sim 49 --Apix 13.1 --ksample 2 --uninvert-data
+tomodrgn analyze output/06_vae_both_sim 49 --Apix 13.1 --ksample 2
 # Test analyze for simulated particles (testing latent learning baseline) --> should get continuous UMAP, kmeans2 with two similar ribosome volumes
-tomodrgn analyze output/08_vae_classE_sim 49 --Apix 13.1 --ksample 2 --uninvert-data
+tomodrgn analyze output/08_vae_classE_sim 49 --Apix 13.1 --ksample 2
 
 ### EVAL_VOL ###
 # Test eval_vol for all particles --> should get director with 144 unique volumes
-tomodrgn eval_vol --weights output/06_vae_both_sim/weights.pkl -c output/06_vae_both_sim/config.pkl -o output/06_vae_both_sim/eval_vol_allz --zfile output/06_vae_both_sim/z.pkl --Apix 13.1 --uninvert-data
+tomodrgn eval_vol --weights output/06_vae_both_sim/weights.pkl -c output/06_vae_both_sim/config.pkl -o output/06_vae_both_sim/eval_vol_allz --zfile output/06_vae_both_sim/z.pkl --Apix 13.1
 
 ### SUBTOMO2CHIMERAX ###
 # Test subtomo2chimerax for classD/classE volumes separately --> in ChimeraX should show all classE volumes to left (small X coord, label 1, light blue) and all classD volumes to right (large X coord, label 0, dark blue)
