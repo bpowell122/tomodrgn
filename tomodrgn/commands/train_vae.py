@@ -506,7 +506,8 @@ def main(args):
 
         flog(f'# =====> Epoch: {epoch+1} Average gen loss = {gen_loss_accum/batch_it:.6}, KLD = {kld_accum/batch_it:.6f}, total loss = {loss_accum/batch_it:.6f}; Finished in {dt.now()-t2}')
         if args.checkpoint and (epoch+1) % args.checkpoint == 0:
-            flog(f'GPU memory usage: {utils.check_memory_usage()}')
+            if device.type != 'cpu':
+                flog(f'GPU memory usage: {utils.check_memory_usage()}')
             out_weights = f'{args.outdir}/weights.{epoch}.pkl'
             out_z = f'{args.outdir}/z.{epoch}.pkl'
             z_mu, z_logvar = eval_z(model, lattice, data, args, device, use_amp=use_amp)

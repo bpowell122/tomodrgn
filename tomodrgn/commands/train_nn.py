@@ -331,7 +331,8 @@ def main(args):
 
         flog(f'# =====> Epoch: {epoch+1} Average loss = {loss_accum/batch_it:.6}; Finished in {dt.now() - t2}')
         if args.checkpoint and epoch % args.checkpoint == 0:
-            flog(f'GPU memory usage: {utils.check_memory_usage()}')
+            if device.type != 'cpu':
+                flog(f'GPU memory usage: {utils.check_memory_usage()}')
             out_mrc = f'{args.outdir}/reconstruct.{epoch}.mrc'
             out_weights = f'{args.outdir}/weights.{epoch}.pkl'
             save_checkpoint(model, lattice, optim, epoch, data.norm, Apix, out_mrc, out_weights)
