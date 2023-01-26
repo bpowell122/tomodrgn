@@ -53,7 +53,7 @@ def add_args(parser):
     group = parser.add_argument_group('Volume generation arguments')
     group.add_argument('--Apix', type = float, default = 1.0, help='A/pix of output volume')
     group.add_argument('--flip', action='store_true', help='Flip handedness of output volume')
-    group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
+    group.add_argument('--invert', action='store_true', help='Invert contrast of output volume')
     group.add_argument('-d','--downsample', type=int, help='Downsample volumes to this box size (pixels). Recommended for boxes > 250-300px')
     group.add_argument('--cuda', type = int, default = None, help='Specify cuda device for volume generation')
     group.add_argument('--skip-volgen', action = 'store_true', help='Skip volume generation. Requires that volumes already exist for downstream CC + FSC calcs')
@@ -962,7 +962,7 @@ def main(args):
         flog(f'Generating volumes at representative latent encodings for epochs {epochs} ...', LOG)
         Apix = args.Apix
         flip = args.flip
-        invert = args.invert_data  #not config_file['dataset_args']['invert_data']
+        invert = args.invert
         downsample = args.downsample
         cuda = args.cuda
         generate_volumes(workdir, outdir, epochs, Apix, flip, invert, downsample, cuda, LOG)
