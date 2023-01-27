@@ -425,14 +425,22 @@ class FTPositionalDecoder(nn.Module):
         # k = coords . rand_freqs
         # expand rand_freqs with singleton dimension along the batch dimensions
         # e.g. dim (1, ..., 1, n_rand_feats, 3)
-        freqs = self.rand_freqs.view(*[1] * (len(coords.shape) - 1), -1, 3) * self.D2
+        freqs = self.rand_freqs.view(*[1] * (len(coords.shape) - 1), -1, 3) * self.D2     # 1 x 1 x 3*D2 x 3
 
-        kxkykz = (coords[..., None, 0:3] * freqs)  # compute the x,y,z components of k
-        k = kxkykz.sum(-1)  # compute k
-        s = torch.sin(k)
-        c = torch.cos(k)
-        x = torch.cat([s, c], -1)
+        # kxkykz = (coords[..., None, 0:3] * freqs)  # compute the x,y,z components of k    # B x N x 3*D2 x 3
+        # k = kxkykz.sum(-1)  # compute k                                                   # B x N x 3*D2
+        # s = torch.sin(k)                                                                  # B x N x 3*D2
+        # c = torch.cos(k)                                                                  # B x N x 3*D2
+        # x = torch.cat([s, c], -1)                                                         # B x N x 3*D2 x 2
+        # x = x.view(*coords.shape[:-1], self.in_dim - self.zdim)                           # B x N x 3*D2*2
+
+        # compute x,y,z components of k then sum x,y,z components
+        k = (coords[..., None, 0:3] * freqs).sum(-1)
+        x = torch.zeros(*k.shape, 2, dtype=k.dtype, device=k.device)  # preallocate memory to slightly lower allocation requirement
+        x[...,0] = torch.sin(k)
+        x[...,1] = torch.cos(k)
         x = x.view(*coords.shape[:-1], self.in_dim - self.zdim)
+
         if self.zdim > 0:
             x = torch.cat([x, coords[..., 3:]], -1)
             assert x.shape[-1] == self.in_dim
@@ -491,7 +499,7 @@ class FTPositionalDecoder(nn.Module):
             D: size of lattice
             extent: extent of lattice [-extent, extent]
             norm: data normalization 
-            zval: value of latent (zdim x 1) ... or 1 x zdim from eval_vol?
+            zval: value of latent (zdim) ... or 1 x zdim from eval_vol?
         '''
         assert extent <= 0.5
         if zval is not None:
