@@ -1,6 +1,5 @@
 '''
 Evaluate the decoder at specified values of z
-# TODO: add dataloader GPU-parallelized volume generation
 '''
 import numpy as np
 import os
@@ -10,6 +9,8 @@ import pprint
 import multiprocessing as mp
 
 import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader, Dataset
 from torch.cuda.amp import autocast
 
 from tomodrgn import mrc, utils
@@ -25,6 +26,7 @@ def add_args(parser):
     parser.add_argument('--prefix', default='vol_', help='Prefix when writing out multiple .mrc files')
     parser.add_argument('--no-amp', action='store_true', help='Disable use of mixed-precision training')
     parser.add_argument('-b', '--batch-size', type=int, default=64, help='Batch size to parallelize volume generation')
+    parser.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs. Specify GPUs i,j via `export CUDA_VISIBLE_DEVICES=i,j`')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increases verbosity')
 
     group = parser.add_argument_group('Specify z values')
@@ -42,11 +44,37 @@ def add_args(parser):
 
     return parser
 
+
 def check_z_inputs(args):
     if args.z_start:
         assert args.z_end, "Must provide --z-end with argument --z-start"
     assert sum((bool(args.z), bool(args.z_start), bool(args.zfile))) == 1, \
         "Must specify either -z OR --z-start/--z-end OR --zfile"
+
+
+class ZDataset(Dataset):
+    def __init__(self, z):
+        self.z = z
+        self.N = z.shape[0]
+
+    def __len__(self):
+        return self.N
+
+    def __getitem__(self, index):
+        return self.z[index]
+
+
+class DummyModel(nn.Module):
+    '''
+    wrapper for nn.DataParallel to split data across batch axis and run eval_volume_batch on all GPUs
+    '''
+    def __init__(self, model):
+        super(DummyModel, self).__init__()
+        self.model = model
+
+    def forward(self, *args, **kwargs):
+        return self.model.decoder.eval_volume_batch(*args, **kwargs)
+
 
 def main(args):
     check_z_inputs(args)
@@ -69,7 +97,8 @@ def main(args):
         assert args.downsample % 2 == 0, "Boxsize must be even"
         assert args.downsample <= D - 1, "Must be smaller than original box size"
     
-    model, lattice = TiltSeriesHetOnlyVAE.load(cfg, args.weights, device=device)
+    model, lattice = TiltSeriesHetOnlyVAE.load(cfg, args.weights)
+    model = DummyModel(model).to(device)
     model.eval()
 
     use_amp = not args.no_amp
@@ -87,7 +116,7 @@ def main(args):
         ### Multiple z ###
         if args.z_start or args.zfile:
 
-            ### Get z values
+            # Get z values
             if args.z_start:
                 args.z_start = np.array(args.z_start)
                 args.z_end = np.array(args.z_end)
@@ -101,54 +130,52 @@ def main(args):
                     z = np.loadtxt(args.zfile).reshape(-1, zdim)
             assert z.shape[1] == zdim
 
+            # parallelize
+            if args.multigpu and torch.cuda.device_count() > 1:
+                log(f'Using {torch.cuda.device_count()} GPUs!')
+                args.batch_size *= torch.cuda.device_count()
+                log(f'Increasing batch size to {args.batch_size}')
+                model = nn.DataParallel(model)
+            elif args.multigpu:
+                log(f'WARNING: --multigpu selected, but {torch.cuda.device_count()} GPUs detected')
+
+            # Make output directory
             if not os.path.exists(args.o):
                 os.makedirs(args.o)
 
-            # NEW CODE PREALLOCATE START
-            coords_zz = torch.zeros((args.batch_size, fft_boxsize, fft_boxsize**2, 3+zdim), dtype=coords.dtype, device=coords.device)  # B x D(z) x D**2(xy) x 3+zdim
+            # preallocate concatenated coords, z, and keep(mask)
+            coords_zz = torch.zeros((args.batch_size, fft_boxsize, fft_boxsize**2, 3+zdim), dtype=coords.dtype)  # B x D(z) x D**2(xy) x 3+zdim
             for i, dz in enumerate(torch.linspace(-extent, extent, steps=fft_boxsize)):
-                coords_zz[:, i, :, :3] = (coords + torch.tensor([0, 0, dz], device=coords.device).view(1, 1, -1, 3))
+                coords_zz[:, i, :, :3] = (coords + torch.tensor([0, 0, dz]).view(1, 1, -1, 3))
             keep = (coords_zz[0, :, :, :3].pow(2).sum(dim=-1) <= extent ** 2).view(fft_boxsize, -1)
-            z = torch.tensor(z, device=coords.device)
-            # pool = mp.pool.ThreadPool()  # mp.Pool()
-            # NEW CODE PREALLOCATE END
+            keep = keep.expand(torch.cuda.device_count(), *keep.shape)
 
+            # prepare threadpool for parallelized file writing
+            pool = mp.pool.ThreadPool()
+
+            # send tensors to GPU
+            coords_zz = coords_zz.to(device)
+            keep = keep.to(device)
+            norm = torch.tensor(norm)
+            norm = norm.expand(torch.cuda.device_count(), *norm.shape).to(device)
+
+            # construct dataset and dataloader
+            z = ZDataset(z)
+            z_iterator = DataLoader(z, batch_size=args.batch_size, shuffle=False)
             log(f'Generating {len(z)} volumes in batches of {args.batch_size}')
-            for i in range(np.ceil(len(z) / args.batch_size).astype(int)):
-
-                # # ORIGINAL CODE START
-                # zz = z[i*args.batch_size : (i+1)*args.batch_size, :]  # batch_size x zdim
-                # log(f' Generating volume batch {i}: {zz}')
-                # vols_batch = model.decoder.eval_volume(coords, fft_boxsize, extent, norm, zz)  # batch_size x D-1 x D-1 x D-1
-                # if args.batch_size == 1:
-                #     vols_batch = np.expand_dims(vols_batch, 0)  # restore batchsize dim that was eliminated in decoder.eval_volume
-                # if args.flip:
-                #     vols_batch = vols_batch[:,::-1]
-                # if args.invert:
-                #     vols_batch *= -1
-                # for j, vol in enumerate(vols_batch):
-                #     out_mrc = f'{args.o}/{args.prefix}{i*args.batch_size+j:03d}.mrc'
-                #     mrc.write(out_mrc, vol.astype(np.float32), Apix=args.Apix)
-                # # ORIGINAL CODE END
-
-                # NEW CODE BATCHED START
-                zz = z[i*args.batch_size : (i+1)*args.batch_size, :]  # batch_size x zdim
-                log(f' Generating volume batch {i}: {zz}')
-                for j, zzz in enumerate(zz):
-                    coords_zz[j, :, :, 3:] = zzz
-                vols_batch = model.decoder.eval_volume_batch(coords_zz, keep, norm)
+            for i, zz in enumerate(z_iterator):
+                log(f'    Generating volume batch {i}')
+                if args.verbose:
+                    log(zz)
+                coords_zz[:len(zz), :, :, 3:] = zz.unsqueeze(1).unsqueeze(1)
+                vols_batch = model(coords_zz, keep, norm)
+                vols_batch = vols_batch.cpu().numpy()
                 if args.flip:
-                    vols_batch = vols_batch[:,::-1]
+                    vols_batch = vols_batch[:, ::-1]
                 if args.invert:
                     vols_batch *= -1
-                for j in range(len(zz)):
-                    # coords_zz is always multiples of batchsize, so if len(z) % batchsize != 0, will evaluate >=1 duplicate vol,
-                    # but we avoid writing that to disk with this loop structure
-                    out_mrc = f'{args.o}/{args.prefix}{i*args.batch_size+j:03d}.mrc'
-                    mrc.write(out_mrc, vols_batch[j].astype(np.float32), Apix=args.Apix)
-                # out_mrcs = [f'{args.o}/{args.prefix}{i*args.batch_size+j:03d}.mrc' for j in range(len(zz))]
-                # pool.starmap_async(mrc.write, zip(out_mrcs, vols_batch[:len(out_mrcs)]), chunksize=4)
-                # NEW CODE BATCHED END
+                out_mrcs = [f'{args.o}/{args.prefix}{i*args.batch_size+j:03d}.mrc' for j in range(len(zz))]
+                pool.starmap_async(mrc.write, zip(out_mrcs, vols_batch[:len(out_mrcs)]), chunksize=4)
 
         ### Single z ###
         else:

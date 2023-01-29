@@ -535,8 +535,8 @@ class FTPositionalDecoder(nn.Module):
 
         Inputs:
             coords_zz: pre-batched and z-concatenated lattice coords (B x D(z) x D**2(xy) x 3+zdim)
-            keep: mask of which coords to keep per z-plane (satisfying extent) (D(z) x D**2(xy))
-            norm: data normalization
+            keep: mask of which coords to keep per z-plane (satisfying extent) (B=1 x D(z) x D**2(xy))
+            norm: data normalization (B=1 x 2)
         '''
         batch_size, D, _, _ = coords_zz.shape
         batch_vol_f = torch.zeros((batch_size, D, D, D), dtype=coords_zz.dtype, device=coords_zz.device, requires_grad=False)
@@ -544,15 +544,14 @@ class FTPositionalDecoder(nn.Module):
         # evaluate the volume by zslice to avoid memory overflows
         for i in range(D):
             with torch.no_grad():
-                x = coords_zz[:, i, keep[i], :]
+                x = coords_zz[:, i, keep[0, i], :]
                 y = self.decode(x)
                 y = y[..., 0] - y[..., 1]
                 slice_ = torch.zeros((batch_size, D ** 2), dtype=coords_zz.dtype, device=coords_zz.device, requires_grad=False)
-                slice_[:, keep[i]] = y.to(slice_.dtype)
+                slice_[:, keep[0, i]] = y.to(slice_.dtype)
                 batch_vol_f[:, i] = slice_.view(batch_size, D, D)
-        batch_vol_f = batch_vol_f.cpu().numpy()
-        batch_vol_f = batch_vol_f * norm[1] + norm[0]
-        batch_vol = np.array([fft.ihtn_center(vol_f[:-1, :-1, :-1]) for vol_f in batch_vol_f])  # remove last +k freq for inverse FFT
+        batch_vol_f = batch_vol_f * norm[0, 1] + norm[0, 0]
+        batch_vol = torch.stack([fft.ihtn_center_torch(vol_f[:-1, :-1, :-1]) for vol_f in batch_vol_f], dim=0)  # remove last +k freq for inverse FFT
         return batch_vol
 
 

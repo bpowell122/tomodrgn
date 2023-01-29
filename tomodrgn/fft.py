@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 def fft2_center(img):
     return np.fft.fftshift(np.fft.fft2(np.fft.fftshift(img,axes=(-1,-2))),axes=(-1,-2))
@@ -30,6 +31,13 @@ def ihtn_center(V):
     V = np.fft.fftn(V)
     V = np.fft.fftshift(V)
     V /= np.product(V.shape)
+    return V.real - V.imag
+
+def ihtn_center_torch(V):
+    V = torch.fft.fftshift(V)
+    V = torch.fft.fftn(V)
+    V = torch.fft.fftshift(V)
+    V /= torch.numel(V)
     return V.real - V.imag
 
 def symmetrize_ht(ht, preallocated=False):
