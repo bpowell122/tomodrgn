@@ -72,10 +72,17 @@ def main(args):
 
     zdim = cfg['model_args']['zdim']
 
+    # load the particle indices
+    if args.ind is not None:
+        log(f'Reading supplied particle indices {args.ind}')
+        ind = pickle.load(open(args.ind, 'rb'))
+    else:
+        ind = None
+
     # load the particles
     data = dataset.TiltSeriesMRCData(args.particles,
                                      datadir=args.datadir,
-                                     ind_ptcl=args.ind,
+                                     ind_ptcl=ind,
                                      lazy=args.lazy,
                                      invert_data=args.invert_data,
                                      norm=cfg['dataset_args']['norm'],
