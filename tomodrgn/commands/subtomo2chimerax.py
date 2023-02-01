@@ -27,7 +27,7 @@ def add_args(parser):
     group = parser.add_argument_group('ChimeraX rendering options')
     group.add_argument('--vols-render-level', type=float, default=0.7, help='Isosurface level to render all tomoDRGN reconstructed volumes in ChimeraX')
     group.add_argument('--coloring-labels', type=os.path.abspath, help='labels.pkl file used to assign colors to each volume (typically kmeans labels.pkl')
-    group.add_argument('--matplotlib-colormap', type=str, default='tab20', help='Name of colormap to sample labels, from https://matplotlib.org/stable/tutorials/colors/colormaps.html')
+    group.add_argument('--matplotlib-colormap', type=str, help='Colormap to apply to --coloring-labels (default = ChimeraX color scheme per label value) from https://matplotlib.org/stable/tutorials/colors/colormaps.html (e.g. tab10)')
 
     return parser
 
@@ -82,8 +82,20 @@ def main(args):
         labels = labels[df_tomo['index']]
 
         # prepare colormap
-        log(f'Using colormap {args.matplotlib_colormap}')
-        cmap = matplotlib.cm.get_cmap(args.matplotlib_colormap)
+        if args.matplotlib_colormap:
+            cmap = matplotlib.cm.get_cmap(args.matplotlib_colormap)
+        else:
+            chimerax_colors = np.divide(((192, 192, 192),
+                                         (255, 255, 178),
+                                         (178, 255, 255),
+                                         (178, 178, 255),
+                                         (255, 178, 255),
+                                         (255, 178, 178),
+                                         (178, 255, 178),
+                                         (229, 191, 153),
+                                         (153, 191, 229),
+                                         (204, 204, 153)), 255)
+            cmap = matplotlib.colors.ListedColormap(chimerax_colors, name='chimerax_colors')
         labels_rgba = cmap(labels_norm)
 
         # save text mapping of label : rgba specification
