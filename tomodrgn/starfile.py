@@ -226,7 +226,7 @@ class TiltSeriesStarfile():
 
     def get_tiltseries_shape(self):
         unique_ptcls = self.df['_rlnGroupName'].unique()
-        ntilts = self.df['_rlnGroupName'].value_counts().unique()
+        ntilts = self.df['_rlnGroupName'].value_counts().unique().to_numpy()
         assert len(ntilts) == 1, 'All particles must have the same number of tilt images!'
         return len(unique_ptcls), int(ntilts)
 
