@@ -224,6 +224,51 @@ class TiltSeriesStarfile():
             for i, img in enumerate(lazyparticles): particles[i,:-1,:-1] = img.get().astype(np.float32)
             return particles
 
+    def get_particles_stack(self, datadir=None, lazy=False):
+        '''
+        Return particles of the starfile as (n_ptcls * n_tilts, D, D)
+
+        Input:
+            datadir (str): Overwrite base directories of particle .mrcs
+                Tries both substituting the base path and prepending to the path
+            If lazy=True, returns list of LazyImage instances, else np.array
+        '''
+        images = self.df['_rlnImageName']
+        images = [x.split('@') for x in images] # format is index@path_to_mrc
+        self.df['_rlnImageNameInd'] = [int(x[0])-1 for x in images] # convert to 0-based indexing of full dataset
+        self.df['_rlnImageNameBase'] = [x[1] for x in images]
+
+        mrcs = []
+        ind = []
+        for name, group in self.df.groupby(['_rlnImageNameBase']):
+            # mrcs = [path1, path2, ...]
+            mrcs.append(name)
+            # ind = [ [0, 1, 2, ..., N], [0, 3, 4, ..., M], ..., ]
+            ind.append(group['_rlnImageNameInd'].to_numpy())
+
+        if datadir is not None:
+            mrcs = prefix_paths(mrcs, datadir)
+        for path in set(mrcs):
+            assert os.path.exists(path), f'{path} not found'
+
+        header = mrc.parse_header(mrcs[0])
+        D = header.D # image size along one dimension in pixels
+        dtype = header.dtype
+        stride = dtype().itemsize*D*D
+        if lazy:
+            lazyparticles = [LazyImage(file, (D, D), dtype, 1024 + ind_img * stride)
+                             for ind_stack, file in zip(ind, mrcs)
+                             for ind_img in ind_stack]
+            return lazyparticles
+        else:
+            # preallocating numpy array for in-place loading, fourier transform, fourier transform centering, etc
+            particles = np.empty((len(self.df), D+1, D+1), dtype=np.float32)
+            offset = 0
+            for ind_stack, file in zip(ind, mrcs):
+                particles[offset:offset+len(ind_stack), :-1, :-1] = mrc.LazyImageStack(file, dtype, (D,D), ind_stack).get()
+                offset += len(ind_stack)
+            return particles
+
     def get_tiltseries_shape(self):
         unique_ptcls = self.df['_rlnGroupName'].unique()
         ntilts = self.df['_rlnGroupName'].value_counts().unique().to_numpy()

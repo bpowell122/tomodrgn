@@ -2,6 +2,7 @@ import numpy as np
 import os
 import struct
 from collections import OrderedDict
+from itertools import groupby
 
 # See ref:
 # MRC2014: Extensions to the MRC format header for electron cryo-microscopy and tomography
@@ -122,6 +123,79 @@ class LazyImage:
             f.seek(self.offset)
             image = np.fromfile(f, dtype=self.dtype, count=np.product(self.shape)).reshape(self.shape)
         return image
+
+
+class LazyImageStack:
+    """
+    Efficiently load a particle stack from an NxDxD stack.mrcs file on-the-fly.
+    Minimizes calls to file opening, file seeking, and file reading in single-process context.
+
+    Attributes
+    ----------
+    fname : str
+        Absolute path to file `stack.mrcs`
+    dtype_pixel : dtype
+        dtype from MRCHeader.dtype
+    shape_image : tuple of ints
+        number of pixels along each image axis
+    indices_image : list of ints
+        0-indexed list of images to read from `stack.mrcs`
+    indices_image_contiguous : list of list of ints
+        indices_image grouped by continuous value sequences
+    stride_image : int
+        number of bytes per image
+
+    Methods
+    -------
+    get:
+        loads and returns images specified at class instantiation as (N,D,D) numpy array
+    """
+    def __init__(self, fname, dtype_pixel, shape_image, indices_image):
+        self.fname = fname
+        self.dtype_pixel = dtype_pixel
+        self.shape_image = shape_image
+        self.indices_image = indices_image
+        self.indices_image_contiguous = self.group_contiguous_indices()
+        self.stride_image = self.dtype_pixel().itemsize * self.shape_image[0] * self.shape_image[1]
+
+    def group_contiguous_indices(self):
+        contiguous_indices = []
+        positions = [j - i for i, j in enumerate(self.indices_image)]
+        offset = 0
+
+        for _, elements in groupby(positions):
+            length_contiguous_subset = len(list(elements))
+            contiguous_indices.append(self.indices_image[offset : offset + length_contiguous_subset])
+            offset += length_contiguous_subset
+
+        return contiguous_indices
+
+
+    def get(self):
+
+        with open(self.fname, 'rb') as f:
+            stack = np.zeros((len(self.indices_image), *self.shape_image), dtype=np.float32)
+
+            offset_file = 1024 + self.indices_image[0] * self.stride_image
+            f.seek(offset_file, 0) # define read to beginning of file including header
+
+            offset_stack = 0
+            for i, inds_contiguous in enumerate(self.indices_image_contiguous):
+
+                if (i > 0) and (inds_contiguous[0] != previous_ind + 1):
+                    # np.fromfile advances file pointer by one image's stride on the previous loop
+                    # further update file pointer if next image is more than one image's stride away
+                    offset_file = (inds_contiguous[0] - (previous_ind+1)) * self.stride_image
+                    f.seek(offset_file, 1)
+
+                length_contiguous_subset = len(inds_contiguous)
+                stack[offset_stack : offset_stack + length_contiguous_subset] = \
+                    np.fromfile(f, dtype=self.dtype_pixel, count=self.shape_image[0]*self.shape_image[1]*length_contiguous_subset)\
+                        .reshape(length_contiguous_subset, self.shape_image[0], self.shape_image[1])
+                offset_stack += length_contiguous_subset
+                previous_ind = inds_contiguous[-1]
+
+        return stack
 
 def parse_header(fname):
     return MRCHeader.parse(fname)

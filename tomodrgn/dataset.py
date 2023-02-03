@@ -291,7 +291,7 @@ class TiltSeriesMRCData(data.Dataset):
 
         # load and preprocess all particles
         log('Loading particles...')
-        particles = ptcls_star.get_particles(datadir=datadir, lazy=lazy)
+        particles = ptcls_star.get_particles_stack(datadir=datadir, lazy=lazy)
         nx = ptcls_star.get_image_size(datadir=datadir)
         nimgs = len(particles)
         nptcls = len(ptcls_unique_list)
