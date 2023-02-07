@@ -240,9 +240,10 @@ class TiltSeriesStarfile():
 
         mrcs = []
         ind = []
-        for name, group in self.df.groupby(['_rlnImageNameBase']):
+        # handle starfiles where .mrcs stacks are referenced non-contiguously
+        for i, group in self.df.groupby((self.df['_rlnImageNameBase'].shift() != self.df['_rlnImageNameBase']).cumsum()):
             # mrcs = [path1, path2, ...]
-            mrcs.append(name)
+            mrcs.append(group['_rlnImageNameBase'].iloc[0])
             # ind = [ [0, 1, 2, ..., N], [0, 3, 4, ..., M], ..., ]
             ind.append(group['_rlnImageNameInd'].to_numpy())
 
