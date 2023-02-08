@@ -97,6 +97,22 @@ def main(args):
     nptcls = data.nptcls
     data.ntilts_training = cfg['dataset_args']['ntilts']
 
+    # load poses and ctf if referenced in config
+    if 'poses' in cfg['dataset_args'].keys():
+        rot, trans = utils.load_pkl(cfg['dataset_args']['poses'])
+        rot = rot[data.ptcls_to_imgs_ind.flatten().astype(int)]
+        assert rot.shape == (data.nimgs,3,3)
+        if trans is not None:
+            trans = trans[data.ptcls_to_imgs_ind.flatten().astype(int)]
+            assert trans.shape == (data.nimgs,2)
+        data.trans = np.asarray(trans, dtype=np.float32)
+        data.rot = np.asarray(rot, dtype=np.float32)
+    if 'ctf' in cfg['dataset_args'].keys():
+        ctf_params = utils.load_pkl(cfg['dataset_args']['ctf'])
+        ctf_params = ctf_params[data.ptcls_to_imgs_ind.flatten().astype(int)]
+        assert ctf_params.shape == (data.nimgs,9)
+        data.ctf_params = np.asarray(ctf_params, dtype=np.float32)
+
     # instantiate model and lattice
     model, lattice = TiltSeriesHetOnlyVAE.load(cfg, args.weights, device=device)
 

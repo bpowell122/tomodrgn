@@ -112,7 +112,9 @@ def save_config(args, dataset, lattice, model, out_config):
                         window=args.window,
                         window_r=args.window_r,
                         datadir=args.datadir,
-                        sequential_tilt_sampling=args.sequential_tilt_sampling)
+                        sequential_tilt_sampling=args.sequential_tilt_sampling,
+                        pose=args.pose,
+                        ctf=args.ctf)
     lattice_args = dict(D=lattice.D,
                         extent=lattice.extent,
                         ignore_DC=lattice.ignore_DC)
