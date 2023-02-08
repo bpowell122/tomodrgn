@@ -116,7 +116,7 @@ def save_config(args, dataset, lattice, model, out_config):
     lattice_args = dict(D=lattice.D,
                         extent=lattice.extent,
                         ignore_DC=lattice.ignore_DC)
-    model_args = dict(in_dim=model.in_dim,
+    model_args = dict(in_dim=model.in_dim.item(),  # .item() converts tensor to int for unpickling on non-gpu systems
                       qlayersA=args.qlayersA,
                       qdimA=args.qdimA,
                       qlayersB=args.qlayersB,
@@ -357,13 +357,16 @@ def main(args):
 
     if args.pose is not None:
         rot, trans = utils.load_pkl(args.pose)
+        rot = rot[data.ptcls_to_imgs_ind.flatten().astype(int)]
         assert rot.shape == (data.nimgs,3,3)
         if trans is not None:
+            trans = trans[data.ptcls_to_imgs_ind.flatten().astype(int)]
             assert trans.shape == (data.nimgs,2)
         data.trans = np.asarray(trans, dtype=np.float32)
         data.rot = np.asarray(rot, dtype=np.float32)
     if args.ctf is not None:
         ctf_params = utils.load_pkl(args.ctf)
+        ctf_params = ctf_params[data.ptcls_to_imgs_ind.flatten().astype(int)]
         assert ctf_params.shape == (data.nimgs,9)
         data.ctf_params = np.asarray(ctf_params, dtype=np.float32)
 
