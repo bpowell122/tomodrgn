@@ -238,8 +238,15 @@ def calc_fsc(vol1, vol2, mask = 'none', dilate = 3, dist = 10):
 
 
 def check_memory_usage():
-    gpu_memory_usage = subprocess.check_output(['nvidia-smi', '--query-gpu=memory.used,memory.total', '--format=csv,noheader'], encoding='utf-8').strip().split('\n')
-    return [f'{gpu.split(", ")[0]} / {gpu.split(", ")[1]}' for gpu in gpu_memory_usage]
+    try:
+        # TODO: replace with pytorch>=1.11.0 TORCH.CUDA.MEM_GET_INFO to avoid subprocess forking (can't find how to spawn process instead)
+        usage = [torch.cuda.mem_get_info(i) for i in range(torch.cuda.device_count())]
+        return [f'{(total - free) // 1024**2} MiB / {total // 1024**2} MiB' for free, total in usage]
+    except AttributeError:
+        gpu_memory_usage = subprocess.check_output(['nvidia-smi', '--query-gpu=memory.used,memory.total', '--format=csv,noheader'], encoding='utf-8').strip().split('\n')
+        return [f'{gpu.split(", ")[0]} / {gpu.split(", ")[1]}' for gpu in gpu_memory_usage]
+    except:
+        return ['error checking memory usage']
 
 
 def check_git_revision_hash(repo_path):
