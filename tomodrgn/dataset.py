@@ -302,24 +302,28 @@ class TiltSeriesMRCData(data.Dataset):
 
             # Real space window
             if window:
+                log('Windowing particles...')
                 m = window_mask(nx, window_r, .99)
                 particles[:, :-1, :-1] *= m
 
             # compute HT
-            log('Computing FFT')
+            log('Computing FFT...')
             for i, img in enumerate(particles):
                 particles[i, :-1, :-1] = fft.ht2_center(img[:-1, :-1])
             log('Converted to FFT')
 
             if invert_data:
+                log('Inverting data sign...')
                 particles *= -1
 
             # symmetrize HT
+            log('Symmetrizing HT...')
             particles = fft.symmetrize_ht(particles, preallocated=True)
             _, ny_ht, nx_ht = particles.shape
 
             # normalize
             if norm is None:
+                log('Calculating normalization factor...')
                 random_imgs_for_normalization = np.random.choice(np.arange(nimgs), size=nimgs//100, replace=False)
                 norm = [np.mean(particles[random_imgs_for_normalization]), np.std(particles[random_imgs_for_normalization])]
                 norm[0] = 0
