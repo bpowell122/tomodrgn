@@ -18,11 +18,12 @@ def add_args(parser):
     parser.add_argument('starfile', type=os.path.abspath, help='Input particle_volumeseries starfile from Warp subtomogram export')
     parser.add_argument('-o', '--outfile', type=os.path.abspath, required=True, help='Output .cxc script to be opened in ChimeraX')
     parser.add_argument('--tomoname', type=str, help='Name of tomogram in input starfile for which to display tomoDRGN vols in ChimeraX')
-    parser.add_argument('--tomo-id-col', type=str, default='_rlnMicrographName', help='Name of column in input starfile to filter by --tomoname')
-    parser.add_argument('--star-apix-override', type=float, help='Override pixel size of input particle_volumeseries starfile (A/px)')
-    parser.add_argument('--vols-dir', type=os.path.abspath, required=True, help='Path to tomoDRGN reconstructed volumes')
-    parser.add_argument('--vols-apix-override', type=float, help='Override pixel size of tomoDRGN-reconstructed particle volumes (A/px)')
+    parser.add_argument('--vols-dir', type=os.path.abspath, help='Path to tomoDRGN reconstructed volumes')
+    parser.add_argument('--vol-path', type=os.path.abspath, help='Path to single consensus volume (instead of tomoDRGN volumes)')
     parser.add_argument('--ind', type=os.path.abspath, help='Ind.pkl used in training run that produced volumes in vols-dir (if applicable)')
+    parser.add_argument('--tomo-id-col-override', type=str, help='Name of column in input starfile to filter by --tomoname')
+    parser.add_argument('--star-apix-override', type=float, help='Override pixel size of input particle_volumeseries starfile (A/px)')
+    parser.add_argument('--vols-apix-override', type=float, help='Override pixel size of tomoDRGN-reconstructed particle volumes (A/px)')
 
     group = parser.add_argument_group('ChimeraX rendering options')
     group.add_argument('--vols-render-level', type=float, default=0.7, help='Isosurface level to render all tomoDRGN reconstructed volumes in ChimeraX')
@@ -34,10 +35,27 @@ def add_args(parser):
 
 def main(args):
     # load the star file
-    log(f'Loading and checking starfile {args.starfile}')
+    log(f'Loading starfile {args.starfile}')
     ptcl_star = starfile.GenericStarfile(args.starfile)
-    rots_cols = ['_rlnAngleRot', '_rlnAngleTilt', '_rlnAnglePsi']
-    trans_cols = ['_rlnCoordinateX', '_rlnCoordinateY', '_rlnCoordinateZ']
+
+    # confirm required metadata are present in star file
+    log('Checking requisite metadata in star file')
+    if len([col_name for col_name in ptcl_star.blocks['data_'].columns if '_rlnCoordinate' in col_name]) > 0:
+        # column headers use relion naming
+        rots_cols = ['_rlnAngleRot', '_rlnAngleTilt', '_rlnAnglePsi']
+        trans_cols = ['_rlnCoordinateX', '_rlnCoordinateY', '_rlnCoordinateZ']
+        tomo_id_col = '_rlnMicrographName'
+    else:
+        m_trans_cols = [col_name for col_name in ptcl_star.blocks['data_'].columns if '_wrpCoordinate' in col_name]
+        assert len(m_trans_cols) >= 3  # column headers use m naming
+        if len(m_trans_cols) == 3:  # m temporal sampling == 1
+            rots_cols = ['_wrpAngleRot', '_wrpAngleTilt', '_wrpAnglePsi']
+            trans_cols = ['_wrpCoordinateX', '_wrpCoordinateY', '_wrpCoordinateZ']
+        else:  # m temporal sampling > 1
+            assert len(m_trans_cols) % 3 == 0
+            rots_cols = ['_wrpAngleRot1', '_wrpAngleTilt1', '_wrpAnglePsi1']
+            trans_cols = ['_wrpCoordinateX1', '_wrpCoordinateY1', '_wrpCoordinateZ1']
+        tomo_id_col = '_wrpSourceName'
     assert np.all([col in ptcl_star.blocks['data_'].columns for col in rots_cols]), f'`{rots_cols} columns not found in starfile `data_` block'
     assert np.all([col in ptcl_star.blocks['data_'].columns for col in trans_cols]), f'{trans_cols} columns not found in starfile `data_` block'
 
@@ -54,21 +72,30 @@ def main(args):
         ind = utils.load_pkl(args.ind)
         ptcl_star.blocks['data_'] = ptcl_star.blocks['data_'].iloc[ind]
     log(f'Isolating starfile rows containing particles from {args.tomoname}')
-    assert args.tomoname in ptcl_star.blocks['data_'][args.tomo_id_col].values, f'{args.tomoname} not found in {args.tomo_id_col}'
-    df_tomo = ptcl_star.blocks['data_'][ptcl_star.blocks['data_'][args.tomo_id_col] == args.tomoname]
+    if args.tomo_id_col_override is not None:
+        tomo_id_col = args.tomo_id_col_override
+    assert args.tomoname in ptcl_star.blocks['data_'][tomo_id_col].values, f'{args.tomoname} not found in {tomo_id_col}'
+    df_tomo = ptcl_star.blocks['data_'][ptcl_star.blocks['data_'][tomo_id_col] == args.tomoname]
     df_tomo.reset_index(inplace=True)
 
     # load the first tomodrgn vol to get boxsize and pixel size
-    log(f'Enumerating volumes in {args.vols_dir}')
-    all_vols = os.listdir(os.path.abspath(args.vols_dir))
-    all_vols = [os.path.join(args.vols_dir, vol) for vol in all_vols if vol.endswith('.mrc')]
+    if args.vols_dir:
+        log(f'Enumerating volumes in {args.vols_dir}')
+        all_vols = os.listdir(os.path.abspath(args.vols_dir))
+        all_vols = [os.path.join(args.vols_dir, vol) for vol in all_vols if vol.endswith('.mrc')]
+    elif args.vol_path:
+        assert args.vol_path.endswith('.mrc')
+        all_vols = [os.path.abspath(args.vol_path)]
+    else:
+        raise RuntimeError('One of --vols-dir or --vol-path is required')
     vol, header = mrc.parse_mrc(all_vols[0])
     vol_box = vol.shape[0]
     vol_apix = header.get_apix() if args.vols_apix_override is None else args.vols_apix_override
 
     # check number of volumes is consistent between df_tomo and all_vols
-    assert len(df_tomo) == len(all_vols), f'Mismatch between number of rows in dataframe ({len(df_tomo)}) and number of volumes in --vols-dir ({len(all_vols)}). ' \
-                                          f'Possible causes: --ind not being used; incorrect star file; incorrectly generated tomodrgn volumes directory'
+    if args.vols_dir:
+        assert len(df_tomo) == len(all_vols), f'Mismatch between number of rows in dataframe ({len(df_tomo)}) and number of volumes in --vols-dir ({len(all_vols)}). ' \
+                                              f'Possible causes: --ind not being used; incorrect star file; incorrectly generated tomodrgn volumes directory'
 
     if args.coloring_labels is not None:
         log(f'Loading labels for volume coloring in chimerax from {args.coloring_labels}')
@@ -111,7 +138,10 @@ def main(args):
     with open(args.outfile, 'w') as f:
         for i in range(len(df_tomo)):
             # write volume opening command
-            f.write(f'open {args.vols_dir}/vol_{i:03d}.mrc\n')
+            if args.vol_path:
+                f.write(f'open {all_vols[0]}\n')
+            else:
+                f.write(f'open {args.vols_dir}/vol_{i:03d}.mrc\n')
 
             # prepare rotation matrix
             eulers_relion = df_tomo.loc[i, rots_cols].to_numpy(dtype=np.float32)
