@@ -6,6 +6,7 @@ import os
 import argparse
 from datetime import datetime as dt
 import pprint
+import itertools
 import multiprocessing as mp
 
 import torch
@@ -14,7 +15,8 @@ from torch.utils.data import DataLoader, Dataset
 from torch.cuda.amp import autocast
 
 from tomodrgn import mrc, utils
-from tomodrgn.models import TiltSeriesHetOnlyVAE
+from tomodrgn.lattice import Lattice
+from tomodrgn.models import TiltSeriesHetOnlyVAE, FTPositionalDecoder
 
 log = utils.log
 vlog = utils.vlog
@@ -25,7 +27,7 @@ def add_args(parser):
     parser.add_argument('-o', type=os.path.abspath, required=True, help='Output .mrc or directory')
     parser.add_argument('--prefix', default='vol_', help='Prefix when writing out multiple .mrc files')
     parser.add_argument('--no-amp', action='store_true', help='Disable use of mixed-precision training')
-    parser.add_argument('-b', '--batch-size', type=int, default=64, help='Batch size to parallelize volume generation')
+    parser.add_argument('-b', '--batch-size', type=int, default=1, help='Batch size to parallelize volume generation (32-64 works well for box64 volumes)')
     parser.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs. Specify GPUs i,j via `export CUDA_VISIBLE_DEVICES=i,j`')
     parser.add_argument('-v', '--verbose', action='store_true', help='Increases verbosity')
 
@@ -34,7 +36,7 @@ def add_args(parser):
     group.add_argument('--z-start', type=np.float32, nargs='*', help='Specify a starting z-value')
     group.add_argument('--z-end', type=np.float32, nargs='*', help='Specify an ending z-value')
     group.add_argument('-n', type=int, default=10, help='Number of structures between [z_start, z_end]')
-    group.add_argument('--zfile', help='Text/.pkl file with z-values to evaluate')
+    group.add_argument('--zfile', type=os.path.abspath, help='Text/.pkl file with z-values to evaluate')
 
     group = parser.add_argument_group('Volume arguments')
     group.add_argument('--Apix', type=float, default=1, help='Pixel size to add to output .mrc header')
@@ -48,8 +50,6 @@ def add_args(parser):
 def check_z_inputs(args):
     if args.z_start:
         assert args.z_end, "Must provide --z-end with argument --z-start"
-    assert sum((bool(args.z), bool(args.z_start), bool(args.zfile))) == 1, \
-        "Must specify either -z OR --z-start/--z-end OR --zfile"
 
 
 class ZDataset(Dataset):
@@ -68,12 +68,18 @@ class DummyModel(nn.Module):
     '''
     wrapper for nn.DataParallel to split data across batch axis and run eval_volume_batch on all GPUs
     '''
-    def __init__(self, model):
+    def __init__(self, model, zdim):
         super(DummyModel, self).__init__()
         self.model = model
+        self.zdim = zdim
 
     def forward(self, *args, **kwargs):
-        return self.model.decoder.eval_volume_batch(*args, **kwargs)
+        if self.zdim:
+            # multiple volumes to be evaluated
+            return self.model.decoder.eval_volume_batch(*args, **kwargs)
+        else:
+            # single volume to be evaluated
+            return self.model.eval_volume(*args, **kwargs)
 
 
 def main(args):
@@ -90,15 +96,25 @@ def main(args):
     pprint.pprint(cfg)
 
     D = cfg['lattice_args']['D'] # image size + 1
-    zdim = cfg['model_args']['zdim']
+    zdim = cfg['model_args']['zdim'] if 'zdim' in cfg['model_args'].keys() else None
     norm = cfg['dataset_args']['norm']
 
     if args.downsample:
         assert args.downsample % 2 == 0, "Boxsize must be even"
         assert args.downsample <= D - 1, "Must be smaller than original box size"
-    
-    model, lattice = TiltSeriesHetOnlyVAE.load(cfg, args.weights)
-    model = DummyModel(model).to(device)
+
+    if zdim:
+        model, lattice = TiltSeriesHetOnlyVAE.load(cfg, args.weights)
+    else:
+        activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[cfg['model_args']['activation']]
+        model = FTPositionalDecoder(3, D, cfg['model_args']['layers'], cfg['model_args']['dim'], activation,
+                                    enc_type=cfg['model_args']['pe_type'], enc_dim=cfg['model_args']['pe_dim'],
+                                    feat_sigma=cfg['model_args']['feat_sigma'])
+        ckpt = torch.load(args.weights)
+        model.load_state_dict(ckpt['model_state_dict'])
+        model = model.to(device)
+        lattice = Lattice(D, extent=cfg['lattice_args']['extent'], device=device)
+    model = DummyModel(model, zdim).to(device)
     model.eval()
 
     use_amp = not args.no_amp
@@ -116,20 +132,6 @@ def main(args):
         ### Multiple z ###
         if args.z_start or args.zfile:
 
-            # Get z values
-            if args.z_start:
-                args.z_start = np.array(args.z_start)
-                args.z_end = np.array(args.z_end)
-                z = np.repeat(np.arange(args.n,dtype=np.float32), zdim).reshape((args.n, zdim))
-                z *= ((args.z_end - args.z_start)/(args.n-1))
-                z += args.z_start
-            else:
-                if args.zfile.endswith('.pkl'):
-                    z = utils.load_pkl(args.zfile)
-                else:
-                    z = np.loadtxt(args.zfile).reshape(-1, zdim)
-            assert z.shape[1] == zdim
-
             # parallelize
             if args.multigpu and torch.cuda.device_count() > 1:
                 log(f'Using {torch.cuda.device_count()} GPUs!')
@@ -143,21 +145,40 @@ def main(args):
             if not os.path.exists(args.o):
                 os.makedirs(args.o)
 
+            # Get z values
+            if args.z_start:
+                args.z_start = np.array(args.z_start)
+                args.z_end = np.array(args.z_end)
+                z = np.repeat(np.arange(args.n,dtype=np.float32), zdim).reshape((args.n, zdim))
+                z *= ((args.z_end - args.z_start)/(args.n-1))
+                z += args.z_start
+            else:
+                if args.zfile.endswith('.pkl'):
+                    z = utils.load_pkl(args.zfile)
+                else:
+                    z = np.loadtxt(args.zfile, dtype=np.float32).reshape(-1, zdim)
+            assert z.shape[1] == zdim
+            if z.shape[0] < args.batch_size:
+                log(f'Decreasing batchsize to number of volumes: {z.shape[0]}')
+                args.batch_size = z.shape[0]
+
             # preallocate concatenated coords, z, and keep(mask)
             coords_zz = torch.zeros((args.batch_size, fft_boxsize, fft_boxsize**2, 3+zdim), dtype=coords.dtype)  # B x D(z) x D**2(xy) x 3+zdim
             for i, dz in enumerate(torch.linspace(-extent, extent, steps=fft_boxsize)):
                 coords_zz[:, i, :, :3] = (coords + torch.tensor([0, 0, dz]).view(1, 1, -1, 3))
             keep = (coords_zz[0, :, :, :3].pow(2).sum(dim=-1) <= extent ** 2).view(fft_boxsize, -1)
-            keep = keep.expand(torch.cuda.device_count(), *keep.shape)
+            # keep = keep.expand(torch.cuda.device_count(), *keep.shape)
+            keep = keep.unsqueeze(0)  # create batch dimension for dataparallel to split over if --multigpu
 
             # prepare threadpool for parallelized file writing
-            pool = mp.pool.ThreadPool()
+            pool = mp.pool.ThreadPool(processes=min(os.cpu_count(), args.batch_size))
 
             # send tensors to GPU
             coords_zz = coords_zz.to(device)
             keep = keep.to(device)
             norm = torch.tensor(norm)
-            norm = norm.expand(torch.cuda.device_count(), *norm.shape).to(device)
+            # norm = norm.expand(torch.cuda.device_count(), *norm.shape).to(device)
+            norm = norm.unsqueeze(0).to(device)  # create batch dimension for dataparallel to split over if --multigpu
 
             # construct dataset and dataloader
             z = ZDataset(z)
@@ -175,13 +196,26 @@ def main(args):
                 if args.invert:
                     vols_batch *= -1
                 out_mrcs = [f'{args.o}/{args.prefix}{i*args.batch_size+j:03d}.mrc' for j in range(len(zz))]
-                pool.starmap_async(mrc.write, zip(out_mrcs, vols_batch[:len(out_mrcs)]), chunksize=4)
+                pool.starmap(mrc.write, zip(out_mrcs,
+                                            vols_batch[:len(out_mrcs)],
+                                            itertools.repeat(None, len(out_mrcs)),
+                                            itertools.repeat(args.Apix, len(out_mrcs))))
+            pool.close()
 
         ### Single z ###
-        else:
+        elif args.z:
             z = np.array(args.z)
             log(z)
-            vol = model.decoder.eval_volume(coords, fft_boxsize, extent, norm, z)
+            vol = model(coords, fft_boxsize, extent, norm, z)
+            if args.flip:
+                vol = vol[::-1]
+            if args.invert:
+                vol *= -1
+            mrc.write(args.o, vol.astype(np.float32), Apix=args.Apix)
+
+        ### No latent, train_nn eval ###
+        else:
+            vol = model(coords, fft_boxsize, extent, norm)
             if args.flip:
                 vol = vol[::-1]
             if args.invert:
