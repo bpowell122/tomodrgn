@@ -8,11 +8,28 @@
 
 TomoDRGN extends the cryoDRGN framework to cryo-ET by learning heterogeneity from datasets in which each particle is sampled by multiple projection images at different stage tilt angles. For cryo-ET samples imaging particles _in situ_, tomoDRGN therefore enables continuous heterogeneity analysis at a single particle level within the native cellular environment. This new type of input necessitates modification of the cryoDRGN architecture, enables tomography-specific processing opportunities (e.g. dose weighting for loss weighting and efficient voxel subset evaluation during training), and benefits from tomography-specific interactive visualizations.
 
-TomoDRGN aims to parallel familiar cryoDRGN usage syntax and integrate directly with pre-existing cryoDRGN analysis and visualization tools. 
-
-
 ## Installation / dependencies:
-TomoDRGN shares essentially all of cryoDRGN's dependencies, with the addition of a few new ones such as ipyvolume (for interactive 3D visualization of results). Therefore, users may choose to update existing cryoDRGN environments to run tomoDRGN as well, or instead to set up a dedicated tomoDRGN environment. However, we advise users to set up a separate tomoDRGN environment if possible. 
+TomoDRGN shares essentially all of cryoDRGN's dependencies, with the addition of a few new ones such as ipyvolume (for interactive 3D visualization of results). Therefore, users may choose to update existing cryoDRGN environments to run tomoDRGN as well, or instead to set up a dedicated tomoDRGN environment. However, we advise users to set up a separate tomoDRGN environment if possible.
+
+Setting up a dedicated tomoDRGN environment (recommended):
+
+    # Create conda environment
+    conda create --name tomodrgn "python>=3.7"
+    conda activate tomodrgn
+      
+    # Install dependencies
+    conda install "pytorch-gpu>=1.8.0" "cudatoolkit>=11.0" -c pytorch  # TODO this should really be pytorch-gpu>=1.11.0 (inference mode, mem check, etc)
+    conda install "pandas>=1.3.5" "seaborn>=0.11.2" "scikit-learn>=1.0.2"
+    conda install "umap-learn>=0.5.3" "cufflinks-py>=0.17.3" "ipyvolume>=0.5" "healpy>=1.16.1"  "ipywidgets<8.0" "typing_extensions>=3.7.4" "pythreejs<2.4.0" "notebook>5.3" -c conda-forge
+    pip install ipyvolume==0.6.0a10
+
+    # Clone source code and install
+    git clone https://github.com/bpowell122/tomodrgn.git
+    cd tomodrgn
+    pip install .
+
+<details>
+   <summary> Additional setup details </summary>
 
 Adding tomoDRGN to an existing cryoDRGN environment (possible but not recommended):
 
@@ -30,23 +47,6 @@ Adding tomoDRGN to an existing cryoDRGN environment (possible but not recommende
     cd tomodrgn
     pip install .
 
-Setting up a dedicated tomoDRGN environment (recommended):
-
-    # Create conda environment
-    conda create --name tomodrgn python>=3.7
-    conda activate tomodrgn
-      
-    # Install dependencies
-    conda install "pytorch>=1.8.0" "cudatoolkit>=11.0" -c pytorch
-    conda install "pandas>=1.3.5" "seaborn>=0.11.2" "scikit-learn>=1.0.2"
-    conda install "umap-learn>=0.5.3" "cufflinks-py>=0.17.3" "ipyvolume>=0.5" "healpy>=1.16.1"  "ipywidgets<8.0" "typing_extensions>=3.7.4" "pythreejs<2.4.0" "notebook>5.3" -c conda-forge
-    pip install ipyvolume==0.6.0a10
-
-    # Clone source code and install
-    git clone https://github.com/bpowell122/tomodrgn.git
-    cd tomodrgn
-    pip install .
-
 Note: the majority of these dependency pins are in place to help conda solve the dependency matrix in reasonable runtime using known workable versions, but are not explicitly required. The *truly* required pins are:
 * cudatoolkit>=11.0 : nvidia 30-series GPUs with higher CUDA capability (eg. sm_86) require this cudatoolkit version
 * typing_extensions>=3.7.4 : older versions cause an error when initializing some tomodrgn scripts
@@ -54,6 +54,8 @@ Note: the majority of these dependency pins are in place to help conda solve the
 * ipywidgets<8.0 : ipyvolume is not compatible with ipywidgets>=8.0 as of 9/1/22, see [here](https://github.com/widgetti/ipyvolume/pull/411)
 * pythreejs<2.4.0 : 2.4 causes ipyvolume interactive widgets to not render and jupyter notebook to freeze
 * ipyvolume==0.6.0a10 : tomodrgn's analysis notebook uses some features introduced in 0.6.0a10, which is itself not currently available on conda-forge
+
+</details>
 
 Optional: verify code+dependency functionality on your system
     
