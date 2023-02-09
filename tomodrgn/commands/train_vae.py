@@ -331,15 +331,6 @@ def main(args):
     ## set the device
     device = utils.get_default_device()
 
-    # set beta schedule
-    if args.beta is None:
-        args.beta = 1./args.zdim
-    try:
-        args.beta = float(args.beta)
-    except ValueError:
-        assert args.beta_control, "Need to set beta control weight for schedule {}".format(args.beta)
-    beta_schedule = get_beta_schedule(args.beta)
-
     # load the particle indices
     if args.ind is not None:
         flog(f'Reading supplied particle indices {args.ind}')
@@ -431,6 +422,15 @@ def main(args):
     # save configuration
     out_config = f'{args.outdir}/config.pkl'
     save_config(args, data, lattice, model, out_config)
+
+    # set beta schedule
+    if args.beta is None:
+        args.beta = 1./args.zdim
+    # try:
+    #     args.beta = float(args.beta)
+    # except ValueError:
+    #     assert args.beta_control, "Need to set beta control weight for schedule {}".format(args.beta)
+    beta_schedule = get_beta_schedule(args.beta, n_iterations = args.num_epochs * nptcls + args.batch_size)
 
     # instantiate optimizer
     optim = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.wd, eps=1e-4)  # https://github.com/pytorch/pytorch/issues/40497#issuecomment-1084807134
