@@ -196,7 +196,7 @@ def run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params=None):
 
     if not torch.all(ctf_params == 0):
         # phase flip the CTF-corrupted image
-        freqs = lattice.freqs2d.unsqueeze(0).expand(B * ntilts, -1, -1) / ctf_params[:,:,1].view(B * ntilts, 1, 1)
+        freqs = lattice.freqs2d.unsqueeze(0).expand(B * ntilts, *lattice.freqs2d.shape) / ctf_params[:,:,1].view(B * ntilts, 1, 1)
         ctf_weights = ctf.compute_ctf(freqs, *torch.split(ctf_params.view(B*ntilts,-1)[:, 2:], 1, 1)).view(B, ntilts, D, D)
         input *= ctf_weights.sign()  # phase flip by the ctf to be all positive amplitudes
     else:
@@ -207,7 +207,7 @@ def run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params=None):
 
     # prepare lattice at masked fourier components
     # TODO reimplement decoding more cleanly and efficiently with NestedTensors when autograd available: https://github.com/pytorch/nestedtensor
-    input_coords = lattice.coords @ rot  # shape B x ntilts x D*D x 3
+    input_coords = lattice.coords @ rot  # shape B x ntilts x D*D x 3 from [D*D x 3] @ [B x ntilts x 3 x 3]
     input_coords = input_coords[dec_mask.view(B, ntilts, D * D), :]  # shape np.sum(dec_mask) x 3
     input_coords = input_coords.unsqueeze(0)  # singleton batch dimension for model to run (dec_mask can have variable # elements per particle, therefore cannot reshape with b > 1)
 
@@ -217,7 +217,7 @@ def run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params=None):
 
     # internally reshape such that batch dimension has length > 1, allowing splitting along batch dimension for DataParallel
     pseudo_batchsize = utils.first_n_factors(input_coords.shape[1], lower_bound=8)[0]
-    input_coords = input_coords.view(pseudo_batchsize, input_coords.shape[1]//pseudo_batchsize, -1)
+    input_coords = input_coords.view(pseudo_batchsize, input_coords.shape[1]//pseudo_batchsize, input_coords.shape[-1])
 
     # decode
     y_recon = model(input_coords).view(1, -1)  # 1 x B*ntilts*N[final_mask]
