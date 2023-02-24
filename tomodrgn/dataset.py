@@ -432,7 +432,7 @@ class TiltSeriesMRCData(data.Dataset):
         self.window_r = window_r
         self.invert_data = invert_data
         self.sequential_tilt_sampling = sequential_tilt_sampling
-        self.norm = norm if not lazy else self.lazy_particles_estimate_normalization()
+        self.norm = norm if norm is not None else self.lazy_particles_estimate_normalization()
 
         self.star = ptcls_star
         self.ptcls_list = ptcls_unique_list
