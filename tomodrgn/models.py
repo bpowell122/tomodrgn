@@ -889,19 +889,21 @@ class TiltSeriesEncoder(nn.Module):
 
             elif self.pooling_function == 'max':
                 batch_pooled_tilts = batch_tilts_intermediate.max(dim = 1)[0]
+                batch_pooled_tilts = torch.nn.functional.relu(batch_pooled_tilts)
 
             elif self.pooling_function == 'mean':
                 batch_pooled_tilts = batch_tilts_intermediate.mean(dim = 1)
+                batch_pooled_tilts = torch.nn.functional.relu(batch_pooled_tilts)
 
             elif self.pooling_function == 'median':
                 with autocast(enabled=False):  # torch.quantile and torch.median do not support fp16 so casting to fp32 assuming AMP is used
                     batch_pooled_tilts = batch_tilts_intermediate.to(torch.float32).quantile(dim = 1, q = 0.5)
+                    batch_pooled_tilts = torch.nn.functional.relu(batch_pooled_tilts)
 
             else:
                 raise ValueError
 
             # input: B x out_dim_A
-            batch_pooled_tilts = torch.nn.functional.relu(batch_pooled_tilts)
             z = self.encoder2(batch_pooled_tilts)  # reshape to encode all tilts of one ptcl together
 
         else:
