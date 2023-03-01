@@ -413,7 +413,7 @@ class TiltSeriesMRCData(data.Dataset):
                     else:
                         dose_weights = np.ones((ntilts, nx+1, nx+1))
 
-                weights_dict[weights_key] = dose_weights * tilt_weights
+                weights_dict[weights_key] = (dose_weights * tilt_weights).astype(np.float32)
                 dec_mask_dict[weights_key] = dec_mask
             weight_mask_keys.append(weights_key)
 
