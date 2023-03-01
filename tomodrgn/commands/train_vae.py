@@ -249,16 +249,17 @@ def loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta
     return loss, gen_loss, kld_loss
 
 
-def eval_z(model, lattice, data, args, device, use_amp=False, expanded_ind_rebased=None, ctf_params=None):
+def eval_z(model, lattice, data, args, device, use_amp=False):
     model.eval()
     assert not model.training
     with torch.no_grad():
         with autocast(enabled=use_amp):
-            z_mu_all = []
-            z_logvar_all = []
-            data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, prefetch_factor=args.prefetch_factor, persistent_workers=args.persistent_workers,
-                                        pin_memory=args.pin_memory)
-            for batch_images, _, batch_tran, batch_ctf, _, _, _ in data_generator:
+            z_mu_all = torch.zeros((data.nptcls, model.zdim), device=device, dtype=torch.half if use_amp else torch.float)
+            z_logvar_all = torch.zeros((data.nptcls, model.zdim), device=device, dtype=torch.half if use_amp else torch.float)
+            data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=False,
+                                        num_workers=args.num_workers, prefetch_factor=args.prefetch_factor,
+                                        persistent_workers=args.persistent_workers, pin_memory=args.pin_memory)
+            for batch_images, _, batch_tran, batch_ctf, _, _, batch_indices in data_generator:
                 B, ntilts, D, D = batch_images.shape
 
                 # transfer to GPU
@@ -278,10 +279,10 @@ def eval_z(model, lattice, data, args, device, use_amp=False, expanded_ind_rebas
                     batch_images *= ctf_weights.sign()
 
                 z_mu, z_logvar = _unparallelize(model).encode(batch_images, B, ntilts)
-                z_mu_all.append(z_mu.detach().cpu().numpy())
-                z_logvar_all.append(z_logvar.detach().cpu().numpy())
-            z_mu_all = np.vstack(z_mu_all)
-            z_logvar_all = np.vstack(z_logvar_all)
+                z_mu_all[batch_indices] = z_mu
+                z_logvar_all[batch_indices] = z_logvar
+            z_mu_all = z_mu_all.cpu().numpy()
+            z_logvar_all = z_logvar_all.cpu().numpy()
 
             if np.any(z_mu_all == np.nan) or np.any(z_mu_all == np.inf):
                 nan_count = np.sum(np.isnan(z_mu_all))
