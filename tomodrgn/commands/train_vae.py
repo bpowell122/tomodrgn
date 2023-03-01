@@ -411,7 +411,7 @@ def main(args):
                                  domain='fourier', activation=activation, l_dose_mask=args.l_dose_mask,
                                  feat_sigma=args.feat_sigma, pooling_function=args.pooling_function,
                                  num_seeds=args.num_seeds, num_heads=args.num_heads, layer_norm=args.layer_norm)
-    model.to(device)
+    # model.to(device)
     flog(model)
     flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
     flog('{} parameters in encoder'.format(sum(p.numel() for p in model.encoder.parameters() if p.requires_grad)))
@@ -451,6 +451,7 @@ def main(args):
         flog('Loading checkpoint from {}'.format(args.load))
         checkpoint = torch.load(args.load)
         model.load_state_dict(checkpoint['model_state_dict'])
+        model.to(device)
         optim.load_state_dict(checkpoint['optimizer_state_dict'])
         start_epoch = checkpoint['epoch']+1
         assert start_epoch < args.num_epochs
@@ -460,6 +461,7 @@ def main(args):
             flog('No GradScaler instance found in specified checkpoint; creating new GradScaler')
     else:
         start_epoch = 0
+        model.to(device)
 
     # parallelize
     if args.multigpu and torch.cuda.device_count() > 1:
