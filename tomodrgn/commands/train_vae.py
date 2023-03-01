@@ -182,8 +182,6 @@ def train_batch(scaler, model, lattice, y, rot, tran, cumulative_weights, dec_ma
         loss, gen_loss, kld_loss = loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta, beta_control)
 
     scaler.scale(loss).backward()
-    # scaler.scale(gen_loss).backward(retain_graph=True)
-    # scaler.scale(kld_loss).backward()
     scaler.step(optim)
     scaler.update()
 
@@ -242,9 +240,9 @@ def loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta
     # latent loss
     kld = torch.mean(-0.5 * torch.sum(1 + z_logvar - z_mu.pow(2) - z_logvar.exp(), dim=1), dim=0)
     if beta_control is None:
-        kld_loss = beta * kld
+        kld_loss = beta * kld / dec_mask.sum().float()
     else:
-        kld_loss = beta_control * (beta - kld)**2
+        kld_loss = beta_control * (beta - kld)**2 / dec_mask.sum().float()
 
     # total loss
     loss = gen_loss + kld_loss
