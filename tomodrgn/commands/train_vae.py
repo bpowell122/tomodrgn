@@ -187,7 +187,7 @@ def train_batch(scaler, model, lattice, y, rot, tran, cumulative_weights, dec_ma
     scaler.step(optim)
     scaler.update()
 
-    return loss.item(), gen_loss.item(), kld_loss.item()
+    return torch.tensor((loss, gen_loss, kld_loss)).detach().cpu().numpy()
 
 
 def run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params=None):
@@ -237,7 +237,7 @@ def _unparallelize(model):
 def loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta, beta_control=None):
     # reconstruction error
     y = y[dec_mask].view(1,-1)
-    gen_loss = (cumulative_weights[dec_mask].view(1,-1) * ((y_recon - y) ** 2)).mean()
+    gen_loss = torch.mean((cumulative_weights[dec_mask].view(1,-1) * ((y_recon - y) ** 2)))
 
     # latent loss
     kld = torch.mean(-0.5 * torch.sum(1 + z_logvar - z_mu.pow(2) - z_logvar.exp(), dim=1), dim=0)
@@ -477,14 +477,12 @@ def main(args):
     data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, prefetch_factor=args.prefetch_factor, persistent_workers=args.persistent_workers, pin_memory=args.pin_memory)
     for epoch in range(start_epoch, args.num_epochs):
         t2 = dt.now()
-        gen_loss_accum = 0
-        loss_accum = 0
-        kld_accum = 0
+        losses_accum = np.zeros((3), dtype=np.float32)
         batch_it = 0
 
-        for batch_images, batch_rot, batch_trans, batch_ctf, batch_weights, batch_dec_mask, _ in data_generator:
+        for batch_images, batch_rot, batch_trans, batch_ctf, batch_weights, batch_dec_mask, batch_indices in data_generator:
             # impression counting
-            batch_it += len(batch_images) # total number of ptcls seen
+            batch_it += len(batch_indices) # total number of ptcls seen
             global_it = nptcls*epoch + batch_it
             beta = beta_schedule(global_it)
 
@@ -497,19 +495,15 @@ def main(args):
             batch_dec_mask = batch_dec_mask.to(device)
 
             # training minibatch
-            loss, gen_loss, kld = train_batch(scaler, model, lattice, batch_images, batch_rot, batch_trans,
-                                              batch_weights, batch_dec_mask, optim, beta, args.beta_control,
-                                              ctf_params=batch_ctf, use_amp=use_amp)
+            losses_batch = train_batch(scaler, model, lattice, batch_images, batch_rot, batch_trans,
+                                       batch_weights, batch_dec_mask, optim, beta, args.beta_control,
+                                       ctf_params=batch_ctf, use_amp=use_amp)
 
             # logging
-            gen_loss_accum += gen_loss * len(batch_images)
-            kld_accum += kld * len(batch_images)
-            loss_accum += loss * len(batch_images)
-
             if batch_it % args.log_interval == 0:
-                log(f'# [Train Epoch: {epoch+1}/{args.num_epochs}] [{batch_it}/{nptcls} subtomos] gen loss={gen_loss:.6f}, kld={kld:.6f}, beta={beta:.6f}, loss={loss:.6f}')
-
-        flog(f'# =====> Epoch: {epoch+1} Average gen loss = {gen_loss_accum/batch_it:.6}, KLD = {kld_accum/batch_it:.6f}, total loss = {loss_accum/batch_it:.6f}; Finished in {dt.now()-t2}')
+                log(f'# [Train Epoch: {epoch+1}/{args.num_epochs}] [{batch_it}/{nptcls} subtomos] gen loss={losses_batch[1]:.6f}, kld={losses_batch[2]:.6f}, beta={beta:.6f}, loss={losses_batch[0]:.6f}')
+            losses_accum += losses_batch * len(batch_images)
+        flog(f'# =====> Epoch: {epoch+1} Average gen loss = {losses_accum[1]/batch_it:.6f}, KLD = {losses_accum[2]/batch_it:.6f}, total loss = {losses_accum[0]/batch_it:.6f}; Finished in {dt.now()-t2}')
         if args.checkpoint and (epoch+1) % args.checkpoint == 0:
             if device.type != 'cpu':
                 flog(f'GPU memory usage: {utils.check_memory_usage()}')
