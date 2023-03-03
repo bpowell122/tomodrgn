@@ -453,7 +453,7 @@ class TiltSeriesMRCData(data.Dataset):
 
     def __getitem__(self, idx_ptcl):
         # get correct image indices for image, pose, and ctf params (indexed against entire dataset)
-        ptcl_img_ind = self.ptcls_to_imgs_ind[idx_ptcl].flatten().astype(int)
+        ptcl_img_ind = self.ptcls_to_imgs_ind[idx_ptcl]
         if self.sequential_tilt_sampling:
             zero_indexed_ind = np.arange(self.ntilts_training)  # take first ntilts_training images for deterministic loading/debugging
         else:

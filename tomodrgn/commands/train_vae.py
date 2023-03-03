@@ -349,16 +349,16 @@ def main(args):
 
     if args.pose is not None:
         rot, trans = utils.load_pkl(args.pose)
-        rot = rot[data.ptcls_to_imgs_ind.flatten().astype(int)]
+        rot = rot[data.ptcls_to_imgs_ind]
         assert rot.shape == (data.nimgs,3,3)
         if trans is not None:
-            trans = trans[data.ptcls_to_imgs_ind.flatten().astype(int)]
+            trans = trans[data.ptcls_to_imgs_ind]
             assert trans.shape == (data.nimgs,2)
         data.trans = np.asarray(trans, dtype=np.float32)
         data.rot = np.asarray(rot, dtype=np.float32)
     if args.ctf is not None:
         ctf_params = utils.load_pkl(args.ctf)
-        ctf_params = ctf_params[data.ptcls_to_imgs_ind.flatten().astype(int)]
+        ctf_params = ctf_params[data.ptcls_to_imgs_ind]
         assert ctf_params.shape == (data.nimgs,9)
         data.ctf_params = np.asarray(ctf_params, dtype=np.float32)
 

@@ -308,8 +308,8 @@ class TiltSeriesStarfile():
 
     def get_ptcl_img_indices(self):
         df_grouped = self.df.groupby('_rlnGroupName')
-        ptcl_to_img_ind = np.array([df_grouped.get_group(ptcl).index.to_numpy() for ptcl in df_grouped.groups], dtype=object)
-        return ptcl_to_img_ind
+        ptcls_to_imgs_ind = [df_grouped.get_group(ptcl).index.to_numpy() for ptcl in df_grouped.groups]
+        return ptcls_to_imgs_ind
 
     def get_image_size(self, datadir=None):
         images = self.df['_rlnImageName']

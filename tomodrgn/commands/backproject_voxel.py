@@ -60,6 +60,7 @@ def main(args):
     # load the star file
     ptcls_star = starfile.TiltSeriesStarfile.load(args.particles)
     ptcls_to_imgs_ind = ptcls_star.get_ptcl_img_indices()
+    ptcls_to_imgs_ind = np.array(ptcls_to_imgs_ind, dtype=object)  # convert list -> numpy array to allow multiindexing
 
     if args.ind is not None:
         ind_ptcls = np.array(utils.load_pkl(args.ind))
