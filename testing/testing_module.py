@@ -1,5 +1,5 @@
 '''
-Module containing multi-command testing functionality
+Module to independently test multiple commands
 '''
 
 import os
@@ -49,6 +49,7 @@ class CommandTester():
                 self.failed_commands.append(command)
                 with open(self.stderr_file, 'a+') as f:
                     f.write(f'Command {command_index}/{len(self.commands)}: {command} \n')
+                    f.write(f'Error returncode: {output.returncode} \n')
                     f.write(f'{output.stderr} \n')
 
         print('\n')
