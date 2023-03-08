@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader
 
 from tomodrgn import utils, dataset, ctf
 from tomodrgn.models import TiltSeriesHetOnlyVAE
+from tomodrgn.commands.train_vae import eval_z
 
 log = utils.log
 vlog = utils.vlog
@@ -25,6 +26,7 @@ def add_args(parser):
     parser.add_argument('--log-interval', type=int, default=1000, help='Logging interval in N_IMGS (default: %(default)s)')
     parser.add_argument('-b','--batch-size', type=int, default=64, help='Minibatch size (default: %(default)s)')
     parser.add_argument('-v','--verbose',action='store_true',help='Increases verbosity')
+    parser.add_argument('--no-amp', action='store_true', help='Disable use of automatic mixed precision')
 
     group = parser.add_argument_group('Dataset loading')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
@@ -32,6 +34,12 @@ def add_args(parser):
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory')
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
     group.add_argument('--sequential-tilt-sampling', action='store_true', help='Supply particle images of one particle to encoder in starfile order')
+
+    group = parser.add_argument_group('Dataloader arguments')
+    group.add_argument('--num-workers', type=int, default=0, help='Number of workers to use when batching particles for training. Has moderate impact on epoch time')
+    group.add_argument('--prefetch-factor', type=int, default=2, help='Number of particles to prefetch per worker for training. Has moderate impact on epoch time')
+    group.add_argument('--persistent-workers', action='store_true', help='Whether to persist workers after dataset has been fully consumed. Has minimal impact on run time')
+    group.add_argument('--pin-memory', action='store_true', help='Whether to use pinned memory for dataloader. Has large impact on epoch time. Recommended.')
 
     return parser
 
@@ -64,6 +72,7 @@ def main(args):
     ## set the device
     device = utils.get_default_device()
     torch.set_grad_enabled(False)
+    use_amp = not args.no_amp
 
     log(args)
     cfg = utils.load_pkl(args.config)
@@ -117,33 +126,11 @@ def main(args):
     model, lattice = TiltSeriesHetOnlyVAE.load(cfg, args.weights, device=device)
 
     # evaluation loop
-    model.eval()
-    z_mu_all = []
-    z_logvar_all = []
-    batch_it = 0
-    data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=False)
-    for batch_images, _, batch_trans, batch_ctf, _, _, batch_ptcl_ids in data_generator:
-        # impression counting
-        batch_it += len(batch_ptcl_ids)
-
-        # transfer to GPU
-        batch_images = batch_images.to(device)
-        batch_trans = batch_trans.to(device)
-        batch_ctf = batch_ctf.to(device)
-
-        z_mu, z_logvar = eval_batch(model, lattice, batch_images, batch_trans, ctf_params=batch_ctf)
-        z_mu_all.append(z_mu)
-        z_logvar_all.append(z_logvar)
-
-        if batch_it % args.log_interval == 0:
-            log(f'# [{batch_it}/{nptcls} particles]')
-
-    z_mu_all = np.vstack(z_mu_all)
-    z_logvar_all = np.vstack(z_logvar_all)
+    z_mu, z_logvar = eval_z(model, lattice, data, args, device, use_amp=use_amp)
 
     with open(args.out_z,'wb') as f:
-        pickle.dump(z_mu_all, f)
-        pickle.dump(z_logvar_all, f)
+        pickle.dump(z_mu, f)
+        pickle.dump(z_logvar, f)
 
     log(f'Finished in {dt.now() - t1}')
 
