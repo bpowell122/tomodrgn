@@ -329,6 +329,10 @@ def main(args):
 
     ## set the device
     device = utils.get_default_device()
+    if device == torch.device('cpu'):
+        args.no_amp = True
+        flog('Warning: pytorch AMP does not support non-CUDA (e.g. cpu) devices. Automatically disabling AMP and continuing')
+        # https://github.com/pytorch/pytorch/issues/55374
 
     # load the particle indices
     if args.ind is not None:

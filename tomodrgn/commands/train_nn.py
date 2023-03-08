@@ -205,13 +205,11 @@ def main(args):
     torch.manual_seed(args.seed)
 
     ## set the device
-    use_cuda = torch.cuda.is_available()
-    device = torch.device('cuda' if use_cuda else 'cpu')
-    log(f'Use cuda {use_cuda}')
-    log(f'Using device {device}')
-    if not use_cuda:
-        log('WARNING: No GPUs detected')
-    # device = utils.get_default_device()
+    device = utils.get_default_device()
+    if device == torch.device('cpu'):
+        args.no_amp = True
+        flog('Warning: pytorch AMP does not support non-CUDA (e.g. cpu) devices. Automatically disabling AMP and continuing')
+        # https://github.com/pytorch/pytorch/issues/55374
 
     # load the particle indices
     if args.ind is not None:
