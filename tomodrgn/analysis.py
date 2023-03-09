@@ -11,6 +11,7 @@ from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
 
 from tomodrgn import utils, mrc
+from tomodrgn.starfile import guess_dtypes
 
 import ipyvolume as ipv
 import ipywidgets as widgets
@@ -644,14 +645,14 @@ def subset_ptcls_and_render(df, tomo_name_for_df):
         # Rot and Psi must cover [-180,180] or [0,360], and Tilt must cover [0,180]
         # otherwise particles with "C1 poses" outside "sym-restricted rot/tilt/psi" will appear misaligned
         # extract scaled image coordinates
-        x = df['_rlnCoordinateX'].to_numpy()
-        y = df['_rlnCoordinateY'].to_numpy()
-        z = df['_rlnCoordinateZ'].to_numpy()
+        x = df['_rlnCoordinateX'].to_numpy(dtype=float)
+        y = df['_rlnCoordinateY'].to_numpy(dtype=float)
+        z = df['_rlnCoordinateZ'].to_numpy(dtype=float)
 
         # extract euler angles and convert to radians
-        rot = df['_rlnAngleRot'].to_numpy() * np.pi / 180
-        tilt = df['_rlnAngleTilt'].to_numpy() * np.pi / 180
-        psi = df['_rlnAnglePsi'].to_numpy() * np.pi / 180
+        rot = df['_rlnAngleRot'].to_numpy(dtype=float) * np.pi / 180
+        tilt = df['_rlnAngleTilt'].to_numpy(dtype=float) * np.pi / 180
+        psi = df['_rlnAnglePsi'].to_numpy(dtype=float) * np.pi / 180
 
         # convert euler angles to xyz view vector
         # following formulation of doi: 10.1016/j.jsb.2005.06.001 section 2.2.5
@@ -724,6 +725,7 @@ def subset_ptcls_and_render(df, tomo_name_for_df):
         update_subset_quiver()
 
     # subset dataframe by selected tomo
+    df = guess_dtypes(df)
     df_subset = subset_df(df, tomo_name_for_df)
 
     # create interactive widgets for main plot
