@@ -9,9 +9,8 @@ from datetime import datetime as dt
 import pprint
 
 import torch
-from torch.utils.data import DataLoader
 
-from tomodrgn import utils, dataset, ctf
+from tomodrgn import utils, dataset
 from tomodrgn.models import TiltSeriesHetOnlyVAE
 from tomodrgn.commands.train_vae import eval_z
 
@@ -28,7 +27,7 @@ def add_args(parser):
     parser.add_argument('-v','--verbose',action='store_true',help='Increases verbosity')
     parser.add_argument('--no-amp', action='store_true', help='Disable use of automatic mixed precision')
 
-    group = parser.add_argument_group('Dataset loading')
+    group = parser.add_argument_group('Override configuration values')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
     group.add_argument('--ind', type=os.path.abspath, help='Filter particle stack by these indices')
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory')
@@ -43,24 +42,6 @@ def add_args(parser):
 
     return parser
 
-
-def eval_batch(model, lattice, y, trans, ctf_params=None):
-    B, ntilts, D, D = y.shape
-
-    # correct for translations
-    if not torch.all(trans == 0):
-        y = lattice.translate_ht(y.view(B * ntilts, -1), trans.view(B * ntilts, 1, 2))
-    y = y.view(B, ntilts, D, D)
-
-    # correct for CTF via phase flipping
-    if not torch.all(ctf_params == 0):
-        freqs = lattice.freqs2d.unsqueeze(0).expand(B * ntilts, -1, -1) / ctf_params[:, :, 1].view(B * ntilts, 1, 1)
-        ctf_weights = ctf.compute_ctf(freqs, *torch.split(ctf_params.view(B * ntilts, -1)[:, 2:], 1, 1)).view(B, ntilts, D, D)
-        y *= ctf_weights.sign()
-
-    z_mu, z_logvar = model.encode(y, B, ntilts)
-
-    return z_mu.detach().cpu().numpy(), z_logvar.detach().cpu().numpy()
 
 def main(args):
     t1 = dt.now()
@@ -80,35 +61,24 @@ def main(args):
 
     log(args)
     cfg = utils.load_pkl(args.config)
-    log('Loaded configuration:')
+
+    # update the configuration with user-specified parameters
+    if args.datadir is not None:
+        cfg['dataset_args']['datadir'] = args.datadir
+    if args.ind is not None:
+        cfg['dataset_args']['ind'] = args.ind
+    if args.lazy:
+        cfg['training_args']['lazy'] = args.lazy
+    if not args.invert_data:
+        cfg['dataset_args']['invert_data'] = args.invert_data
+    if args.sequential_tilt_sampling:
+        cfg['dataset_args']['sequential_tilt_sampling'] = args.sequential_tilt_sampling
+
+    log('Using configuration:')
     pprint.pprint(cfg)
 
-    zdim = cfg['model_args']['zdim']
-
-    # load the particle indices
-    if args.ind is not None:
-        log(f'Reading supplied particle indices {args.ind}')
-        ind = pickle.load(open(args.ind, 'rb'))
-    else:
-        ind = None
-
     # load the particles
-    data = dataset.TiltSeriesMRCData(args.particles,
-                                     datadir=args.datadir,
-                                     ind_ptcl=ind,
-                                     lazy=args.lazy,
-                                     invert_data=args.invert_data,
-                                     norm=cfg['dataset_args']['norm'],
-                                     window=cfg['dataset_args']['window'],
-                                     window_r=cfg['dataset_args']['window_r'],
-                                     recon_dose_weight=cfg['training_args']['recon_dose_weight'],
-                                     dose_override=cfg['training_args']['dose_override'],
-                                     recon_tilt_weight=cfg['training_args']['recon_tilt_weight'],
-                                     l_dose_mask=cfg['model_args']['l_dose_mask'],
-                                     sequential_tilt_sampling=args.sequential_tilt_sampling)
-
-    nptcls = data.nptcls
-    data.ntilts_training = cfg['dataset_args']['ntilts']
+    data = dataset.TiltSeriesMRCData.load(cfg)
 
     # load poses and ctf if referenced in config
     if cfg['dataset_args']['pose'] is not None:
