@@ -268,6 +268,8 @@ class TiltSeriesMRCData(data.Dataset):
         log(f'Found {len(ptcls_unique_list)} particles')
         if ind_ptcl is not None:
             log('Filtering particles by supplied indices...')
+            if type(ind_ptcl) is str and ind_ptcl.endswith('.pkl'):
+                ind_ptcl = utils.load_pkl(ind_ptcl)
             ptcls_unique_list = ptcls_unique_list[ind_ptcl]
             ptcls_star.df = ptcls_star.df[ptcls_star.df['_rlnGroupName'].isin(ptcls_unique_list)]
             ptcls_star.df = ptcls_star.df.reset_index(drop=True)
@@ -499,3 +501,31 @@ class TiltSeriesMRCData(data.Dataset):
         norm[0] = 0
         log(f'Normalizing HT by {norm[0]} +/- {norm[1]}')
         return norm
+
+    @classmethod
+    def load(self, config):
+
+        '''Instantiate a dataset from a config.pkl
+
+        Inputs:
+            config (str, dict): Path to config.pkl or loaded config.pkl
+
+        Returns:
+            TiltSeriesMRCData instance
+        '''
+
+        config = utils.load_pkl(config) if type(config) is str else config
+        data = TiltSeriesMRCData(config['dataset_args']['particles'],
+                                 norm=config['dataset_args']['norm'],
+                                 invert_data=config['dataset_args']['invert_data'],
+                                 ind_ptcl=config['dataset_args']['ind'],
+                                 window=config['dataset_args']['window'],
+                                 datadir=config['dataset_args']['datadir'],
+                                 window_r=config['dataset_args']['window_r'],
+                                 recon_dose_weight=config['training_args']['recon_dose_weight'],
+                                 recon_tilt_weight=config['training_args']['recon_tilt_weight'],
+                                 dose_override=config['training_args']['dose_override'],
+                                 l_dose_mask=config['model_args']['l_dose_mask'],
+                                 lazy=config['training_args']['lazy'],
+                                 sequential_tilt_sampling=config['dataset_args']['sequential_tilt_sampling'])
+        return data
