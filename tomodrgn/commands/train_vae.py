@@ -20,12 +20,11 @@ from tomodrgn.beta_schedule import get_beta_schedule
 
 log = utils.log
 vlog = utils.vlog
-# TODO fix logging: everything to flog instead of log, and optional vlog where appropriate
 
 def add_args(parser):
     parser.add_argument('particles', type=os.path.abspath, help='Input particles (.mrcs, .star, .cs, or .txt)')
     parser.add_argument('-o', '--outdir', type=os.path.abspath, required=True, help='Output directory to save model')
-    parser.add_argument('--zdim', type=int, required=True, help='Dimension of latent variable')
+    parser.add_argument('--zdim', type=int, required=True, default=128, help='Dimension of latent variable')
     parser.add_argument('--load', metavar='WEIGHTS.PKL', help='Initialize training from a checkpoint')
     parser.add_argument('--checkpoint', type=int, default=1, help='Checkpointing interval in N_EPOCHS (default: %(default)s)')
     parser.add_argument('--log-interval', type=int, default=200, help='Logging interval in N_PTCLS (default: %(default)s)')

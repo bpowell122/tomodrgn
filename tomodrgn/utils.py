@@ -239,7 +239,6 @@ def calc_fsc(vol1, vol2, mask = 'none', dilate = 3, dist = 10):
 
 def check_memory_usage():
     try:
-        # TODO: replace with pytorch>=1.11.0 TORCH.CUDA.MEM_GET_INFO to avoid subprocess forking (can't find how to spawn process instead)
         usage = [torch.cuda.mem_get_info(i) for i in range(torch.cuda.device_count())]
         return [f'{(total - free) // 1024**2} MiB / {total // 1024**2} MiB' for free, total in usage]
     except AttributeError:

@@ -148,7 +148,6 @@ class TiltSeriesHetOnlyVAE(nn.Module):
 
     @classmethod
     def load(self, config, weights=None, device=None):
-        # TODO update me
         '''Instantiate a model from a config.pkl
 
         Inputs:
@@ -185,9 +184,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
                                      l_dose_mask=cfg['model_args']['l_dose_mask'],
                                      feat_sigma=cfg['model_args']['feat_sigma'],
                                      pooling_function=cfg['model_args']['pooling_function'],
-                                     # set_encoder=cfg['model_args']['set_encoder'],
                                      num_seeds=cfg['model_args']['num_seeds'],
-                                     # num_inds=cfg['model_args']['num_inds'],
                                      num_heads=cfg['model_args']['num_heads'],
                                      layer_norm=cfg['model_args']['layer_norm'])
 
@@ -375,7 +372,7 @@ class FTPositionalDecoder(nn.Module):
         self.enc_type = enc_type
         self.enc_dim = self.D2 if enc_dim is None else enc_dim
         self.in_dim = 3 * (self.enc_dim) * 2 + self.zdim
-        self.decoder = ResidLinearMLP(self.in_dim, nlayers, hidden_dim, 2, activation)  # TODO try replacing outdim 2 with 8 for (possible) AMP TensorCore speedup, ignoring indices 3-8
+        self.decoder = ResidLinearMLP(self.in_dim, nlayers, hidden_dim, 2, activation)
 
         if enc_type == "gaussian":
             # We construct 3 * self.enc_dim random vector frequences, to match the original positional encoding:

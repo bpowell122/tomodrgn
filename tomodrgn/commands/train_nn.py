@@ -57,7 +57,7 @@ def add_args(parser):
 
     group = parser.add_argument_group('Network Architecture')
     group.add_argument('--layers', type=int, default=3, help='Number of hidden layers')
-    group.add_argument('--dim', type=int, default=256, help='Number of nodes in hidden layers')
+    group.add_argument('--dim', type=int, default=512, help='Number of nodes in hidden layers')
     group.add_argument('--l-extent', type=float, default=0.5, help='Coordinate lattice size (if not using positional encoding)')
     group.add_argument('--pe-type', choices=('geom_ft','geom_full','geom_lowf','geom_nohighf','linear_lowf', 'gaussian', 'none'), default='gaussian', help='Type of positional encoding')
     group.add_argument('--pe-dim', type=int, help='Num sinusoid features in positional encoding (default: D/2)')
