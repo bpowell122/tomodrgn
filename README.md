@@ -18,50 +18,21 @@ Setting up a dedicated tomoDRGN environment (recommended):
     conda activate tomodrgn
       
     # Install dependencies
-    conda install "pytorch-gpu>=1.8.0" "cudatoolkit>=11.0" -c pytorch  # TODO this should really be pytorch-gpu>=1.11.0 (inference mode, mem check, etc)
-    conda install "pandas>=1.3.5" "seaborn>=0.11.2" "scikit-learn>=1.0.2"
-    conda install "umap-learn>=0.5.3" "cufflinks-py>=0.17.3" "ipyvolume>=0.5" "healpy>=1.16.1"  "ipywidgets<8.0" "typing_extensions>=3.7.4" "pythreejs<2.4.0" "notebook>5.3" -c conda-forge
-    pip install ipyvolume==0.6.0a10
+    conda install "pytorch-gpu>=1.11.0" "cudatoolkit>=11.0" -c pytorch
+    conda install pandas seaborn scikit-learn
+    conda install umap-learn notebook -c conda-forge
+    pip install "ipyvolume>=0.6.0" "pythreejs>=2.4.2"
 
     # Clone source code and install
     git clone https://github.com/bpowell122/tomodrgn.git
     cd tomodrgn
     pip install .
-
-<details>
-   <summary> Additional setup details </summary>
-
-Adding tomoDRGN to an existing cryoDRGN environment (possible but not recommended):
-
-    # Activate cryodrgn conda environment
-    conda activate cryodrgn
-
-    # Install new dependencies
-    conda install ipywidgets healpy -c conda-forge
-    pip install ipyvolume>=0.6.0a10
-    jupyter labextension install @jupyter-widgets/jupyterlab-manager jupyterlab-plotly plotlywidget --no-build
-    jupyter lab build
-
-    # Clone source code and install
-    git clone https://github.com/bpowell122/tomodrgn.git
-    cd tomodrgn
-    pip install .
-
-Note: the majority of these dependency pins are in place to help conda solve the dependency matrix in reasonable runtime using known workable versions, but are not explicitly required. The *truly* required pins are:
-* cudatoolkit>=11.0 : nvidia 30-series GPUs with higher CUDA capability (eg. sm_86) require this cudatoolkit version
-* typing_extensions>=3.7.4 : older versions cause an error when initializing some tomodrgn scripts
-* ipyvolume>=0.5 : tomodrgn's analysis notebook uses some features introduced in 0.5
-* ipywidgets<8.0 : ipyvolume is not compatible with ipywidgets>=8.0 as of 9/1/22, see [here](https://github.com/widgetti/ipyvolume/pull/411)
-* pythreejs<2.4.0 : 2.4 causes ipyvolume interactive widgets to not render and jupyter notebook to freeze
-* ipyvolume==0.6.0a10 : tomodrgn's analysis notebook uses some features introduced in 0.6.0a10, which is itself not currently available on conda-forge
-
-</details>
 
 Optional: verify code+dependency functionality on your system
     
     cd tomodrgn/testing
-    bash ./quicktest.sh  # ~1 minute, tests train_vae and analyze
-    bash ./unittest.sh  # ~20 minutes, tests all commands with multiple options (except jupyter notebooks)
+    python ./quicktest.py  # ~1 minute, tests train_vae and analyze
+    python ./unittest.py  # ~30 minutes, tests all commands with multiple options (except jupyter notebooks)
 
 ## Example usage
 Below are minimal examples of various common tomoDRGN commands. By design, syntax parallels cryoDRGN's syntax where possible. All commands require initialization of the conda environment: `conda activate tomodrgn`
