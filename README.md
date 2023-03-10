@@ -645,10 +645,9 @@ TomoDRGN requires a number of specific metadata values to be supplied in the sta
 
 
 ## Relevant literature
-1. TomoDRGN (bioRxiv) 2022
-2. Zhong, E., Bepler, T., Berger, B. & Davis, J. CryoDRGN: Reconstruction of Heterogeneous cryo-EM Structures Using Neural Networks. Nature Methods, [doi:10.1038/s41592-020-01049-4](https://doi.org/10.1038/s41592-020-01049-4) (2021)
-3. Kinman, L., Powell, B., Zhong, E., Berger, B. & Davis, J. Uncovering structural ensembles from single particle cryo-EM data using cryoDRGN. bioRxiv, [doi:10.1101/2022.08.09.503342](https://doi.org/10.1101/2022.08.09.503342) (2022)
-4. Sun, J., Kinman, L., Jahagirdar, D., Ortega, J., Davis. J. KsgA facilitates ribosomal small subunit maturation by proofreading a key structural lesion. bioRxiv, [doi:10.1101/2022.07.13.499473](https://doi.org/10.1101/2022.07.13.499473) (2022)
+1. Zhong, E., Bepler, T., Berger, B. & Davis, J. CryoDRGN: Reconstruction of Heterogeneous cryo-EM Structures Using Neural Networks. Nature Methods, [doi:10.1038/s41592-020-01049-4](https://doi.org/10.1038/s41592-020-01049-4) (2021)
+2. Kinman, L., Powell, B., Zhong, E., Berger, B. & Davis, J. Uncovering structural ensembles from single particle cryo-EM data using cryoDRGN. bioRxiv, [doi:10.1101/2022.08.09.503342](https://doi.org/10.1101/2022.08.09.503342) (2022)
+3. Sun, J., Kinman, L., Jahagirdar, D., Ortega, J., Davis. J. KsgA facilitates ribosomal small subunit maturation by proofreading a key structural lesion. bioRxiv, [doi:10.1101/2022.07.13.499473](https://doi.org/10.1101/2022.07.13.499473) (2022)
 
 
 ## Contact
