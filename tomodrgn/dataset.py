@@ -276,7 +276,7 @@ class TiltSeriesMRCData(data.Dataset):
             assert len(ptcls_star.df['_rlnGroupName'].unique().astype(str)) == len(ind_ptcl), 'Make sure particle indices file does not contain duplicates'
             log(f'Found {len(ptcls_unique_list)} particles after filtering')
         ptcls_to_imgs_ind = ptcls_star.get_ptcl_img_indices()  # either instantiate for the first time or update after ind_ptcl filtering
-        ntilts_set = set(ptcls_star.df.groupby('_rlnGroupName').size().values)
+        ntilts_set = set(ptcls_star.df.groupby('_rlnGroupName', sort=False).size().values)
         ntilts_min = min(ntilts_set)
         ntilts_max = max(ntilts_set)
         log(f'Found {ntilts_min} (min) to {ntilts_max} (max) tilt images per particle')
@@ -381,7 +381,7 @@ class TiltSeriesMRCData(data.Dataset):
         dec_mask_dict = {}     # associates small keys with large masking matrices
         apix = ptcls_star.get_tiltseries_pixelsize()
         spatial_frequencies = dose.get_spatial_frequencies(apix, nx + 1)
-        for name, group in ptcls_star.df.groupby('_rlnGroupName'):
+        for name, group in ptcls_star.df.groupby('_rlnGroupName', sort=False):
 
             ntilts = len(group)
             weight_informing_cols = ['_rlnCtfScalefactor', '_rlnCtfBfactor']

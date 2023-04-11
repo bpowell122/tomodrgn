@@ -241,7 +241,7 @@ class TiltSeriesStarfile():
         mrcs = []
         ind = []
         # handle starfiles where .mrcs stacks are referenced non-contiguously
-        for i, group in self.df.groupby((self.df['_rlnImageNameBase'].shift() != self.df['_rlnImageNameBase']).cumsum()):
+        for i, group in self.df.groupby((self.df['_rlnImageNameBase'].shift() != self.df['_rlnImageNameBase']).cumsum(), sort=False):
             # mrcs = [path1, path2, ...]
             mrcs.append(group['_rlnImageNameBase'].iloc[0])
             # ind = [ [0, 1, 2, ..., N], [0, 3, 4, ..., M], ..., ]
@@ -307,7 +307,7 @@ class TiltSeriesStarfile():
         return cosine_weights
 
     def get_ptcl_img_indices(self):
-        df_grouped = self.df.groupby('_rlnGroupName')
+        df_grouped = self.df.groupby('_rlnGroupName', sort=False)
         ptcls_to_imgs_ind = [df_grouped.get_group(ptcl).index.to_numpy() for ptcl in df_grouped.groups]
         return ptcls_to_imgs_ind
 
