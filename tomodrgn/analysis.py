@@ -686,8 +686,12 @@ def subset_ptcls_and_render(df, tomo_name_for_df):
     def generate_colormap_from_column(df_subset_selected_column, colormap=None):
         # derive colormap from selected column
         cmap = plt.get_cmap(colormap)
-        metric = df[df_subset_selected_column]
-        normalized_metric = (metric - metric.min()) / (metric.max() - metric.min())
+
+        metric_min = df[df_subset_selected_column].min()
+        metric_max = df[df_subset_selected_column].max()
+        metric_subset = df_subset[df_subset_selected_column]
+
+        normalized_metric = (metric_subset - metric_min) / (metric_max - metric_min)
         return cmap(normalized_metric)
 
     def selcolumn_dropdown_eventhandler(change):
