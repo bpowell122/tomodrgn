@@ -594,8 +594,14 @@ def render_tomogram_xyzslices(tomogram):
     ipv.zlim(0, zmax)
 
     # define UI layout
-    ui = widgets.VBox([widgets.HBox([slice_slider, thickness_slider]),
-                       widgets.HBox([axis_dropdown, continuous_update_check])])
+    ui = widgets.VBox([widgets.HBox(
+        [slice_slider, thickness_slider],
+        layout=widgets.Layout(width='100%', display='inline-flex', flex_flow='row wrap')
+    ),
+        widgets.HBox(
+            [axis_dropdown, continuous_update_check],
+            layout=widgets.Layout(width='100%', display='inline-flex', flex_flow='row wrap')
+        )])
     display(ui)
 
 
@@ -617,9 +623,9 @@ def rescale_df_coordinates(df, tomo_max_xyz_nm=(680, 680, 510), tomo_pixelsize=1
     tomo_max_x_nm, tomo_max_y_nm, tomo_max_z_nm = tomo_max_xyz_nm  # units = nm
 
     # rlnCoordinate from starfile is measured in px, so needs to be rescaled to dimensionless tomo voxels
-    df.loc[:,'_rlnCoordinateX'] = df['_rlnCoordinateX'].astype('float') * starfile_pixelsize / tomo_pixelsize
-    df.loc[:,'_rlnCoordinateY'] = df['_rlnCoordinateY'].astype('float') * starfile_pixelsize / tomo_pixelsize
-    df.loc[:,'_rlnCoordinateZ'] = df['_rlnCoordinateZ'].astype('float') * starfile_pixelsize / tomo_pixelsize
+    df.loc[:, '_rlnCoordinateX'] = df['_rlnCoordinateX'].astype('float') * starfile_pixelsize / tomo_pixelsize
+    df.loc[:, '_rlnCoordinateY'] = df['_rlnCoordinateY'].astype('float') * starfile_pixelsize / tomo_pixelsize
+    df.loc[:, '_rlnCoordinateZ'] = df['_rlnCoordinateZ'].astype('float') * starfile_pixelsize / tomo_pixelsize
 
     assert 0 <= df['_rlnCoordinateX'].all() <= tomo_max_x_nm
     assert 0 <= df['_rlnCoordinateY'].all() <= tomo_max_y_nm
@@ -824,9 +830,12 @@ def subset_ptcls_and_render(df, tomo_name_for_df):
     quiverplot.popup = popup
 
     # define UI layout
-    quiverplot_widgets = widgets.HBox([column_selection, colormap_selection, size])
+    quiverplot_widgets = widgets.HBox(
+        [column_selection, colormap_selection, size],
+        layout=widgets.Layout(width='100%', display='inline-flex', flex_flow='row wrap'))
     selection_widgets = widgets.HBox(
-        [show_selection_checkbox, subset_value_range, subset_invert_selection, subset_size])
+        [show_selection_checkbox, subset_value_range, subset_invert_selection, subset_size],
+        layout=widgets.Layout(width='100%', display='inline-flex', flex_flow='row wrap'))
     ui = widgets.VBox([quiverplot_widgets, selection_widgets])  # , output])
     display(ui)
 
