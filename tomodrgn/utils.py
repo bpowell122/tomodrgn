@@ -196,8 +196,8 @@ def calc_fsc(vol1, vol2, mask = 'none', dilate = 3, dist = 10):
     r = np.sqrt(x0 ** 2 + x1 ** 2 + x2 ** 2)
     r_max = D // 2  # sphere inscribed within volume box
     r_step = 1  # int(np.min(r[r>0]))
-    bins = np.arange(0, r_max, r_step)
-    bin_labels = np.searchsorted(bins, r, side='left')  # bin_label=0 is DC, bin_label=r_max is highest included freq, bin_label=r_max+1 is frequencies excluded by D//2 spherical mask
+    bins = np.arange(0, r_max + r_step, r_step)  # since np.arange does not include final point `D//2`, need one more shell to calculate FSC at Nyquist
+    bin_labels = np.searchsorted(bins, r, side='left')  # bin_label=0 is DC, bin_label=r_max+r_step is highest included freq, bin_label=r_max+2*r_step is frequencies excluded by D//2 spherical mask
 
     # prepare mask
     if mask == 'none':
@@ -227,7 +227,7 @@ def calc_fsc(vol1, vol2, mask = 'none', dilate = 3, dist = 10):
     vol2_ft = fft.fftn_center(vol2)
 
 
-    # calculate the FSC via labeled shells
+    # calculate the FSC via labeled shells (frequencies > Nyquist share a bin_label that is excluded by `index=bins`)
     num = ndimage.sum(np.real(vol1_ft * np.conjugate(vol2_ft)), labels=bin_labels, index=bins)
     den1 = ndimage.sum(np.abs(vol1_ft) ** 2, labels=bin_labels, index=bins)
     den2 = ndimage.sum(np.abs(vol2_ft) ** 2, labels=bin_labels, index=bins)
