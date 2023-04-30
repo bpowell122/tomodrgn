@@ -71,12 +71,12 @@ def main(args):
         log(f'Filtering starfile by indices {args.ind}')
         ind = utils.load_pkl(args.ind)
         ptcl_star.blocks['data_'] = ptcl_star.blocks['data_'].iloc[ind]
+        ptcl_star.blocks['data_'].reset_index(inplace=True)
     log(f'Isolating starfile rows containing particles from {args.tomoname}')
     if args.tomo_id_col_override is not None:
         tomo_id_col = args.tomo_id_col_override
     assert args.tomoname in ptcl_star.blocks['data_'][tomo_id_col].values, f'{args.tomoname} not found in {tomo_id_col}'
     df_tomo = ptcl_star.blocks['data_'][ptcl_star.blocks['data_'][tomo_id_col] == args.tomoname]
-    df_tomo.reset_index(inplace=True)
 
     # load the first tomodrgn vol to get boxsize and pixel size
     if args.vols_dir:
@@ -99,75 +99,103 @@ def main(args):
 
     if args.coloring_labels is not None:
         log(f'Loading labels for volume coloring in chimerax from {args.coloring_labels}')
-        # load the labels file and
         labels = utils.load_pkl(args.coloring_labels)
 
-        # normalize labels to [0,1]
-        labels_norm = (labels - labels.min()) / (labels.max() - labels.min())
+        # check number of labels matches either df_allparticles (filter by tomogram) or matches df_tomo (no filtering needed)
+        if len(labels) == len(ptcl_star.blocks['data_']):
+            log('Filtering labels array by tomogram')
+            labels = labels[df_tomo.index.to_numpy()]
+        elif len(labels) == len(df_tomo):
+            pass
+        else:
+            raise RuntimeError(f'Number of labels ({len(labels)}) does not correspond to length of starfile ({len(ptcl_star.blocks["data_"])}) or number of particles in tomogram ({len(df_tomo)})')
 
-        # filter by ind.pkl + tomoname
-        labels = labels[df_tomo['index']]
+        # organize models by shared label for ease of selection in chimerax
+        labels_set = set(labels)
+        labels_models_grouped = []
+        for label in labels_set:
+            models = [str(i + 1) for i, l in enumerate(labels) if l == label]
+            models = ",".join(models)
+            labels_models_grouped.append(models)
 
         # prepare colormap
-        if args.matplotlib_colormap:
-            cmap = matplotlib.cm.get_cmap(args.matplotlib_colormap)
+        if args.matplotlib_colormap == None:
+            log('Using Chimerax color scheme')
+            chimerax_colors = np.array(((192, 192, 192, 2.55),
+                                        (255, 255, 178, 2.55),
+                                        (178, 255, 255, 2.55),
+                                        (178, 178, 255, 2.55),
+                                        (255, 178, 255, 2.55),
+                                        (255, 178, 178, 2.55),
+                                        (178, 255, 178, 2.55),
+                                        (229, 191, 153, 2.55),
+                                        (153, 191, 229, 2.55),
+                                        (204, 204, 153, 2.55)), dtype=float)
+            chimerax_colors *= 100 / 255  # normalize 0-100 for chimerax
+            chimerax_colors = np.around(chimerax_colors).astype(int)
+            labels_rgba = np.ones((len(labels), 4), dtype=int)
+            for i, label in enumerate(labels_set):
+                labels_rgba[labels == label] = chimerax_colors[i % len(chimerax_colors)]
         else:
-            chimerax_colors = np.divide(((192, 192, 192),
-                                         (255, 255, 178),
-                                         (178, 255, 255),
-                                         (178, 178, 255),
-                                         (255, 178, 255),
-                                         (255, 178, 178),
-                                         (178, 255, 178),
-                                         (229, 191, 153),
-                                         (153, 191, 229),
-                                         (204, 204, 153)), 255)
-            cmap = matplotlib.colors.ListedColormap(chimerax_colors, name='chimerax_colors')
-        labels_rgba = cmap(labels_norm)
+            log(f'Using matplotlib color scheme {args.matplotlib_colormap}')
+            cmap = matplotlib.cm.get_cmap(args.matplotlib_colormap)
+            labels_norm = (labels - labels.min()) / (labels.max() - labels.min())
+            labels_rgba = cmap(labels_norm)
+            labels_rgba[:,:-1] *= 100
+            labels_rgba = np.around(labels_rgba).astype(int)
 
         # save text mapping of label : rgba specification
-        labels_set = set(labels)
         labels_outfile = f'{os.path.splitext(args.outfile)[0]}_rgba_labels.txt'
         with open(labels_outfile, 'w') as f:
-            f.write('Mapping of unique labels : RGBA specification (normalized 0-1)\n')
-            for label in labels_set:
-                f.write(f'{label} : {cmap((label - labels.min()) / (labels.max() - labels.min()))}\n')
-        log(f'Saved key of labels : RGBA specifications (normalized 0-1) to {labels_outfile}')
+            f.write('Mapping of unique labels : RGBA specification : chimerax models \n\n')
+            for i, label in enumerate(labels_set):
+                f.write(f'Label : {label} \n')
+                if args.matplotlib_colormap is None:
+                    f.write(f'RGB : {chimerax_colors[i % len(chimerax_colors)]} \n')
+                else:
+                    label_norm = (label - labels.min()) / (labels.max() - labels.min())
+                    label_rgba = np.array(cmap(label_norm))
+                    label_rgba[:-1] *= 100
+                    label_rgba = np.around(label_rgba).astype(int)
+                    f.write(f'RGB : {label_rgba[:-1]}\n')
+                f.write(f'models : {labels_models_grouped[i]}\n')
+                f.write('\n')
+        log(f'Saved key of unique labels : RGBA specification : chimerax models to {labels_outfile}')
 
     # write commands for each volume
     with open(args.outfile, 'w') as f:
         for i in range(len(df_tomo)):
             # write volume opening command
             if args.vol_path:
-                f.write(f'open {all_vols[0]}\n')
+                f.write(f'open "{all_vols[0]}"\n')
             else:
-                f.write(f'open {args.vols_dir}/vol_{i:03d}.mrc\n')
+                f.write(f'open "{args.vols_dir}/vol_{i:03d}.mrc"\n')
 
             # prepare rotation matrix
-            eulers_relion = df_tomo.loc[i, rots_cols].to_numpy(dtype=np.float32)
+            eulers_relion = df_tomo.iloc[i][rots_cols].to_numpy(dtype=np.float32)
             rot = utils.R_from_relion(eulers_relion[0], eulers_relion[1], eulers_relion[2])
 
             # prepare tomogram-scale translations
-            coord_px = df_tomo.loc[i, trans_cols].to_numpy(dtype=np.float32)
+            coord_px = df_tomo.iloc[i][trans_cols].to_numpy(dtype=np.float32)
             coord_ang = coord_px * star_apix
 
             # incorporate translations due to refinement
             if '_rlnOriginXAngst' in df_tomo.columns:
-                shift_ang = df_tomo.loc[i, ['_rlnOriginXAngst', '_rlnOriginYAngst', '_rlnOriginZAngst']].to_numpy(dtype=np.float32)
+                shift_ang = df_tomo.iloc[i]['_rlnOriginXAngst', '_rlnOriginYAngst', '_rlnOriginZAngst'].to_numpy(dtype=np.float32)
                 coord_ang -= shift_ang
 
             # incorporate translations due to box rotation
-            vol_radius_ang = (np.array([vol_box,vol_box,vol_box]) - 1) / 2 * vol_apix
+            vol_radius_ang = (np.array([vol_box, vol_box, vol_box]) - 1) / 2 * vol_apix
             shift_volrot_ang = np.matmul(rot, -vol_radius_ang.transpose())
             coord_ang += shift_volrot_ang
 
             # write volume positioning command
-            chimerax_view_matrix = np.concatenate((rot, coord_ang[:,np.newaxis]), axis=1)
-            f.write(f'view matrix mod #{i+1:d}{"".join([f",{i:.2f}" for i in chimerax_view_matrix.flatten()])}\n')
+            chimerax_view_matrix = np.concatenate((rot, coord_ang[:, np.newaxis]), axis=1)
+            f.write(f'view matrix mod #{i + 1:d}{"".join([f",{i:.2f}" for i in chimerax_view_matrix.flatten()])}\n')
 
             if args.coloring_labels is not None:
                 # write volume coloring command
-                f.write(f'color #{i+1:d} rgba{tuple(labels_rgba[i])}\n')
+                f.write(f'color #{i + 1:d} rgba({"%,".join([str(channel) for channel in labels_rgba[i]])})\n')
 
             f.write('\n')
 
