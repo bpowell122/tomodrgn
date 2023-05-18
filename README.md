@@ -591,6 +591,15 @@ TomoDRGN requires a number of specific metadata values to be supplied in the sta
 
 
 ## Changelog
+* v0.2.2
+  * Changes 
+    * Subtomo2chimerax now writes a text file summarizing which models are associated with each label and color
+    * Made jupyter notebook interactive particle viewer UI layout more flexible
+  * Bugfixes
+    * Fixed several jupyter notebook bugs including reindexing prefiltered indices when saving new subset indices, reduced memory usage, interactive particle viewer colormap generation and assignment
+    * Fixed FSC calculation to properly handle Nyquist bin
+    * Fixed subtomo2chimerax alignment of coloring labels with volume indices
+
 * v0.2.1
   * New features
     * Added `--dose-override` option when loading images to manually specify dose in e-/A2/image
