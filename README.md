@@ -1,4 +1,4 @@
-# TomoDRGN: a cryoDRGN fork for heterogeneity analysis of particles from cryo-electron tomography
+# TomoDRGN: analyzing structural heterogeneity in cryo-electron sub-tomograms
 
 <p style="text-align: center;">
     <img src="assets/empiar10499_00255_ribosomes.png" alt="Unique per-particle ribosome volumes, calculated from a tomoDRGN variational autoencoder trained on EMPIAR-10499 _Mycoplasma pneumonaie_ ribosomes, mapped back to the tomographic cellular environment"/> 
