@@ -1,6 +1,6 @@
 # Usage of tomoDRGN Jupyter notebook 3-D interactive tomogram+particle viewer
 
-[movie_s3_v1.mp4](../assets/movie_s3_v1.mp4)
+[interactive_particle_viewer_usage.mp4](../assets/interactive_particle_viewer.mp4) (download to view locally)
 
 Example usage of the Jupyter notebook 3-D interactive tomogram and particle viewer in generating Figure 5D from the tomoDRGN bioRxiv paper. This video highlights:
 1. rendering of tomograms in slice view along selectable axes,
