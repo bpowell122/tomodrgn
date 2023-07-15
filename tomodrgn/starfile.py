@@ -322,6 +322,70 @@ class TiltSeriesStarfile():
         header = mrc.parse_header(mrcs[0])
         return header.D  # image size along one dimension in pixels
 
+    def make_test_train_split(self,
+                              fraction_train: float = 0.5,
+                              use_first_ntilts: int = None,
+                              summary_stats: bool = True):
+        '''
+        Create indices for tilt images assigned to training vs testing a tomoDRGN model
+
+        Parameters
+            fraction_train    # fraction of each particle's tilt images to put in train dataset
+            use_first_ntilts  # if not None, sample from first n tilts in star file (before test/train split)
+            summary_stats     # if True, print summary statistics of particle sampling for test/train
+
+        Returns
+            train_image_inds  # array of True/False tilt image indices (per tilt image) used in train dataset
+            test_image_inds   # array of True/False tilt image indices (per tilt image) used in test dataset
+
+        '''
+
+        # check required inputs are present
+        assert '_rlnGroupName' in self.df.columns
+        df_grouped = self.df.groupby('_rlnGroupName', sort=False)
+        assert 0 < fraction_train <= 1.0
+
+        # find minimum number of tilts present for any particle
+        mintilt_df = np.nan
+        for _, group in df_grouped:
+            mintilt_df = min(len(group), mintilt_df)
+
+        # get indices associated with train and test
+        inds_train = []
+        inds_test = []
+
+        for particle_id, group in df_grouped:
+            inds_img = group.index.to_numpy()
+
+            if use_first_ntilts is not None:
+                assert len(inds_img) >= use_first_ntilts, f'Requested use_first_ntilts: {use_first_ntilts} larger than number of tilts: {len(inds_img)} for particle: {particle_id}'
+                inds_img = inds_img[:use_first_ntilts]
+
+            n_inds_train = np.rint(len(inds_img) * fraction_train).astype(int)
+
+            inds_img_train = np.random.choice(inds_img, size=n_inds_train, replace=False)
+            inds_img_train = np.sort(inds_img_train)
+            inds_train.append(inds_img_train)
+
+            inds_img_test = np.array(list(set(inds_img) - set(inds_img_train)))
+            inds_test.append(inds_img_test)
+
+        # provide summary statistics
+        if summary_stats:
+            log(f'    Number of tilts sampled by inds_train: {set([len(inds_img_train) for inds_img_train in inds_train])}')
+            log(f'    Number of tilts sampled by inds_test: {set([len(inds_img_test) for inds_img_test in inds_test])}')
+
+        # flatten indices
+        inds_train = np.asarray([ind_img for inds_img_train in inds_train for ind_img in inds_img_train])
+        inds_test = np.asarray([ind_img for inds_img_test in inds_test for ind_img in inds_img_test])
+
+        # sanity check
+        assert len(set(inds_train) & set(inds_test)) == 0, len(set(inds_train) & set(inds_test))
+        if use_first_ntilts is None:
+            assert len(set(inds_train) | set(inds_test)) == len(self.df), len(set(inds_train) | set(inds_test))
+
+        return inds_train, inds_test
+
 
 def get_tiltseries_dose_per_A2_per_tilt(df, ntilts=None):
     # extract dose in e-/A2 from _rlnCtfBfactor column of Warp starfile (scaled by -4)

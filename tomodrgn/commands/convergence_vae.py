@@ -105,7 +105,7 @@ def encoder_latent_pca(workdir, outdir, epochs, LOG):
 
     for epoch in epochs:
         flog(f'Now calculating PCA for epoch {epoch}', LOG)
-        z = utils.load_pkl(workdir + f'/z.{epoch}.pkl')
+        z = utils.load_pkl(workdir + f'/z.{epoch}.train.pkl')
         pc, _ = analysis.run_pca(z)
         utils.save_pkl(pc, outdir + f'/pcs/pc.{epoch}.pkl')
 
@@ -186,7 +186,7 @@ def encoder_latent_umaps(workdir, outdir, epochs, n_particles_total, subset, ran
 
     for epoch in epochs:
         flog(f'Now calculating UMAP for epoch {epoch} with random_state {random_state}', LOG)
-        z = utils.load_pkl(workdir + f'/z.{epoch}.pkl')[ind_subset, :]
+        z = utils.load_pkl(workdir + f'/z.{epoch}.train.pkl')[ind_subset, :]
         if use_umap_gpu: #using cuML library GPU-accelerated UMAP
             reducer = cuUMAP(random_state=random_state, n_epochs=n_epochs_umap)
             umap_embedding = reducer.fit_transform(z)
@@ -253,13 +253,13 @@ def encoder_latent_shifts(workdir, outdir, epochs, E, LOG):
     for i in np.arange(E-1):
         flog(f'Calculating vector metrics for epochs {i}-{i+1} and {i+1}-{i+2}', LOG)
         if i == 0:
-            z1 = utils.load_pkl(workdir + f'/z.{i}.pkl')
-            z2 = utils.load_pkl(workdir + f'/z.{i+1}.pkl')
-            z3 = utils.load_pkl(workdir + f'/z.{i+2}.pkl')
+            z1 = utils.load_pkl(workdir + f'/z.{i}.train.pkl')
+            z2 = utils.load_pkl(workdir + f'/z.{i+1}.train.pkl')
+            z3 = utils.load_pkl(workdir + f'/z.{i+2}.train.pkl')
         else:
             z1 = z2.copy()
             z2 = z3.copy()
-            z3 = utils.load_pkl(workdir + f'/z.{i+2}.pkl')
+            z3 = utils.load_pkl(workdir + f'/z.{i+2}.train.pkl')
 
         diff21 = z2 - z1
         diff32 = z3 - z2
@@ -490,7 +490,7 @@ def follow_candidate_particles(workdir, outdir, epochs, n_dim, binned_ptcls_mask
     for i, ax in enumerate(axes.flat):
         try:
             umap = utils.load_pkl(outdir + f'/umaps/umap.{epochs[i]}.pkl')
-            z = utils.load_pkl(workdir + f'/z.{epochs[i]}.pkl')[ind_subset,:]
+            z = utils.load_pkl(workdir + f'/z.{epochs[i]}.train.pkl')[ind_subset,:]
             z_maxima_median = np.zeros((len(labels), n_dim))
 
             for k in range(len(labels)):
@@ -842,7 +842,7 @@ def calculate_ground_truth_CCs(outdir, epochs, labels, LOG, ground_truth_paths):
 def get_latest(workdir):
     # assumes args.num_epochs > latest checkpoint
     log('Detecting latest checkpoint...')
-    files = glob.glob(f'{workdir}/z.*.pkl')
+    files = glob.glob(f'{workdir}/z.*.train.pkl')
     epochs = [int(file.split('.')[-2]) for file in files]  # should be a string-formatted number
     E = max(epochs)
     return int(E)
@@ -856,7 +856,7 @@ def main(args):
     config = f'{workdir}/config.pkl'
     logfile = f'{workdir}/run.log'
     assert glob.glob(f'{args.workdir}/weights*.pkl'), f'No weights.*.pkl files detected in {args.workdir}; exiting...'
-    assert glob.glob(f'{args.workdir}/z*.pkl'), f'No z.*.pkl files detected in {args.workdir}; exiting...'
+    assert glob.glob(f'{args.workdir}/z.*.train.pkl'), f'No z.*.train.pkl files detected in {args.workdir}; exiting...'
     E = get_latest(args.workdir) if args.epoch == 'latest' else int(args.epoch)
     sampling = args.epoch_interval
     epochs = np.arange(4, E+1, sampling)
@@ -865,7 +865,7 @@ def main(args):
 
     # assert all required files are locatable
     for i in range(E):
-        assert os.path.exists(workdir + f'/z.{i}.pkl'), f'Could not find training file {workdir}/z.{i}.pkl'
+        assert os.path.exists(workdir + f'/z.{i}.train.pkl'), f'Could not find training file {workdir}/z.{i}.train.pkl'
     for epoch in epochs:
         assert os.path.exists(workdir + f'/weights.{epoch}.pkl'), f'Could not find training file {workdir}/weights.{epoch}.pkl'
     assert os.path.exists(config), f'Could not find training file {config}'
@@ -893,7 +893,7 @@ def main(args):
     flog(f'Saving all results to {outdir}', LOG)
 
     # Get total number of particles, latent space dimensionality, input image size
-    n_particles_total, n_dim = utils.load_pkl(workdir + f'/z.{E}.pkl').shape
+    n_particles_total, n_dim = utils.load_pkl(workdir + f'/z.{E}.train.pkl').shape
     config_file = utils.load_pkl(f'{workdir}/config.pkl')
     img_size = config_file['lattice_args']['D'] -1
 

@@ -166,12 +166,12 @@ def main(args):
     t1 = dt.now()
     E = args.epoch
     workdir = args.workdir
-    zfile = f'{workdir}/z.{E}.pkl'
+    zfile = f'{workdir}/z.{E}.train.pkl'
     weights = f'{workdir}/weights.{E}.pkl'
     config = f'{workdir}/config.pkl'
     outdir = f'{workdir}/analyze.{E}'
     if E == -1:
-        zfile = f'{workdir}/z.pkl'
+        zfile = f'{workdir}/z.train.pkl'
         weights = f'{workdir}/weights.pkl'
         outdir = f'{workdir}/analyze'
     

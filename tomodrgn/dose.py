@@ -5,49 +5,6 @@ from . import utils
 log = utils.log
 
 
-def calculate_dose_weights(dose_per_A2_per_tilt, spatial_frequencies, voltage, ny_ht):
-    '''
-    code adapted from Grigorieff lab summovie_1.0.2/src/core/electron_dose.f90
-    see also Grant and Grigorieff, eLife (2015) DOI: 10.7554/eLife.06980
-    '''
-    voltage_scaling_factor = 1.0 if voltage == 300 else 0.8  # 1.0 for 300kV, 0.8 for 200kV microscopes
-    ny = ny_ht - 1
-    ntilts = len(dose_per_A2_per_tilt)
-
-    spatial_frequencies[ny // 2, ny // 2] = 1  # setting DC component to full weight to avoid divide by zero error in eq 3
-    spatial_frequency_critical_dose = (0.24499 * np.power(spatial_frequencies, -1.6649) + 2.8141) * voltage_scaling_factor  # eq 3 from DOI: 10.7554/eLife.06980
-    spatial_frequency_optimal_dose = 2.51284 * spatial_frequency_critical_dose
-
-    dose_weights = np.zeros((ntilts, ny_ht, ny_ht))
-    for k, dose_at_end_of_tilt in enumerate(dose_per_A2_per_tilt):
-        dose_at_start_of_tilt = 0 if k == 0 else dose_per_A2_per_tilt[k-1]
-        dose_weights[k] = np.where(abs(dose_at_end_of_tilt - spatial_frequency_optimal_dose) < abs(dose_at_start_of_tilt - spatial_frequency_optimal_dose),
-                                   np.exp((-0.5 * dose_at_end_of_tilt) / spatial_frequency_critical_dose),
-                                   0.0)
-    dose_weights[:, ny // 2, ny // 2] = 1.0  # setting DC component to full weight
-
-    assert dose_weights.min() >= 0.0
-    assert dose_weights.max() <= 1.0
-
-    return dose_weights
-
-
-def get_spatial_frequencies(pixel_size, ny_ht):
-    # return spatial frequencies of ht_sym in 1/A
-    spatial_frequencies = np.zeros((ny_ht, ny_ht))
-    fourier_pixel_sizes = 1.0 / (np.array([ny_ht-1, ny_ht-1]))  # in units of 1/px
-    box_center_indices = (np.array([ny_ht-1, ny_ht-1]) / 2).astype(int)  # this might break if nx, ny not even, or nx!=ny
-
-    for j in range(ny_ht):
-        y = ((j - box_center_indices[1]) * fourier_pixel_sizes[1])
-
-        for i in range(ny_ht):
-            x = ((i - box_center_indices[0]) * fourier_pixel_sizes[0])
-
-            spatial_frequency = np.sqrt(x ** 2 + y ** 2) / pixel_size  # units of 1/A
-            spatial_frequencies[j, i] = spatial_frequency
-
-    return spatial_frequencies
 
 
 def plot_weight_distribution(cumulative_weights, spatial_frequencies, outdir, weight_distribution_index = None):
@@ -82,3 +39,125 @@ def plot_weight_distribution(cumulative_weights, spatial_frequencies, outdir, we
     plt.savefig(f'{outdir}/weighting_scheme_{weight_distribution_index}.png', dpi=300)
     plt.close()
 
+
+def calculate_spatial_frequencies(pixel_size, D):
+    '''
+    Calculate spatial frequencies for image of width D-1 pixels with sampling of pixel_size Å/px
+    Parameters
+        pixel_size: scalar of pixel size in Å/px, dtype float
+        D: scalar of fourier-symmetrized box width in pixels (typically odd, 1px larger than input image)
+    Returns
+        spatial_frequencies: numpy array of spatial frequency at each pixel (units 1/Å), shape (D, D), dtype float
+    '''
+    center = (D // 2, D // 2)
+
+    Y, X = np.ogrid[:D, :D]
+    spatial_frequencies = np.sqrt((X - center[0]) ** 2 + (Y - center[1]) ** 2) / (pixel_size * (D - 1))
+
+    return spatial_frequencies
+
+
+def calculate_critical_dose_per_frequency(spatial_frequencies, voltage):
+    '''
+    Calculate critical dose for spatial frequencies following Grant and Grigorieff 2015
+    Params
+        spatial_frequencies: numpy array of spatial frequency at each pixel (units 1/Å), shape (D, D), dtype float
+        voltage: scalar of voltage of electron source in kv, dtype int
+    Returns
+        spatial_frequencies_critical_dose: numpy array of critical dose for each spatial frequency, shape (D, D), dtype float
+    '''
+    voltage_scaling_factor = 1.0 if voltage == 300 else 0.8  # 1.0 for 300kV, 0.8 for 200kV microscopes
+    D = spatial_frequencies.shape[0]
+
+    spatial_frequencies[D // 2, D // 2] = 1  # setting DC frequency to avoid divide by zero error
+    spatial_frequencies_critical_dose = (0.24499 * np.power(spatial_frequencies, -1.6649) + 2.8141) * voltage_scaling_factor  # eq 3 from DOI: 10.7554/eLife.06980
+    spatial_frequencies[D // 2, D // 2] = 0  # restoring DC frequency to zero
+
+    return spatial_frequencies_critical_dose
+
+
+def calculate_dose_weights(spatial_frequencies_critical_dose, cumulative_doses):
+    '''
+    Calculate weight associated with spatial frequencies given cumulative dose and critical dose
+    Params
+        spatial_frequencies_critical_dose: numpy array of critical dose for each spatial frequency, shape (D, D), dtype float
+        cumulative_doses: numpy array of cumulative dose in e-/A2 at each tilt, shape (ntilts), dtype float
+    Returns
+        dose_weights: numpy array of weight for each spatial frequency at each cumulative dose, shape (ntilts, D, D), dtype float
+    '''
+
+    ntilts = cumulative_doses.shape[0]
+    D = spatial_frequencies_critical_dose.shape[0]
+
+    spatial_frequencies_optimal_dose = 2.51284 * spatial_frequencies_critical_dose
+
+    # caution: not precisely equivalent to original summovie implementation due to potential random ordering of cumulative doses
+    # thus taking a slightly more conservative approach that masks spatial frequencies at slightly lower doses than original
+    cumulative_doses = cumulative_doses.reshape(ntilts, 1, 1)
+    spatial_frequencies_critical_dose = spatial_frequencies_critical_dose.reshape(1, D, D)
+    dose_weights = np.where(cumulative_doses <= spatial_frequencies_optimal_dose,
+                            np.exp((-0.5 * cumulative_doses) / spatial_frequencies_critical_dose),
+                            0.0)
+
+    # DC component fully weighted
+    dose_weights[:, D // 2, D // 2] = 1.
+
+    return dose_weights
+
+
+def calculate_tilt_weights(tilts):
+    '''
+    calculate weight per tilt image associated with higher tilt increasing optical path length and decreasing SNR
+    Params
+        tilts: numpy array of tilt angles in degrees, shape (ntilts,), dtype float
+    Returns
+        tilt_weights: numpy array of weight per tilt image, shape (ntilts,) dtype float
+    '''
+    tilt_weights = np.cos(tilts * np.pi / 180.)
+    return tilt_weights
+
+
+def combine_dose_tilt_weights(dose_weights, tilt_weights):
+    '''
+    Merge dose weights (per frequency and per tilt) with tilt weights (per tilt) for single output array
+    Params
+        dose_weights: numpy array of weight for each spatial frequency at each cumulative dose, shape (ntilts, D, D), dtype float
+        tilt_weights: numpy array of weight per tilt image, shape (ntilts,) dtype float
+    Returns
+        weights: merged weights per frequency and per tilt, shape (ntilts, D, D), dtype float
+    '''
+    weights = dose_weights * tilt_weights.reshape(-1, 1, 1)
+    return weights
+
+
+def calculate_circular_mask(D):
+    '''
+    Produces binary mask of circle inscribed in box of side length D, with central pixel set to False (DC component)
+    Params
+        D: scalar of box size in pixels, dtype int
+    Returns:
+        circular_mask: numpy array of circular mask of pixels, shape (D, D), dtype bool
+    '''
+    center = (D // 2, D // 2)
+    radius = D // 2
+
+    Y, X = np.ogrid[:D, :D]
+    dist_from_center = np.sqrt((X - center[0]) ** 2 + (Y - center[1]) ** 2)
+
+    circular_mask = dist_from_center <= radius
+    circular_mask[center] = False
+
+    return circular_mask
+
+
+def calculate_dose_mask(dose_weights, circular_mask):
+    '''
+    Create mask as intersection of non-zero dose weights and circular mask
+    Params
+        dose_weights: numpy array of weight for each spatial frequency at each cumulative dose, shape (ntilts, D, D), dtype float
+        circular_mask: numpy array of circle inscribed in image box, shape (D, D), dtype bool
+    Returns
+        dose_mask: numpy array of pixels contributing positively to SNR, shape (ntilts, nx, nx), dtype bool
+    '''
+    dose_mask = (dose_weights != 0.0) & circular_mask
+    return dose_mask

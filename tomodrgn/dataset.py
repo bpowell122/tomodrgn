@@ -258,10 +258,13 @@ class TiltSeriesMRCData(data.Dataset):
 
     def __init__(self, mrcfile, norm=None, invert_data=False, ind_ptcl=None, window=True, datadir=None, window_r=0.85,
                  recon_dose_weight=False, recon_tilt_weight=False, dose_override=None, l_dose_mask=False, lazy=True,
-                 sequential_tilt_sampling=False):
+                 sequential_tilt_sampling=False, ind_img=None):
 
-        log('Parsing star file...')
         ptcls_star = starfile.TiltSeriesStarfile.load(mrcfile)
+
+        # filter by test/train split per-image
+        if ind_img is not None:
+            ptcls_star.df = ptcls_star.df.iloc[ind_img].reset_index(drop=True)
 
         # evaluate command line arguments affecting preprocessing
         ptcls_unique_list = ptcls_star.df['_rlnGroupName'].unique().astype(str)
@@ -375,52 +378,14 @@ class TiltSeriesMRCData(data.Dataset):
             ctf_params = None
             log('CTF parameters not found in star file. Reconstruction will not have CTF applied.')
 
-        # Calculating weighting schemes
-        weight_mask_keys = []  # len(ptcls), associates small key per particle
-        weights_dict = {}      # associates small keys with large weighting matrices
-        dec_mask_dict = {}     # associates small keys with large masking matrices
-        apix = ptcls_star.get_tiltseries_pixelsize()
-        spatial_frequencies = dose.get_spatial_frequencies(apix, nx + 1)
-        for name, group in ptcls_star.df.groupby('_rlnGroupName', sort=False):
+        # Getting relevant properties and precalculating appropriate arrays/masks for possible masking/weighting
+        angpix = ptcls_star.get_tiltseries_pixelsize()
+        voltage = ptcls_star.get_tiltseries_voltage()
+        spatial_frequencies = dose.calculate_spatial_frequencies(angpix, nx+1)
+        spatial_frequencies_critical_dose = dose.calculate_critical_dose_per_frequency(spatial_frequencies, voltage)
+        circular_mask = dose.calculate_circular_mask(nx+1)
 
-            ntilts = len(group)
-            weight_informing_cols = ['_rlnCtfScalefactor', '_rlnCtfBfactor']
-            if np.all([col in group.columns for col in weight_informing_cols]):
-                weights_key = group[weight_informing_cols].to_numpy(dtype=float).data.tobytes()
-            else:
-                weights_key = ntilts  # HACKY, will miscall starfiles with discontinuous tilt series but no scalefactor/bfactor columns
-
-            if weights_key not in weights_dict.keys():
-                tilt_weights = np.ones((ntilts, 1, 1))
-                dose_weights = np.ones((ntilts, nx+1, nx+1))
-                dec_mask = np.ones((ntilts, nx+1, nx+1))
-
-                if recon_tilt_weight:
-                    tilt_weights = group['_rlnCtfScalefactor'].to_numpy(dtype=float).reshape(ntilts, 1, 1)
-
-                if recon_dose_weight or l_dose_mask:
-                    voltage = ptcls_star.get_tiltseries_voltage()
-                    if dose_override is None:
-                        dose_series = starfile.get_tiltseries_dose_per_A2_per_tilt(group, ntilts)
-                    else:
-                        # increment scalar dose_override across ntilts
-                        dose_series = dose_override * np.arange(1, ntilts + 1)
-                    dose_weights = dose.calculate_dose_weights(dose_series, spatial_frequencies, voltage, nx+1)
-
-                    if l_dose_mask:
-                        dec_mask = dose_weights != 0.0
-
-                    if recon_dose_weight:
-                        pass
-                    else:
-                        dose_weights = np.ones((ntilts, nx+1, nx+1))
-
-                weights_dict[weights_key] = (dose_weights * tilt_weights).astype(np.float32)
-                dec_mask_dict[weights_key] = dec_mask
-            weight_mask_keys.append(weights_key)
-
-        log(f'Found {len(weights_dict.keys())} different weighting schemes')
-
+        # Saving relevant values as attributes of the class for future use
         self.nimgs = nimgs
         self.nptcls = nptcls
         self.ntilts_range = [ntilts_min, ntilts_max]
@@ -441,10 +406,12 @@ class TiltSeriesMRCData(data.Dataset):
 
         self.recon_tilt_weight = recon_tilt_weight
         self.recon_dose_weight = recon_dose_weight
-        self.weight_mask_keys = weight_mask_keys
-        self.dec_mask_dict = dec_mask_dict
-        self.weights_dict = weights_dict
+        self.l_dose_mask = l_dose_mask
+        self.angpix = angpix
+        self.voltage = voltage
         self.spatial_frequencies = spatial_frequencies
+        self.spatial_frequencies_critical_dose = spatial_frequencies_critical_dose
+        self.circular_mask = circular_mask
 
         self.rot = rot
         self.trans = trans
@@ -456,12 +423,21 @@ class TiltSeriesMRCData(data.Dataset):
     def __getitem__(self, idx_ptcl):
         # get correct image indices for image, pose, and ctf params (indexed against entire dataset)
         ptcl_img_ind = self.ptcls_to_imgs_ind[idx_ptcl]
-        if self.sequential_tilt_sampling:
-            zero_indexed_ind = np.arange(self.ntilts_training)  # take first ntilts_training images for deterministic loading/debugging
+
+        # determine the number of images and related parameters to get
+        if self.ntilts_training is None:
+            ntilts_training = len(ptcl_img_ind)
         else:
-            zero_indexed_ind = np.asarray(np.random.choice(len(ptcl_img_ind), size=self.ntilts_training, replace=False))
+            ntilts_training = self.ntilts_training
+
+        # determine the order in which to return the images and related parameters
+        if self.sequential_tilt_sampling:
+            zero_indexed_ind = np.arange(ntilts_training)  # take first ntilts_training images for deterministic loading/debugging
+        else:
+            zero_indexed_ind = np.asarray(np.random.choice(len(ptcl_img_ind), size=ntilts_training, replace=False))
         ptcl_img_ind = ptcl_img_ind[zero_indexed_ind]
 
+        # load and preprocess the images to be returned
         if self.lazy:
             images = np.asarray([self.ptcls[i].get() for i in ptcl_img_ind])
             if self.window:
@@ -475,13 +451,23 @@ class TiltSeriesMRCData(data.Dataset):
         else:
             images = self.ptcls[ptcl_img_ind]
 
+        # get metadata to be used in calculating what to return
+        cumulative_doses = self.star.df['_rlnCtfBfactor'].iloc[ptcl_img_ind].to_numpy(dtype=float)/-4
+
+        # get the associated metadata to be returned
         rot = self.rot[ptcl_img_ind]
         trans = 0 if self.trans is None else self.trans[ptcl_img_ind]  # tells train loop to skip translation block, bc no translation params provided and collate_fn does not allow returning None
         ctf = 0 if self.ctf_params is None else self.ctf_params[ptcl_img_ind]  # tells train loop to skip ctf weighting block, bc no ctf params provided and collate_fn does not allow returning None
-        weights = self.weights_dict[self.weight_mask_keys[idx_ptcl]][zero_indexed_ind]
-        dec_mask = self.dec_mask_dict[self.weight_mask_keys[idx_ptcl]][zero_indexed_ind]
+        if self.recon_dose_weight or self.l_dose_mask:
+            dose_weights = dose.calculate_dose_weights(self.spatial_frequencies_critical_dose, cumulative_doses)
+            decoder_mask = dose.calculate_dose_mask(dose_weights, self.circular_mask) if self.l_dose_mask else np.repeat(self.circular_mask[np.newaxis,:,:], ntilts_training, axis=0)
+        else:
+            dose_weights = np.ones((self.ntilts_training, self.D, self.D))
+            decoder_mask = np.repeat(self.circular_mask[np.newaxis,:,:], ntilts_training, axis=0)
+        tilt_weights = self.star.df['_rlnCtfScalefactor'].iloc[ptcl_img_ind].to_numpy(dtype=float) if self.recon_tilt_weight else np.ones((self.ntilts_training))
+        decoder_weights = dose.combine_dose_tilt_weights(dose_weights, tilt_weights)
 
-        return images, rot, trans, ctf, weights, dec_mask, idx_ptcl
+        return images, rot, trans, ctf, decoder_weights, decoder_mask, idx_ptcl
 
     def get(self, index):
         return self.ptcls[index]
