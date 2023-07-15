@@ -687,7 +687,7 @@ def calculate_FSCs(outdir, epochs, labels, img_size, chimerax_colors, LOG):
         plot.png of sequential volume pairs map-map FSC at Nyquist for each class in labels across training epochs
     '''
     # calculate masked FSCs for all volumes
-    fsc_masked = np.zeros((len(labels), len(epochs) - 1, img_size // 2))
+    fsc_masked = np.zeros((len(labels), len(epochs) - 1, img_size // 2 + 1))
 
     for cluster in range(len(labels)):
         flog(f'Calculating all FSCs for cluster {cluster}', LOG)
