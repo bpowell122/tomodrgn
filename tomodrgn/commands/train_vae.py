@@ -554,22 +554,29 @@ def main(args):
             return ctf_params
 
         if args.pose is not None:
+            flog(f'Updating dataset to use poses from {args.pose}')
             rots_train, trans_train = load_pose_pkl(args.pose, inds_train)
             assert rots_train.shape == (data_train.nimgs, 3, 3)
+            data_train.rot = rots_train
             if trans_train is not None:
                 assert trans_train.shape == (data_train.nimgs, 2)
+                data_train.trans = trans_train
             if len(inds_test) > 0:
                 rots_test, trans_test = load_pose_pkl(args.pose, inds_test)
                 assert rots_test.shape == (data_test.nimgs, 3, 3)
+                data_test.rot = rots_test
                 if trans_test is not None:
                     assert trans_test.shape == (data_test.nimgs, 2)
+                    data_test.trans = trans_test
 
         if args.ctf is not None:
             ctf_params_train = load_ctf_pkl(args.ctf, inds_train)
             assert ctf_params_train.shape == (data_train.nimgs, 9)
+            data_train.ctf_params = ctf_params_train
             if len(inds_test) > 0:
                 ctf_params_test = load_ctf_pkl(args.ctf, inds_test)
                 assert ctf_params_test.shape == (data_test.nimgs, 9)
+                data_test.ctf_params = ctf_params_test
 
     # instantiate lattice
     lattice = Lattice(D, extent=args.l_extent, device=device)
