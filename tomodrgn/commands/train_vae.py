@@ -42,12 +42,14 @@ def add_args(parser):
     group.add_argument('--ind-img-train', type=os.path.abspath, help='Filter starfile by images (rows) to train model using pre-existing np array pkl')
     group.add_argument('--ind-img-test', type=os.path.abspath, help='Filter starfile by images (rows) to test model using pre-existing np array pkl')
     group.add_argument('--sequential-tilt-sampling', action='store_true', help='Supply particle images of one particle to encoder in starfile order')
+    group.add_argument('--starfile-source', type=str, choices=('warp', 'cistem'), default='warp', help='Software used to extract particles and write star file (sets expected column headers)')
 
     group = parser.add_argument_group('Dataset loading and preprocessing')
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
     group.add_argument('--no-window', dest='window', action='store_false', help='Turn off real space windowing of dataset')
     group.add_argument('--window-r', type=float, default=.85, help='Real space inner windowing radius for cosine falloff to radius 1')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
+    group.add_argument('--stack-path', type=os.path.abspath, help='For cisTEM image stack only, path to stack.mrc due to file name not present in star file')
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
     group.add_argument('--Apix', type=float, default=1.0, help='Override A/px from input starfile; useful if starfile does not have _rlnDetectorPixelSize col')
 
@@ -119,7 +121,8 @@ def save_config(args, dataset, lattice, model, out_config):
                         datadir=args.datadir,
                         sequential_tilt_sampling=args.sequential_tilt_sampling,
                         pose=args.pose,
-                        ctf=args.ctf)
+                        ctf=args.ctf,
+                        starfile_source=args.starfile_source)
     lattice_args = dict(D=lattice.D,
                         extent=lattice.extent,
                         ignore_DC=lattice.ignore_DC)
@@ -464,9 +467,16 @@ def main(args):
         # https://github.com/pytorch/pytorch/issues/55374
 
     # load star file
-    flog('Reading star file')
-    ptcls_star = starfile.TiltSeriesStarfile.load(args.particles)
+    flog(f'Reading star file with format: {args.starfile_source}')
+    if args.starfile_source == 'warp':
+        ptcls_star = starfile.TiltSeriesStarfile.load(args.particles)
+    elif args.starfile_source == 'cistem':
+        ptcls_star = starfile.TiltSeriesStarfileCisTEM.load(args.particles, args.stack_path)
+        ptcls_star.convert_to_relion_conventions()
+    else:
+        raise NotImplementedError
     ptcls_to_imgs_ind = ptcls_star.get_ptcl_img_indices()
+    ptcls_star.plot_particle_uid_ntilt_distribution(args.outdir)
 
     # load the particle indices
     if args.ind is not None:
@@ -500,7 +510,7 @@ def main(args):
 
     # load the particles + poses + ctf from input starfile
     flog(f'Loading dataset from {args.particles}')
-    data_train = dataset.TiltSeriesMRCData(args.particles,
+    data_train = dataset.TiltSeriesMRCData(ptcls_star,
                                            norm=args.norm,
                                            invert_data=args.invert_data,
                                            ind_ptcl=ind,
@@ -515,7 +525,7 @@ def main(args):
                                            lazy=args.lazy,
                                            sequential_tilt_sampling=args.sequential_tilt_sampling)
     if len(inds_test) > 0:
-        data_test = dataset.TiltSeriesMRCData(args.particles,
+        data_test = dataset.TiltSeriesMRCData(ptcls_star,
                                               norm=data_train.norm,  # share normalization with train images
                                               invert_data=args.invert_data,
                                               ind_ptcl=ind,

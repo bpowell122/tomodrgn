@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 from torch.cuda.amp import GradScaler, autocast
 
 import tomodrgn
-from tomodrgn import mrc, utils, dataset, ctf, models, dose
+from tomodrgn import mrc, utils, dataset, ctf, models, starfile
 from tomodrgn.lattice import Lattice
 
 log = utils.log
@@ -29,22 +29,25 @@ def add_args(parser):
     parser.add_argument('-v', '--verbose', action='store_true', help='Increases verbosity')
     parser.add_argument('--seed', type=int, default=np.random.randint(0, 100000), help='Random seed')
 
-    group = parser.add_argument_group('Dataset loading')
-    group.add_argument('--ind', type=os.path.abspath, help='Filter particle stack by these indices')
+    group = parser.add_argument_group('Particle starfile loading and train/test split')
+    group.add_argument('--ind', type=os.path.abspath, metavar='PKL', help='Filter starfile by particles (unique rlnGroupName values) using np array pkl')
+    group.add_argument('--sequential-tilt-sampling', action='store_true', help='Supply particle images of one particle to encoder in starfile order')
+    group.add_argument('--starfile-source', type=str, choices=('warp', 'cistem'), default='warp', help='Software used to extract particles and write star file (sets expected column headers)')
+
+    group = parser.add_argument_group('Dataset loading and preprocessing')
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
     group.add_argument('--no-window', dest='window', action='store_false', help='Turn off real space windowing of dataset')
-    group.add_argument('--window-r', type=float, default=.85, help='Windowing radius')
+    group.add_argument('--window-r', type=float, default=.85, help='Real space inner windowing radius for cosine falloff to radius 1')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
-    group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory')
+    group.add_argument('--stack-path', type=os.path.abspath, help='For cisTEM image stack only, path to stack.mrc due to file name not present in star file')
+    group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
     group.add_argument('--Apix', type=float, default=1.0, help='Override A/px from input starfile; useful if starfile does not have _rlnDetectorPixelSize col')
 
-    group.add_argument_group('Tilt series')
+    group.add_argument_group('Weighting and masking')
     group.add_argument('--recon-tilt-weight', action='store_true', help='Weight reconstruction loss by cosine(tilt_angle)')
     group.add_argument('--recon-dose-weight', action='store_true', help='Weight reconstruction loss per tilt per pixel by dose dependent amplitude attenuation')
     group.add_argument('--dose-override', type=float, default=None, help='Manually specify dose in e- / A2 / tilt')
     group.add_argument('--l-dose-mask', action='store_true', help='Do not train on frequencies exposed to > 2.5x critical dose. Training lattice is intersection of this with --l-extent')
-    group.add_argument('--sample-ntilts', type=int, default=None, help='Number of tilts to sample from each particle per epoch. Default: min(ntilts) from dataset')
-    group.add_argument('--sequential-tilt-sampling', action='store_true', help='Supply particle images of one particle to encoder in starfile order')
 
     group = parser.add_argument_group('Training parameters')
     group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs')
@@ -211,19 +214,42 @@ def main(args):
         flog('Warning: pytorch AMP does not support non-CUDA (e.g. cpu) devices. Automatically disabling AMP and continuing')
         # https://github.com/pytorch/pytorch/issues/55374
 
+    # load star file
+    flog(f'Reading star file with format: {args.starfile_source}')
+    if args.starfile_source == 'warp':
+        ptcls_star = starfile.TiltSeriesStarfile.load(args.particles)
+    elif args.starfile_source == 'cistem':
+        ptcls_star = starfile.TiltSeriesStarfileCisTEM.load(args.particles, args.stack_path)
+        ptcls_star.convert_to_relion_conventions()
+    else:
+        raise NotImplementedError
+    ptcls_to_imgs_ind = ptcls_star.get_ptcl_img_indices()
+    ptcls_star.plot_particle_uid_ntilt_distribution(args.outdir)
+
     # load the particle indices
     if args.ind is not None:
         flog('Filtering supplied particle indices with {}'.format(args.ind))
         ind = pickle.load(open(args.ind, 'rb'))
+        assert len(ptcls_to_imgs_ind) >= len(ind), 'More particles specified than particles found in star file'
+        assert len(ptcls_to_imgs_ind) >= max(ind), 'Specified particles exceed the number of particles found in star file'
     else:
         ind = None
 
     # load the particles
-    data = dataset.TiltSeriesMRCData(args.particles, norm=args.norm, invert_data=args.invert_data,
-                                     ind_ptcl=ind, window=args.window, datadir=args.datadir,
-                                     window_r=args.window_r, recon_dose_weight=args.recon_dose_weight,
-                                     dose_override=args.dose_override, recon_tilt_weight=args.recon_tilt_weight,
-                                     l_dose_mask=args.l_dose_mask, lazy=args.lazy, sequential_tilt_sampling=args.sequential_tilt_sampling)
+    data = dataset.TiltSeriesMRCData(ptcls_star,
+                                     norm=args.norm,
+                                     invert_data=args.invert_data,
+                                     ind_ptcl=ind,
+                                     ind_img=None,
+                                     window=args.window,
+                                     datadir=args.datadir,
+                                     window_r=args.window_r,
+                                     recon_dose_weight=args.recon_dose_weight,
+                                     dose_override=args.dose_override,
+                                     recon_tilt_weight=args.recon_tilt_weight,
+                                     l_dose_mask=args.l_dose_mask,
+                                     lazy=args.lazy,
+                                     sequential_tilt_sampling=args.sequential_tilt_sampling)
     D = data.D
     nptcls = data.nptcls
     Apix = data.ctf_params[0,1] if data.ctf_params is not None else args.Apix
@@ -231,28 +257,6 @@ def main(args):
 
     # instantiate lattice
     lattice = Lattice(D, extent=args.l_extent, device=device)
-
-    # determine which pixels to decode (cache by related weights_dict keys)
-    flog(f'Constructing baseline circular lattice for decoder with radius {lattice.D // 2}')
-    lattice_mask = lattice.get_circular_mask(lattice.D // 2)  # reconstruct box-inscribed circle of pixels
-    for i, weights_key in enumerate(data.weights_dict.keys()):
-        dec_mask = (data.dec_mask_dict[weights_key] * lattice_mask.view(1, D, D).cpu().numpy()).astype(dtype=bool)  # lattice mask excludes DC and > nyquist frequencies; weights mask excludes > optimal dose
-        data.dec_mask_dict[weights_key] = dec_mask
-        flog(f'Pixels decoded per particle (--l-dose-mask: {args.l_dose_mask} and --l-extent: {args.l_extent}, mask scheme: {i}):  {dec_mask.sum()}')
-
-        # save plots of all weighting schemes
-        weights = data.weights_dict[weights_key]
-        spatial_frequencies = data.spatial_frequencies
-        dose.plot_weight_distribution(weights * dec_mask, spatial_frequencies, args.outdir, weight_distribution_index=i)
-
-    if args.sample_ntilts:
-        assert args.sample_ntilts <= data.ntilts_range[0], \
-            f'The number of tilts requested to be sampled per particle ({args.sample_ntilts}) ' \
-            f'exceeds the number of tilt images for at least one particle ({data.ntilts_range[0]})'
-        data.ntilts_training = args.sample_ntilts
-    else:
-        data.ntilts_training = data.ntilts_range[0]
-    flog(f'Sampling {data.ntilts_training} tilts per particle for training')
 
     # instantiate model
     activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]
@@ -309,7 +313,7 @@ def main(args):
         t2 = dt.now()
         loss_accum = 0
         batch_it = 0
-        for batch_images, batch_rot, batch_trans, batch_ctf, batch_weights, batch_dec_mask, _ in data_generator:
+        for batch_images, batch_rot, batch_trans, batch_ctf, batch_decoder_weights, batch_decoder_mask, batch_indices in data_generator:
             # impression counting
             batch_it += len(batch_images)
 
@@ -318,11 +322,13 @@ def main(args):
             batch_rot = batch_rot.to(device)
             batch_trans = batch_trans.to(device)
             batch_ctf = batch_ctf.to(device)
-            batch_weights = batch_weights.to(device)
-            batch_dec_mask = batch_dec_mask.to(device)
+            batch_decoder_weights = batch_decoder_weights.to(device)
+            batch_decoder_mask = batch_decoder_mask.to(device)
 
             # training minibatch
-            loss_item = train(scaler, model, lattice, batch_images, batch_rot, batch_trans, batch_weights, batch_dec_mask, optim, ctf_params=batch_ctf, use_amp=use_amp)
+            loss_item = train(scaler, model, lattice, batch_images, batch_rot, batch_trans,
+                              batch_decoder_weights, batch_decoder_mask, optim,
+                              ctf_params=batch_ctf, use_amp=use_amp)
             loss_accum += loss_item * len(batch_images)
             if batch_it % args.log_interval == 0:
                 flog(f'# [Train Epoch: {epoch+1}/{args.num_epochs}] [{batch_it}/{nptcls} particles]  loss={loss_item:.6f}')
