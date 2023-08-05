@@ -456,7 +456,7 @@ def get_tiltseries_dose_per_A2_per_tilt(df, ntilts=None):
 
 class GenericStarfile():
     '''
-    Class to handle any star file with any number of blocks
+    Class to parse any star file with any number of blocks to a (dictionary of) pandas dataframes.
     Input            : path to star file
     Attributes:
         sourcefile   : absolute path to source data star file
@@ -466,98 +466,137 @@ class GenericStarfile():
     Methods:
         load         : automatically called by __init__ to read all data from .star
         write        : writes all object data to `outstar` optionally with timestamp
-    Stores (but does not recognize) data blocks not initiated with `loop_` keyword
-    Does not support comments within column headers / data block sections (will give bad results)
+    Notes:
+        Stores data blocks not initiated with `loop_` keyword as a list in the `preambles` attribute
+        Will ignore comments between `loop_` and beginning of data block; will not be preserved if using .write()
+        Will raise a RuntimeError if a comment is found within a data block initiated with `loop`
     '''
 
     def __init__(self, starfile):
         # assert headers == list(df.columns), f'{headers} != {df.columns}'
         self.sourcefile = os.path.abspath(starfile)
-        preambles, blocks = self.load()
+        preambles, blocks = self.skeletonize()
         self.preambles = preambles
-        self.block_names = list(blocks.keys())
+        if len(blocks) > 0:
+            blocks = self.load(blocks)
+            self.block_names = list(blocks.keys())
         self.blocks = blocks
 
     def __len__(self):
         return len(self.block_names)
 
-    def load(self):
-        def parse_preamble(filehandle, line):
+    def skeletonize(self):
+        '''
+        Given absolute path to star file, for each block return the preambles + columns + file lines of data block
+        preambles: list of lists, each list being between the end of previous data block and start of loop block
+        columns
+        '''
+
+        def parse_preamble(filehandle, line_count):
             # parse all lines preceeding column headers (including 'loop_')
             preamble = []
-            while (not 'loop_' in line):
+            while True:
+                line = filehandle.readline()
+                line_count += 1
                 if not line:
-                    print('Warning: end of last data block detected but star file still had additional data')
-                    print('Warning: GenericStarfile object created with data read so far')
-                    print('Warning: Remaining lines of data stored in self.preambles[-1]')
-                    return preamble, None
+                    # end of file detected
+                    return preamble, None, line_count
                 preamble.append(line.strip())
-                line = filehandle.readline()
-            preamble.append(line.strip())
-            block_name = [line for line in preamble if line != ''][-2]
+                if line.startswith('loop_'):
+                    # entering loop
+                    block_name = [line for line in preamble if line != ''][-2]
+                    return preamble, block_name, line_count
 
-            return preamble, block_name
-
-        def parse_single_block(filehandle, line):
-            # parse all lines containing the column headers
+        def parse_single_block(filehandle, line_count):
             header = []
-            line = filehandle.readline()
-            while line[0] == '_':
-                header.append(line.split(' ')[0])
-                position = line.split('#')[-1]
-                assert int(len(header)) == int(position), \
-                    f'Error in .star file header - column index "{position}" not matched to the reported "#" in "{header[-1]}"'
+            while True:
+                # populate header
                 line = filehandle.readline()
-
-            # parse all data lines for this block
-            data = []
-            while not line.strip() == '':
-                data.append(line.split())
+                line_count += 1
+                if line.startswith('_'):
+                    # column header
+                    header.append(line)
+                    continue
+                elif line.startswith('#'):
+                    # line is a comment, preserving
+                    header.append(line)
+                    continue
+                elif len(line.split()) == len([column for column in header if column.startswith('_')]):
+                    # first data line
+                    block_start_line = line_count
+                    break
+                else:
+                    # unrecognized data block format
+                    raise RuntimeError
+            while True:
+                # get length of data block
                 line = filehandle.readline()
-            df = pd.DataFrame(data, columns=header)
+                line_count += 1
+                if not line:
+                    # end of file, therefore end of data block
+                    return header, block_start_line, line_count, True
+                if line.strip() == '':
+                    # end of data block
+                    return header, block_start_line, line_count, False
 
+        preambles = []
+        blocks = {}
+        line_count = 0
+        with(open(self.sourcefile, 'r')) as f:
+            while True:
+                # iterates once per preamble/header/block combination, ends when parse_preamble detects EOF
+                preamble, block_name, line_count = parse_preamble(f, line_count)
+                if preamble:
+                    preambles.append(preamble)
+                if block_name is None:
+                    return preambles, blocks
+
+                header, block_start_line, line_count, end_of_file = parse_single_block(f, line_count)
+                blocks[block_name] = [header, block_start_line, line_count]
+
+                if end_of_file:
+                    return preambles, blocks
+
+    def load(self, blocks):
+
+        def load_single_block(header, block_start_line, block_end_line):
+            columns = [line.split(' ')[0] for line in header if line.startswith('_')]
+            df = pd.read_csv(self.sourcefile,
+                             sep='\s+',
+                             header=None,
+                             names=columns,
+                             index_col=None,
+                             skiprows=block_start_line - 1,
+                             nrows=block_end_line - block_start_line)
             return df
 
-        with(open(self.sourcefile, 'r')) as f:
-            preambles = []
-            blocks = {}
-            while True:
-                line = f.readline()
-                if not line:
-                    # end of file reached normally, exit loop
-                    return preambles, blocks
-                preamble, block_name = parse_preamble(f, line)
-                preambles.append(preamble)
-                if block_name is None:
-                    # end of file reached with extra text following last data block, exit loop
-                    return preambles, blocks
-                df = parse_single_block(f, line)
-                df = guess_dtypes(df)
-                blocks[block_name] = df
+        for block_name in blocks.keys():
+            header, block_start_line, block_end_line = blocks[block_name]
+            blocks[block_name] = load_single_block(header, block_start_line, block_end_line)
+        return blocks
 
     def write(self, outstar, timestamp=False):
-            def write_single_block(filehandle, block_id):
-                df = self.blocks[self.block_names[block_id]]
-                headers = [f'{header} #{i + 1}' for i, header in enumerate(list(df))]
-                f.write('\n'.join(headers))
-                f.write('\n')
-                for row in df.index:
-                    f.write('    '.join([str(value) for value in df.loc[row]]))
-                    f.write('\n')
-
-            f = open(outstar, 'w')
-            if timestamp:
-                f.write('# Created {}\n'.format(dt.now()))
-
-            for block_id, preamble in enumerate(self.preambles):
-                for row in preamble:
-                    f.write(row)
-                    f.write('\n')
-                write_single_block(f, block_id)
+        def write_single_block(filehandle, block_id):
+            df = self.blocks[self.block_names[block_id]]
+            headers = [f'{header} #{i + 1}' for i, header in enumerate(list(df))]
+            f.write('\n'.join(headers))
+            f.write('\n')
+            for row in df.index:
+                f.write('    '.join([str(value) for value in df.loc[row]]))
                 f.write('\n')
 
-            print(f'Wrote {os.path.abspath(outstar)}')
+        f = open(outstar, 'w')
+        if timestamp:
+            f.write('# Created {}\n'.format(dt.now()))
 
+        for block_id, preamble in enumerate(self.preambles):
+            for row in preamble:
+                f.write(row)
+                f.write('\n')
+            write_single_block(f, block_id)
+            f.write('\n')
+
+        print(f'Wrote {os.path.abspath(outstar)}')
 
 class TiltSeriesStarfileCisTEM():
     '''
