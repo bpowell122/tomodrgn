@@ -13,7 +13,7 @@ def add_args(parser):
     parser.add_argument('--tomo-id-col', type=str, default='_rlnMicrographName', help='Name of column in input starfile with unique values per tomogram')
     parser.add_argument('--ptcl-id-col', type=str, default='_rlnGroupName', help='Name of column in input starfile with unique values per particle, '
                                                                                  'if `index` then each row is treated as a unique particle')
-    parser.add_argument('--starfile-source', type=str, default='warp', choices=('warp', 'relion31'), help='Software that created starfile; used to identify particles data block')
+    parser.add_argument('--starfile-source', type=str, default='warp', choices=('warp', 'relion31', 'cistem'), help='Software that created starfile; used to identify particles data block')
     parser.add_argument('--ind', help='selected indices array (.pkl)')
     parser.add_argument('--ind-type', choices=('particle', 'image'), default='particle',
                         help='use indices to filter by particle or by individual image')
@@ -39,10 +39,13 @@ def main(args):
     # ingest star file
     in_star = starfile.GenericStarfile(args.input)
     print(f'Loaded starfile : {args.input}')
+    print(f'Parsing starfile with starfile_source mode: {args.starfile_source}')
     if args.starfile_source == 'warp':
         ptcl_block = 'data_'
     elif args.starfile_source == 'relion31':
         ptcl_block = 'data_particles'
+    elif args.starfile_source == 'cistem':
+        ptcl_block = 'data_'
     else:
         raise ValueError
     print(f'{len(in_star.blocks[ptcl_block])} rows in input star file')
@@ -59,8 +62,9 @@ def main(args):
         print(f'Particles will be filtered by tomogram : {args.tomogram}')
 
     # configure filtering for input data type
-    unique_tomo_header = args.tomo_id_col
-    assert unique_tomo_header in in_star.blocks[ptcl_block].columns, f'{unique_tomo_header} not found in starfile {ptcl_block} block'
+    if args.tomogram:
+        unique_tomo_header = args.tomo_id_col
+        assert unique_tomo_header in in_star.blocks[ptcl_block].columns, f'{unique_tomo_header} not found in starfile {ptcl_block} block'
     if args.ptcl_id_col == 'index':
         unique_particle_header = None
     else:
