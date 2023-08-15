@@ -1,21 +1,23 @@
 import numpy as np
 
 def get_beta_schedule(schedule, n_iterations = None):
-    if type(schedule) == float:
+    try:
+        schedule = float(schedule)
         return ConstantSchedule(schedule)
-    elif schedule == 'a':
-        return LinearSchedule(0.001, 15, 0, 1000000)
-    elif schedule == 'b':
-        return LinearSchedule(5, 15, 200000, 800000)
-    elif schedule == 'c':
-        return LinearSchedule(5, 18, 200000, 800000)
-    elif schedule == 'd':
-        return LinearSchedule(5, 18, 1000000, 5000000)
-    elif schedule == 'e':
-        return CyclicalSchedule(n_iterations)
-    else:
-        raise RuntimeError('Wrong beta schedule. Schedule={}'
-                           .format(schedule))
+    except ValueError:
+        if schedule == 'a':
+            return LinearSchedule(0.001, 15, 0, 1000000)
+        elif schedule == 'b':
+            return LinearSchedule(5, 15, 200000, 800000)
+        elif schedule == 'c':
+            return LinearSchedule(5, 18, 200000, 800000)
+        elif schedule == 'd':
+            return LinearSchedule(5, 18, 1000000, 5000000)
+        elif schedule == 'e':
+            return CyclicalSchedule(n_iterations)
+        else:
+            raise RuntimeError('Wrong beta schedule. Schedule={}'
+                               .format(schedule))
 
 class ConstantSchedule:
     def __init__(self, value):
