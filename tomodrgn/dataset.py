@@ -87,7 +87,12 @@ def window_mask(D, in_rad, out_rad):
     x0, x1 = np.meshgrid(np.linspace(-1, 1, D, endpoint=False, dtype=np.float32), 
                          np.linspace(-1, 1, D, endpoint=False, dtype=np.float32))
     r = (x0**2 + x1**2)**.5
-    mask = np.minimum(1.0, np.maximum(0.0, 1 - (r-in_rad)/(out_rad-in_rad)))
+    mask = np.where((r < out_rad) & (r > in_rad),
+                    (1 + np.cos((r-in_rad)/(out_rad-in_rad) * np.pi)) / 2,
+                    1)
+    mask = np.where(r < out_rad,
+                    mask,
+                    0)
     return mask
 
 class MRCData(data.Dataset):
@@ -256,9 +261,9 @@ class TiltSeriesMRCData(data.Dataset):
     Currently supports initializing mrcfile from .star exported by warp when generating particleseries
     '''
 
-    def __init__(self, ptcls_star, norm=None, invert_data=False, ind_ptcl=None, window=True, datadir=None, window_r=0.85,
-                 recon_dose_weight=False, recon_tilt_weight=False, dose_override=None, l_dose_mask=False, lazy=True,
-                 sequential_tilt_sampling=False, ind_img=None):
+    def __init__(self, ptcls_star, norm=None, invert_data=False, ind_ptcl=None, window=True, datadir=None, window_r=0.8,
+                 window_r_outer=0.9, recon_dose_weight=False, recon_tilt_weight=False, dose_override=None, l_dose_mask=False,
+                 lazy=True, sequential_tilt_sampling=False, ind_img=None):
 
         # filter by test/train split per-image
         if ind_img is not None:
@@ -306,7 +311,7 @@ class TiltSeriesMRCData(data.Dataset):
             # Real space window
             if window:
                 log('Windowing particles...')
-                m = window_mask(nx, window_r, .99)
+                m = window_mask(nx, window_r, window_r_outer)
                 particles[:, :-1, :-1] *= m
 
             # compute HT
@@ -387,6 +392,7 @@ class TiltSeriesMRCData(data.Dataset):
         self.lazy = lazy
         self.window = window
         self.window_r = window_r
+        self.window_r_outer = window_r_outer
         self.invert_data = invert_data
         self.sequential_tilt_sampling = sequential_tilt_sampling
         self.norm = norm if norm is not None else self.lazy_particles_estimate_normalization()
@@ -431,7 +437,7 @@ class TiltSeriesMRCData(data.Dataset):
         if self.lazy:
             images = np.asarray([self.ptcls[i].get() for i in ptcl_img_ind])
             if self.window:
-                m = window_mask(self.D - 1, self.window_r, .99)
+                m = window_mask(self.D - 1, self.window_r, self.window_r_outer)
                 images *= m
             for i, img in enumerate(images):
                 images[i] = fft.ht2_center(img)
@@ -475,7 +481,7 @@ class TiltSeriesMRCData(data.Dataset):
         random_imgs_for_normalization = np.random.choice(self.nimgs, size=n, replace=False)
         imgs = np.asarray([self.ptcls[i].get() for i in random_imgs_for_normalization])
         if self.window:
-            m = window_mask(self.D-1, self.window_r, 0.99)
+            m = window_mask(self.D-1, self.window_r, self.window_r_outer)
             imgs *= m
         for i, img in enumerate(imgs):
             imgs[i] = fft.ht2_center(img)
@@ -506,6 +512,7 @@ class TiltSeriesMRCData(data.Dataset):
                                  window=config['dataset_args']['window'],
                                  datadir=config['dataset_args']['datadir'],
                                  window_r=config['dataset_args']['window_r'],
+                                 window_r_outer=config['dataset_args']['window_r_outer'],
                                  recon_dose_weight=config['training_args']['recon_dose_weight'],
                                  recon_tilt_weight=config['training_args']['recon_tilt_weight'],
                                  dose_override=config['training_args']['dose_override'],

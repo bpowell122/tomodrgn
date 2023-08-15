@@ -258,7 +258,7 @@ class TiltSeriesStarfile():
             return lazyparticles
         else:
             # preallocating numpy array for in-place loading, fourier transform, fourier transform centering, etc
-            particles = np.empty((len(lazyparticles), D+1, D+1), dtype=np.float32)
+            particles = np.zeros((len(lazyparticles), D+1, D+1), dtype=np.float32)
             for i, img in enumerate(lazyparticles): particles[i,:-1,:-1] = img.get().astype(np.float32)
             return particles
 
@@ -301,7 +301,7 @@ class TiltSeriesStarfile():
             return lazyparticles
         else:
             # preallocating numpy array for in-place loading, fourier transform, fourier transform centering, etc
-            particles = np.empty((len(self.df), D+1, D+1), dtype=np.float32)
+            particles = np.zeros((len(self.df), D+1, D+1), dtype=np.float32)
             offset = 0
             for ind_stack, file in zip(ind, mrcs):
                 particles[offset:offset+len(ind_stack), :-1, :-1] = mrc.LazyImageStack(file, dtype, (D,D), ind_stack).get()

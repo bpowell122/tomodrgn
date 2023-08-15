@@ -37,7 +37,8 @@ def add_args(parser):
     group = parser.add_argument_group('Dataset loading and preprocessing')
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
     group.add_argument('--no-window', dest='window', action='store_false', help='Turn off real space windowing of dataset')
-    group.add_argument('--window-r', type=float, default=.85, help='Real space inner windowing radius for cosine falloff to radius 1')
+    group.add_argument('--window-r', type=float, default=.8, help='Real space inner windowing radius for cosine falloff to radius 1')
+    group.add_argument('--window-r-outer', type=float, default=.9, help='Real space outer windowing radius for cosine falloff to radius 1')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
     group.add_argument('--stack-path', type=os.path.abspath, help='For cisTEM image stack only, path to stack.mrc due to file name not present in star file')
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
@@ -138,6 +139,7 @@ def save_config(args, dataset, lattice, model, out_config):
                         ind=args.ind,
                         window=args.window,
                         window_r=args.window_r,
+                        window_r_outer=args.window_r_outer,
                         datadir=args.datadir,
                         sequential_tilt_sampling=args.sequential_tilt_sampling)
     lattice_args = dict(D=lattice.D,
@@ -244,6 +246,7 @@ def main(args):
                                      window=args.window,
                                      datadir=args.datadir,
                                      window_r=args.window_r,
+                                     window_r_outer=args.window_r_outer,
                                      recon_dose_weight=args.recon_dose_weight,
                                      dose_override=args.dose_override,
                                      recon_tilt_weight=args.recon_tilt_weight,
