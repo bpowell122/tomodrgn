@@ -422,21 +422,15 @@ class FTPositionalDecoder(nn.Module):
         # k = coords . rand_freqs
         # expand rand_freqs with singleton dimension along the batch dimensions
         # e.g. dim (1, ..., 1, n_rand_feats, 3)
-        freqs = self.rand_freqs.view(*[1] * (len(coords.shape) - 1), -1, 3) * self.D2     # 1 x 1 x 3*D2 x 3
-
-        # kxkykz = (coords[..., None, 0:3] * freqs)  # compute the x,y,z components of k    # B x N x 3*D2 x 3
-        # k = kxkykz.sum(-1)  # compute k                                                   # B x N x 3*D2
-        # s = torch.sin(k)                                                                  # B x N x 3*D2
-        # c = torch.cos(k)                                                                  # B x N x 3*D2
-        # x = torch.cat([s, c], -1)                                                         # B x N x 3*D2 x 2
-        # x = x.view(*coords.shape[:-1], self.in_dim - self.zdim)                           # B x N x 3*D2*2
+        freqs = self.rand_freqs.view(1, 1, -1, 3) * self.D2     # 1 x 1 x 3*D2 x 3
 
         # compute x,y,z components of k then sum x,y,z components
-        k = (coords[..., None, 0:3] * freqs).sum(-1)
-        x = torch.zeros(*k.shape, 2, dtype=k.dtype, device=k.device)  # preallocate memory to slightly lower allocation requirement
-        x[...,0] = torch.sin(k)
+        k = coords[..., None, 0:3] * freqs                 # 1 x B*N[mask] x 3*D2 x 3
+        k = k.sum(-1)                                      # 1 x B*N[mask] x 3*D2
+        x = torch.zeros((*k.shape, 2), dtype=k.dtype, device=k.device)  # preallocate memory to slightly lower allocation requirement
+        x[...,0] = torch.sin(k)                            # 1 x B*N[mask] x 3*D2 x 2
         x[...,1] = torch.cos(k)
-        x = x.view(*coords.shape[:-1], self.in_dim - self.zdim)
+        x = x.view(*coords.shape[:-1], self.in_dim - self.zdim)   # 1 x B*N[mask] x 3*D2*2
 
         if self.zdim > 0:
             x = torch.cat([x, coords[..., 3:]], -1)
@@ -460,7 +454,6 @@ class FTPositionalDecoder(nn.Module):
 
     def forward(self, lattice):
         '''
-        lattice: B x N x 3+zdim (generally)
         lattice: 1 x B*ntilts*N[mask] x 3+zdim, useful when images are different sizes to avoid ragged tensors
         '''
         # evaluate model on all pixel coordinates for each image
@@ -479,7 +472,7 @@ class FTPositionalDecoder(nn.Module):
             f'lattice[...,0:3].min(): {lattice[...,0:3].min().to(torch.float32)}'
         # convention: only evaluate the -z points
         w = lattice[...,2] > 0.0
-        w_zflipper = torch.ones_like(lattice, device=lattice.device)
+        w_zflipper = torch.ones_like(lattice, device=lattice.device, requires_grad=False)
         w_zflipper[..., 0:3][w] *= -1
         lattice = lattice * w_zflipper  # avoids "modifying tensor in-place" warnings+errors
         # lattice[..., 0:3][w] = -lattice[..., 0:3][w]  # negate lattice coordinates where z > 0
@@ -882,7 +875,7 @@ class TiltSeriesEncoder(nn.Module):
         if self.pooling_function != 'set_encoder':
 
             if self.pooling_function == 'concatenate':
-                batch_pooled_tilts = batch_tilts_intermediate.view(-1, self.out_dimA * self.ntilts)
+                batch_pooled_tilts = batch_tilts_intermediate.view(batch.shape[0], self.out_dimA * self.ntilts)
 
             elif self.pooling_function == 'max':
                 batch_pooled_tilts = batch_tilts_intermediate.max(dim = 1)[0]

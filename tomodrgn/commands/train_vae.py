@@ -184,12 +184,10 @@ def train_batch(scaler, model, lattice, y, rot, tran, cumulative_weights, dec_ma
     B, ntilts, D, D = y.shape
 
     with autocast(enabled=use_amp):
-        if not torch.all(tran == 0):
-            y = lattice.translate_ht(y.view(B * ntilts, -1), tran.view(B * ntilts, 1, 2))
-        y = y.view(B, ntilts, D, D)
-
-        z_mu, z_logvar, z, y_recon, ctf_weights = run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params)
-        loss, gen_loss, kld_loss = loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta, beta_control)
+        y, ctf_weights = preprocess_batch(lattice, y, tran, ctf_params, B, ntilts, D)
+        z_mu, z_logvar, z = encode_batch(model, y, B, ntilts)
+        y_recon = decode_batch(model, lattice, rot, dec_mask, B, ntilts, D, z)
+        loss, gen_loss, kld_loss = loss_function(z_mu, z_logvar, y, y_recon, ctf_weights, cumulative_weights, dec_mask, beta, beta_control)
 
     scaler.scale(loss).backward()
     scaler.step(optim)
@@ -198,42 +196,52 @@ def train_batch(scaler, model, lattice, y, rot, tran, cumulative_weights, dec_ma
     return torch.tensor((loss, gen_loss, kld_loss)).detach().cpu().numpy()
 
 
-def run_batch(model, lattice, y, rot, dec_mask, B, ntilts, D, ctf_params=None):
-    # encode
-    input = y.clone()
+def preprocess_batch(lattice, y, tran, ctf_params, B, ntilts, D):
+    # translate the image
+    if not torch.all(tran == 0):
+        y = lattice.translate_ht(y.view(B * ntilts, -1), tran.view(B * ntilts, 1, 2))
 
+    y = y.view(B, ntilts, D, D)
+
+    # calculate CTF weights
     if not torch.all(ctf_params == 0):
         # phase flip the CTF-corrupted image
-        freqs = lattice.freqs2d.unsqueeze(0).expand(B * ntilts, *lattice.freqs2d.shape) / ctf_params[:, :, 1].view(B * ntilts, 1, 1)
-        ctf_weights = ctf.compute_ctf(freqs, *torch.split(ctf_params.view(B * ntilts, -1)[:, 2:], 1, 1)).view(B, ntilts, D, D)
-        input *= ctf_weights.sign()  # phase flip by the ctf to be all positive amplitudes
+        freqs = lattice.freqs2d.unsqueeze(0).expand(B * ntilts, *lattice.freqs2d.shape).clone()  # one lattice copy per image in batch
+        freqs /= ctf_params[:, :, 1].view(B * ntilts, 1, 1)  # convert units from 1/px to 1/Angstrom
+        ctf_weights = ctf.compute_ctf(freqs, *torch.split(ctf_params.view(B * ntilts, -1)[:, 2:], 1, 1))
+        ctf_weights = ctf_weights.view(B, ntilts, D, D)
+        y *= ctf_weights.sign() # phase flip by CTF to be all positive amplitudes
     else:
         ctf_weights = None
 
-    z_mu, z_logvar = _unparallelize(model).encode(input, B, ntilts)  # ouput is B x zdim, i.e. one value per ptcl (not per img)
+    return y, ctf_weights
+
+
+def encode_batch(model, y, B, ntilts):
+    # encode
+    z_mu, z_logvar = _unparallelize(model).encode(y, B, ntilts)  # ouput is B x zdim, i.e. one value per ptcl (not per img)
     z = _unparallelize(model).reparameterize(z_mu, z_logvar)
 
-    # prepare lattice at masked fourier components
+    return z_mu, z_logvar, z
+
+
+def decode_batch(model, lattice, rot, dec_mask, B, ntilts, D, z):
     # TODO reimplement decoding more cleanly and efficiently with NestedTensors when autograd available: https://github.com/pytorch/nestedtensor
+
+    # prepare lattice at masked fourier components
     input_coords = lattice.coords @ rot  # shape B x ntilts x D*D x 3 from [D*D x 3] @ [B x ntilts x 3 x 3]
     input_coords = input_coords[dec_mask.view(B, ntilts, D * D), :]  # shape np.sum(dec_mask) x 3
-    input_coords = input_coords.unsqueeze(0)  # singleton batch dimension for model to run (dec_mask can have variable # elements per particle, therefore cannot reshape with b > 1)
 
     # slicing by #pixels per particle after dec_mask is applied to indirectly get correct tensors subset for concatenating z with matching particle coords
-    ptcl_pixel_counts = [int(i) for i in torch.sum(dec_mask.view(B, -1), dim=1)]
-    input_coords = torch.cat([_unparallelize(model).cat_z(input_coords_ptcl, z[i].unsqueeze(0)) for i, input_coords_ptcl in enumerate(input_coords.split(ptcl_pixel_counts, dim=1))], dim=1)
-
-    # internally reshape such that batch dimension has length > 1, allowing splitting along batch dimension for DataParallel
-    pseudo_batchsize = utils.first_n_factors(input_coords.shape[1], lower_bound=8)[0]
-    input_coords = input_coords.view(pseudo_batchsize, input_coords.shape[1] // pseudo_batchsize, input_coords.shape[-1])
+    ptcl_pixel_counts = torch.sum(dec_mask.view(B, -1), dim=1)
+    z = torch.repeat_interleave(z, ptcl_pixel_counts, dim=0, output_size=torch.sum(ptcl_pixel_counts))
+    input_coords = torch.cat((input_coords, z), dim=-1)
 
     # decode
+    input_coords = input_coords.unsqueeze(0)  # singleton batch dimension for model to run (dec_mask can have variable # elements per particle, therefore cannot reshape with b > 1)
     y_recon = model(input_coords).view(1, -1)  # 1 x B*ntilts*N[final_mask]
 
-    if ctf_weights is not None:
-        y_recon *= ctf_weights[dec_mask].view(1, -1)
-
-    return z_mu, z_logvar, z, y_recon, ctf_weights
+    return y_recon
 
 
 def _unparallelize(model):
@@ -242,9 +250,12 @@ def _unparallelize(model):
     return model
 
 
-def loss_function(z_mu, z_logvar, y, y_recon, cumulative_weights, dec_mask, beta, beta_control=None):
+def loss_function(z_mu, z_logvar, y, y_recon, ctf_weights, cumulative_weights, dec_mask, beta, beta_control=None):
     # reconstruction error
     y = y[dec_mask].view(1, -1)
+    if ctf_weights is not None:
+        y_recon *= ctf_weights[dec_mask].view(1, -1)  # apply CTF to reconstructed image
+        y *= ctf_weights[dec_mask].sign().view(1, -1)  # undo phase flipping from preprocess_batch
     gen_loss = torch.mean((cumulative_weights[dec_mask].view(1, -1) * ((y_recon - y) ** 2)))
 
     # latent loss
@@ -277,18 +288,10 @@ def eval_z(model, lattice, data, args, device, use_amp=False):
                 batch_ctf = batch_ctf.to(device)
                 batch_tran = batch_tran.to(device)
 
-                # correct for translations
-                if not torch.all(batch_tran == 0):
-                    batch_images = lattice.translate_ht(batch_images.view(B * ntilts, -1), batch_tran.view(B * ntilts, 1, 2))
-                batch_images = batch_images.view(B, ntilts, D, D)
+                # use run_batch to reduce redundant code errors
+                batch_images, ctf_weights = preprocess_batch(lattice, batch_images, batch_tran, batch_ctf, B, ntilts, D)
+                z_mu, z_logvar, z = encode_batch(model, batch_images, B, ntilts)
 
-                # correct for CTF via phase flipping
-                if not torch.all(batch_ctf == 0):
-                    freqs = lattice.freqs2d.unsqueeze(0).expand(B * ntilts, -1, -1) / batch_ctf[:, :, 1].view(B * ntilts, 1, 1)
-                    ctf_weights = ctf.compute_ctf(freqs, *torch.split(batch_ctf.view(B * ntilts, -1)[:, 2:], 1, 1)).view(B, ntilts, D, D)
-                    batch_images *= ctf_weights.sign()
-
-                z_mu, z_logvar = _unparallelize(model).encode(batch_images, B, ntilts)
                 z_mu_all[batch_indices] = z_mu
                 z_logvar_all[batch_indices] = z_logvar
             z_mu_all = z_mu_all.cpu().numpy()
@@ -584,6 +587,7 @@ def main(args):
                     data_test.trans = trans_test
 
         if args.ctf is not None:
+            flog(f'Updating dataset to use CTF parameters from {args.ctf}')
             ctf_params_train = load_ctf_pkl(args.ctf, inds_train)
             assert ctf_params_train.shape == (data_train.nimgs, 9)
             data_train.ctf_params = ctf_params_train
