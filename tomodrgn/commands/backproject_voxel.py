@@ -198,29 +198,7 @@ def main(args):
     # apply lowpass filter
     lowpass_target = Apix/threshold_resolution if args.lowpass is None else args.lowpass
     log(f'Lowpass filtering to {lowpass_target} Å')
-    def lowpass_filter(vol_ft, angpix, lowpass):
-        # get real space box width, and correct for FFT 1-px padding if applied
-        D = vol_ft.shape[0]
-        assert D % 2 == 1, f'Fourier transformed volume must have odd box length, found box length: {D}'
-
-        # calculate frequencies along one axis in units of 1/Å
-        lowest_freq = 1 / (D - 1)
-        freqs_1d_px = np.arange(start=-1 / 2, stop=1 / 2 + lowest_freq, step=lowest_freq)
-        freqs_1d_angstrom = freqs_1d_px / angpix
-
-        # create 3D mask binarized at lowpass frequency
-        freqs_x, freqs_y, freqs_z = np.meshgrid(freqs_1d_angstrom, freqs_1d_angstrom, freqs_1d_angstrom)
-        lowpass_mask = np.where(np.power(freqs_x ** 2 + freqs_y ** 2 + freqs_z ** 2, 0.5) <= 1 / lowpass,
-                                True,
-                                False)
-
-        # apply mask to volume to zero-out higher frequency components
-        if torch.is_tensor(vol_ft):
-            lowpass_mask = torch.tensor(lowpass_mask).to(vol_ft.device)
-        vol_ft = vol_ft * lowpass_mask
-
-        return vol_ft
-    V_lowpass = lowpass_filter(V, angpix = Apix, lowpass = lowpass_target)
+    V_lowpass = utils.lowpass_filter(V, angpix = Apix, lowpass = lowpass_target)
 
     # save volumes
     def save_map(vol, vol_path, Apix):

@@ -238,13 +238,24 @@ def calc_fsc(vol1, vol2, mask = 'none', dilate = 3, dist = 10):
 
 
 def lowpass_filter(vol_ft, angpix, lowpass):
-    # get real space box width, and correct for FFT 1-px padding if applied
+    '''
+    Lowpass-filters a volume in reciprocal space
+    Takes in a reciprocal-space volume array, returns a reciprocal-space volume array of same dtype
+    '''
+    # get real space box width (assumes non-symmetrized box, i.e. even box width)
     D = vol_ft.shape[0]
-    assert D % 2 == 1, f'Fourier transformed volume must have odd box length, found box length: {D}'
+
+    # calculate frequencies along one axis in units of 1/px
+    if D % 2 == 0:
+        # even-sized fourier space box
+        lowest_freq = 1 / D
+        freqs_1d_px = np.arange(start=-1 / 2, stop=1 / 2, step=lowest_freq)
+    else:
+        # odd-sized box (from fft.symmetrize_ht)
+        lowest_freq = 1 / (D - 1)
+        freqs_1d_px = np.arange(start=-1 / 2, stop=1 / 2 + lowest_freq, step=lowest_freq)
 
     # calculate frequencies along one axis in units of 1/Å
-    lowest_freq = 1 / (D - 1)
-    freqs_1d_px = np.arange(start=-1 / 2, stop=1 / 2 + lowest_freq, step=lowest_freq)
     freqs_1d_angstrom = freqs_1d_px / angpix
 
     # create 3D mask binarized at lowpass frequency

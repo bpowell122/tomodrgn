@@ -34,6 +34,7 @@ def add_args(parser):
     group.add_argument('--pc-ondata', action='store_true', help='Find closest on-data latent point to each PC percentile')
     group.add_argument('--ksample', type=int, default=20, help='Number of kmeans samples to generate (default: %(default)s)')
     group.add_argument('--invert', action='store_true', help='Invert contrast of output volumes')
+    group.add_argument('--lowpass', type=float, default=None, help='Lowpass filter to this resolution in Å')
     return parser
 
 def analyze_z1(z, outdir, vg):
@@ -184,7 +185,7 @@ def main(args):
     z = utils.load_pkl(zfile)
     zdim = z.shape[1]
 
-    vol_args = dict(Apix=args.Apix, downsample=args.downsample, flip=args.flip, cuda=args.device, invert=args.invert)
+    vol_args = dict(Apix=args.Apix, downsample=args.downsample, flip=args.flip, cuda=args.device, invert=args.invert, lowpass=args.lowpass)
     vg = VolumeGenerator(weights, config, vol_args, skip_vol=args.skip_vol)
 
     if zdim == 1:

@@ -39,10 +39,11 @@ def add_args(parser):
     group.add_argument('--zfile', type=os.path.abspath, help='Text/.pkl file with z-values to evaluate')
 
     group = parser.add_argument_group('Volume arguments')
-    group.add_argument('--Apix', type=float, default=1, help='Pixel size to add to output .mrc header')
+    group.add_argument('--Apix', type=float, default=1, help='Pixel size to add to output .mrc header. If downsampling, need to manually adjust.')
     group.add_argument('--flip', action='store_true', help='Flip handedness of output volume')
     group.add_argument('--invert', action='store_true', help='Invert contrast of output volume')
     group.add_argument('-d','--downsample', type=int, help='Downsample volumes to this box size (pixels)')
+    group.add_argument('--lowpass', type=float, default=None, help='Lowpass filter to this resolution in Å. Requires settings --Apix.')
 
     return parser
 
@@ -128,10 +129,12 @@ def main(args):
             fft_boxsize = args.downsample + 1
             coords = lattice.get_downsample_coords(fft_boxsize)
             extent = lattice.extent * (args.downsample / (D - 1))
+            iht_downsample_scaling_correction = args.downsample ** 3 / (D - 1) ** 3
         else:
             fft_boxsize = lattice.D
             coords = lattice.coords
             extent = lattice.extent
+            iht_downsample_scaling_correction = 1.
 
         ### Multiple z ###
         if args.z_start or args.zfile:
@@ -195,13 +198,17 @@ def main(args):
                 coords_zz[:len(zz), :, :, 3:] = zz.unsqueeze(1).unsqueeze(1)
                 vols_batch = model(coords_zz, keep, norm)
                 vols_batch = vols_batch.cpu().numpy()
+                vols_batch *= iht_downsample_scaling_correction
+                if args.lowpass:
+                    vols_batch = np.array([fft.ihtn_center(utils.lowpass_filter(fft.htn_center(vol), angpix=args.Apix, lowpass=args.lowpass))
+                                           for vol in vols_batch], dtype=np.float32)
                 if args.flip:
                     vols_batch = vols_batch[:, ::-1]
                 if args.invert:
                     vols_batch *= -1
                 out_mrcs = [f'{args.o}/{args.prefix}{i*args.batch_size+j:03d}.mrc' for j in range(len(zz))]
                 pool.starmap(mrc.write, zip(out_mrcs,
-                                            vols_batch[:len(out_mrcs)],
+                                            vols_batch[:len(out_mrcs)].astype(np.float32),
                                             itertools.repeat(None, len(out_mrcs)),
                                             itertools.repeat(args.Apix, len(out_mrcs))))
             pool.close()
@@ -211,6 +218,9 @@ def main(args):
             z = np.array(args.z)
             log(z)
             vol = model(coords, fft_boxsize, extent, norm, z)
+            vol *= iht_downsample_scaling_correction
+            if args.lowpass:
+                vol = fft.ihtn_center(utils.lowpass_filter(fft.htn_center(vol), angpix=args.Apix, lowpass=args.lowpass))
             if args.flip:
                 vol = vol[::-1]
             if args.invert:
@@ -220,6 +230,9 @@ def main(args):
         ### No latent, train_nn eval ###
         else:
             vol = model(coords, fft_boxsize, extent, norm)
+            vol *= iht_downsample_scaling_correction
+            if args.lowpass:
+                vol = fft.ihtn_center(utils.lowpass_filter(fft.htn_center(vol), angpix=args.Apix, lowpass=args.lowpass))
             if args.flip:
                 vol = vol[::-1]
             if args.invert:

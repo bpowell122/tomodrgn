@@ -420,7 +420,8 @@ def plot_projections(imgs, labels=None):
     return fig, axes
 
 def gen_volumes(weights, config, zfile, outdir, cuda=None,
-                Apix=None, flip=False, downsample=None, invert=None):
+                Apix=None, flip=False, downsample=None, invert=None,
+                lowpass=None):
     '''Call cryodrgn eval_vol to generate volumes at specified z values
     Input:
         weights (str): Path to model weights .pkl
@@ -432,6 +433,7 @@ def gen_volumes(weights, config, zfile, outdir, cuda=None,
         flip (bool): Flag to flip chirality of output volumes
         downsample (int or None): Generate volumes at this box size
         invert (bool): Invert contrast of output volumes
+        lowpass (float or None): Lowpass filter to this resolution in Å
     '''
     cmd = f'tomodrgn eval_vol --weights {weights} --config {config} --zfile {zfile} -o {outdir}'
     if Apix is not None:
@@ -442,6 +444,8 @@ def gen_volumes(weights, config, zfile, outdir, cuda=None,
         cmd += f' -d {downsample}'
     if invert:
         cmd += f' --invert'
+    if lowpass is not None:
+        cmd += f' --lowpass {lowpass}'
     if cuda is not None:
         cmd = f'CUDA_VISIBLE_DEVICES={cuda} {cmd}'
     log(f'Running command:\n{cmd}')

@@ -37,14 +37,20 @@ def warnexists(out):
 
 
 def downsample_images(batch_original, start, stop):
-    batch_original = torch.fft.fftshift(torch.fft.fft2(torch.fft.fftshift(batch_original, dim=(-1, -2))), dim=(-1, -2))
-    batch_original = batch_original.real - batch_original.imag
+    # calculate 2-D DHT
+    batch_ht = fft.ht2_center_torch(batch_original)
 
-    batch_new = batch_original[:, start:stop, start:stop]
+    # crop hartley-transformed image stack
+    batch_ht_cropped = batch_ht[:, start:stop, start:stop]
 
-    batch_new = torch.fft.fftshift(torch.fft.fft2(torch.fft.fftshift(batch_new, dim=(-1, -2))), dim=(-1, -2))
-    batch_new /= (batch_new.shape[-1] * batch_new.shape[-2])
-    return batch_new.real - batch_new.imag
+    # inverse hartley transform image stack
+    batch_real_cropped = fft.iht2_center(batch_ht_cropped)
+
+    # fix image stack scaling (due to cropping during transform) and dtype (due to numpy type promotion during transform)
+    batch_real_cropped *= (stop-start)**2 / batch_original.shape[-1]**2
+    batch_real_cropped = batch_real_cropped.astype(batch_original.dtype)
+
+    return batch_real_cropped
 
 
 def write_downsampled_starfile(args, oldD, newD, n_particles, out_mrcs):
@@ -130,16 +136,31 @@ def main(args):
     start = int(oldD/2 - newD/2)
     stop = int(oldD/2 + newD/2)
 
+    old_apix = mrc.parse_header(args.input).get_apix()
+    new_apix = old_apix * oldD / newD
+
     log('Downsampling...')
     ### Downsample volume ###
     if args.is_vol:
-        oldft = fft.htn_center(old)
-        log(oldft.shape)
-        newft = oldft[start:stop,start:stop,start:stop]
-        log(newft.shape)
-        new = fft.ihtn_center(newft).astype(np.float32)
+        log(old.shape)
+
+        # hartley transform, crop the hartley transformed volume, and return to real space
+        vol_ht = fft.htn_center(old)
+        vol_ht_cropped = vol_ht[start:stop, start:stop, start:stop]
+        vol_real_cropped = fft.ihtn_center(vol_ht_cropped)
+        log(vol_real_cropped.shape)
+
+        # fix volume scaling (due to cropping during transform) and dtype (due to numpy type promotion during transform)
+        vol_real_cropped *= newD ** 3 / oldD ** 3
+        vol_real_cropped = vol_real_cropped.astype(old.dtype)
+
+        # write to disk
         log(f'Saving {args.o}')
-        mrc.write(args.o, new, is_vol=True)
+        mrc.write(args.o,
+                  vol_real_cropped,
+                  Apix= new_apix,
+                  is_vol=True)
+
 
     ### Downsample images ###
     elif args.chunk is None:
@@ -156,7 +177,10 @@ def main(args):
 
         log(new.shape)
         log('Saving {}'.format(args.o))
-        mrc.write(out_mrcs, new.astype(np.float32), is_vol=False)
+        mrc.write(out_mrcs,
+                  new.astype(np.float32, copy=False),
+                  Apix=new_apix,
+                  is_vol=False)
 
     ### Downsample images, saving chunks of N images ###
     else:
@@ -178,7 +202,10 @@ def main(args):
 
             log(new.shape)
             log(f'Saving {out_mrcs[i]}')
-            mrc.write(out_mrcs[i], new, is_vol=False)
+            mrc.write(out_mrcs[i],
+                      new.astype(np.float32, copy=False),
+                      Apix=new_apix,
+                      is_vol=False)
 
         # Write a text file with all chunks
         out_txt = '{}.txt'.format(os.path.splitext(args.o)[0])
