@@ -70,10 +70,10 @@ def main(args):
     if args.ind is not None:
         log(f'Reading supplied particle indices {args.ind}')
         ind_ptcls = utils.load_pkl(args.ind)
-        if args.first:
+        if args.first is not None:
             ind_ptcls = ind_ptcls[:args.first]
     else:
-        if args.first:
+        if args.first is not None:
             ind_ptcls = np.arange(args.first)
         else:
             ind_ptcls = np.arange(len(ptcls_star.get_ptcl_img_indices()))
@@ -83,7 +83,7 @@ def main(args):
     ind_ptcls_half1 = np.sort(np.random.choice(ind_ptcls, size=len(ind_ptcls)//2, replace=False))
     ind_ptcls_half2 = np.sort(np.array(list(set(ind_ptcls) - set(ind_ptcls_half1))))
 
-    data_half1 = dataset.TiltSeriesMRCData(args.particles,
+    data_half1 = dataset.TiltSeriesMRCData(ptcls_star,
                                            norm=(0,1),
                                            invert_data=args.invert_data,
                                            ind_ptcl=ind_ptcls_half1,
@@ -94,7 +94,8 @@ def main(args):
                                            l_dose_mask=False,
                                            lazy=False,
                                            sequential_tilt_sampling=True)
-    data_half2 = dataset.TiltSeriesMRCData(args.particles,
+    ptcls_star = starfile.TiltSeriesStarfile.load(args.particles)  # re-load the star file object because loading dataset with ind filtering applies filtering in-place
+    data_half2 = dataset.TiltSeriesMRCData(ptcls_star,
                                            norm=(0,1),
                                            invert_data=args.invert_data,
                                            ind_ptcl=ind_ptcls_half2,
