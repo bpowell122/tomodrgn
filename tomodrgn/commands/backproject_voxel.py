@@ -180,7 +180,7 @@ def main(args):
     V_half2 /= counts_half2
 
     # calculate map-map FSC
-    threshold_correlation = 0.5
+    threshold_correlation = 0.143
     x, fsc = utils.calc_fsc(fft.ihtn_center(V_half1[0:-1,0:-1,0:-1].cpu().numpy()),
                             fft.ihtn_center(V_half2[0:-1,0:-1,0:-1].cpu().numpy()),
                             mask='soft')
