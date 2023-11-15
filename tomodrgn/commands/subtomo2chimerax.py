@@ -18,17 +18,21 @@ def add_args(parser):
     parser.add_argument('starfile', type=os.path.abspath, help='Input particle_volumeseries starfile from Warp subtomogram export')
     parser.add_argument('-o', '--outfile', type=os.path.abspath, required=True, help='Output .cxc script to be opened in ChimeraX')
     parser.add_argument('--tomoname', type=str, help='Name of tomogram in input starfile for which to display tomoDRGN vols in ChimeraX')
-    parser.add_argument('--vols-dir', type=os.path.abspath, help='Path to tomoDRGN reconstructed volumes')
-    parser.add_argument('--vol-path', type=os.path.abspath, help='Path to single consensus volume (instead of tomoDRGN volumes)')
-    parser.add_argument('--ind', type=os.path.abspath, help='Ind.pkl used in training run that produced volumes in vols-dir (if applicable)')
     parser.add_argument('--tomo-id-col-override', type=str, help='Name of column in input starfile to filter by --tomoname')
     parser.add_argument('--star-apix-override', type=float, help='Override pixel size of input particle_volumeseries starfile (A/px)')
-    parser.add_argument('--vols-apix-override', type=float, help='Override pixel size of tomoDRGN-reconstructed particle volumes (A/px)')
+    parser.add_argument('--ind', type=os.path.abspath, help='Ind.pkl used in training run that produced volumes in vols-dir (if applicable)')
+    parser.add_argument('--mode', choices=('volumes', 'volume', 'markers'), default='markers', help='Whether to render tomogram scene with unique volumes per particle, a single volume for all particles, or markers for each particle')
+
+    group = parser.add_argument_group('Volume specification options')
+    group.add_argument('--vols-dir', type=os.path.abspath, help='Path to tomoDRGN reconstructed volumes')
+    group.add_argument('--vol-path', type=os.path.abspath, help='Path to single consensus volume (instead of tomoDRGN volumes)')
+    group.add_argument('--vols-apix-override', type=float, help='Override pixel size of tomoDRGN-reconstructed particle volumes (A/px)')
 
     group = parser.add_argument_group('ChimeraX rendering options')
     group.add_argument('--vols-render-level', type=float, default=0.7, help='Isosurface level to render all tomoDRGN reconstructed volumes in ChimeraX')
     group.add_argument('--coloring-labels', type=os.path.abspath, help='labels.pkl file used to assign colors to each volume (typically kmeans labels.pkl')
     group.add_argument('--matplotlib-colormap', type=str, help='Colormap to apply to --coloring-labels (default = ChimeraX color scheme per label value) from https://matplotlib.org/stable/tutorials/colors/colormaps.html (e.g. tab10)')
+    group.add_argument('--marker-radius-angstrom', type=float, help='Radius of markers if `mode` is set to `markers`')
 
     return parser
 
@@ -79,18 +83,24 @@ def main(args):
     df_tomo = ptcl_star.blocks['data_'][ptcl_star.blocks['data_'][tomo_id_col] == args.tomoname]
 
     # load the first tomodrgn vol to get boxsize and pixel size
-    if args.vols_dir:
-        log(f'Enumerating volumes in {args.vols_dir}')
-        all_vols = os.listdir(os.path.abspath(args.vols_dir))
-        all_vols = [os.path.join(args.vols_dir, vol) for vol in all_vols if vol.endswith('.mrc')]
-    elif args.vol_path:
-        assert args.vol_path.endswith('.mrc')
-        all_vols = [os.path.abspath(args.vol_path)]
+    if args.mode =='volumes' or args.mode == 'volume':
+        if args.vols_dir is not None:
+            log(f'Enumerating volumes in {args.vols_dir}')
+            all_vols = os.listdir(os.path.abspath(args.vols_dir))
+            all_vols = [os.path.join(args.vols_dir, vol) for vol in all_vols if vol.endswith('.mrc')]
+        elif args.vol_path is not None:
+            assert args.vol_path is not None
+            assert args.vol_path.endswith('.mrc')
+            all_vols = [os.path.abspath(args.vol_path)]
+        vol, header = mrc.parse_mrc(all_vols[0])
+        vol_box = vol.shape[0]
+        vol_apix = header.get_apix() if args.vols_apix_override is None else args.vols_apix_override
+    elif args.mode == 'markers':
+        # required for rotations to be about the origin with rotation approach used below
+        vol_box = 1
+        vol_apix = 0
     else:
-        raise RuntimeError('One of --vols-dir or --vol-path is required')
-    vol, header = mrc.parse_mrc(all_vols[0])
-    vol_box = vol.shape[0]
-    vol_apix = header.get_apix() if args.vols_apix_override is None else args.vols_apix_override
+        raise RuntimeError(f'Unknown mode spefied: {args.mode=}')
 
     # check number of volumes is consistent between df_tomo and all_vols
     if args.vols_dir:
@@ -168,8 +178,10 @@ def main(args):
             # write volume opening command
             if args.vol_path:
                 f.write(f'open "{all_vols[0]}"\n')
-            else:
+            elif args.vols_dir:
                 f.write(f'open "{args.vols_dir}/vol_{i:03d}.mrc"\n')
+            elif args.mode == 'markers':
+                f.write(f'marker #{i+1} position 0,0,0 radius {args.marker_radius_angstrom}\n')
 
             # prepare rotation matrix
             eulers_relion = df_tomo.iloc[i][rots_cols].to_numpy(dtype=np.float32)
@@ -199,13 +211,15 @@ def main(args):
 
             f.write('\n')
 
-        f.write(f'\nvolume #{1:d}-{len(df_tomo):d} step 1 level {args.vols_render_level:f}\n\n')
+        if args.mode == 'volumes' or args.mode == 'volume':
+            f.write(f'\nvolume #{1:d}-{len(df_tomo):d} step 1 level {args.vols_render_level:f}\n\n')
+
         f.write('view orient')
+
     log(f'Saved chimerax commands to {args.outfile}')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     args = add_args(parser).parse_args()
-    utils._verbose = args.verbose
     main(args)
