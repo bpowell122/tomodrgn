@@ -201,8 +201,9 @@ def main(args):
                 vols_batch = vols_batch.cpu().numpy()
                 vols_batch *= iht_downsample_scaling_correction
                 if args.lowpass:
-                    vols_batch = np.array([fft.ihtn_center(utils.lowpass_filter(fft.htn_center(vol), angpix=args.Apix, lowpass=args.lowpass))
-                                           for vol in vols_batch], dtype=np.float32)
+                    vols_batch = fft.ht3_center(vols_batch)
+                    vols_batch = np.array([utils.lowpass_filter(vol, angpix=args.Apix, lowpass=args.lowpass) for vol in vols_batch], dtype=np.float32)
+                    vols_batch = fft.iht3_center(vols_batch)
                 if args.flip:
                     vols_batch = vols_batch[:, ::-1]
                 if args.invert:
@@ -219,9 +220,10 @@ def main(args):
             z = np.array(args.z)
             log(z)
             vol = model(coords, fft_boxsize, extent, norm, z)
+            vol = vol.cpu().numpy()
             vol *= iht_downsample_scaling_correction
             if args.lowpass:
-                vol = fft.ihtn_center(utils.lowpass_filter(fft.htn_center(vol), angpix=args.Apix, lowpass=args.lowpass))
+                vol = fft.iht3_center(utils.lowpass_filter(fft.ht3_center(vol), angpix=args.Apix, lowpass=args.lowpass))
             if args.flip:
                 vol = vol[::-1]
             if args.invert:
@@ -231,9 +233,10 @@ def main(args):
         ### No latent, train_nn eval ###
         else:
             vol = model(coords, fft_boxsize, extent, norm)
+            vol = vol.cpu().numpy()
             vol *= iht_downsample_scaling_correction
             if args.lowpass:
-                vol = fft.ihtn_center(utils.lowpass_filter(fft.htn_center(vol), angpix=args.Apix, lowpass=args.lowpass))
+                vol = fft.iht3_center(utils.lowpass_filter(fft.ht3_center(vol), angpix=args.Apix, lowpass=args.lowpass))
             if args.flip:
                 vol = vol[::-1]
             if args.invert:

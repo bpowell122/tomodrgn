@@ -1,6 +1,9 @@
 import numpy as np
 import torch
 
+
+### FOURIER TRANSFORM - 2D ###
+
 def fft2_center(img):
     '''
     Batch-vectorized 2-D DFT of an even-box sized image(s) as numpy array

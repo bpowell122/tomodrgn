@@ -182,8 +182,8 @@ def main(args):
 
     # calculate map-map FSC
     threshold_correlation = 0.143
-    x, fsc = utils.calc_fsc(fft.ihtn_center(V_half1[0:-1,0:-1,0:-1].cpu().numpy()),
-                            fft.ihtn_center(V_half2[0:-1,0:-1,0:-1].cpu().numpy()),
+    x, fsc = utils.calc_fsc(fft.iht3_center(V_half1[0:-1,0:-1,0:-1].cpu().numpy()),
+                            fft.iht3_center(V_half2[0:-1,0:-1,0:-1].cpu().numpy()),
                             mask='soft')
     threshold_resolution = x[-1] if np.all(fsc >= threshold_correlation) else x[np.argmax(fsc < threshold_correlation)]
     log(f'Map-map FSC falls below correlation {threshold_correlation} at resolution {Apix/threshold_resolution} Å ({threshold_resolution} 1/px)')
@@ -203,7 +203,7 @@ def main(args):
 
     # save volumes
     def save_map(vol, vol_path, Apix):
-        vol = fft.ihtn_center(vol[0:-1,0:-1,0:-1].cpu().numpy())
+        vol = fft.iht3_center(vol[0:-1,0:-1,0:-1].cpu().numpy())
         if args.flip: vol = vol[::-1]
         mrc.write(vol_path, vol.astype('float32'), Apix=Apix)
         log(f'Wrote {vol_path}')

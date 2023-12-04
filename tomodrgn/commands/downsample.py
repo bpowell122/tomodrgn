@@ -44,7 +44,7 @@ def downsample_images(batch_original, start, stop):
     batch_ht_cropped = batch_ht[:, start:stop, start:stop]
 
     # inverse hartley transform image stack
-    batch_real_cropped = fft.iht2_center(batch_ht_cropped)
+    batch_real_cropped = fft.iht2_center_torch(batch_ht_cropped)
 
     # fix image stack scaling (due to cropping during transform) and dtype (due to numpy type promotion during transform)
     batch_real_cropped *= (stop-start)**2 / batch_original.shape[-1]**2
@@ -145,9 +145,9 @@ def main(args):
         log(old.shape)
 
         # hartley transform, crop the hartley transformed volume, and return to real space
-        vol_ht = fft.htn_center(old)
+        vol_ht = fft.ht3_center(old)
         vol_ht_cropped = vol_ht[start:stop, start:stop, start:stop]
-        vol_real_cropped = fft.ihtn_center(vol_ht_cropped)
+        vol_real_cropped = fft.iht3_center(vol_ht_cropped)
         log(vol_real_cropped.shape)
 
         # fix volume scaling (due to cropping during transform) and dtype (due to numpy type promotion during transform)

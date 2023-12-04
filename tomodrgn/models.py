@@ -358,7 +358,7 @@ class PositionalDecoder(nn.Module):
                 y = y.view(D,D).cpu().numpy()
             vol_f[i] = y
         vol_f = vol_f*norm[1]+norm[0]
-        vol = fft.ihtn_center(vol_f[0:-1,0:-1,0:-1]) # remove last +k freq for inverse FFT
+        vol = fft.iht3_center(vol_f[0:-1,0:-1,0:-1]) # remove last +k freq for inverse FFT
         return vol
 
 class FTPositionalDecoder(nn.Module):
@@ -516,7 +516,7 @@ class FTPositionalDecoder(nn.Module):
                 vol_f[i] = slice_.view(D, D)
         vol_f = vol_f.cpu().numpy()
         vol_f = vol_f * norm[1] + norm[0]
-        vol = fft.ihtn_center(vol_f[:-1, :-1, :-1])  # remove last +k freq for inverse FFT
+        vol = fft.iht3_center(vol_f[:-1, :-1, :-1])  # remove last +k freq for inverse FFT
         return vol
 
     def eval_volume_batch(self, coords_zz, keep, norm):
@@ -541,7 +541,7 @@ class FTPositionalDecoder(nn.Module):
                 slice_[:, keep[0, i]] = y.to(slice_.dtype)
                 batch_vol_f[:, i] = slice_.view(batch_size, D, D)
         batch_vol_f = batch_vol_f * norm[0, 1] + norm[0, 0]
-        batch_vol = torch.stack([fft.ihtn_center_torch(vol_f[:-1, :-1, :-1]) for vol_f in batch_vol_f], dim=0)  # remove last +k freq for inverse FFT
+        batch_vol = fft.iht3_center_torch(batch_vol_f[:, -1, :-1, :-1])  # remove last +k freq for inverse FFT
         return batch_vol
 
 
@@ -646,7 +646,7 @@ class FTSliceDecoder(nn.Module):
             vol_f[i] = y
         vol_f = vol_f*norm[1]+norm[0]
         vol_f = utils.zero_sphere(vol_f)
-        vol = fft.ihtn_center(vol_f[:-1,:-1,:-1]) # remove last +k freq for inverse FFT
+        vol = fft.iht3_center(vol_f[:-1,:-1,:-1]) # remove last +k freq for inverse FFT
         return vol
 
 class VAE(nn.Module):

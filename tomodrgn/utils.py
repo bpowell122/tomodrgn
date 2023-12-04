@@ -223,8 +223,8 @@ def calc_fsc(vol1, vol2, mask = 'none', dilate = 3, dist = 10):
     vol2 *= mask
 
     # FFT volumes
-    vol1_ft = fft.fftn_center(vol1)
-    vol2_ft = fft.fftn_center(vol2)
+    vol1_ft = fft.fft3_center(vol1)
+    vol2_ft = fft.fft3_center(vol2)
 
 
     # calculate the FSC via labeled shells (frequencies > Nyquist share a bin_label that is excluded by `index=bins`)
