@@ -541,7 +541,7 @@ class FTPositionalDecoder(nn.Module):
                 slice_[:, keep[0, i]] = y.to(slice_.dtype)
                 batch_vol_f[:, i] = slice_.view(batch_size, D, D)
         batch_vol_f = batch_vol_f * norm[0, 1] + norm[0, 0]
-        batch_vol = fft.iht3_center_torch(batch_vol_f[:, -1, :-1, :-1])  # remove last +k freq for inverse FFT
+        batch_vol = fft.iht3_center_torch(batch_vol_f[:, :-1, :-1, :-1])  # remove last +k freq for inverse FFT
         return batch_vol
 
 
