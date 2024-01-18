@@ -207,7 +207,7 @@ def write_labels_rgba_by_model(df_one_tomo, outdir_one_tomo):
             f.write('\n')
 
 
-def write_mapback_script(df_one_tomo, outdir_one_tomo, all_vols, rots_cols, trans_cols, star_apix, vol_box, vol_apix, marker_radius_angstrom):
+def write_mapback_script(df_one_tomo, outdir_one_tomo, all_vols, rots_cols, trans_cols, args):
     # write commands for each volume
     with open(f'{outdir_one_tomo}/mapback.cxc', 'w') as f:
         for i in range(len(df_one_tomo)):
@@ -217,7 +217,7 @@ def write_mapback_script(df_one_tomo, outdir_one_tomo, all_vols, rots_cols, tran
             elif args.vols_dir:
                 f.write(f'open "{os.path.basename(all_vols[i])}"\n')
             elif args.mode == 'markers':
-                f.write(f'marker #{i+1} position 0,0,0 radius {marker_radius_angstrom}\n')
+                f.write(f'marker #{i+1} position 0,0,0 radius {args.marker_radius_angstrom}\n')
 
             # prepare rotation matrix
             eulers_relion = df_one_tomo.iloc[i][rots_cols].to_numpy(dtype=np.float32)
@@ -225,7 +225,7 @@ def write_mapback_script(df_one_tomo, outdir_one_tomo, all_vols, rots_cols, tran
 
             # prepare tomogram-scale translations
             coord_px = df_one_tomo.iloc[i][trans_cols].to_numpy(dtype=np.float32)
-            coord_ang = coord_px * star_apix
+            coord_ang = coord_px * args.star_apix
 
             # incorporate translations due to refinement
             if '_rlnOriginXAngst' in df_one_tomo.columns:
@@ -233,7 +233,7 @@ def write_mapback_script(df_one_tomo, outdir_one_tomo, all_vols, rots_cols, tran
                 coord_ang -= shift_ang
 
             # incorporate translations due to box rotation
-            vol_radius_ang = (np.array([vol_box, vol_box, vol_box]) - 1) / 2 * vol_apix
+            vol_radius_ang = (np.array([args.vol_box, args.vol_box, args.vol_box]) - 1) / 2 * args.vol_apix
             shift_volrot_ang = np.matmul(rot, -vol_radius_ang.transpose())
             coord_ang += shift_volrot_ang
 
@@ -260,7 +260,7 @@ def main(args):
     ptcl_star = starfile.GenericStarfile(args.starfile)
 
     # validate star file metadata
-    rots_cols, trans_cols, star_apix, tomo_id_col = validate_starfile(args, ptcl_star)
+    rots_cols, trans_cols, args.star_apix, tomo_id_col = validate_starfile(args, ptcl_star)
 
     # filter by indices used during training (if used)
     if args.ind is not None:
@@ -310,7 +310,7 @@ def main(args):
 
         # load the first tomodrgn vol to get boxsize and pixel size
         args.vols_dir = outdir_one_tomo if args.mode == 'volumes' else None
-        vol_box, vol_apix, all_vols = validate_rendering_mode(args)
+        args.vol_box, args.vol_apix, all_vols = validate_rendering_mode(args)
 
         # write labels/RGBa in this tomogram
         log('Saving key of unique labels : RGBA specification : chimerax models')
@@ -318,7 +318,7 @@ def main(args):
 
         # write mapback cxc for this tomogram
         log('Saving .cxc file to view subtomogram map-back')
-        write_mapback_script(df_one_tomo, outdir_one_tomo, all_vols, rots_cols, trans_cols, star_apix, vol_box, vol_apix, args.marker_radius_angstrom)
+        write_mapback_script(df_one_tomo, outdir_one_tomo, all_vols, rots_cols, trans_cols, args)
 
 
 if __name__ == '__main__':
