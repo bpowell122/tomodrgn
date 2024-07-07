@@ -7,6 +7,7 @@ import pandas as pd
 from datetime import datetime as dt
 import os
 import matplotlib.pyplot as plt
+from typing import TextIO
 
 from tomodrgn import mrc, utils
 from tomodrgn.mrc import LazyImage
@@ -473,7 +474,6 @@ class GenericStarfile():
     '''
 
     def __init__(self, starfile):
-        # assert headers == list(df.columns), f'{headers} != {df.columns}'
         self.sourcefile = os.path.abspath(starfile)
         preambles, blocks = self.skeletonize()
         self.preambles = preambles
@@ -485,14 +485,23 @@ class GenericStarfile():
     def __len__(self):
         return len(self.block_names)
 
-    def skeletonize(self):
+    def skeletonize(self) -> tuple[list[list[str]], dict[str, [list[str], int, int]]]:
         '''
-        Given absolute path to star file, for each block return the preambles + columns + file lines of data block
-        preambles: list of lists, each list being between the end of previous data block and start of loop block
-        columns
+        Parse star file for key data including preamble lines, header lines, and first and last row numbers associated with each data block. Does not load the entire file.
+        :return: preambles: list (for each data block) of lists (each line preceeding column header lines and following data rows, as relevant)
+        :return: blocks: dict mapping block names (e.g. `data_particles`) to a list of constituent column headers (e.g. `_rlnImageName), the first file line containing the data values of that block, and the last file line containing data values of that block
         '''
 
-        def parse_preamble(filehandle, line_count):
+        def parse_preamble(filehandle: TextIO,
+                           line_count: int) -> tuple[list[str], str | None, int]:
+            '''
+            Parse a star file preamble (the lines preceeding column header lines and following data rows, as relevant)
+            :param filehandle: pre-existing file handle from which to read the star file
+            :param line_count: the currently active line number in the star file
+            :return: preamble: list of lines comprising the preamble section
+            :return: block_name: the name of the data block following the preamble section, or None if no data block follows
+            :return: line_count: the currently active line number in the star file after parsing the preamble
+            '''
             # parse all lines preceeding column headers (including 'loop_')
             preamble = []
             while True:
@@ -507,19 +516,33 @@ class GenericStarfile():
                     block_name = [line for line in preamble if line != ''][-2]
                     return preamble, block_name, line_count
 
-        def parse_single_block(filehandle, line_count):
+        def parse_single_block(filehandle: TextIO,
+                               line_count: int) -> tuple[list[str], int, int, bool]:
+            '''
+            Parse a single data block of a star file
+            :param filehandle: pre-existing file handle from which to read the star file
+            :param line_count: the currently active line number in the star file
+            :return: header: list of lines comprising the column headers of the data block
+            :return: block_start_line: the first file line containing the data values of the data block
+            :return: line_count: the currently active line number in the star file after parsing the data block
+            :return: end_of_file: boolean indicating whether the entire file ends immediately following the data block
+            '''
             header = []
+            block_start_line = line_count
             while True:
                 # populate header
                 line = filehandle.readline()
                 line_count += 1
-                if line.startswith('_'):
+                if not line.strip():
+                    # blank line between `loop_` and first header row
+                    continue
+                elif line.startswith('_'):
                     # column header
                     header.append(line)
                     continue
                 elif line.startswith('#'):
-                    # line is a comment, preserving
-                    header.append(line)
+                    # line is a comment, discarding for now
+                    print(f'Found comment at STAR file line {line_count}, will not be preserved if writing star file later')
                     continue
                 elif len(line.split()) == len([column for column in header if column.startswith('_')]):
                     # first data line
@@ -557,17 +580,56 @@ class GenericStarfile():
                 if end_of_file:
                     return preambles, blocks
 
-    def load(self, blocks):
+    def load(self,
+             blocks: dict[str, [list[str], int, int]]) -> dict[str, pd.DataFrame]:
+        '''
+        Load each data block of a pre-skeletonized star file into a pandas dataframe
+        :param blocks: dict mapping block names (e.g. `data_particles`) to a list of constituent column headers (e.g. `_rlnImageName), the first file line containing the data values of that block, and the last file line containing data values of that block
+        :return: dict mapping block names (e.g. `data_particles`) to the corresponding data as a pandas dataframe
+        '''
 
-        def load_single_block(header, block_start_line, block_end_line):
+        def load_single_block(header: list[str],
+                              block_start_line: int,
+                              block_end_line: int) -> pd.DataFrame:
+            '''
+            Load a single data block of a pre-skeletonized star file into a pandas dataframe
+            :param header: list of column headers (e.g. `_rlnImageName) of the data block
+            :param block_start_line: the first file line containing the data values of the data block
+            :param block_end_line: the last file line containing data values of the data block
+            :return: pandas dataframe of the data block values
+            '''
             columns = [line.split(' ')[0] for line in header if line.startswith('_')]
+
+            # load the first 1 row to get dtypes of columns
             df = pd.read_csv(self.sourcefile,
                              sep='\s+',
                              header=None,
                              names=columns,
                              index_col=None,
                              skiprows=block_start_line - 1,
-                             nrows=block_end_line - block_start_line)
+                             nrows=1,
+                             low_memory=True,
+                             engine='c',
+                            )
+            df_dtypes = {column: dtype for column, dtype in zip(df.columns.values.tolist(), df.dtypes.values.tolist())}
+
+            # convert object dtype columns to string
+            for column, dtype in df_dtypes.items():
+                if dtype == 'object':
+                    df_dtypes[column] = pd.StringDtype()
+
+            # load the full dataframe with dtypes specified
+            df = pd.read_csv(self.sourcefile,
+                             sep='\s+',
+                             header=None,
+                             names=columns,
+                             index_col=None,
+                             skiprows=block_start_line - 1,
+                             nrows=block_end_line - block_start_line,
+                             low_memory=True,
+                             engine='c',
+                             dtype=df_dtypes,
+                            )
             return df
 
         for block_name in blocks.keys():
@@ -575,28 +637,95 @@ class GenericStarfile():
             blocks[block_name] = load_single_block(header, block_start_line, block_end_line)
         return blocks
 
-    def write(self, outstar, timestamp=False):
-        def write_single_block(filehandle, block_id):
-            df = self.blocks[self.block_names[block_id]]
-            headers = [f'{header} #{i + 1}' for i, header in enumerate(list(df))]
-            f.write('\n'.join(headers))
-            f.write('\n')
-            for row in df.index:
-                f.write('    '.join([str(value) for value in df.loc[row]]))
-                f.write('\n')
+    def write(self,
+              outstar: str,
+              timestamp: bool = False) -> None:
+        '''
+        Write out the starfile dataframe(s) as a new file
+        :param outstar: name of the output star file, optionally as absolute or relative path
+        :param timestamp: whether to include the timestamp of file creation as a comment in the first line of the file
+        :return: None
+        '''
 
-        f = open(outstar, 'w')
-        if timestamp:
-            f.write('# Created {}\n'.format(dt.now()))
+        def write_single_block(filehandle: TextIO,
+                               block_name: str) -> None:
+            '''
+            Write a single star file block to a pre-existing file handle
+            :param filehandle: pre-existing file handle to which to write this block's contents
+            :param block_name: name of star file block to write (e.g. `data_`, `data_particles`)
+            :return: None
+            '''
+            df = self.blocks[block_name]
+            headers = [f'{header} #{i + 1}' for i, header in enumerate(df.columns.values.tolist())]
+            filehandle.write('\n'.join(headers))
+            filehandle.write('\n')
+            df.to_csv(filehandle, index=False, header=False, mode='a', sep='\t')
 
-        for block_id, preamble in enumerate(self.preambles):
-            for row in preamble:
-                f.write(row)
+        with open(outstar, 'w') as f:
+            if timestamp:
+                f.write('# Created {}\n'.format(dt.now()))
+
+            for preamble, block_name in zip(self.preambles, self.block_names):
+                for row in preamble:
+                    f.write(row)
+                    f.write('\n')
+                write_single_block(f, block_name)
                 f.write('\n')
-            write_single_block(f, block_id)
-            f.write('\n')
 
         print(f'Wrote {os.path.abspath(outstar)}')
+
+    def get_particles_stack(self,
+                            particles_block_name: str,
+                            particles_path_column: str,
+                            datadir: str = None,
+                            lazy: bool = False) -> np.ndarray | list[LazyImage]:
+        '''
+        Load particle images referenced by starfile
+        :param particles_block_name: name of star file block containing particle path column (e.g. `data_`, `data_particles`)
+        :param particles_path_column: name of star file column containing path to particle images .mrcs (e.g. `_rlnImageName`)
+        :param datadir: absolute path to particle images .mrcs to override particles_path_column
+        :param lazy: whether to load particle images now in memory (False) or later on-the-fly (True)
+        :return: np.ndarray of shape (n_ptcls * n_tilts, D, D) or list of LazyImage objects of length (n_ptcls * n_tilts)
+        '''
+
+        images = self.blocks[particles_block_name][particles_path_column]
+        images = [x.split('@') for x in images]  # assumed format is index@path_to_mrc
+        self.blocks[particles_block_name]['_rlnImageNameInd'] = [int(x[0]) - 1 for x in images]  # convert to 0-based indexing of full dataset
+        self.blocks[particles_block_name]['_rlnImageNameBase'] = [x[1] for x in images]
+
+        mrcs = []
+        ind = []
+        # handle starfiles where .mrcs stacks are referenced non-contiguously
+        for i, group in self.blocks[particles_block_name].groupby(
+                (self.blocks[particles_block_name]['_rlnImageNameBase'].shift() != self.blocks[particles_block_name]['_rlnImageNameBase']).cumsum(), sort=False):
+            # mrcs = [path1, path2, ...]
+            mrcs.append(group['_rlnImageNameBase'].iloc[0])
+            # ind = [ [0, 1, 2, ..., N], [0, 3, 4, ..., M], ..., ]
+            ind.append(group['_rlnImageNameInd'].to_numpy())
+
+        if datadir is not None:
+            mrcs = prefix_paths(mrcs, datadir)
+        for path in set(mrcs):
+            assert os.path.exists(path), f'{path} not found'
+
+        header = mrc.parse_header(mrcs[0])
+        D = header.D  # image size along one dimension in pixels
+        dtype = header.dtype
+        stride = dtype().itemsize * D * D
+        if lazy:
+            lazyparticles = [LazyImage(file, (D, D), dtype, 1024 + ind_img * stride)
+                             for ind_stack, file in zip(ind, mrcs)
+                             for ind_img in ind_stack]
+            return lazyparticles
+        else:
+            # preallocating numpy array for in-place loading, fourier transform, fourier transform centering, etc
+            particles = np.zeros((len(self.blocks[particles_block_name]), D + 1, D + 1), dtype=np.float32)
+            offset = 0
+            for ind_stack, file in zip(ind, mrcs):
+                particles[offset:offset + len(ind_stack), :-1, :-1] = mrc.LazyImageStack(file, dtype, (D, D), ind_stack).get()
+                offset += len(ind_stack)
+            return particles
+
 
 class TiltSeriesStarfileCisTEM():
     '''
