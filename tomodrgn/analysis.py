@@ -11,7 +11,6 @@ from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
 
 from tomodrgn import utils, mrc
-from tomodrgn.starfile import guess_dtypes
 
 import ipyvolume as ipv
 import ipywidgets as widgets

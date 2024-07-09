@@ -29,20 +29,6 @@ def prefix_paths(mrcs, datadir):
     return mrcs
 
 
-def guess_dtypes(df):
-    # guess numerics (obj --> float64, float32, int, or uint)
-    df2 = df.apply(pd.to_numeric, errors='coerce', downcast='unsigned')
-
-    # force downcast floats (float64 --> float32)
-    df2[df2.select_dtypes(np.float64).columns] = df2.select_dtypes(np.float64).astype(np.float32)
-
-    # assign remaining to strings (obj --> str)
-    str_cols = df2.columns[df2.isna().any()]
-    df2[str_cols] = df[str_cols].astype("string")
-
-    return df2
-
-
 class GenericStarfile():
     '''
     Class to parse any star file with any number of blocks on disk, or a pre-existing pandas dataframe, to a (dictionary of) pandas dataframes.
