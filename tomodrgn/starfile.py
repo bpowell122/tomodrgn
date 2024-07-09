@@ -1,6 +1,6 @@
-'''
-Lightweight parser for starfiles
-'''
+"""
+Lightweight parsers for starfiles
+"""
 
 import numpy as np
 import pandas as pd
@@ -11,6 +11,7 @@ from typing import TextIO
 
 from tomodrgn import mrc, utils
 from tomodrgn.mrc import LazyImage
+
 log = utils.log
 vlog = utils.vlog
 
@@ -20,17 +21,17 @@ def prefix_paths(mrcs, datadir):
     mrcs2 = ['{}/{}'.format(datadir, x) for x in mrcs]
     try:
         for path in set(mrcs1):
-            assert os.path.exists(path)
+            assert os.path.exists(path), f'{path} not found'
         mrcs = mrcs1
-    except:
+    except AssertionError:
         for path in set(mrcs2):
             assert os.path.exists(path), f'{path} not found'
         mrcs = mrcs2
     return mrcs
 
 
-class GenericStarfile():
-    '''
+class GenericStarfile:
+    """
     Class to parse any star file with any number of blocks on disk, or a pre-existing pandas dataframe, to a (dictionary of) pandas dataframes.
     Input
         starfile     : path to star file on disk, mutually exclusive with setting `dataframe`
@@ -49,17 +50,17 @@ class GenericStarfile():
         Stores data blocks not initiated with `loop_` keyword as a list in the `preambles` attribute
         Will ignore comments between `loop_` and beginning of data block; will not be preserved if using .write()
         Will raise a RuntimeError if a comment is found within a data block initiated with `loop`
-    '''
+    """
 
     def __init__(self,
                  starfile: str = None,
                  *,
                  dataframe: pd.DataFrame = None):
-        '''
+        """
         Create the GenericStarfile object either by reading a star file on disk, or by passing in a pre-existing pandas dataframe.
         :param starfile: path to star file on disk, mutually exclusive with setting `dataframe`
         :param dataframe: pre-existing pandas dataframe, mutually exclusive with setting `starfile`
-        '''
+        """
         if starfile is not None:
             assert not dataframe, 'Creating a GenericStarfile from a star file is mutually exclusive with creating a GenericStarfile from a dataframe.'
             self.sourcefile = os.path.abspath(starfile)
@@ -79,86 +80,87 @@ class GenericStarfile():
         return len(self.block_names)
 
     def skeletonize(self) -> tuple[list[list[str]], dict[str, [list[str], int, int]]]:
-        '''
+        """
         Parse star file for key data including preamble lines, header lines, and first and last row numbers associated with each data block. Does not load the entire file.
         :return: preambles: list (for each data block) of lists (each line preceeding column header lines and following data rows, as relevant)
-        :return: blocks: dict mapping block names (e.g. `data_particles`) to a list of constituent column headers (e.g. `_rlnImageName), the first file line containing the data values of that block, and the last file line containing data values of that block
-        '''
+        :return: blocks: dict mapping block names (e.g. `data_particles`) to a list of constituent column headers (e.g. `_rlnImageName),
+            the first file line containing the data values of that block, and the last file line containing data values of that block
+        """
 
         def parse_preamble(filehandle: TextIO,
-                           line_count: int) -> tuple[list[str], str | None, int]:
-            '''
+                           _line_count: int) -> tuple[list[str], str | None, int]:
+            """
             Parse a star file preamble (the lines preceeding column header lines and following data rows, as relevant)
             :param filehandle: pre-existing file handle from which to read the star file
-            :param line_count: the currently active line number in the star file
-            :return: preamble: list of lines comprising the preamble section
-            :return: block_name: the name of the data block following the preamble section, or None if no data block follows
-            :return: line_count: the currently active line number in the star file after parsing the preamble
-            '''
+            :param _line_count: the currently active line number in the star file
+            :return: _preamble: list of lines comprising the preamble section
+            :return: _block_name: the name of the data block following the preamble section, or None if no data block follows
+            :return: _line_count: the currently active line number in the star file after parsing the preamble
+            """
             # parse all lines preceeding column headers (including 'loop_')
-            preamble = []
+            _preamble = []
             while True:
                 line = filehandle.readline()
-                line_count += 1
+                _line_count += 1
                 if not line:
                     # end of file detected
-                    return preamble, None, line_count
-                preamble.append(line.strip())
+                    return _preamble, None, _line_count
+                _preamble.append(line.strip())
                 if line.startswith('loop_'):
                     # entering loop
-                    block_name = [line for line in preamble if line != ''][-2]
-                    return preamble, block_name, line_count
+                    _block_name = [line for line in _preamble if line != ''][-2]
+                    return _preamble, _block_name, _line_count
 
-        def parse_single_block(filehandle: TextIO,
-                               line_count: int) -> tuple[list[str], int, int, bool]:
-            '''
+        def parse_single_block(_f: TextIO,
+                               _line_count: int) -> tuple[list[str], int, int, bool]:
+            """
             Parse a single data block of a star file
-            :param filehandle: pre-existing file handle from which to read the star file
-            :param line_count: the currently active line number in the star file
-            :return: header: list of lines comprising the column headers of the data block
-            :return: block_start_line: the first file line containing the data values of the data block
-            :return: line_count: the currently active line number in the star file after parsing the data block
+            :param _f: pre-existing file handle from which to read the star file
+            :param _line_count: the currently active line number in the star file
+            :return: _header: list of lines comprising the column headers of the data block
+            :return: _block_start_line: the first file line containing the data values of the data block
+            :return: _line_count: the currently active line number in the star file after parsing the data block
             :return: end_of_file: boolean indicating whether the entire file ends immediately following the data block
-            '''
-            header = []
-            block_start_line = line_count
+            """
+            _header = []
+            _block_start_line = _line_count
             while True:
                 # populate header
-                line = filehandle.readline()
-                line_count += 1
+                line = _f.readline()
+                _line_count += 1
                 if not line.strip():
                     # blank line between `loop_` and first header row
                     continue
                 elif line.startswith('_'):
                     # column header
-                    header.append(line)
+                    _header.append(line)
                     continue
                 elif line.startswith('#'):
                     # line is a comment, discarding for now
-                    print(f'Found comment at STAR file line {line_count}, will not be preserved if writing star file later')
+                    print(f'Found comment at STAR file line {_line_count}, will not be preserved if writing star file later')
                     continue
-                elif len(line.split()) == len([column for column in header if column.startswith('_')]):
+                elif len(line.split()) == len([column for column in _header if column.startswith('_')]):
                     # first data line
-                    block_start_line = line_count
+                    _block_start_line = _line_count
                     break
                 else:
                     # unrecognized data block format
                     raise RuntimeError
             while True:
                 # get length of data block
-                line = filehandle.readline()
-                line_count += 1
+                line = _f.readline()
+                _line_count += 1
                 if not line:
                     # end of file, therefore end of data block
-                    return header, block_start_line, line_count, True
+                    return _header, _block_start_line, _line_count, True
                 if line.strip() == '':
                     # end of data block
-                    return header, block_start_line, line_count, False
+                    return _header, _block_start_line, _line_count, False
 
         preambles = []
         blocks = {}
         line_count = 0
-        with(open(self.sourcefile, 'r')) as f:
+        with open(self.sourcefile, 'r') as f:
             while True:
                 # iterates once per preamble/header/block combination, ends when parse_preamble detects EOF
                 preamble, block_name, line_count = parse_preamble(f, line_count)
@@ -175,23 +177,24 @@ class GenericStarfile():
 
     def load(self,
              blocks: dict[str, [list[str], int, int]]) -> dict[str, pd.DataFrame]:
-        '''
+        """
         Load each data block of a pre-skeletonized star file into a pandas dataframe
-        :param blocks: dict mapping block names (e.g. `data_particles`) to a list of constituent column headers (e.g. `_rlnImageName), the first file line containing the data values of that block, and the last file line containing data values of that block
+        :param blocks: dict mapping block names (e.g. `data_particles`) to a list of constituent column headers (e.g. `_rlnImageName),
+            the first file line containing the data values of that block, and the last file line containing data values of that block
         :return: dict mapping block names (e.g. `data_particles`) to the corresponding data as a pandas dataframe
-        '''
+        """
 
-        def load_single_block(header: list[str],
-                              block_start_line: int,
-                              block_end_line: int) -> pd.DataFrame:
-            '''
+        def load_single_block(_header: list[str],
+                              _block_start_line: int,
+                              _block_end_line: int) -> pd.DataFrame:
+            """
             Load a single data block of a pre-skeletonized star file into a pandas dataframe
-            :param header: list of column headers (e.g. `_rlnImageName) of the data block
-            :param block_start_line: the first file line containing the data values of the data block
-            :param block_end_line: the last file line containing data values of the data block
+            :param _header: list of column headers (e.g. `_rlnImageName) of the data block
+            :param _block_start_line: the first file line containing the data values of the data block
+            :param _block_end_line: the last file line containing data values of the data block
             :return: pandas dataframe of the data block values
-            '''
-            columns = [line.split(' ')[0] for line in header if line.startswith('_')]
+            """
+            columns = [line.split(' ')[0] for line in _header if line.startswith('_')]
 
             # load the first 1 row to get dtypes of columns
             df = pd.read_csv(self.sourcefile,
@@ -199,11 +202,11 @@ class GenericStarfile():
                              header=None,
                              names=columns,
                              index_col=None,
-                             skiprows=block_start_line - 1,
+                             skiprows=_block_start_line - 1,
                              nrows=1,
                              low_memory=True,
                              engine='c',
-                            )
+                             )
             df_dtypes = {column: dtype for column, dtype in zip(df.columns.values.tolist(), df.dtypes.values.tolist())}
 
             # convert object dtype columns to string
@@ -217,12 +220,12 @@ class GenericStarfile():
                              header=None,
                              names=columns,
                              index_col=None,
-                             skiprows=block_start_line - 1,
-                             nrows=block_end_line - block_start_line,
+                             skiprows=_block_start_line - 1,
+                             nrows=_block_end_line - _block_start_line,
                              low_memory=True,
                              engine='c',
                              dtype=df_dtypes,
-                            )
+                             )
             return df
 
         for block_name in blocks.keys():
@@ -233,26 +236,26 @@ class GenericStarfile():
     def write(self,
               outstar: str,
               timestamp: bool = False) -> None:
-        '''
+        """
         Write out the starfile dataframe(s) as a new file
         :param outstar: name of the output star file, optionally as absolute or relative path
         :param timestamp: whether to include the timestamp of file creation as a comment in the first line of the file
         :return: None
-        '''
+        """
 
-        def write_single_block(filehandle: TextIO,
-                               block_name: str) -> None:
-            '''
+        def write_single_block(_f: TextIO,
+                               _block_name: str) -> None:
+            """
             Write a single star file block to a pre-existing file handle
-            :param filehandle: pre-existing file handle to which to write this block's contents
-            :param block_name: name of star file block to write (e.g. `data_`, `data_particles`)
+            :param _f: pre-existing file handle to which to write this block's contents
+            :param _block_name: name of star file block to write (e.g. `data_`, `data_particles`)
             :return: None
-            '''
-            df = self.blocks[block_name]
+            """
+            df = self.blocks[_block_name]
             headers = [f'{header} #{i + 1}' for i, header in enumerate(df.columns.values.tolist())]
-            filehandle.write('\n'.join(headers))
-            filehandle.write('\n')
-            df.to_csv(filehandle, index=False, header=False, mode='a', sep='\t')
+            _f.write('\n'.join(headers))
+            _f.write('\n')
+            df.to_csv(_f, index=False, header=False, mode='a', sep='\t')
 
         with open(outstar, 'w') as f:
             if timestamp:
@@ -272,14 +275,14 @@ class GenericStarfile():
                             particles_path_column: str,
                             datadir: str = None,
                             lazy: bool = False) -> np.ndarray | list[LazyImage]:
-        '''
+        """
         Load particle images referenced by starfile
         :param particles_block_name: name of star file block containing particle path column (e.g. `data_`, `data_particles`)
         :param particles_path_column: name of star file column containing path to particle images .mrcs (e.g. `_rlnImageName`)
         :param datadir: absolute path to particle images .mrcs to override particles_path_column
         :param lazy: whether to load particle images now in memory (False) or later on-the-fly (True)
         :return: np.ndarray of shape (n_ptcls * n_tilts, D, D) or list of LazyImage objects of length (n_ptcls * n_tilts)
-        '''
+        """
 
         images = self.blocks[particles_block_name][particles_path_column]
         images = [x.split('@') for x in images]  # assumed format is index@path_to_mrc
@@ -302,26 +305,26 @@ class GenericStarfile():
             assert os.path.exists(path), f'{path} not found'
 
         header = mrc.parse_header(mrcs[0])
-        D = header.D  # image size along one dimension in pixels
+        boxsize = header.D  # image size along one dimension in pixels
         dtype = header.dtype
-        stride = dtype().itemsize * D * D
+        stride = dtype().itemsize * boxsize * boxsize
         if lazy:
-            lazyparticles = [LazyImage(file, (D, D), dtype, 1024 + ind_img * stride)
+            lazyparticles = [LazyImage(file, (boxsize, boxsize), dtype, 1024 + ind_img * stride)
                              for ind_stack, file in zip(ind, mrcs)
                              for ind_img in ind_stack]
             return lazyparticles
         else:
             # preallocating numpy array for in-place loading, fourier transform, fourier transform centering, etc
-            particles = np.zeros((len(self.blocks[particles_block_name]), D + 1, D + 1), dtype=np.float32)
+            particles = np.zeros((len(self.blocks[particles_block_name]), boxsize + 1, boxsize + 1), dtype=np.float32)
             offset = 0
             for ind_stack, file in zip(ind, mrcs):
-                particles[offset:offset + len(ind_stack), :-1, :-1] = mrc.LazyImageStack(file, dtype, (D, D), ind_stack).get()
+                particles[offset:offset + len(ind_stack), :-1, :-1] = mrc.LazyImageStack(file, dtype, (boxsize, boxsize), ind_stack).get()
                 offset += len(ind_stack)
             return particles
 
 
 class TiltSeriesStarfile(GenericStarfile):
-    '''
+    """
     Class to parse a particle image-series star file from multiple upstream STA software into a consistent format
     Input            : path to star file
     Attributes:
@@ -357,8 +360,9 @@ class TiltSeriesStarfile(GenericStarfile):
         get_image_size : returns the image size in pixels by loading the first image's header.
         make_test_train_split  : creates indices for tilt images assigned to train vs test split
         plot_particle_uid_ntilt_distribution: plots the distribution of the number of tilt images per particle as a line plot (against star file particle index) and as a histogram.
-    '''
-    def __init__(self, starfile):
+    """
+
+    def __init__(self, starfile: str):
         # initialize object from parent class with parent attributes assigned at parent __init__
         super().__init__(starfile)
 
@@ -397,10 +401,10 @@ class TiltSeriesStarfile(GenericStarfile):
         self.df = df
 
     def infer_metadata_mapping(self) -> None:
-        '''
+        """
         Infer particle source software and version for key metadata and extraction-time processing corrections
         :return: None
-        '''
+        """
         known_star_headers = {
             'warpm_v1': {
                 'data_': [
@@ -588,7 +592,7 @@ class TiltSeriesStarfile(GenericStarfile):
                 self.image_tilt_weighted = False
 
             case {'data_optics': headers1, 'data_particles': headers2} if (
-                        set(known_star_headers['nextpyp']['data_optics']).issubset(headers1) and set(known_star_headers['nextpyp']['data_particles']).issubset(headers2)):
+                    set(known_star_headers['nextpyp']['data_optics']).issubset(headers1) and set(known_star_headers['nextpyp']['data_particles']).issubset(headers2)):
                 print('Detected STAR source software: nextPYP')
 
                 # easy reference to particles data block
@@ -644,37 +648,37 @@ class TiltSeriesStarfile(GenericStarfile):
         return len(self.df)
 
     def get_tiltseries_pixelsize(self) -> float | int:
-        '''
+        """
         Returns the pixel size of the extracted particles in Ångstroms.
         Assumes all particles have the same pixel size.
         :return: pixel size in Ångstroms/pixel
-        '''
+        """
         return self.df[self.header_ctf_angpix].iloc[0]
 
     def get_tiltseries_voltage(self) -> float | int:
-        '''
+        """
         Returns the voltage of the microscope used to image the particles in kV.
         :return: voltage in kV
-        '''
+        """
         return self.df[self.header_ctf_voltage].iloc[0]
 
     def get_ptcl_img_indices(self) -> list[np.ndarray[int]]:
-        '''
+        """
         Returns the indices of each tilt image in the particles dataframe grouped by particle ID.
         The number of tilt images per particle may vary across the STAR file, so a list (or object-type numpy array or ragged torch tensor) is required
         :return: indices of each tilt image in the particles dataframe grouped by particle ID
-        '''
+        """
         df_grouped = self.df.groupby(self.header_ptcl_uid, sort=False)
         return [df_grouped.get_group(ptcl).index.to_numpy() for ptcl in df_grouped.groups]
 
     def get_image_size(self,
                        datadir: str = None) -> int:
-        '''
+        """
         Returns the image size in pixels by loading the first image's header.
         Assumes images are square.
         :param datadir: Relative or absolute path to overwrite path to particle image .mrcs specified in the STAR file
         :return: image size in pixels
-        '''
+        """
         # expected format of path to images .mrcs file is index@path_to_mrc, 1-indexed
         first_image = self.df[self.header_ptcl_image].iloc[0]
         stack_index, stack_path = first_image.split('@')
@@ -688,14 +692,14 @@ class TiltSeriesStarfile(GenericStarfile):
                               fraction_train: float = 0.5,
                               first_ntilts: int = None,
                               show_summary_stats: bool = True) -> tuple[np.ndarray, np.ndarray]:
-        '''
+        """
         Create indices for tilt images assigned to train vs test split
         :param fraction_train: fraction of each particle's tilt images to put in train dataset
         :param first_ntilts: if not None, only use first ntilts images of each particle in star file
         :param show_summary_stats: print summary statistics of particle sampling for test/train
         :return: inds_train: array of indices of tilt images assigned to train split from particles dataframe
         :return: inds_test: array of indices of tilt images assigned to test split from particles dataframe
-        '''
+        """
 
         # check required inputs are present
         df_grouped = self.df.groupby(self.header_ptcl_uid, sort=False)
@@ -749,12 +753,12 @@ class TiltSeriesStarfile(GenericStarfile):
 
     def plot_particle_uid_ntilt_distribution(self,
                                              outdir: str = None) -> None:
-        '''
+        """
         Plot the distribution of the number of tilt images per particle as a line plot (against star file particle index) and as a histogram.
         Defaults to saving plot in the same location as the input star file.
         :param outdir: directory in which to save the plot
         :return: None
-        '''
+        """
         ptcls_to_imgs_ind = self.get_ptcl_img_indices()
         n_tilts = np.asarray([len(ptcl_to_imgs_ind) for ptcl_to_imgs_ind in ptcls_to_imgs_ind])
 
