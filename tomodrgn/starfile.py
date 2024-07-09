@@ -161,8 +161,10 @@ class GenericStarfile():
         block_names  : list of names for each data block
         blocks       : dictionary of {block_name: data_block_as_pandas_df}
     Methods:
-        load         : automatically called by __init__ to read all data from .star
+        skeletonize  : automatically called by __init__ to identify data blocks, column headers, and line numbers to load later
+        load         : automatically called by __init__ to read all data from .star into pandas dataframes
         write        : writes all object data to `outstar` optionally with timestamp
+        get_particles_stack : loads all particle images specified by the star file into a numpy array
     Notes:
         Stores data blocks not initiated with `loop_` keyword as a list in the `preambles` attribute
         Will ignore comments between `loop_` and beginning of data block; will not be preserved if using .write()
@@ -424,6 +426,43 @@ class GenericStarfile():
 
 
 class TiltSeriesStarfile(GenericStarfile):
+    '''
+    Class to parse a particle image-series star file from multiple upstream STA software into a consistent format
+    Input            : path to star file
+    Attributes:
+        df                     : alias to the particles dataframe
+        header_pose_phi        : particles dataframe column header for pose angle phi in degrees following RELION conventions
+        header_pose_theta      : particles dataframe column header for pose angle theta in degrees following RELION conventions
+        header_pose_psi        : particles dataframe column header for pose angle psi in degrees following RELION conventions
+        header_pose_tx         : particles dataframe column header for pose shift in x in pixels
+        header_pose_tx_angst   : particles dataframe column header for pose shift in x in Ångstroms
+        header_pose_ty         : particles dataframe column header for pose shift in y in pixels
+        header_pose_ty_angst   : particles dataframe column header for pose shift in y in Ångstroms
+        header_ctf_angpix      : particles dataframe column header for extracted particle pixel size in Ångstroms per pixel
+        header_ctf_defocus_u   : particles dataframe column header for particle defocus U in Ångstroms
+        header_ctf_defocus_v   : particles dataframe column header for particle defocus V in Ångstroms
+        header_ctf_defocus_ang : particles dataframe column header for particle defocus angle in degrees
+        header_ctf_voltage     : particles dataframe column header for microscope voltage in kV
+        header_ctf_cs          : particles dataframe column header for microscope spherical aberration in millimeters
+        header_ctf_w           : particles dataframe column header for microscope amplitude contrast
+        header_ctf_ps          : particles dataframe column header for particle phase shift in degrees
+        header_ptcl_uid        : particles dataframe column header for unique identifier shared among all images of a particle
+        header_ptcl_dose       : particles dataframe column header for cumulative electron dose applied to each image in electrons per square Ångstrom
+        header_ptcl_tilt       : particles dataframe column header for stage tilt relative to electron beam in degrees
+        header_ptcl_image      : particles dataframe column header for index and path of extracted particle image
+        header_ptcl_micrograph : particles dataframe column header for source particle image micrograph or tomogram
+        image_ctf_corrected    : whether extracted particle images are CTF corrected
+        image_dose_weighted    : whether extracted particle images are dose weighted
+        image_tilt_weighted    : whether extracted particle iamges are tilt weighted
+    Methods:
+        infer_metadata_mapping  : automatically called by __init__ to infer key column names and upstream particle image preprocessing
+        get_tiltseries_pixelsize : returns the extracted particle pixel size in Ångstroms per pixel
+        get_tiltseries_voltage   : returns the microscope acceleration voltage in kV
+        get_ptcl_img_indices     : returns the indices of each tilt image in the particles dataframe grouped by particle ID.
+        get_image_size : returns the image size in pixels by loading the first image's header.
+        make_test_train_split  : creates indices for tilt images assigned to train vs test split
+        plot_particle_uid_ntilt_distribution: plots the distribution of the number of tilt images per particle as a line plot (against star file particle index) and as a histogram.
+    '''
     def __init__(self, starfile):
         # initialize object from parent class with parent attributes assigned at parent __init__
         super().__init__(starfile)
