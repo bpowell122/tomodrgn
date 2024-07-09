@@ -26,8 +26,6 @@ def load_particles(mrcs_txt_star, lazy=False, datadir=None, relion31=False):
                 datadir = os.path.dirname(mrcs_txt_star) # assume .mrcs files are in the same director as the starfile
                 particles = starfile.Starfile.load(mrcs_txt_star, relion31=relion31).get_particles(datadir=datadir, lazy=lazy)
             else: raise RuntimeError(e)
-    elif mrcs_txt_star.endswith('.cs'):
-        particles = starfile.csparc_get_particles(mrcs_txt_star, datadir, lazy)
     else:
         particles, _ = mrc.parse_mrc(mrcs_txt_star, lazy=lazy)
     return particles
