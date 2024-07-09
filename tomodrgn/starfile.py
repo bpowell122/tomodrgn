@@ -153,8 +153,10 @@ def guess_dtypes(df):
 
 class GenericStarfile():
     '''
-    Class to parse any star file with any number of blocks to a (dictionary of) pandas dataframes.
-    Input            : path to star file
+    Class to parse any star file with any number of blocks on disk, or a pre-existing pandas dataframe, to a (dictionary of) pandas dataframes.
+    Input
+        starfile     : path to star file on disk, mutually exclusive with setting `dataframe`
+        dataframe    : pre-existing pandas dataframe, mutually exclusive with setting `starfile`
     Attributes:
         sourcefile   : absolute path to source data star file
         preambles    : list of lists containing text preceeding each block in starfile
@@ -171,14 +173,29 @@ class GenericStarfile():
         Will raise a RuntimeError if a comment is found within a data block initiated with `loop`
     '''
 
-    def __init__(self, starfile):
-        self.sourcefile = os.path.abspath(starfile)
-        preambles, blocks = self.skeletonize()
-        self.preambles = preambles
-        if len(blocks) > 0:
-            blocks = self.load(blocks)
-            self.block_names = list(blocks.keys())
-        self.blocks = blocks
+    def __init__(self,
+                 starfile: str = None,
+                 *,
+                 dataframe: pd.DataFrame = None):
+        '''
+        Create the GenericStarfile object either by reading a star file on disk, or by passing in a pre-existing pandas dataframe.
+        :param starfile: path to star file on disk, mutually exclusive with setting `dataframe`
+        :param dataframe: pre-existing pandas dataframe, mutually exclusive with setting `starfile`
+        '''
+        if starfile is not None:
+            assert not dataframe, 'Creating a GenericStarfile from a star file is mutually exclusive with creating a GenericStarfile from a dataframe.'
+            self.sourcefile = os.path.abspath(starfile)
+            preambles, blocks = self.skeletonize()
+            self.preambles = preambles
+            if len(blocks) > 0:
+                blocks = self.load(blocks)
+                self.block_names = list(blocks.keys())
+            self.blocks = blocks
+        elif dataframe is not None:
+            self.sourcefile = None
+            self.preambles = [['', 'data_', '', 'loop_']]
+            self.block_names = ['data_']
+            self.blocks = {'data_': dataframe}
 
     def __len__(self):
         return len(self.block_names)
