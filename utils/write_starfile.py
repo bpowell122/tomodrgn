@@ -135,11 +135,8 @@ def main(args):
     if args.group_index is not None:
         df[MISC_HEADERS[2]] = group_names
 
-    headers = [f'{header} #{i+1}' for i, header in enumerate(df.columns.values.tolist())]
-    df.columns = headers
-    s = starfile.Starfile(headers, df)
-    s.write(args.o)
-    log(f'Wrote: {args.o}')
+    s = starfile.GenericStarfile(dataframe=df)
+    s.write(outstar=args.o)
 
 
 if __name__ == '__main__':
