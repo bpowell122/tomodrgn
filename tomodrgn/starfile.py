@@ -16,18 +16,27 @@ log = utils.log
 vlog = utils.vlog
 
 
-def prefix_paths(mrcs, datadir):
-    mrcs1 = ['{}/{}'.format(datadir, os.path.basename(x)) for x in mrcs]
-    mrcs2 = ['{}/{}'.format(datadir, x) for x in mrcs]
-    try:
-        for path in set(mrcs1):
-            assert os.path.exists(path), f'{path} not found'
-        mrcs = mrcs1
-    except AssertionError:
-        for path in set(mrcs2):
-            assert os.path.exists(path), f'{path} not found'
-        mrcs = mrcs2
-    return mrcs
+def prefix_paths(mrcs: list[str],
+                 datadir: str) -> list[str]:
+    """
+    Test which of various modifications to the image .mrcs files correctly locates the files on disk.
+    Tries no modification; prepending `datadir` to the basename of each image; prepending `datadir` to the full path of each image.
+    :param mrcs: list of strings corresponding to the path to each image file specified in the star file (expected format: the `path_to_mrc` part of `index@path_to_mrc`)
+    :param datadir: str corresponding to absolute or relative path to prepend to `mrcs`
+    :return: list of strings corresponding to the confirmed path to each image file
+    """
+
+    filename_patterns = [
+        mrcs,
+        [f'{datadir}/{os.path.basename(x)}' for x in mrcs],
+        [f'{datadir}/{x}' for x in mrcs],
+    ]
+
+    for filename_pattern in filename_patterns:
+        if all([os.path.isfile(file) for file in set(filename_pattern)]):
+            return filename_pattern
+
+    raise FileNotFoundError(f'Not all files (or possibly no files) could be found using any of the filename patterns: {[filename_pattern[0] for filename_pattern in filename_patterns]}')
 
 
 class GenericStarfile:
