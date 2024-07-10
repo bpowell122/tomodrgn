@@ -35,226 +35,40 @@ def load_particles(mrcs_txt_star: str,
     return particles
 
 
-class LazyMRCData(data.Dataset):
-    '''
-    Class representing an .mrcs stack file -- images loaded on the fly
-    '''
-    def __init__(self, mrcfile, norm=None, keepreal=False, invert_data=False, ind=None, window=True, datadir=None, relion31=False, window_r=0.85):
-        assert not keepreal, 'Not implemented error'
-        particles = load_particles(mrcfile, True, datadir=datadir, relion31=relion31)
-        if ind is not None:
-            particles = [particles[x] for x in ind]
-        N = len(particles)
-        ny, nx = particles[0].get().shape
-        assert ny == nx, "Images must be square"
-        assert ny % 2 == 0, "Image size must be even"
-        log('Loaded {} {}x{} images'.format(N, ny, nx))
-        self.particles = particles
-        self.N = N
-        self.D = ny + 1 # after symmetrizing HT
-        self.invert_data = invert_data
-        if norm is None:
-            norm = self.estimate_normalization()
-        self.norm = norm
-        self.window = window_mask(ny, window_r, .99) if window else None
+def window_mask(boxsize: int,
+                in_rad: float = 0.75,
+                out_rad: float = 0.95) -> np.ndarray:
+    """
+    Create a 2-D circular mask with a soft edge falling as a cosine from `in_rad` to `out_rad`.
+    Mask is defined as a circle inscribed within the (square) image box.
+    :param boxsize: the image box width in pixels
+    :param in_rad: the fraction of the image box radius at which to begin a falling cosine edge
+    :param out_rad: the fraction of the image box radius at which to end a falling cosine edge
+    :return: 2-D mask as a 2-D numpy array of shape (boxsize, boxsize) of dtype float
+    """
 
-    def estimate_normalization(self, n=1000):
-        n = min(n,self.N)
-        imgs = np.asarray([fft.ht2_center(self.particles[i].get()) for i in range(0,self.N, self.N//n)])
-        if self.invert_data: imgs *= -1
-        imgs = fft.symmetrize_ht(imgs)
-        norm = [np.mean(imgs), np.std(imgs)]
-        norm[0] = 0
-        log('Normalizing HT by {} +/- {}'.format(*norm))
-        return norm
+    # sanity check inputs
+    assert boxsize % 2 == 0, f'Image box size must be an even number (box size: {boxsize})'
+    assert 0 <= in_rad <= 1 * 2**0.5, f'Window inner radius must be between 0 and sqrt(2) (inner radius: {in_rad})'
+    assert 0 <= out_rad <= 1 * 2**0.5, f'Window outer radius must be between 0 and sqrt(2) (outer radius: {out_rad})'
+    assert in_rad < out_rad, f'Window inner radius must be less than window outer radius (inner radius: {in_rad}, outer radius: {out_rad})'
 
-    def get(self, i):
-        img = self.particles[i].get()
-        if self.window is not None:
-            img *= self.window
-        img = fft.ht2_center(img).astype(np.float32)
-        if self.invert_data: img *= -1
-        img = fft.symmetrize_ht(img)
-        img = (img - self.norm[0])/self.norm[1]
-        return img
+    # create a mesh of 2-D grid points
+    x0, x1 = np.meshgrid(np.linspace(-1, 1, boxsize, endpoint=False, dtype=np.float32),
+                         np.linspace(-1, 1, boxsize, endpoint=False, dtype=np.float32))
 
-    def __len__(self):
-        return self.N
-
-    def __getitem__(self, index):
-        return self.get(index), index
-
-def window_mask(D, in_rad, out_rad):
-    assert D % 2 == 0
-    x0, x1 = np.meshgrid(np.linspace(-1, 1, D, endpoint=False, dtype=np.float32), 
-                         np.linspace(-1, 1, D, endpoint=False, dtype=np.float32))
+    # calculate distance from box center at every point in the grid
     r = (x0**2 + x1**2)**.5
+
+    # create the mask, fill regions between in_rad and out_rad with falling cosine edge, otherwise fill with 1
     mask = np.where((r < out_rad) & (r > in_rad),
                     (1 + np.cos((r-in_rad)/(out_rad-in_rad) * np.pi)) / 2,
                     1)
+    # fill mask regions at and outside of out_rad with 0
     mask = np.where(r < out_rad,
                     mask,
                     0)
     return mask
-
-class MRCData(data.Dataset):
-    '''
-    Class representing an .mrcs stack file
-    '''
-    def __init__(self, mrcfile, norm=None, keepreal=False, invert_data=False, ind=None, window=True, datadir=None, relion31=False, max_threads=16, window_r=0.85):
-        if keepreal:
-            raise NotImplementedError
-        if ind is not None:
-            particles = load_particles(mrcfile, True, datadir=datadir, relion31=relion31)
-            particles = np.array([particles[i].get() for i in ind])
-        else:
-            particles = load_particles(mrcfile, False, datadir=datadir, relion31=relion31)
-        N, ny, nx = particles.shape
-        assert ny == nx, "Images must be square"
-        assert ny % 2 == 0, "Image size must be even"
-        log('Loaded {} {}x{} images'.format(N, ny, nx))
-
-        # Real space window
-        if window:
-            log(f'Windowing images with radius {window_r}')
-            particles *= window_mask(ny, window_r, .99)
-
-        # compute HT
-        log('Computing FFT')
-        max_threads = min(max_threads, mp.cpu_count())
-        if max_threads > 1:
-            log(f'Spawning {max_threads} processes')
-            with Pool(max_threads) as p:
-                particles = np.asarray(p.map(fft.ht2_center, particles), dtype=np.float32)
-        else:
-            particles = np.asarray([fft.ht2_center(img) for img in particles], dtype=np.float32)
-            log('Converted to FFT')
-            
-        if invert_data: particles *= -1
-
-        # symmetrize HT
-        log('Symmetrizing image data')
-        particles = fft.symmetrize_ht(particles)
-
-        # normalize
-        if norm is None:
-            norm  = [np.mean(particles), np.std(particles)]
-            norm[0] = 0
-        particles = (particles - norm[0])/norm[1]
-        log('Normalized HT by {} +/- {}'.format(*norm))
-
-        self.particles = particles
-        self.N = N
-        self.D = particles.shape[1] # ny + 1 after symmetrizing HT
-        self.norm = norm
-        self.keepreal = keepreal
-        if keepreal:
-            self.particles_real = particles_real
-            log('Normalized real space images by {}'.format(particles_real.std()))
-            self.particles_real /= particles_real.std()
-
-    def __len__(self):
-        return self.N
-
-    def __getitem__(self, index):
-        return self.particles[index], index
-
-    def get(self, index):
-        return self.particles[index]
-
-class PreprocessedMRCData(data.Dataset):
-    '''
-    '''
-    def __init__(self, mrcfile, norm=None, ind=None):
-        particles = load_particles(mrcfile, False)
-        if ind is not None:
-            particles = particles[ind]
-        log(f'Loaded {len(particles)} {particles.shape[1]}x{particles.shape[1]} images')
-        if norm is None:
-            norm  = [np.mean(particles), np.std(particles)]
-            norm[0] = 0
-        particles = (particles - norm[0])/norm[1]
-        log('Normalized HT by {} +/- {}'.format(*norm))
-        self.particles = particles
-        self.N = len(particles)
-        self.D = particles.shape[1] # ny + 1 after symmetrizing HT
-        self.norm = norm
-
-    def __len__(self):
-        return self.N
-
-    def __getitem__(self, index):
-        return self.particles[index], index
-
-    def get(self, index):
-        return self.particles[index]
-
-class TiltMRCData(data.Dataset):
-    '''
-    Class representing an .mrcs tilt series pair
-    '''
-    def __init__(self, mrcfile, mrcfile_tilt, norm=None, keepreal=False, invert_data=False, ind=None, window=True, datadir=None, window_r=0.85):
-        if ind is not None:
-            particles_real = load_particles(mrcfile, True, datadir)
-            particles_tilt_real = load_particles(mrcfile_tilt, True, datadir)
-            particles_real = np.array([particles_real[i].get() for i in ind], dtype=np.float32)
-            particles_tilt_real = np.array([particles_tilt_real[i].get() for i in ind], dtype=np.float32)
-        else:
-            particles_real = load_particles(mrcfile, False, datadir)
-            particles_tilt_real = load_particles(mrcfile_tilt, False, datadir)
-
-        N, ny, nx = particles_real.shape
-        assert ny == nx, "Images must be square"
-        assert ny % 2 == 0, "Image size must be even"
-        log('Loaded {} {}x{} images'.format(N, ny, nx))
-        assert particles_tilt_real.shape == (N, ny, nx), "Tilt series pair must have same dimensions as untilted particles"
-        log('Loaded {} {}x{} tilt pair images'.format(N, ny, nx))
-
-        # Real space window
-        if window:
-            m = window_mask(ny, window_r, .99)
-            particles_real *= m
-            particles_tilt_real *= m 
-
-        # compute HT
-        particles = np.asarray([fft.ht2_center(img) for img in particles_real]).astype(np.float32)
-        particles_tilt = np.asarray([fft.ht2_center(img) for img in particles_tilt_real]).astype(np.float32)
-        if invert_data: 
-            particles *= -1
-            particles_tilt *= -1
-
-        # symmetrize HT
-        particles = fft.symmetrize_ht(particles)
-        particles_tilt = fft.symmetrize_ht(particles_tilt)
-
-        # normalize
-        if norm is None:
-            norm  = [np.mean(particles), np.std(particles)]
-            norm[0] = 0
-        particles = (particles - norm[0])/norm[1]
-        particles_tilt = (particles_tilt - norm[0])/norm[1]
-        log('Normalized HT by {} +/- {}'.format(*norm))
-
-        self.particles = particles
-        self.particles_tilt = particles_tilt
-        self.norm = norm
-        self.N = N
-        self.D = particles.shape[1]
-        self.keepreal = keepreal
-        if keepreal:
-            self.particles_real = particles_real
-            self.particles_tilt_real = particles_tilt_real
-
-    def __len__(self):
-        return self.N
-
-    def __getitem__(self, index):
-        return self.particles[index], self.particles_tilt[index], index
-
-    def get(self, index):
-        return self.particles[index], self.particles_tilt[index]
-
-# TODO: LazyTilt
 
 
 class TiltSeriesMRCData(data.Dataset):
@@ -263,9 +77,22 @@ class TiltSeriesMRCData(data.Dataset):
     Currently supports initializing mrcfile from .star exported by warp when generating particleseries
     '''
 
-    def __init__(self, ptcls_star, norm=None, invert_data=False, ind_ptcl=None, window=True, datadir=None, window_r=0.8,
-                 window_r_outer=0.9, recon_dose_weight=False, recon_tilt_weight=False, dose_override=None, l_dose_mask=False,
-                 lazy=True, sequential_tilt_sampling=False, ind_img=None):
+    def __init__(self,
+                 ptcls_star,
+                 datadir=None,
+                 lazy=True,
+                 ind_ptcl=None,
+                 ind_img=None,
+                 norm=None,
+                 invert_data=False,
+                 window=True,
+                 window_r=0.75,
+                 window_r_outer=0.95,
+                 recon_dose_weight=False,
+                 recon_tilt_weight=False,
+                 dose_override=None,
+                 l_dose_mask=False,
+                 sequential_tilt_sampling=False,):
 
         # filter by test/train split per-image
         if ind_img is not None:
@@ -289,7 +116,8 @@ class TiltSeriesMRCData(data.Dataset):
         ntilts_max = max(ntilts_set)
         log(f'Found {ntilts_min} (min) to {ntilts_max} (max) tilt images per particle')
         log(f'Will sample tilt images per particle: {"sequentially" if sequential_tilt_sampling else "randomly"}')
-        log(f'Will window images with radius {window_r}')
+        if window:
+            log(f'Will window images in real space with falling cosine edge between inner radius {window_r} and outer radius {window_r_outer}')
         if recon_dose_weight:
             log('Will calculate weights due to incremental dose; frequencies will be weighted by exposure-dependent amplitude attenuation for pixelwise loss')
         else:
@@ -299,12 +127,20 @@ class TiltSeriesMRCData(data.Dataset):
         else:
             log('Will not perform tilt weighting; all tilt angles will be equally weighted for pixelwise loss')
 
-        # load and preprocess all particles
+        # load all particles
         log('Loading particles...')
         particles = ptcls_star.get_particles_stack(datadir=datadir, lazy=lazy)
         nx = ptcls_star.get_image_size(datadir=datadir)
         nimgs = len(particles)
         nptcls = len(ptcls_unique_list)
+
+        # prepare the real space circular window mask
+        if window:
+            self.real_space_2d_mask = window_mask(nx, window_r, window_r_outer)
+        else:
+            self.real_space_2d_mask = None
+
+        # preprocess particles if not lazy
         if not lazy:
             log('Preprocessing particles...')
             assert particles.shape[-1] == particles.shape[-2], "Images must be square"
@@ -313,8 +149,7 @@ class TiltSeriesMRCData(data.Dataset):
             # Real space window
             if window:
                 log('Windowing particles...')
-                m = window_mask(nx, window_r, window_r_outer)
-                particles[:, :-1, :-1] *= m
+                particles[:, :-1, :-1] *= self.real_space_2d_mask
 
             # compute HT
             log('Computing FFT...')
@@ -439,8 +274,7 @@ class TiltSeriesMRCData(data.Dataset):
         if self.lazy:
             images = np.asarray([self.ptcls[i].get() for i in ptcl_img_ind])
             if self.window:
-                m = window_mask(self.D - 1, self.window_r, self.window_r_outer)
-                images *= m
+                images *= self.real_space_2d_mask
             for i, img in enumerate(images):
                 images[i] = fft.ht2_center(img)
             if self.invert_data: images *= -1
@@ -483,8 +317,7 @@ class TiltSeriesMRCData(data.Dataset):
         random_imgs_for_normalization = np.random.choice(self.nimgs, size=n, replace=False)
         imgs = np.asarray([self.ptcls[i].get() for i in random_imgs_for_normalization])
         if self.window:
-            m = window_mask(self.D-1, self.window_r, self.window_r_outer)
-            imgs *= m
+            imgs *= self.real_space_2d_mask
         for i, img in enumerate(imgs):
             imgs[i] = fft.ht2_center(img)
         if self.invert_data: imgs *= -1
