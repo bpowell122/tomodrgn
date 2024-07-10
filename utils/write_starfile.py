@@ -37,7 +37,7 @@ MISC_HEADERS = ['_rlnCtfBfactor',
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('particles', type=os.path.abspath, help='Input particles (.mrcs, .txt, .star, .cs)')
+    parser.add_argument('particles', type=os.path.abspath, help='Input particles (.mrcs, .txt, .star)')
     parser.add_argument('-o', type=os.path.abspath, required=True, help='Output .star file')
     parser.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
     parser.add_argument('--ctf', type=os.path.abspath, help='Optionally input ctf.pkl')

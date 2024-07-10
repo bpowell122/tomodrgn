@@ -376,6 +376,7 @@ class TiltSeriesStarfile(GenericStarfile):
         super().__init__(starfile)
 
         # pre-initialize header aliases as None, to be set as appropriate by guess_metadata_interpretation()
+        self.block_particles = None
         self.df = None
         self.header_pose_phi = None
         self.header_pose_theta = None
@@ -534,7 +535,8 @@ class TiltSeriesStarfile(GenericStarfile):
                 print('Detected STAR source software: Warp_v1 | M_V1')
 
                 # easy reference to particles data block
-                self.df = self.blocks['data_']
+                self.block_particles = 'data_'
+                self.df = self.blocks[self.block_particles]
 
                 # set header aliases used by tomodrgn
                 self.header_pose_phi = '_rlnAngleRot'
@@ -569,7 +571,8 @@ class TiltSeriesStarfile(GenericStarfile):
                 print('Detected STAR source software: cryoSRPNT_v0.1')
 
                 # easy reference to particles data block
-                self.df = self.blocks['data_']
+                self.block_particles = 'data_'
+                self.df = self.blocks[self.block_particles]
 
                 # set header aliases used by tomodrgn
                 self.header_pose_phi = '_rlnAngleRot'
@@ -605,7 +608,8 @@ class TiltSeriesStarfile(GenericStarfile):
                 print('Detected STAR source software: nextPYP')
 
                 # easy reference to particles data block
-                self.df = self.blocks['data_particles']
+                self.block_particles = 'data_particles'
+                self.df = self.blocks[self.block_particles]
 
                 # set header aliases used by tomodrgn
                 self.header_pose_phi = '_rlnAngleRot'

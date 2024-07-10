@@ -125,7 +125,7 @@ def main(args):
 
     log(f'Loading {args.input}')
     lazy = args.lazy
-    old = dataset.load_particles(args.input, lazy=lazy, datadir=args.datadir, relion31=args.relion31)
+    old = dataset.load_particles(args.input, lazy=lazy, datadir=args.datadir)
     N = len(old)
 
     oldD = old[0].get().shape[0] if lazy else old.shape[-1]

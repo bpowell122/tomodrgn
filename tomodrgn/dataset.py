@@ -8,26 +8,30 @@ from tomodrgn import fft, mrc, utils, starfile, dose, ctf
 
 log = utils.log
 
-def load_particles(mrcs_txt_star, lazy=False, datadir=None, relion31=False):
-    '''
-    Load particle stack from either a .mrcs file, a .star file, a .txt file containing paths to .mrcs files, or a cryosparc particles.cs file
 
-    lazy (bool): Return numpy array if True, or return list of LazyImages
-    datadir (str or None): Base directory overwrite for .star or .cs file parsing
-    '''
+def load_particles(mrcs_txt_star: str,
+                   lazy: bool = False,
+                   datadir: str = None) -> np.ndarray | list[mrc.LazyImage]:
+    """
+    Load particle stack from a .mrcs file, a .star file, or a .txt file containing paths to .mrcs files
+    :param mrcs_txt_star: path to .mrcs, .star, or .txt file referencing images to load
+    :param lazy: return numpy array if True, or return list of LazyImages
+    :param datadir: relative or absolute path to overwrite path to particle image .mrcs specified in the STAR file
+    :return: numpy array of particle images of shape (n_images, boxsize+1, boxsize+1), or list of LazyImage objects
+    """
     if mrcs_txt_star.endswith('.txt'):
-        particles = mrc.parse_mrc_list(mrcs_txt_star, lazy=lazy)
+        particles = mrc.parse_mrc_list(mrcs_txt_star,
+                                       lazy=lazy)
     elif mrcs_txt_star.endswith('.star'):
-        # not exactly sure what the default behavior should be for the data paths if parsing a starfile
-        try:
-            particles = starfile.Starfile.load(mrcs_txt_star, relion31=relion31).get_particles(datadir=datadir, lazy=lazy)
-        except Exception as e:
-            if datadir is None:
-                datadir = os.path.dirname(mrcs_txt_star) # assume .mrcs files are in the same director as the starfile
-                particles = starfile.Starfile.load(mrcs_txt_star, relion31=relion31).get_particles(datadir=datadir, lazy=lazy)
-            else: raise RuntimeError(e)
-    else:
+        star = starfile.TiltSeriesStarfile(mrcs_txt_star)
+        particles = star.get_particles_stack(particles_block_name=star.block_particles,
+                                             particles_path_column=star.header_ptcl_image,
+                                             datadir=datadir,
+                                             lazy=lazy)
+    elif mrcs_txt_star.endswith('.mrcs'):
         particles, _ = mrc.parse_mrc(mrcs_txt_star, lazy=lazy)
+    else:
+        raise ValueError(f'Unrecognized file type: {mrcs_txt_star}')
     return particles
 
 
