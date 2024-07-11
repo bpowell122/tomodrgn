@@ -51,8 +51,8 @@ class GenericStarfile:
         block_names  : list of names for each data block
         blocks       : dictionary of {block_name: data_block_as_pandas_df}
     Methods:
-        skeletonize  : automatically called by __init__ to identify data blocks, column headers, and line numbers to load later
-        load         : automatically called by __init__ to read all data from .star into pandas dataframes
+        _skeletonize : automatically called by __init__ to identify data blocks, column headers, and line numbers to load later
+        _load        : automatically called by __init__ to read all data from .star into pandas dataframes
         write        : writes all object data to `outstar` optionally with timestamp
         get_particles_stack : loads all particle images specified by the star file into a numpy array
     Notes:
@@ -73,10 +73,10 @@ class GenericStarfile:
         if starfile is not None:
             assert not dataframe, 'Creating a GenericStarfile from a star file is mutually exclusive with creating a GenericStarfile from a dataframe.'
             self.sourcefile = os.path.abspath(starfile)
-            preambles, blocks = self.skeletonize()
+            preambles, blocks = self._skeletonize()
             self.preambles = preambles
             if len(blocks) > 0:
-                blocks = self.load(blocks)
+                blocks = self._load(blocks)
                 self.block_names = list(blocks.keys())
             self.blocks = blocks
         elif dataframe is not None:
@@ -88,7 +88,7 @@ class GenericStarfile:
     def __len__(self):
         return len(self.block_names)
 
-    def skeletonize(self) -> tuple[list[list[str]], dict[str, [list[str], int, int]]]:
+    def _skeletonize(self) -> tuple[list[list[str]], dict[str, [list[str], int, int]]]:
         """
         Parse star file for key data including preamble lines, header lines, and first and last row numbers associated with each data block. Does not load the entire file.
         :return: preambles: list (for each data block) of lists (each line preceeding column header lines and following data rows, as relevant)
@@ -184,8 +184,8 @@ class GenericStarfile:
                 if end_of_file:
                     return preambles, blocks
 
-    def load(self,
-             blocks: dict[str, [list[str], int, int]]) -> dict[str, pd.DataFrame]:
+    def _load(self,
+              blocks: dict[str, [list[str], int, int]]) -> dict[str, pd.DataFrame]:
         """
         Load each data block of a pre-skeletonized star file into a pandas dataframe
         :param blocks: dict mapping block names (e.g. `data_particles`) to a list of constituent column headers (e.g. `_rlnImageName),
@@ -366,13 +366,14 @@ class TiltSeriesStarfile(GenericStarfile):
         image_dose_weighted    : whether extracted particle images are dose weighted
         image_tilt_weighted    : whether extracted particle iamges are tilt weighted
     Methods:
-        infer_metadata_mapping  : automatically called by __init__ to infer key column names and upstream particle image preprocessing
+        _infer_metadata_mapping  : automatically called by __init__ to infer key column names and upstream particle image preprocessing
         get_tiltseries_pixelsize : returns the extracted particle pixel size in Ångstroms per pixel
         get_tiltseries_voltage   : returns the microscope acceleration voltage in kV
         get_ptcl_img_indices     : returns the indices of each tilt image in the particles dataframe grouped by particle ID.
         get_image_size : returns the image size in pixels by loading the first image's header.
         make_test_train_split  : creates indices for tilt images assigned to train vs test split
         plot_particle_uid_ntilt_distribution: plots the distribution of the number of tilt images per particle as a line plot (against star file particle index) and as a histogram.
+        get_particles_stack  :  loads all particle images specified by the star file into a numpy array using partially predefined parent class get_particles_stack
     """
 
     def __init__(self, starfile: str):
@@ -407,14 +408,14 @@ class TiltSeriesStarfile(GenericStarfile):
         self.image_tilt_weighted = None
 
         # infer the upstream metadata format
-        self.infer_metadata_mapping()
+        self._infer_metadata_mapping()
 
     def __init__(self, headers, df, mrc_path):
         assert headers == list(df.columns), f'{headers} != {df.columns}'
         self.headers = headers
         self.df = df
 
-    def infer_metadata_mapping(self) -> None:
+    def _infer_metadata_mapping(self) -> None:
         """
         Infer particle source software and version for key metadata and extraction-time processing corrections
         :return: None
