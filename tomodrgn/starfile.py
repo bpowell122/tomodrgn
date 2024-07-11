@@ -280,8 +280,8 @@ class GenericStarfile:
         print(f'Wrote {os.path.abspath(outstar)}')
 
     def get_particles_stack(self,
-                            particles_block_name: str,
-                            particles_path_column: str,
+                            particles_block_name: str = None,
+                            particles_path_column: str = None,
                             datadir: str = None,
                             lazy: bool = False) -> np.ndarray | list[LazyImage]:
         """
@@ -292,6 +292,10 @@ class GenericStarfile:
         :param lazy: whether to load particle images now in memory (False) or later on-the-fly (True)
         :return: np.ndarray of shape (n_ptcls * n_tilts, D, D) or list of LazyImage objects of length (n_ptcls * n_tilts)
         """
+
+        # validate inputs
+        assert particles_block_name is not None
+        assert particles_path_column is not None
 
         images = self.blocks[particles_block_name][particles_path_column]
         images = [x.split('@') for x in images]  # assumed format is index@path_to_mrc
@@ -790,3 +794,20 @@ class TiltSeriesStarfile(GenericStarfile):
         basename = os.path.splitext(os.path.basename(self.sourcefile))[0]
         plt.savefig(f'{outdir}/{basename}_particle_uid_ntilt_distribution.png', dpi=200)
         plt.close()
+
+    def get_particles_stack(self,
+                            *,
+                            datadir: str = None,
+                            lazy: bool = False,
+                            **kwargs) -> np.ndarray | list[LazyImage]:
+        """
+        Calls parent GenericStarfile get_particles_stack.
+        Parent method parameters `particles_block_name` and `particles_path_column` are presupplied due to identification of these values during TiltSeriesStarfile instance creation.
+        :param datadir: absolute path to particle images .mrcs to override particles_path_column
+        :param lazy: whether to load particle images now in memory (False) or later on-the-fly (True)
+        :return: np.ndarray of shape (n_ptcls * n_tilts, D, D) or list of LazyImage objects of length (n_ptcls * n_tilts)
+        """
+        return super().get_particles_stack(particles_block_name=self.block_particles,
+                                           particles_path_column=self.header_ptcl_image,
+                                           datadir=datadir,
+                                           lazy=lazy)
