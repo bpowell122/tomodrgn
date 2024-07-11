@@ -117,6 +117,7 @@ def save_config(args, dataset, lattice, model, out_config):
                         ntilts=dataset.ntilts_training,
                         invert_data=args.invert_data,
                         ind=args.ind,
+                        ind_img=np.hstack(dataset.ptcls_to_imgs_ind),
                         window=args.window,
                         window_r=args.window_r,
                         window_r_outer=args.window_r_outer,
