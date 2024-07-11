@@ -383,13 +383,21 @@ class TiltSeriesStarfile(GenericStarfile):
         # pre-initialize header aliases as None, to be set as appropriate by guess_metadata_interpretation()
         self.block_particles = None
         self.df = None
+
         self.header_pose_phi = None
         self.header_pose_theta = None
         self.header_pose_psi = None
+        self.headers_rot = [self.header_pose_phi,
+                            self.header_pose_theta,
+                            self.header_pose_psi]
+
         self.header_pose_tx = None
         self.header_pose_tx_angst = None
         self.header_pose_ty = None
         self.header_pose_ty_angst = None
+        self.headers_trans = [self.header_pose_tx,
+                              self.header_pose_ty]
+
         self.header_ctf_angpix = None
         self.header_ctf_defocus_u = None
         self.header_ctf_defocus_v = None
@@ -398,11 +406,21 @@ class TiltSeriesStarfile(GenericStarfile):
         self.header_ctf_cs = None
         self.header_ctf_w = None
         self.header_ctf_ps = None
+        self.headers_ctf = [self.header_ctf_angpix,
+                            self.header_ctf_defocus_u,
+                            self.header_ctf_defocus_v,
+                            self.header_ctf_defocus_ang,
+                            self.header_ctf_voltage,
+                            self.header_ctf_cs,
+                            self.header_ctf_w,
+                            self.header_ctf_ps]
+
         self.header_ptcl_uid = None
         self.header_ptcl_dose = None
         self.header_ptcl_tilt = None
         self.header_ptcl_image = None
         self.header_ptcl_micrograph = None
+
         self.image_ctf_corrected = None
         self.image_dose_weighted = None
         self.image_tilt_weighted = None
