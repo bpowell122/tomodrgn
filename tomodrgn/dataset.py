@@ -261,18 +261,17 @@ class TiltSeriesMRCData(data.Dataset):
         # parse rotations
         log('Loading rotations from star file')
         euler = self.star.df[self.star.headers_rot].to_numpy(dtype=np.float32)
-        log('Euler angles (Rot, Tilt, Psi):')
-        log(euler[0])
+        log(f'First image Euler angles (Rot, Tilt, Psi): {euler[0]}')
         log('Converting to rotation matrix:')
         rot = np.asarray([utils.R_from_relion(*x) for x in euler], dtype=np.float32)
-        log(rot[0])
+        log(f'First image rotation matrix: {rot[0]}')
 
         # parse translations (if present, default none for warp-exported particleseries)
         log('Loading translations from star file (if any)')
         if all(header_trans in self.star.df.columns for header_trans in self.star.headers_trans):
             trans = self.star.df[self.star.headers_trans].to_numpy(dtype=np.float32)
             log('Translations (pixels):')
-            log(trans[0])
+            log(f'First image translation matrix: {trans[0]}')
         else:
             trans = None
             log('Translations not found in star file. Reconstruction will not have translations applied.')
@@ -368,7 +367,7 @@ class TiltSeriesMRCData(data.Dataset):
                 norm = self.norm
             particles -= norm[0]  # zero mean
             particles /= norm[1]  # unit stdev, separate line required to avoid redundant memory allocation
-            log(f'Normalized HT by {norm[0]} +/- {norm[1]}')
+            log(f'Normalized HT by mean offset {norm[0]} and standard deviation scaling {norm[1]}')
 
             log(f'Finished loading and preprocessing subtomo particleseries in memory')
         else:

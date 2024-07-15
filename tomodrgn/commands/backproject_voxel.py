@@ -89,8 +89,6 @@ def backproject_dataset(data: dataset.TiltSeriesMRCData,
     return V, counts
 
 def add_slice(V, counts, ff_coord, ff, D):
-    d2 = int(D/2)
-    ff_coord = ff_coord.transpose(0,1)
     d2 = int(D / 2)
     ff_coord = ff_coord.transpose(0, 1)
     xf, yf, zf = ff_coord.floor().long()
@@ -132,16 +130,18 @@ def main(args):
         log(f'Reading supplied particle indices {args.ind}')
         ind_ptcls = utils.load_pkl(args.ind)
         if args.first is not None:
+            log(f'Will only use first {args.first} particles of supplied indices')
             ind_ptcls = ind_ptcls[:args.first]
     else:
         if args.first is not None:
+            log(f'Will only use first {args.first} particles')
             ind_ptcls = np.arange(args.first)
         else:
             ind_ptcls = np.arange(len(ptcls_star.get_ptcl_img_indices()))
 
     # split ind_ptcls by into half sets for calculation of map-map FSC
-    log('Creating random split of selected indices for calculation of map-map FSC')
-    ind_ptcls_half1 = np.sort(np.random.choice(ind_ptcls, size=len(ind_ptcls)//2, replace=False))
+    log('Creating random half-set split of selected indices for calculation of map-map FSC')
+    ind_ptcls_half1 = np.sort(np.random.choice(ind_ptcls, size=len(ind_ptcls) // 2, replace=False))
     ind_ptcls_half2 = np.sort(np.array(list(set(ind_ptcls) - set(ind_ptcls_half1))))
 
     data_half1 = dataset.TiltSeriesMRCData(ptcls_star,

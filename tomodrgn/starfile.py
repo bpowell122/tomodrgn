@@ -146,7 +146,7 @@ class GenericStarfile:
                     continue
                 elif line.startswith('#'):
                     # line is a comment, discarding for now
-                    print(f'Found comment at STAR file line {_line_count}, will not be preserved if writing star file later')
+                    log(f'Found comment at STAR file line {_line_count}, will not be preserved if writing star file later')
                     continue
                 elif len(line.split()) == len([column for column in _header if column.startswith('_')]):
                     # first data line
@@ -277,7 +277,7 @@ class GenericStarfile:
                 write_single_block(f, block_name)
                 f.write('\n')
 
-        print(f'Wrote {os.path.abspath(outstar)}')
+        log(f'Wrote {os.path.abspath(outstar)}')
 
     def get_particles_stack(self,
                             particles_block_name: str = None,
@@ -537,7 +537,7 @@ class TiltSeriesStarfile(GenericStarfile):
         match headers:
 
             case {'data_': headers1} if set(known_star_headers['warpm_v1']['data_']).issubset(headers1):
-                print('Detected STAR source software: Warp_v1 | M_V1')
+                log('Detected STAR source software: Warp_v1 | M_v1')
 
                 # easy reference to particles data block
                 self.block_particles = 'data_'
@@ -572,7 +572,7 @@ class TiltSeriesStarfile(GenericStarfile):
                 self.image_tilt_weighted = False
 
             case {'data_': headers1} if set(known_star_headers['cryosrpnt_v0.1']['data_']).issubset(headers1):
-                print('Detected STAR source software: cryoSRPNT_v0.1')
+                log('Detected STAR source software: cryoSRPNT_v0.1')
 
                 # easy reference to particles data block
                 self.block_particles = 'data_'
@@ -608,7 +608,7 @@ class TiltSeriesStarfile(GenericStarfile):
 
             case {'data_optics': headers1, 'data_particles': headers2} if (
                     set(known_star_headers['nextpyp']['data_optics']).issubset(headers1) and set(known_star_headers['nextpyp']['data_particles']).issubset(headers2)):
-                print('Detected STAR source software: nextPYP')
+                log('Detected STAR source software: nextPYP')
 
                 # easy reference to particles data block
                 self.block_particles = 'data_particles'
@@ -653,7 +653,7 @@ class TiltSeriesStarfile(GenericStarfile):
                 self.image_tilt_weighted = False
 
             case {'data_': headers1} if set(known_star_headers['cistem']['data_']).issubset(headers1):
-                print('Detected STAR source software: cisTEM')
+                log('Detected STAR source software: cisTEM')
                 raise NotImplementedError
 
             case _:
@@ -741,7 +741,7 @@ class TiltSeriesStarfile(GenericStarfile):
         Create indices for tilt images assigned to train vs test split
         :param fraction_train: fraction of each particle's tilt images to put in train dataset
         :param first_ntilts: if not None, only use first ntilts images of each particle in star file
-        :param show_summary_stats: print summary statistics of particle sampling for test/train
+        :param show_summary_stats: log summary statistics of particle sampling for test/train
         :return: inds_train: array of indices of tilt images assigned to train split from particles dataframe
         :return: inds_test: array of indices of tilt images assigned to test split from particles dataframe
         """
@@ -781,8 +781,8 @@ class TiltSeriesStarfile(GenericStarfile):
 
         # provide summary statistics
         if show_summary_stats:
-            print(f'    Number of tilts sampled by inds_train: {set([len(inds_img_train) for inds_img_train in inds_train])}')
-            print(f'    Number of tilts sampled by inds_test: {set([len(inds_img_test) for inds_img_test in inds_test])}')
+            log(f'    Number of tilts sampled by inds_train: {set([len(inds_img_train) for inds_img_train in inds_train])}')
+            log(f'    Number of tilts sampled by inds_test: {set([len(inds_img_test) for inds_img_test in inds_test])}')
 
         # flatten indices
         inds_train = np.asarray([ind_img for inds_img_train in inds_train for ind_img in inds_img_train])
