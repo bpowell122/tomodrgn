@@ -21,6 +21,7 @@ def add_args(parser):
     group = parser.add_argument_group('Dataset loading options')
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths star file')
+    group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
     group.add_argument('--ind', type=os.path.abspath, help='Indices of which particles to backproject corresponding tilt images (pkl)')
     group.add_argument('--first', type=int, help='Backproject the first N particles (default is all)')
 
@@ -32,9 +33,65 @@ def add_args(parser):
 
     return parser
 
+
+def backproject_dataset(data: dataset.TiltSeriesMRCData,
+                        V: torch.tensor,
+                        counts: torch.tensor,
+                        device: torch.device = torch.device('cpu'),
+                        lattice: Lattice = None) -> tuple[torch.tensor, torch.tensor]:
+
+    boxsize_ht = V.shape[0]
+    B = 1
+    n_ptcls_backprojected = 0
+    data_generator = DataLoader(data, batch_size=B, shuffle=False)
+    mask = lattice.get_circular_mask(boxsize_ht // 2)
+
+    for batch_images, batch_rot, batch_trans, batch_ctf, batch_frequency_weights, _, batch_indices in data_generator:
+
+        # logging
+        n_ptcls_backprojected += len(batch_indices)
+        if n_ptcls_backprojected % 100 == 0:
+            log(f'    {n_ptcls_backprojected} / {data.nptcls} particles')
+
+        # transfer to GPU
+        batch_images = batch_images.to(device)
+        batch_rot = batch_rot.to(device)
+        batch_trans = batch_trans.to(device)
+        batch_ctf = batch_ctf.to(device)
+        batch_frequency_weights = batch_frequency_weights.to(device)
+        ntilts = batch_images.shape[1]
+
+        # correct for translations
+        if not torch.all(batch_trans == 0):
+            batch_images = lattice.translate_ht(batch_images.view(B * ntilts, -1), batch_trans.view(B * ntilts, 1, 2))
+
+        # correct CTF by phase flipping images
+        if not torch.all(batch_ctf == 0):
+            freqs = lattice.freqs2d.unsqueeze(0).expand(B * ntilts, *lattice.freqs2d.shape)
+            freqs = freqs / batch_ctf[:, :, 1].view(B * ntilts, 1, 1)  # convert units from 1/px to 1/Angstrom
+            ctf_weights = ctf.compute_ctf(freqs, *torch.split(batch_ctf.view(B * ntilts, -1)[:, 2:], 1, 1))
+            batch_images = batch_images.view(B, ntilts, boxsize_ht * boxsize_ht) * ctf_weights.view(B, ntilts, boxsize_ht * boxsize_ht).sign()
+
+        # weight by dose and tilt
+        # TODO remove? half maps should be truly unfiltered?
+        batch_images = batch_images * batch_frequency_weights.view(B, ntilts, boxsize_ht * boxsize_ht)
+
+        # mask out frequencies greater than nyquist
+        batch_images = batch_images.view(B, ntilts, boxsize_ht * boxsize_ht)[:, :, mask]
+
+        # backproject
+        batch_images_coords = lattice.coords[mask] @ batch_rot
+        for i in range(B):
+            for j in range(ntilts):
+                add_slice(V, counts, batch_images_coords[i, j], batch_images[i, j], boxsize_ht)
+
+    return V, counts
+
 def add_slice(V, counts, ff_coord, ff, D):
     d2 = int(D/2)
     ff_coord = ff_coord.transpose(0,1)
+    d2 = int(D / 2)
+    ff_coord = ff_coord.transpose(0, 1)
     xf, yf, zf = ff_coord.floor().long()
     xc, yc, zc = ff_coord.ceil().long()
     def add_for_corner(xi,yi,zi):
@@ -64,7 +121,7 @@ def main(args):
     device = utils.get_default_device()
 
     # load the star file
-    ptcls_star = starfile.TiltSeriesStarfile.load(args.particles)
+    ptcls_star = starfile.TiltSeriesStarfile(args.particles)
 
     # filter by indices and/or manual selection of first N particles
     if args.ind is not None:
@@ -92,9 +149,10 @@ def main(args):
                                            recon_dose_weight=args.recon_dose_weight,
                                            recon_tilt_weight=args.recon_tilt_weight,
                                            l_dose_mask=False,
-                                           lazy=False,
+                                           lazy=args.lazy,
+                                           use_all_images=True,
                                            sequential_tilt_sampling=True)
-    ptcls_star = starfile.TiltSeriesStarfile.load(args.particles)  # re-load the star file object because loading dataset with ind filtering applies filtering in-place
+    ptcls_star = starfile.TiltSeriesStarfile(args.particles)  # re-load the star file object because loading dataset with ind filtering applies filtering in-place
     data_half2 = dataset.TiltSeriesMRCData(ptcls_star,
                                            norm=(0,1),
                                            invert_data=args.invert_data,
@@ -104,9 +162,10 @@ def main(args):
                                            recon_dose_weight=args.recon_dose_weight,
                                            recon_tilt_weight=args.recon_tilt_weight,
                                            l_dose_mask=False,
-                                           lazy=False,
+                                           lazy=args.lazy,
+                                           use_all_images=True,
                                            sequential_tilt_sampling=True)
-    D = data_half1.D
+    D = data_half1.boxsize_ht
     Apix = ptcls_star.get_tiltseries_pixelsize()
 
     # instantiate lattice
@@ -164,9 +223,17 @@ def main(args):
 
         return V, counts
     log('Backprojecting half set 1 ...')
-    V_half1, counts_half1 = backproject_dataset(data_half1, V_half1, counts_half1)
+    V_half1, counts_half1 = backproject_dataset(data=data_half1,
+                                                V=V_half1,
+                                                counts=counts_half1,
+                                                device=device,
+                                                lattice=lattice)
     log('Backprojecting half set 2 ...')
-    V_half2, counts_half2 = backproject_dataset(data_half2, V_half2, counts_half2)
+    V_half2, counts_half2 = backproject_dataset(data=data_half2,
+                                                V=V_half2,
+                                                counts=counts_half2,
+                                                device=device,
+                                                lattice=lattice)
 
     # reconstruct full and half-maps
     log('Reconstructing...')

@@ -382,21 +382,15 @@ class TiltSeriesStarfile(GenericStarfile):
 
         # pre-initialize header aliases as None, to be set as appropriate by guess_metadata_interpretation()
         self.block_particles = None
-        self.df = None
 
         self.header_pose_phi = None
         self.header_pose_theta = None
         self.header_pose_psi = None
-        self.headers_rot = [self.header_pose_phi,
-                            self.header_pose_theta,
-                            self.header_pose_psi]
 
         self.header_pose_tx = None
         self.header_pose_tx_angst = None
         self.header_pose_ty = None
         self.header_pose_ty_angst = None
-        self.headers_trans = [self.header_pose_tx,
-                              self.header_pose_ty]
 
         self.header_ctf_angpix = None
         self.header_ctf_defocus_u = None
@@ -406,14 +400,6 @@ class TiltSeriesStarfile(GenericStarfile):
         self.header_ctf_cs = None
         self.header_ctf_w = None
         self.header_ctf_ps = None
-        self.headers_ctf = [self.header_ctf_angpix,
-                            self.header_ctf_defocus_u,
-                            self.header_ctf_defocus_v,
-                            self.header_ctf_defocus_ang,
-                            self.header_ctf_voltage,
-                            self.header_ctf_cs,
-                            self.header_ctf_w,
-                            self.header_ctf_ps]
 
         self.header_ptcl_uid = None
         self.header_ptcl_dose = None
@@ -428,10 +414,6 @@ class TiltSeriesStarfile(GenericStarfile):
         # infer the upstream metadata format
         self._infer_metadata_mapping()
 
-    def __init__(self, headers, df, mrc_path):
-        assert headers == list(df.columns), f'{headers} != {df.columns}'
-        self.headers = headers
-        self.df = df
 
     def _infer_metadata_mapping(self) -> None:
         """
@@ -559,7 +541,6 @@ class TiltSeriesStarfile(GenericStarfile):
 
                 # easy reference to particles data block
                 self.block_particles = 'data_'
-                self.df = self.blocks[self.block_particles]
 
                 # set header aliases used by tomodrgn
                 self.header_pose_phi = '_rlnAngleRot'
@@ -595,7 +576,6 @@ class TiltSeriesStarfile(GenericStarfile):
 
                 # easy reference to particles data block
                 self.block_particles = 'data_'
-                self.df = self.blocks[self.block_particles]
 
                 # set header aliases used by tomodrgn
                 self.header_pose_phi = '_rlnAngleRot'
@@ -632,7 +612,6 @@ class TiltSeriesStarfile(GenericStarfile):
 
                 # easy reference to particles data block
                 self.block_particles = 'data_particles'
-                self.df = self.blocks[self.block_particles]
 
                 # set header aliases used by tomodrgn
                 self.header_pose_phi = '_rlnAngleRot'
@@ -679,6 +658,36 @@ class TiltSeriesStarfile(GenericStarfile):
 
             case _:
                 raise NotImplementedError(f'STAR file headers do not match any pattern known to tomoDRGN: {headers}')
+
+    @property
+    def headers_rot(self):
+        return [self.header_pose_phi,
+                self.header_pose_theta,
+                self.header_pose_psi]
+
+    @property
+    def headers_trans(self):
+        return [self.header_pose_tx,
+                self.header_pose_ty]
+
+    @property
+    def headers_ctf(self):
+        return [self.header_ctf_angpix,
+                self.header_ctf_defocus_u,
+                self.header_ctf_defocus_v,
+                self.header_ctf_defocus_ang,
+                self.header_ctf_voltage,
+                self.header_ctf_cs,
+                self.header_ctf_w,
+                self.header_ctf_ps]
+
+    @property
+    def df(self):
+        return self.blocks[self.block_particles]
+
+    @df.setter
+    def df(self, value):
+        self.blocks[self.block_particles] = value
 
     def __len__(self) -> int:
         return len(self.df)

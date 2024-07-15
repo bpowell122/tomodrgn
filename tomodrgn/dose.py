@@ -130,7 +130,7 @@ def combine_dose_tilt_weights(dose_weights, tilt_weights):
     return weights
 
 
-def calculate_circular_mask(D):
+def calculate_circular_mask(D: int) -> np.ndarray:
     '''
     Produces binary mask of circle inscribed in box of side length D, with central pixel set to False (DC component)
     Params

@@ -91,6 +91,7 @@ class TiltSeriesMRCData(data.Dataset):
                  recon_dose_weight: bool = False,
                  recon_tilt_weight: bool = False,
                  l_dose_mask: bool = False,
+                 use_all_images: bool = False,
                  sequential_tilt_sampling: bool = False, ):
 
         # set attributes known immediately at creation time
@@ -101,6 +102,7 @@ class TiltSeriesMRCData(data.Dataset):
         self.window_r = window_r
         self.window_r_outer = window_r_outer
         self.invert_data = invert_data
+        self.use_all_images = use_all_images
         self.sequential_tilt_sampling = sequential_tilt_sampling
         self.recon_tilt_weight = recon_tilt_weight
         self.recon_dose_weight = recon_dose_weight
@@ -136,7 +138,7 @@ class TiltSeriesMRCData(data.Dataset):
         # load the CTF parameters
         ctf_params = self._load_ctf_params()
         self.ctf_params = ctf_params
-        self.boxsize_ht = self.ctf_params[0, 0] + 1
+        self.boxsize_ht = int(self.ctf_params[0, 0] + 1)
 
         # get critical dose for each spatial frequency
         spatial_frequencies_critical_dose, hartley_2d_mask = self._get_spatial_frequencies_critical_dose()
@@ -151,11 +153,12 @@ class TiltSeriesMRCData(data.Dataset):
         ptcl_img_ind = self.ptcls_to_imgs_ind[idx_ptcl].astype(int)
 
         # determine the order in which to return the images and related parameters
-        if self.sequential_tilt_sampling:
-            zero_indexed_ind = np.arange(self.ntilts_training)  # take first ntilts_training images for deterministic loading/debugging
-        else:
-            zero_indexed_ind = np.asarray(np.random.choice(len(ptcl_img_ind), size=self.ntilts_training, replace=False))
-        ptcl_img_ind = ptcl_img_ind[zero_indexed_ind]
+        if not self.use_all_images:
+            if self.sequential_tilt_sampling:
+                zero_indexed_ind = np.arange(self.ntilts_training)  # take first ntilts_training images for deterministic loading/debugging
+            else:
+                zero_indexed_ind = np.asarray(np.random.choice(len(ptcl_img_ind), size=self.ntilts_training, replace=False))
+            ptcl_img_ind = ptcl_img_ind[zero_indexed_ind]
 
         # load and preprocess the images to be returned
         if self.lazy:
@@ -182,15 +185,15 @@ class TiltSeriesMRCData(data.Dataset):
         ctf_params = 0 if self.ctf_params is None else self.ctf_params[ptcl_img_ind]
         if self.recon_dose_weight or self.l_dose_mask:
             dose_weights = dose.calculate_dose_weights(self.spatial_frequencies_critical_dose, cumulative_doses).astype(images.dtype)
-            decoder_mask = dose.calculate_dose_mask(dose_weights, self.hartley_2d_mask) if self.l_dose_mask else np.repeat(self.hartley_2d_mask[np.newaxis, :, :], self.ntilts_training, axis=0)
+            decoder_mask = dose.calculate_dose_mask(dose_weights, self.hartley_2d_mask) if self.l_dose_mask else np.repeat(self.hartley_2d_mask[np.newaxis, :, :], len(ptcl_img_ind), axis=0)
         else:
-            dose_weights = np.ones((self.ntilts_training, self.boxsize_ht, self.boxsize_ht), dtype=images.dtype)
-            decoder_mask = np.repeat(self.hartley_2d_mask[np.newaxis, :, :], self.ntilts_training, axis=0)
+            dose_weights = np.ones((len(ptcl_img_ind), self.boxsize_ht, self.boxsize_ht), dtype=images.dtype)
+            decoder_mask = np.repeat(self.hartley_2d_mask[np.newaxis, :, :], len(ptcl_img_ind), axis=0)
         if self.recon_tilt_weight:
             tilts = self.star.df[self.star.header_ptcl_tilt].iloc[ptcl_img_ind].to_numpy(dtype=images.dtype)
             tilt_weights = np.cos(tilts)
         else:
-            tilt_weights = np.ones(self.ntilts_training)
+            tilt_weights = np.ones(len(ptcl_img_ind))
         decoder_weights = dose.combine_dose_tilt_weights(dose_weights, tilt_weights).astype(np.float32)
 
         return images, rot, trans, ctf_params, decoder_weights, decoder_mask, idx_ptcl
@@ -199,8 +202,8 @@ class TiltSeriesMRCData(data.Dataset):
         return self.ptcls[index]
 
     def _filter_ptcls_star(self,
-                           ind_img: np.ndarray | str,
-                           ind_ptcl: np.ndarray | str) -> np.ndarray:
+                           ind_img: np.ndarray | str = None,
+                           ind_ptcl: np.ndarray | str = None) -> np.ndarray:
         """
         Filter the TiltSeriesStarfile associated with this TiltSeriesMRCData by image indices (rows) and particle indices (groups of rows).
         :param ind_img: numpy array or path to numpy array of integer row indices to preserve, shape (N)
@@ -216,10 +219,11 @@ class TiltSeriesMRCData(data.Dataset):
         if ind_img is not None:
             log('Filtering particle images by supplied indices')
 
-            if type(ind_img) is str and ind_img.endswith('.pkl'):
-                ind_ptcl = utils.load_pkl(ind_ptcl)
-            else:
-                raise ValueError(f'Expected .pkl file for {ind_img=}')
+            if type(ind_img) is str:
+                if ind_img.endswith('.pkl'):
+                    ind_ptcl = utils.load_pkl(ind_ptcl)
+                else:
+                    raise ValueError(f'Expected .pkl file for {ind_img=}')
 
             assert min(ind_img) >= 0
             assert max(ind_img) <= len(self.star.df)
@@ -230,10 +234,11 @@ class TiltSeriesMRCData(data.Dataset):
         if ind_ptcl is not None:
             log('Filtering particles by supplied indices')
 
-            if type(ind_ptcl) is str and ind_ptcl.endswith('.pkl'):
-                ind_ptcl = utils.load_pkl(ind_ptcl)
-            else:
-                raise ValueError(f'Expected .pkl file for {ind_ptcl=}')
+            if type(ind_ptcl) is str:
+                if ind_ptcl.endswith('.pkl'):
+                    ind_ptcl = utils.load_pkl(ind_ptcl)
+                else:
+                    raise ValueError(f'Expected .pkl file for {ind_ptcl=}')
 
             assert min(ind_ptcl) >= 0
             assert max(ind_ptcl) <= len(ptcls_unique_list)
@@ -264,7 +269,7 @@ class TiltSeriesMRCData(data.Dataset):
 
         # parse translations (if present, default none for warp-exported particleseries)
         log('Loading translations from star file (if any)')
-        if all(header_trans in self.star.df.headers for header_trans in self.star.headers_trans):
+        if all(header_trans in self.star.df.columns for header_trans in self.star.headers_trans):
             trans = self.star.df[self.star.headers_trans].to_numpy(dtype=np.float32)
             log('Translations (pixels):')
             log(trans[0])
@@ -287,7 +292,7 @@ class TiltSeriesMRCData(data.Dataset):
             log('Particles exported by detected STAR file source software are pre-CTF corrected. During training, reconstructed Fourier central slices will not have CTF applied.')
             return ctf_params
 
-        if not all(header_ctf in self.star.df.headers for header_ctf in self.star.headers_ctf):
+        if not all(header_ctf in self.star.df.columns for header_ctf in self.star.headers_ctf):
             log('CTF parameters not found in star file. During training, reconstructed Fourier central slices will not have CTF applied.')
             return ctf_params
 
