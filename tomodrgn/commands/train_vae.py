@@ -113,13 +113,26 @@ def get_latest(args: argparse.Namespace,
     return args
 
 
-def save_config(args, dataset, lattice, model, out_config):
+def save_config(args: argparse.Namespace,
+                data: TiltSeriesMRCData,
+                lattice: Lattice,
+                model: TiltSeriesHetOnlyVAE,
+                out_config: str) -> None:
+    """
+    Save input arguments and precalculated data, lattice, and model metadata.
+    :param args: argparse namespace from parse_args
+    :param data: TiltSeriesMRCData object containing input data
+    :param lattice: Lattice object created using input data
+    :param model: TiltSeriesHetOnlyVAE object created using input data (no weights included)
+    :param out_config: name of output `.pkl` file in whcih to save configuration
+    :return: None
+    """
     dataset_args = dict(particles=args.particles,
-                        norm=dataset.norm,
-                        ntilts=dataset.ntilts_training,
+                        norm=data.norm,
+                        ntilts=data.ntilts_training,
                         invert_data=args.invert_data,
                         ind=args.ind,
-                        ind_img=np.hstack(dataset.ptcls_to_imgs_ind),
+                        ind_img=np.hstack(data.ptcls_to_imgs_ind),
                         window=args.window,
                         window_r=args.window_r,
                         window_r_outer=args.window_r_outer,
