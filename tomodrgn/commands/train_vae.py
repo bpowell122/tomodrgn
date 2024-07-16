@@ -248,14 +248,11 @@ def train_batch(*,
         z_mu, z_logvar, z = encode_batch(model=model,
                                          batch_images=batch_images_preprocessed)
         # decode the lattice coordinate positions given the encoder-generated embeddings
-        y_reconstructed = decode_batch(model,
-                                       lattice,
-                                       batch_rots,
-                                       batch_hartley_2d_mask,
-                                       batchsize,
-                                       ntilts,
-                                       boxsize_ht,
-                                       z)
+        y_reconstructed = decode_batch(model=model,
+                                       lattice=lattice,
+                                       batch_rots=batch_rots,
+                                       batch_hartley_2d_mask=batch_hartley_2d_mask,
+                                       z=z)
         # calculate the model loss
         loss, gen_loss, kld_loss = loss_function(z_mu,
                                                  z_logvar,
@@ -338,23 +335,51 @@ def encode_batch(*,
     return z_mu, z_logvar, z
 
 
-def decode_batch(model, lattice, rot, dec_mask, B, ntilts, D, z):
+def decode_batch(*,
+                 model: TiltSeriesHetOnlyVAE,
+                 lattice: Lattice,
+                 batch_rots: torch.Tensor,
+                 batch_hartley_2d_mask: torch.Tensor,
+                 z: torch.Tensor) -> torch.Tensor:
+    """
+    Decode a batch of particles represented by multiple images from per-particle latent embeddings and corresponding lattice positions to evaluate
+    :param model: TiltSeriesHetOnlyVAE object to be trained
+    :param lattice: Hartley-transform lattice of points for voxel grid operations
+    :param batch_rots: Batch of 3-D rotation matrices corresponding to `batch_images` known poses, shape (batchsize, ntilts, 3, 3)
+    :param batch_hartley_2d_mask: Batch of 2-D masks to be applied per-spatial-frequency.
+            Calculated as the intersection of critical dose exposure curves and a Nyquist-limited circular mask in reciprocal space, including masking the DC component.
+    :param z: Resampled latent embedding for each particle
+    :return: Reconstructed central slices of Fourier space volumes corresponding to each particle in the batch, shape (batchsize * ntilts * boxsize_ht**2 [`batch_hartley_2d_mask`])
+    """
+
+    # get key dimension sizes
+    boxsize_ht = lattice.D
+    batchsize, ntilts, _, _ = batch_rots.shape
+
     # TODO reimplement decoding more cleanly and efficiently with NestedTensors when autograd available: https://github.com/pytorch/nestedtensor
+    # prepare lattice at rotated fourier components
+    input_coords = lattice.coords @ batch_rots  # shape batchsize x ntilts x boxsize_ht**2 x 3 from [boxsize_ht**2 x 3] @ [batchsize x ntilts x 3 x 3]
 
     # prepare lattice at masked fourier components
     input_coords = lattice.coords @ rot  # shape B x ntilts x D*D x 3 from [D*D x 3] @ [B x ntilts x 3 x 3]
     input_coords = input_coords[dec_mask.view(B, ntilts, D * D), :]  # shape np.sum(dec_mask) x 3
+    # concatenate with z
+    z = z.view(z.shape[0], *([1] * (input_coords.ndimension() - 2)), z.shape[-1])  # shape batchsize x 1 x 1 x zdim
+    z_percoord = z.expand(*input_coords.shape[:-1], z.shape[-1])  # shape batchsize x ntilts x boxsize_ht**2 x zdim
+    input_coords_z = torch.cat((input_coords, z_percoord), dim=-1)  # shape batchsize x ntilts x boxsize_ht**2 x 3+zdim
 
     # slicing by #pixels per particle after dec_mask is applied to indirectly get correct tensors subset for concatenating z with matching particle coords
     ptcl_pixel_counts = torch.sum(dec_mask.view(B, -1), dim=1)
     z = torch.repeat_interleave(z, ptcl_pixel_counts, dim=0, output_size=torch.sum(ptcl_pixel_counts))
     input_coords = torch.cat((input_coords, z), dim=-1)
+    # filter by dec_mask
+    input_coords_z_masked = input_coords_z[batch_hartley_2d_mask.view(batchsize, ntilts, boxsize_ht * boxsize_ht), :].unsqueeze(0)
+    pseudo_batchsize = utils.first_n_factors(input_coords_z_masked.shape[-2], lower_bound=8)[0]
+    input_coords_z_masked = input_coords_z_masked.view(pseudo_batchsize, -1, input_coords_z_masked.shape[-1])
 
-    # decode
-    input_coords = input_coords.unsqueeze(0)  # singleton batch dimension for model to run (dec_mask can have variable # elements per particle, therefore cannot reshape with b > 1)
-    y_recon = model(input_coords).view(1, -1)  # 1 x B*ntilts*N[final_mask]
-
-    return y_recon
+    # pass to decoder
+    batch_images_recon = model(input_coords_z_masked).view(1, -1)
+    return batch_images_recon
 
 
 def _unparallelize(model):
