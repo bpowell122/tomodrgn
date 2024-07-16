@@ -12,7 +12,7 @@ import torch
 
 from tomodrgn import utils, dataset
 from tomodrgn.models import TiltSeriesHetOnlyVAE
-from tomodrgn.commands.train_vae import eval_z
+from tomodrgn.commands.train_vae import encoder_inference
 
 log = utils.log
 vlog = utils.vlog
@@ -100,7 +100,11 @@ def main(args):
     model, lattice = TiltSeriesHetOnlyVAE.load(cfg, args.weights, device=device)
 
     # evaluation loop
-    z_mu, z_logvar = eval_z(model, lattice, data, args, device, use_amp=use_amp)
+    z_mu, z_logvar = encoder_inference(model=model,
+                                       lattice=lattice,
+                                       data=data,
+                                       use_amp=use_amp,
+                                       batchsize=args.batch_size)
 
     with open(args.out_z,'wb') as f:
         pickle.dump(z_mu, f)

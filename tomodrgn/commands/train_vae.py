@@ -423,37 +423,70 @@ def loss_function(*,
     return loss, gen_loss, kld_loss
 
 
-def eval_z(model, lattice, data, args, device, use_amp=False):
+def encoder_inference(*,
+                      model: TiltSeriesHetOnlyVAE | DataParallelPassthrough,
+                      lattice: Lattice,
+                      data: TiltSeriesMRCData,
+                      use_amp: bool = False,
+                      batchsize: int = 1,
+                      **kwargs) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Run inference on the encoder module using the specified data as input to be embedded in latent space.
+    :param model: TiltSeriesHetOnlyVAE object to be used for encoder module inference. Informs device on which to run inference.
+    :param lattice: Hartley-transform lattice of points for voxel grid operations
+    :param data: TiltSeriesMRCData object for accessing tilt images with known CTF and pose parameters, to be embedded in latent space
+    :param use_amp: If true, use Automatic Mixed Precision to reduce memory consumption and accelerate code execution via `torch.autocast`
+    :param batchsize: batch size used in DataLoader for model inference
+    :param kwargs: All other key word arguments are passed to `torch.DataLoader`
+    :return: Direct output of encoder module parameterizing the mean of the latent embedding for each particle, shape (batchsize, zdim).
+            Direct output of encoder module parameterizing the log variance of the latent embedding for each particle, shape (batchsize, zdim)
+    """
+
+    # prepare to run model inference
     model.eval()
     assert not model.training
     with torch.no_grad():
-        with torch.autocast(device_type=device.type, enabled=use_amp):
-            z_mu_all = torch.zeros((data.nptcls, model.zdim), device=device, dtype=torch.half if use_amp else torch.float)
-            z_logvar_all = torch.zeros((data.nptcls, model.zdim), device=device, dtype=torch.half if use_amp else torch.float)
-            data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=False,
-                                        num_workers=args.num_workers, prefetch_factor=args.prefetch_factor,
-                                        persistent_workers=args.persistent_workers, pin_memory=args.pin_memory)
+
+        # autocast auto-enabled and set to correct device
+        with torch.autocast(device_type=model.device.type, enabled=use_amp):
+
+            # pre-allocate tensors to store outputs
+            z_mu_all = torch.zeros((data.nptcls, model.zdim),
+                                   device=model.device,
+                                   dtype=torch.half if use_amp else torch.float)
+            z_logvar_all = torch.zeros_like(z_mu_all)
+
+            # create the dataloader iterator with shuffle False to preserve index alignment between input dataset and output latent
+            data_generator = DataLoader(data,
+                                        batch_size=batchsize,
+                                        shuffle=False,
+                                        **kwargs)
+
             for batch_images, _, batch_trans, batch_ctf_params, _, _, batch_indices in data_generator:
-                B, ntilts, D, D = batch_images.shape
-
                 # transfer to GPU
-                batch_images = batch_images.to(device)
-                batch_ctf_params = batch_ctf_params.to(device)
-                batch_trans = batch_trans.to(device)
+                batch_images = batch_images.to(model.device)
+                batch_ctf_params = batch_ctf_params.to(model.device)
+                batch_trans = batch_trans.to(model.device)
 
-                # use run_batch to reduce redundant code errors
+                # encode the translated and CTF-phase-flipped images
                 batch_images, ctf_weights = preprocess_batch(lattice=lattice,
                                                              batch_images=batch_images,
                                                              batch_trans=batch_trans,
                                                              batch_ctf_params=batch_ctf_params)
+
+                # decode the lattice coordinate positions given the encoder-generated embeddings
                 z_mu, z_logvar, z = encode_batch(model=model,
                                                  batch_images=batch_images)
 
+                # store latent embeddings in master array
                 z_mu_all[batch_indices] = z_mu
                 z_logvar_all[batch_indices] = z_logvar
+
+            # when dataset is fully exhausted, move latent embeddings to cpu-based numpy arrays
             z_mu_all = z_mu_all.cpu().numpy()
             z_logvar_all = z_logvar_all.cpu().numpy()
 
+            # sanity check that no latent embeddings are NaN or inf, which could happen with AMP enabled
             if np.any(z_mu_all == np.nan) or np.any(z_mu_all == np.inf):
                 nan_count = np.sum(np.isnan(z_mu_all))
                 inf_count = np.sum(np.isinf(z_mu_all))
@@ -917,10 +950,18 @@ def main(args):
                 flog(f'GPU memory usage: {utils.check_memory_usage()}')
             out_weights = f'{args.outdir}/weights.{epoch}.pkl'
             out_z_train = f'{args.outdir}/z.{epoch}.train.pkl'
-            z_mu_train, z_logvar_train = eval_z(model, lattice, data_train, args, device, use_amp=use_amp)
+            z_mu_train, z_logvar_train = encoder_inference(model=model,
+                                                           lattice=lattice,
+                                                           data=data_train,
+                                                           use_amp=use_amp,
+                                                           batchsize=args.batch_size)
             if data_test:
                 out_z_test = f'{args.outdir}/z.{epoch}.test.pkl'
-                z_mu_test, z_logvar_test = eval_z(model, lattice, data_test, args, device, use_amp=use_amp)
+                z_mu_test, z_logvar_test = encoder_inference(model=model,
+                                                             lattice=lattice,
+                                                             data=data_test,
+                                                             use_amp=use_amp,
+                                                             batchsize=args.batch_size)
             else:
                 z_mu_test, z_logvar_test, out_z_test = None, None, None
             save_checkpoint(model, optim, epoch, z_mu_train, z_logvar_train, z_mu_test, z_logvar_test, out_weights, out_z_train, out_z_test, scaler)
@@ -934,10 +975,18 @@ def main(args):
     # save model weights, latent encoding, and evaluate the model on 3D lattice
     out_weights = f'{args.outdir}/weights.pkl'
     out_z_train = f'{args.outdir}/z.train.pkl'
-    z_mu_train, z_logvar_train = eval_z(model, lattice, data_train, args, device, use_amp=use_amp)
+    z_mu_train, z_logvar_train = encoder_inference(model=model,
+                                                   lattice=lattice,
+                                                   data=data_train,
+                                                   use_amp=use_amp,
+                                                   batchsize=args.batch_size)
     if data_test:
         out_z_test = f'{args.outdir}/z.test.pkl'
-        z_mu_test, z_logvar_test = eval_z(model, lattice, data_test, args, device, use_amp=use_amp)
+        z_mu_test, z_logvar_test = encoder_inference(model=model,
+                                                     lattice=lattice,
+                                                     data=data_test,
+                                                     use_amp=use_amp,
+                                                     batchsize=args.batch_size)
     else:
         z_mu_test, z_logvar_test, out_z_test = None, None, None
     save_checkpoint(model, optim, epoch, z_mu_train, z_logvar_train, z_mu_test, z_logvar_test, out_weights, out_z_train, out_z_test, scaler)
