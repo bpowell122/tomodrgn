@@ -1009,4 +1009,12 @@ class SO3reparameterize(nn.Module):
         return z_mu, z_std
 
         
-
+class DataParallelPassthrough(torch.nn.DataParallel):
+    """
+    Class to wrap underlying module in DataParallel for GPU-parallelized computations, but allow accessing underlying module attributes and methods
+    """
+    def __getattr__(self, name):
+        try:
+            return super().__getattr__(name)
+        except AttributeError:
+            return getattr(self.module, name)

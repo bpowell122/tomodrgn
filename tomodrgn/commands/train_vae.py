@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 import tomodrgn
 from tomodrgn import utils, dataset, ctf, starfile
 from tomodrgn.dataset import TiltSeriesMRCData
-from tomodrgn.models import TiltSeriesHetOnlyVAE
+from tomodrgn.models import TiltSeriesHetOnlyVAE, DataParallelPassthrough
 from tomodrgn.lattice import Lattice
 from tomodrgn.beta_schedule import get_beta_schedule
 
@@ -118,7 +118,7 @@ def get_latest(args: argparse.Namespace,
 def save_config(args: argparse.Namespace,
                 data: TiltSeriesMRCData,
                 lattice: Lattice,
-                model: TiltSeriesHetOnlyVAE,
+                model: TiltSeriesHetOnlyVAE | DataParallelPassthrough,
                 out_config: str) -> None:
     """
     Save input arguments and precalculated data, lattice, and model metadata.
@@ -195,7 +195,7 @@ def save_config(args: argparse.Namespace,
 
 
 def train_batch(*,
-                model: TiltSeriesHetOnlyVAE,
+                model: TiltSeriesHetOnlyVAE | DataParallelPassthrough,
                 scaler: torch.GradScaler,
                 optim: torch.optim.Optimizer,
                 lattice: Lattice,
@@ -316,6 +316,7 @@ def preprocess_batch(*,
 def encode_batch(*,
                  model: TiltSeriesHetOnlyVAE,
                  batch_images: torch.tensor) -> tuple[torch.tensor, torch.tensor, torch.tensor]:
+                 model: TiltSeriesHetOnlyVAE | DataParallelPassthrough,
     """
     Encode a batch of particles represented by multiple images to per-particle latent embeddings
     :param model: TiltSeriesHetOnlyVAE object to be trained
@@ -329,14 +330,14 @@ def encode_batch(*,
     batchsize, ntilts, _, _ = batch_images.shape
 
     # encode
-    z_mu, z_logvar = _unparallelize(model).encode(batch_images, batchsize, ntilts)  # ouput is B x zdim, i.e. one value per ptcl (not per img)
-    z = _unparallelize(model).reparameterize(z_mu, z_logvar)
+    z_mu, z_logvar = model.encode(batch_images, batchsize, ntilts)  # ouput is B x zdim, i.e. one value per ptcl (not per img)
+    z = model.reparameterize(z_mu, z_logvar)
 
     return z_mu, z_logvar, z
 
 
 def decode_batch(*,
-                 model: TiltSeriesHetOnlyVAE,
+                 model: TiltSeriesHetOnlyVAE | DataParallelPassthrough,
                  lattice: Lattice,
                  batch_rots: torch.Tensor,
                  batch_hartley_2d_mask: torch.Tensor,
@@ -360,18 +361,11 @@ def decode_batch(*,
     # prepare lattice at rotated fourier components
     input_coords = lattice.coords @ batch_rots  # shape batchsize x ntilts x boxsize_ht**2 x 3 from [boxsize_ht**2 x 3] @ [batchsize x ntilts x 3 x 3]
 
-    # prepare lattice at masked fourier components
-    input_coords = lattice.coords @ rot  # shape B x ntilts x D*D x 3 from [D*D x 3] @ [B x ntilts x 3 x 3]
-    input_coords = input_coords[dec_mask.view(B, ntilts, D * D), :]  # shape np.sum(dec_mask) x 3
     # concatenate with z
     z = z.view(z.shape[0], *([1] * (input_coords.ndimension() - 2)), z.shape[-1])  # shape batchsize x 1 x 1 x zdim
     z_percoord = z.expand(*input_coords.shape[:-1], z.shape[-1])  # shape batchsize x ntilts x boxsize_ht**2 x zdim
     input_coords_z = torch.cat((input_coords, z_percoord), dim=-1)  # shape batchsize x ntilts x boxsize_ht**2 x 3+zdim
 
-    # slicing by #pixels per particle after dec_mask is applied to indirectly get correct tensors subset for concatenating z with matching particle coords
-    ptcl_pixel_counts = torch.sum(dec_mask.view(B, -1), dim=1)
-    z = torch.repeat_interleave(z, ptcl_pixel_counts, dim=0, output_size=torch.sum(ptcl_pixel_counts))
-    input_coords = torch.cat((input_coords, z), dim=-1)
     # filter by dec_mask
     input_coords_z_masked = input_coords_z[batch_hartley_2d_mask.view(batchsize, ntilts, boxsize_ht * boxsize_ht), :].unsqueeze(0)
     pseudo_batchsize = utils.first_n_factors(input_coords_z_masked.shape[-2], lower_bound=8)[0]
@@ -454,7 +448,7 @@ def save_checkpoint(model, optim, epoch, z_mu_train, z_logvar_train, z_mu_test, 
     # save model weights
     torch.save({
         'epoch': epoch,
-        'model_state_dict': _unparallelize(model).state_dict(),
+        'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optim.state_dict(),
         'scaler': scaler.state_dict() if scaler is not None else None
     }, out_weights)
@@ -849,7 +843,7 @@ def main(args):
         log(f'Using {torch.cuda.device_count()} GPUs!')
         args.batch_size *= torch.cuda.device_count()
         log(f'Increasing batch size to {args.batch_size}')
-        model = nn.DataParallel(model)
+        model = DataParallelPassthrough(model)
     elif args.multigpu:
         log(f'WARNING: --multigpu selected, but {torch.cuda.device_count()} GPUs detected')
 
