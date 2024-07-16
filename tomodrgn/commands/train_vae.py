@@ -192,19 +192,85 @@ def save_config(args: argparse.Namespace,
         pickle.dump(meta, f)
 
 
-def train_batch(scaler, model, lattice, y, rot, tran, cumulative_weights, dec_mask, optim, beta, beta_control=None, ctf_params=None, use_amp=False):
+def train_batch(*,
+                model: TiltSeriesHetOnlyVAE,
+                scaler: torch.GradScaler,
+                optim: torch.optim.Optimizer,
+                lattice: Lattice,
+                batch_images: torch.tensor,
+                batch_rots: torch.tensor,
+                batch_trans: torch.tensor,
+                batch_ctf_params: torch.tensor,
+                batch_recon_error_weights: torch.tensor,
+                batch_hartley_2d_mask: torch.tensor,
+                beta: float,
+                beta_control: float | None = None,
+                use_amp: bool = False) -> np.ndarray:
+    """
+    Train a TiltSeriesHetOnlyVAE model on a batch of tilt series particle images.
+    :param model: TiltSeriesHetOnlyVAE object to be trained
+    :param scaler: torch.GradScaler object to be used for scaling loss involving fp16 tensors to avoid over/underflow
+    :param optim: torch.optim.Optimizer object to be used for optimizing the model
+    :param lattice: Hartley-transform lattice of points for voxel grid operations
+    :param batch_images: Batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht, boxsize_ht)
+    :param batch_rots: Batch of 3-D rotation matrices corresponding to `batch_images` known poses, shape (batchsize, ntilts, 3, 3)
+    :param batch_trans: Batch of 2-D translation matrices corresponding to `batch_images` known poses, shape (batchsize, ntilts, 2).
+            May be `torch.zeros((batchsize))` instead to indicate no translations should be applied to the input images.
+    :param batch_ctf_params: Batch of CTF parameters corresponding to `batch_images` known CTF parameters, shape (batchsize, ntilts, 9).
+            May be `torch.zeros((batchsize))` instead to indicate no CTF corruption should be applied to the reconstructed slice.
+    :param batch_recon_error_weights: Batch of 2-D weights to be applied to the per-spatial-frequency error between the reconstructed slice and the input image.
+            Calculated from critical dose exposure curves and electron beam vs sample tilt geometry.
+            May be `torch.zeros((batchsize))` instead to indicate no weighting should be applied to the reconstructed slice error.
+    :param batch_hartley_2d_mask: Batch of 2-D masks to be applied per-spatial-frequency.
+            Calculated as the intersection of critical dose exposure curves and a Nyquist-limited circular mask in reciprocal space, including masking the DC component.
+    :param beta: scaling factor to apply to KLD during loss calculation.
+    :param beta_control: KL-Controlled VAE gamma. Beta is KL target.
+    :param use_amp: If true, use Automatic Mixed Precision to reduce memory consumption and accelerate code execution via `torch.autocast` and `torch.scaler`
+    :return: numpy array of losses: total loss, generative loss between reconstructed slices and input images, and kld loss between latent embeddings and standard normal
+    """
+    # prepare to train a new batch
     optim.zero_grad()
     model.train()
 
-    B, ntilts, D, D = y.shape
+    # get key dimension sizes
+    batchsize, ntilts, boxsize_ht, boxsize_ht = batch_images.shape
 
-    with autocast(enabled=use_amp):
-        y, ctf_weights = preprocess_batch(lattice, y, tran, ctf_params, B, ntilts, D)
-        z_mu, z_logvar, z = encode_batch(model, y, B, ntilts)
-        y_recon = decode_batch(model, lattice, rot, dec_mask, B, ntilts, D, z)
-        loss, gen_loss, kld_loss = loss_function(z_mu, z_logvar, y, y_recon, ctf_weights, cumulative_weights, dec_mask, beta, beta_control)
-    with torch.autocast(device_type=y.device.type, enabled=use_amp):
+    # autocast auto-enabled and set to correct device
+    with torch.autocast(device_type=batch_images.device.type, enabled=use_amp):
+        # center images via translation and phase flip for partial CTF correction
+        batch_images_preprocessed, ctf_weights = preprocess_batch(lattice,
+                                                                  batch_images,
+                                                                  batch_trans,
+                                                                  batch_ctf_params,
+                                                                  batchsize,
+                                                                  ntilts,
+                                                                  boxsize_ht)
+        # encode the translated and CTF-phase-flipped images
+        z_mu, z_logvar, z = encode_batch(model,
+                                         batch_images_preprocessed,
+                                         batchsize,
+                                         ntilts)
+        # decode the lattice coordinate positions given the encoder-generated embeddings
+        y_reconstructed = decode_batch(model,
+                                       lattice,
+                                       batch_rots,
+                                       batch_hartley_2d_mask,
+                                       batchsize,
+                                       ntilts,
+                                       boxsize_ht,
+                                       z)
+        # calculate the model loss
+        loss, gen_loss, kld_loss = loss_function(z_mu,
+                                                 z_logvar,
+                                                 batch_images_preprocessed,
+                                                 y_reconstructed,
+                                                 ctf_weights,
+                                                 batch_recon_error_weights,
+                                                 batch_hartley_2d_mask,
+                                                 beta,
+                                                 beta_control)
 
+    # backpropogate the scaled loss and optimize model weights
     scaler.scale(loss).backward()
     scaler.step(optim)
     scaler.update()
@@ -736,7 +802,7 @@ def main(args):
         losses_accum = np.zeros((3), dtype=np.float32)
         batch_it = 0
 
-        for batch_images, batch_rot, batch_trans, batch_ctf, batch_decoder_weights, batch_decoder_mask, batch_indices in data_train_generator:
+        for batch_images, batch_rots, batch_trans, batch_ctf_params, batch_recon_error_weights, batch_hartley_2d_mask, batch_indices in data_train_generator:
             # impression counting
             batch_it += len(batch_indices)  # total number of ptcls seen
             global_it = nptcls * epoch + batch_it
@@ -744,16 +810,26 @@ def main(args):
 
             # transfer to GPU
             batch_images = batch_images.to(device)
-            batch_rot = batch_rot.to(device)
+            batch_rots = batch_rots.to(device)
             batch_trans = batch_trans.to(device)
-            batch_ctf = batch_ctf.to(device)
-            batch_decoder_weights = batch_decoder_weights.to(device)
-            batch_decoder_mask = batch_decoder_mask.to(device)
+            batch_ctf_params = batch_ctf_params.to(device)
+            batch_recon_error_weights = batch_recon_error_weights.to(device)
+            batch_hartley_2d_mask = batch_hartley_2d_mask.to(device)
 
             # training minibatch
-            losses_batch = train_batch(scaler, model, lattice, batch_images, batch_rot, batch_trans,
-                                       batch_decoder_weights, batch_decoder_mask, optim, beta,
-                                       args.beta_control, ctf_params=batch_ctf, use_amp=use_amp)
+            losses_batch = train_batch(model=model,
+                                       scaler=scaler,
+                                       optim=optim,
+                                       lattice=lattice,
+                                       batch_images=batch_images,
+                                       batch_rots=batch_rots,
+                                       batch_trans=batch_trans,
+                                       batch_ctf_params=batch_ctf_params,
+                                       batch_recon_error_weights=batch_recon_error_weights,
+                                       batch_hartley_2d_mask=batch_hartley_2d_mask,
+                                       beta=beta,
+                                       beta_control=args.beta_control,
+                                       use_amp=use_amp)
 
             # logging
             if batch_it % args.log_interval == 0:
