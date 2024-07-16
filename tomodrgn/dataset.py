@@ -422,9 +422,9 @@ class TiltSeriesMRCData(data.Dataset):
 
         spatial_frequencies = dose.calculate_spatial_frequencies(angpix, self.boxsize_ht).astype(np.float32)
         spatial_frequencies_critical_dose = dose.calculate_critical_dose_per_frequency(spatial_frequencies, voltage).astype(np.float32)
-        hartley_mask = dose.calculate_circular_mask(self.boxsize_ht)
+        hartley_2d_mask = dose.calculate_circular_mask(self.boxsize_ht)
 
-        return spatial_frequencies_critical_dose, hartley_mask
+        return spatial_frequencies_critical_dose, hartley_2d_mask
 
     @classmethod
     def load(cls,
