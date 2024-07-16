@@ -245,10 +245,8 @@ def train_batch(*,
                                                                   batch_trans=batch_trans,
                                                                   batch_ctf_params=batch_ctf_params)
         # encode the translated and CTF-phase-flipped images
-        z_mu, z_logvar, z = encode_batch(model,
-                                         batch_images_preprocessed,
-                                         batchsize,
-                                         ntilts)
+        z_mu, z_logvar, z = encode_batch(model=model,
+                                         batch_images=batch_images_preprocessed)
         # decode the lattice coordinate positions given the encoder-generated embeddings
         y_reconstructed = decode_batch(model,
                                        lattice,
@@ -317,9 +315,24 @@ def preprocess_batch(*,
 
     return batch_images, batch_ctf_weights
 
-def encode_batch(model, y, B, ntilts):
+
+def encode_batch(*,
+                 model: TiltSeriesHetOnlyVAE,
+                 batch_images: torch.tensor) -> tuple[torch.tensor, torch.tensor, torch.tensor]:
+    """
+    Encode a batch of particles represented by multiple images to per-particle latent embeddings
+    :param model: TiltSeriesHetOnlyVAE object to be trained
+    :param batch_images: Batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht, boxsize_ht)
+    :return z_mu: Direct output of encoder module parameterizing the mean of the latent embedding for each particle, shape (batchsize, zdim)
+    :return z_logvar: Direct output of encoder module parameterizing the log variance of the latent embedding for each particle, shape (batchsize, zdim)
+    :return z: Resampling of the latent embedding for each particle parameterized as a gaussian with mean z_mu and variance z_logvar, shape (batchsize, zdim)
+    """
+
+    # get key dimension sizes
+    batchsize, ntilts, _, _ = batch_images.shape
+
     # encode
-    z_mu, z_logvar = _unparallelize(model).encode(y, B, ntilts)  # ouput is B x zdim, i.e. one value per ptcl (not per img)
+    z_mu, z_logvar = _unparallelize(model).encode(batch_images, batchsize, ntilts)  # ouput is B x zdim, i.e. one value per ptcl (not per img)
     z = _unparallelize(model).reparameterize(z_mu, z_logvar)
 
     return z_mu, z_logvar, z
@@ -393,7 +406,8 @@ def eval_z(model, lattice, data, args, device, use_amp=False):
                                                              batch_images=batch_images,
                                                              batch_trans=batch_trans,
                                                              batch_ctf_params=batch_ctf_params)
-                z_mu, z_logvar, z = encode_batch(model, batch_images, B, ntilts)
+                z_mu, z_logvar, z = encode_batch(model=model,
+                                                 batch_images=batch_images)
 
                 z_mu_all[batch_indices] = z_mu
                 z_logvar_all[batch_indices] = z_logvar
