@@ -42,7 +42,6 @@ def add_args(parser):
     group.add_argument('--ind-img-train', type=os.path.abspath, help='Filter starfile by images (rows) to train model using pre-existing np array pkl')
     group.add_argument('--ind-img-test', type=os.path.abspath, help='Filter starfile by images (rows) to test model using pre-existing np array pkl')
     group.add_argument('--sequential-tilt-sampling', action='store_true', help='Supply particle images of one particle to encoder in starfile order')
-    group.add_argument('--starfile-source', type=str, choices=('warp', 'cistem'), default='warp', help='Software used to extract particles and write star file (sets expected column headers)')
 
     group = parser.add_argument_group('Dataset loading and preprocessing')
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
@@ -50,14 +49,12 @@ def add_args(parser):
     group.add_argument('--window-r', type=float, default=.8, help='Real space inner windowing radius for cosine falloff to radius 1')
     group.add_argument('--window-r-outer', type=float, default=.9, help='Real space outer windowing radius for cosine falloff to radius 1')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
-    group.add_argument('--stack-path', type=os.path.abspath, help='For cisTEM image stack only, path to stack.mrc due to file name not present in star file')
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
     group.add_argument('--Apix', type=float, default=1.0, help='Override A/px from input starfile; useful if starfile does not have _rlnDetectorPixelSize col')
 
     group.add_argument_group('Weighting and masking')
     group.add_argument('--recon-tilt-weight', action='store_true', help='Weight reconstruction loss by cosine(tilt_angle)')
     group.add_argument('--recon-dose-weight', action='store_true', help='Weight reconstruction loss per tilt per pixel by dose dependent amplitude attenuation')
-    group.add_argument('--dose-override', type=float, default=None, help='Manually specify dose in e- / A2 / tilt')
     group.add_argument('--l-dose-mask', action='store_true', help='Do not train on frequencies exposed to > 2.5x critical dose. Training lattice is intersection of this with --l-extent')
 
     group = parser.add_argument_group('Training parameters')
@@ -159,7 +156,6 @@ def save_config(args, dataset, lattice, model, out_config):
                          multigpu=args.multigpu,
                          lazy=args.lazy,
                          recon_dose_weight=args.recon_dose_weight,
-                         dose_override=args.dose_override,
                          recon_tilt_weight=args.recon_tilt_weight,
                          verbose=args.verbose,
                          log_interval=args.log_interval,
@@ -473,18 +469,10 @@ def main(args):
         # https://github.com/pytorch/pytorch/issues/55374
 
     # load star file
-    flog(f'Reading star file with format: {args.starfile_source}')
-    if args.starfile_source == 'warp':
-        ptcls_star = starfile.TiltSeriesStarfile.load(args.particles)
-    elif args.starfile_source == 'cistem':
-        ptcls_star = starfile.TiltSeriesStarfileCisTEM.load(args.particles, args.stack_path)
-        ptcls_star.convert_to_relion_conventions()
-    else:
-        raise NotImplementedError
-    ptcls_to_imgs_ind = ptcls_star.get_ptcl_img_indices()
-    ptcls_star.plot_particle_uid_ntilt_distribution(args.outdir)
+    ptcls_star = starfile.TiltSeriesStarfile(args.particles)
 
     # load the particle indices
+    ptcls_to_imgs_ind = ptcls_star.get_ptcl_img_indices()
     if args.ind is not None:
         flog(f'Reading supplied particle indices {args.ind}')
         ind = pickle.load(open(args.ind, 'rb'))
@@ -497,20 +485,21 @@ def main(args):
     if args.ind_img_train:
         flog(f'Reading supplied train image indices {args.ind_img_train}')
         inds_train = utils.load_pkl(args.ind_img_train)
-        assert max(ptcls_to_imgs_ind) >= len(inds_train), 'More particle images specified for train split than particle images found in star file'
-        assert max(ptcls_to_imgs_ind) >= max(inds_train), 'Specified particle images for train split exceed then number of particle images found in star file'
+        assert np.max(np.hstack(ptcls_to_imgs_ind)) >= len(inds_train), 'More particle images specified for train split than particle images found in star file'
+        assert np.max(np.hstack(ptcls_to_imgs_ind)) >= max(inds_train), 'Specified particle images for train split exceed then number of particle images found in star file'
         if args.ind_img_test:
             flog(f'Reading supplied test image indices {args.ind_img_test}')
             inds_test = utils.load_pkl(args.ind_img_test)
-            assert max(ptcls_to_imgs_ind) >= (len(inds_train) + len(inds_test)), 'More particle images specified for train and test splits than particle images found in star file'
-            assert max(ptcls_to_imgs_ind) >= max(inds_test), 'Specified particle images for test split exceed then number of particle images found in star file'
+            assert np.max(np.hstack(ptcls_to_imgs_ind)) >= (len(inds_train) + len(inds_test)), 'More particle images specified for train and test splits than particle images found in star file'
+            assert np.max(np.hstack(ptcls_to_imgs_ind)) >= max(inds_test), 'Specified particle images for test split exceed then number of particle images found in star file'
         else:
             flog('No test image indices supplied, so none will be used')
             inds_test = np.array([])
     else:
         flog(f'Creating new train/test split indices with fraction_train={args.fraction_train} and first_ntilts={args.first_ntilts}')
         inds_train, inds_test = ptcls_star.make_test_train_split(fraction_train=args.fraction_train,
-                                                                 use_first_ntilts=args.first_ntilts)
+                                                                 first_ntilts=args.first_ntilts,
+                                                                 show_summary_stats=True)
         utils.save_pkl(inds_train, f'{args.outdir}/inds_imgs_train.pkl')
         utils.save_pkl(inds_test, f'{args.outdir}/inds_imgs_test.pkl')
 
@@ -526,10 +515,10 @@ def main(args):
                                            window_r=args.window_r,
                                            window_r_outer=args.window_r_outer,
                                            recon_dose_weight=args.recon_dose_weight,
-                                           dose_override=args.dose_override,
                                            recon_tilt_weight=args.recon_tilt_weight,
                                            l_dose_mask=args.l_dose_mask,
                                            lazy=args.lazy,
+                                           use_all_images=True,
                                            sequential_tilt_sampling=args.sequential_tilt_sampling)
     if len(inds_test) > 0:
         data_test = dataset.TiltSeriesMRCData(ptcls_star,
@@ -542,14 +531,14 @@ def main(args):
                                               window_r=args.window_r,
                                               window_r_outer=args.window_r_outer,
                                               recon_dose_weight=args.recon_dose_weight,
-                                              dose_override=args.dose_override,
                                               recon_tilt_weight=args.recon_tilt_weight,
                                               l_dose_mask=args.l_dose_mask,
                                               lazy=args.lazy,
+                                              use_all_images=True,
                                               sequential_tilt_sampling=args.sequential_tilt_sampling)
     else:
         data_test = None
-    D = data_train.D
+    boxsize_ht = data_train.boxsize_ht
     nptcls = data_train.nptcls
 
     # load pose and CTF from pkl if supplied
@@ -598,14 +587,14 @@ def main(args):
                 data_test.ctf_params = ctf_params_test
 
     # instantiate lattice
-    lattice = Lattice(D, extent=args.l_extent, device=device)
+    lattice = Lattice(boxsize_ht, extent=args.l_extent, device=device)
 
     # determine which pixels to encode (equivalently applicable to all particles)
     if args.enc_mask is None:
-        args.enc_mask = D // 2
+        args.enc_mask = boxsize_ht // 2
     if args.enc_mask > 0:
         # encode pixels within defined circular radius in fourier space
-        assert args.enc_mask <= D // 2
+        assert args.enc_mask <= boxsize_ht // 2
         enc_mask = lattice.get_circular_mask(args.enc_mask)
         in_dim = enc_mask.sum()
     elif args.enc_mask == -1:
@@ -686,7 +675,7 @@ def main(args):
     scaler = GradScaler(enabled=use_amp)
     if use_amp:
         if not args.batch_size % 8 == 0: flog('Warning: recommended to have batch size divisible by 8 for AMP training')
-        if not (D - 1) % 8 == 0: flog('Warning: recommended to have image size divisible by 8 for AMP training')
+        if not (boxsize_ht - 1) % 8 == 0: flog('Warning: recommended to have image size divisible by 8 for AMP training')
         if in_dim % 8 != 0: flog('Warning: recommended to have masked image dimensions divisible by 8 for AMP training')
         assert args.qdimA % 8 == 0, "Encoder hidden layer dimension must be divisible by 8 for AMP training"
         assert args.qdimB % 8 == 0, "Encoder hidden layer dimension must be divisible by 8 for AMP training"
@@ -767,7 +756,7 @@ def main(args):
             save_checkpoint(model, optim, epoch, z_mu_train, z_logvar_train, z_mu_test, z_logvar_test, out_weights, out_z_train, out_z_test, scaler)
             if data_test:
                 flog('Calculating convergence metrics using test/train split...')
-                convergence_latent(z_mu_train, z_logvar_train, z_mu_test, z_logvar_test, args.outdir, epoch, significance_threshold=0.05)
+                convergence_latent(z_mu_train, z_logvar_train, z_mu_test, z_logvar_test, args.outdir, epoch)
                 convergence_volumes_generate(z_mu_train, z_mu_test, epoch, args.outdir, f'{args.outdir}/weights.{epoch}.pkl', f'{args.outdir}/config.pkl', volume_count=100)
                 convergence_volumes_testtrain_correlation(args.outdir, epoch, volume_count=100)
                 convergence_volumes_testtest_scale(args.outdir, epoch, volume_count=100)
