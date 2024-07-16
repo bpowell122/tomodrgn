@@ -10,8 +10,6 @@ from datetime import datetime as dt
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from torch.cuda.amp import GradScaler, autocast
-from scipy.stats import norm
 
 import tomodrgn
 from tomodrgn import utils, dataset, ctf, starfile
@@ -185,6 +183,7 @@ def train_batch(scaler, model, lattice, y, rot, tran, cumulative_weights, dec_ma
         z_mu, z_logvar, z = encode_batch(model, y, B, ntilts)
         y_recon = decode_batch(model, lattice, rot, dec_mask, B, ntilts, D, z)
         loss, gen_loss, kld_loss = loss_function(z_mu, z_logvar, y, y_recon, ctf_weights, cumulative_weights, dec_mask, beta, beta_control)
+    with torch.autocast(device_type=y.device.type, enabled=use_amp):
 
     scaler.scale(loss).backward()
     scaler.step(optim)
@@ -271,7 +270,7 @@ def eval_z(model, lattice, data, args, device, use_amp=False):
     model.eval()
     assert not model.training
     with torch.no_grad():
-        with autocast(enabled=use_amp):
+        with torch.autocast(device_type=device.type, enabled=use_amp):
             z_mu_all = torch.zeros((data.nptcls, model.zdim), device=device, dtype=torch.half if use_amp else torch.float)
             z_logvar_all = torch.zeros((data.nptcls, model.zdim), device=device, dtype=torch.half if use_amp else torch.float)
             data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=False,
@@ -672,7 +671,7 @@ def main(args):
     # Mixed precision training with AMP
     use_amp = not args.no_amp
     flog(f'AMP acceleration enabled (autocast + gradscaler) : {use_amp}')
-    scaler = GradScaler(enabled=use_amp)
+    scaler = torch.GradScaler(device_type=device.type, enabled=use_amp)
     if use_amp:
         if not args.batch_size % 8 == 0: flog('Warning: recommended to have batch size divisible by 8 for AMP training')
         if not (boxsize_ht - 1) % 8 == 0: flog('Warning: recommended to have image size divisible by 8 for AMP training')
