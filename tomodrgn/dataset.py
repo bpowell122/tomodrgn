@@ -183,6 +183,7 @@ class TiltSeriesMRCData(data.Dataset):
         trans = 0 if self.trans is None else self.trans[ptcl_img_ind]
         # collate_fn does not allow returning None, so return 0 to tell downstream usages to skip applying CTF to image
         ctf_params = 0 if self.ctf_params is None else self.ctf_params[ptcl_img_ind]
+
         if self.recon_dose_weight or self.l_dose_mask:
             dose_weights = dose.calculate_dose_weights(self.spatial_frequencies_critical_dose, cumulative_doses).astype(images.dtype)
             decoder_mask = dose.calculate_dose_mask(dose_weights, self.hartley_2d_mask) if self.l_dose_mask else np.repeat(self.hartley_2d_mask[np.newaxis, :, :], len(ptcl_img_ind), axis=0)

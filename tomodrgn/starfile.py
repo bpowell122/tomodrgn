@@ -414,7 +414,6 @@ class TiltSeriesStarfile(GenericStarfile):
         # infer the upstream metadata format
         self._infer_metadata_mapping()
 
-
     def _infer_metadata_mapping(self) -> None:
         """
         Infer particle source software and version for key metadata and extraction-time processing corrections
