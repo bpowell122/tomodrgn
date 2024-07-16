@@ -240,29 +240,29 @@ def train_batch(*,
     # autocast auto-enabled and set to correct device
     with torch.autocast(device_type=batch_images.device.type, enabled=use_amp):
         # center images via translation and phase flip for partial CTF correction
-        batch_images_preprocessed, ctf_weights = preprocess_batch(lattice=lattice,
-                                                                  batch_images=batch_images,
-                                                                  batch_trans=batch_trans,
-                                                                  batch_ctf_params=batch_ctf_params)
+        batch_images_preprocessed, batch_ctf_weights = preprocess_batch(lattice=lattice,
+                                                                        batch_images=batch_images,
+                                                                        batch_trans=batch_trans,
+                                                                        batch_ctf_params=batch_ctf_params)
         # encode the translated and CTF-phase-flipped images
         z_mu, z_logvar, z = encode_batch(model=model,
                                          batch_images=batch_images_preprocessed)
         # decode the lattice coordinate positions given the encoder-generated embeddings
-        y_reconstructed = decode_batch(model=model,
-                                       lattice=lattice,
-                                       batch_rots=batch_rots,
-                                       batch_hartley_2d_mask=batch_hartley_2d_mask,
-                                       z=z)
+        batch_images_recon = decode_batch(model=model,
+                                          lattice=lattice,
+                                          batch_rots=batch_rots,
+                                          batch_hartley_2d_mask=batch_hartley_2d_mask,
+                                          z=z)
         # calculate the model loss
-        loss, gen_loss, kld_loss = loss_function(z_mu,
-                                                 z_logvar,
-                                                 batch_images_preprocessed,
-                                                 y_reconstructed,
-                                                 ctf_weights,
-                                                 batch_recon_error_weights,
-                                                 batch_hartley_2d_mask,
-                                                 beta,
-                                                 beta_control)
+        loss, gen_loss, kld_loss = loss_function(z_mu=z_mu,
+                                                 z_logvar=z_logvar,
+                                                 batch_images=batch_images_preprocessed,
+                                                 batch_images_recon=batch_images_recon,
+                                                 batch_ctf_weights=batch_ctf_weights,
+                                                 batch_recon_error_weights=batch_recon_error_weights,
+                                                 batch_hartley_2d_mask=batch_hartley_2d_mask,
+                                                 beta=beta,
+                                                 beta_control=beta_control)
 
     # backpropogate the scaled loss and optimize model weights
     scaler.scale(loss).backward()
@@ -376,26 +376,47 @@ def decode_batch(*,
     return batch_images_recon
 
 
-def _unparallelize(model):
-    if isinstance(model, nn.DataParallel):
-        return model.module
-    return model
-
-
-def loss_function(z_mu, z_logvar, y, y_recon, ctf_weights, cumulative_weights, dec_mask, beta, beta_control=None):
+def loss_function(*,
+                  z_mu: torch.Tensor,
+                  z_logvar: torch.Tensor,
+                  batch_images: torch.Tensor,
+                  batch_images_recon: torch.Tensor,
+                  batch_ctf_weights: torch.Tensor,
+                  batch_recon_error_weights: torch.Tensor,
+                  batch_hartley_2d_mask: torch.Tensor,
+                  beta: float,
+                  beta_control: float | None = None) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """
+    Calculate generative loss between reconstructed and input images, and beta-weighted KLD between latent embeddings and standard normal
+    :param z_mu: Direct output of encoder module parameterizing the mean of the latent embedding for each particle, shape (batchsize, zdim)
+    :param z_logvar: Direct output of encoder module parameterizing the log variance of the latent embedding for each particle, shape (batchsize, zdim)
+    :param batch_images: Batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht, boxsize_ht)
+    :param batch_images_recon: Reconstructed central slices of Fourier space volumes corresponding to each particle in the batch, shape (batchsize * ntilts * boxsize_ht**2 [`batch_hartley_2d_mask`])
+    :param batch_ctf_weights: CTF evaluated at each spatial frequency corresponding to input images, shape (batchsize, ntilts, boxsize_ht, boxsize_ht) or None if no CTF should be applied
+    :param batch_recon_error_weights: Batch of 2-D weights to be applied to the per-spatial-frequency error between the reconstructed slice and the input image.
+            Calculated from critical dose exposure curves and electron beam vs sample tilt geometry.
+            May be `torch.zeros((batchsize))` instead to indicate no weighting should be applied to the reconstructed slice error.
+    :param batch_hartley_2d_mask: Batch of 2-D masks to be applied per-spatial-frequency.
+            Calculated as the intersection of critical dose exposure curves and a Nyquist-limited circular mask in reciprocal space, including masking the DC component.
+    :param beta: scaling factor to apply to KLD during loss calculation.
+    :param beta_control: KL-Controlled VAE gamma. Beta is KL target.
+    :return: total summed loss, generative loss between reconstructed slices and input images, and beta-weighted kld loss between latent embeddings and standard normal
+    """
     # reconstruction error
-    y = y[dec_mask].view(1, -1)
-    if ctf_weights is not None:
-        y_recon *= ctf_weights[dec_mask].view(1, -1)  # apply CTF to reconstructed image
-        y *= ctf_weights[dec_mask].sign().view(1, -1)  # undo phase flipping from preprocess_batch
-    gen_loss = torch.mean((cumulative_weights[dec_mask].view(1, -1) * ((y_recon - y) ** 2)))
+    batch_images = batch_images[batch_hartley_2d_mask].view(1, -1)
+    batch_recon_error_weights = batch_recon_error_weights[batch_hartley_2d_mask].view(1, -1)
+    if batch_ctf_weights is not None:
+        ctf_weights = batch_ctf_weights[batch_hartley_2d_mask].view(1, -1)
+        batch_images_recon *= ctf_weights  # apply CTF to reconstructed image
+        batch_images *= ctf_weights.sign()  # undo phase flipping in place from preprocess_batch
+    gen_loss = torch.mean(batch_recon_error_weights * ((batch_images_recon - batch_images) ** 2))
 
     # latent loss
     kld = torch.mean(-0.5 * torch.sum(1 + z_logvar - z_mu.pow(2) - z_logvar.exp(), dim=1), dim=0)
     if beta_control is None:
-        kld_loss = beta * kld / dec_mask.sum().float()
+        kld_loss = beta * kld / torch.sum(batch_hartley_2d_mask, dtype=kld.dtype)
     else:
-        kld_loss = beta_control * (beta - kld) ** 2 / dec_mask.sum().float()
+        kld_loss = beta_control * (beta - kld) ** 2 / torch.sum(batch_hartley_2d_mask, dtype=kld.dtype)
 
     # total loss
     loss = gen_loss + kld_loss
