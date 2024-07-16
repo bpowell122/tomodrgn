@@ -6,6 +6,7 @@ import sys, os
 import argparse
 import pickle
 from datetime import datetime as dt
+from typing import Union
 
 import torch
 import torch.nn as nn
@@ -13,6 +14,7 @@ from torch.utils.data import DataLoader
 
 import tomodrgn
 from tomodrgn import utils, dataset, ctf, starfile
+from tomodrgn.dataset import TiltSeriesMRCData
 from tomodrgn.models import TiltSeriesHetOnlyVAE
 from tomodrgn.lattice import Lattice
 from tomodrgn.beta_schedule import get_beta_schedule
@@ -238,13 +240,10 @@ def train_batch(*,
     # autocast auto-enabled and set to correct device
     with torch.autocast(device_type=batch_images.device.type, enabled=use_amp):
         # center images via translation and phase flip for partial CTF correction
-        batch_images_preprocessed, ctf_weights = preprocess_batch(lattice,
-                                                                  batch_images,
-                                                                  batch_trans,
-                                                                  batch_ctf_params,
-                                                                  batchsize,
-                                                                  ntilts,
-                                                                  boxsize_ht)
+        batch_images_preprocessed, ctf_weights = preprocess_batch(lattice=lattice,
+                                                                  batch_images=batch_images,
+                                                                  batch_trans=batch_trans,
+                                                                  batch_ctf_params=batch_ctf_params)
         # encode the translated and CTF-phase-flipped images
         z_mu, z_logvar, z = encode_batch(model,
                                          batch_images_preprocessed,
@@ -278,26 +277,45 @@ def train_batch(*,
     return torch.tensor((loss, gen_loss, kld_loss)).detach().cpu().numpy()
 
 
-def preprocess_batch(lattice, y, tran, ctf_params, B, ntilts, D):
+def preprocess_batch(*,
+                     lattice: Lattice,
+                     batch_images: torch.tensor,
+                     batch_trans: torch.tensor,
+                     batch_ctf_params: torch.tensor) -> tuple[torch.tensor, Union[torch.tensor, None]]:
+    """
+    Center images via translation and phase flip for partial CTF correction, as needed
+    :param lattice: Hartley-transform lattice of points for voxel grid operations
+    :param batch_images: Batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht, boxsize_ht)
+    :param batch_trans: Batch of 2-D translation matrices corresponding to `batch_images` known poses, shape (batchsize, ntilts, 2).
+            May be `torch.zeros((batchsize))` instead to indicate no translations should be applied to the input images.
+    :param batch_ctf_params: Batch of CTF parameters corresponding to `batch_images` known CTF parameters, shape (batchsize, ntilts, 9).
+            May be `torch.zeros((batchsize))` instead to indicate no CTF corruption should be applied to the reconstructed slice.
+    :return batch_images: translationally-centered and phase-flipped batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht, boxsize_ht)
+    :return batch_ctf_weights: CTF evaluated at each spatial frequency corresponding to input images, shape (batchsize, ntilts, boxsize_ht, boxsize_ht)
+    """
+
+    # get key dimension sizes
+    batchsize, ntilts, boxsize_ht, boxsize_ht = batch_images.shape
+
     # translate the image
-    if not torch.all(tran == 0):
-        y = lattice.translate_ht(y.view(B * ntilts, -1), tran.view(B * ntilts, 1, 2))
+    if not torch.all(batch_trans == 0):
+        batch_images = lattice.translate_ht(batch_images.view(batchsize * ntilts, -1), batch_trans.view(batchsize * ntilts, 1, 2))
 
-    y = y.view(B, ntilts, D, D)
+    batch_images = batch_images.view(batchsize, ntilts, boxsize_ht, boxsize_ht)
 
-    # calculate CTF weights
-    if not torch.all(ctf_params == 0):
-        # phase flip the CTF-corrupted image
-        freqs = lattice.freqs2d.unsqueeze(0).expand(B * ntilts, *lattice.freqs2d.shape).clone()  # one lattice copy per image in batch
-        freqs /= ctf_params[:, :, 1].view(B * ntilts, 1, 1)  # convert units from 1/px to 1/Angstrom
-        ctf_weights = ctf.compute_ctf(freqs, *torch.split(ctf_params.view(B * ntilts, -1)[:, 2:], 1, 1))
-        ctf_weights = ctf_weights.view(B, ntilts, D, D)
-        y *= ctf_weights.sign() # phase flip by CTF to be all positive amplitudes
+    # phase flip the input CTF-corrupted image and calculate CTF weights to apply later
+    if not torch.all(batch_ctf_params == 0):
+        freqs = lattice.freqs2d.unsqueeze(0).expand(batchsize * ntilts, *lattice.freqs2d.shape).clone()  # one lattice copy per image in batch
+        freqs /= batch_ctf_params[:, :, 1].view(batchsize * ntilts, 1, 1)  # convert units from 1/px to 1/Angstrom
+        batch_ctf_weights = ctf.compute_ctf(freqs, *torch.split(batch_ctf_params.view(batchsize * ntilts, -1)[:, 2:], 1, 1))
+        batch_ctf_weights = batch_ctf_weights.view(batchsize, ntilts, boxsize_ht, boxsize_ht)
+        batch_images *= batch_ctf_weights.sign()  # phase flip by CTF to be all positive amplitudes
     else:
-        ctf_weights = None
+        batch_ctf_weights = None
 
     return y, ctf_weights
 
+    return batch_images, batch_ctf_weights
 
 def encode_batch(model, y, B, ntilts):
     # encode
@@ -362,16 +380,19 @@ def eval_z(model, lattice, data, args, device, use_amp=False):
             data_generator = DataLoader(data, batch_size=args.batch_size, shuffle=False,
                                         num_workers=args.num_workers, prefetch_factor=args.prefetch_factor,
                                         persistent_workers=args.persistent_workers, pin_memory=args.pin_memory)
-            for batch_images, _, batch_tran, batch_ctf, _, _, batch_indices in data_generator:
+            for batch_images, _, batch_trans, batch_ctf_params, _, _, batch_indices in data_generator:
                 B, ntilts, D, D = batch_images.shape
 
                 # transfer to GPU
                 batch_images = batch_images.to(device)
-                batch_ctf = batch_ctf.to(device)
-                batch_tran = batch_tran.to(device)
+                batch_ctf_params = batch_ctf_params.to(device)
+                batch_trans = batch_trans.to(device)
 
                 # use run_batch to reduce redundant code errors
-                batch_images, ctf_weights = preprocess_batch(lattice, batch_images, batch_tran, batch_ctf, B, ntilts, D)
+                batch_images, ctf_weights = preprocess_batch(lattice=lattice,
+                                                             batch_images=batch_images,
+                                                             batch_trans=batch_trans,
+                                                             batch_ctf_params=batch_ctf_params)
                 z_mu, z_logvar, z = encode_batch(model, batch_images, B, ntilts)
 
                 z_mu_all[batch_indices] = z_mu
