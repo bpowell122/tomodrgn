@@ -1,8 +1,9 @@
-'''
+"""
 Train a VAE for heterogeneous reconstruction with known pose for tomography data
-'''
+"""
 import numpy as np
-import sys, os
+import sys
+import os
 import argparse
 import pickle
 from datetime import datetime as dt
@@ -13,7 +14,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 import tomodrgn
-from tomodrgn import utils, dataset, ctf, starfile
+from tomodrgn import utils, ctf, starfile
 from tomodrgn.dataset import TiltSeriesMRCData
 from tomodrgn.models import TiltSeriesHetOnlyVAE, DataParallelPassthrough
 from tomodrgn.lattice import Lattice
@@ -23,19 +24,19 @@ log = utils.log
 vlog = utils.vlog
 
 
-def add_args(parser):
-    parser.add_argument('particles', type=os.path.abspath, help='Input particles (.mrcs, .star, .cs, or .txt)')
-    parser.add_argument('-o', '--outdir', type=os.path.abspath, required=True, help='Output directory to save model')
-    parser.add_argument('--zdim', type=int, required=True, default=128, help='Dimension of latent variable')
-    parser.add_argument('--load', metavar='WEIGHTS.PKL', help='Initialize training from a checkpoint')
-    parser.add_argument('--checkpoint', type=int, default=1, help='Checkpointing interval in N_EPOCHS (default: %(default)s)')
-    parser.add_argument('--log-interval', type=int, default=200, help='Logging interval in N_PTCLS (default: %(default)s)')
-    parser.add_argument('-v', '--verbose', action='store_true', help='Increases verbosity')
-    parser.add_argument('--seed', type=int, default=np.random.randint(0, 100000), help='Random seed')
-    parser.add_argument('--pose', type=os.path.abspath, help='Optionally override star file poses with cryodrgn-format pose.pkl')
-    parser.add_argument('--ctf', type=os.path.abspath, help='Optionally override star file CTF with cryodrgn-format ctf.pkl')
+def add_args(_parser):
+    _parser.add_argument('particles', type=os.path.abspath, help='Input particles (.mrcs, .star, .cs, or .txt)')
+    _parser.add_argument('-o', '--outdir', type=os.path.abspath, required=True, help='Output directory to save model')
+    _parser.add_argument('--zdim', type=int, required=True, default=128, help='Dimension of latent variable')
+    _parser.add_argument('--load', metavar='WEIGHTS.PKL', help='Initialize training from a checkpoint')
+    _parser.add_argument('--checkpoint', type=int, default=1, help='Checkpointing interval in N_EPOCHS (default: %(default)s)')
+    _parser.add_argument('--log-interval', type=int, default=200, help='Logging interval in N_PTCLS (default: %(default)s)')
+    _parser.add_argument('-v', '--verbose', action='store_true', help='Increases verbosity')
+    _parser.add_argument('--seed', type=int, default=np.random.randint(0, 100000), help='Random seed')
+    _parser.add_argument('--pose', type=os.path.abspath, help='Optionally override star file poses with cryodrgn-format pose.pkl')
+    _parser.add_argument('--ctf', type=os.path.abspath, help='Optionally override star file CTF with cryodrgn-format ctf.pkl')
 
-    group = parser.add_argument_group('Particle starfile loading and train/test split')
+    group = _parser.add_argument_group('Particle starfile loading and train/test split')
     group.add_argument('--ind', type=os.path.abspath, metavar='PKL', help='Filter starfile by particles (unique rlnGroupName values) using np array pkl')
     group.add_argument('--first-ntilts', type=int, default=None, help='Derive new train/test split filtering each particle to first n tilts before train/test split')
     group.add_argument('--fraction-train', type=float, default=1., help='Derive new train/test split with this fraction of each particles images assigned to train')
@@ -43,7 +44,7 @@ def add_args(parser):
     group.add_argument('--ind-img-test', type=os.path.abspath, help='Filter starfile by images (rows) to test model using pre-existing np array pkl')
     group.add_argument('--sequential-tilt-sampling', action='store_true', help='Supply particle images of one particle to encoder in starfile order')
 
-    group = parser.add_argument_group('Dataset loading and preprocessing')
+    group = _parser.add_argument_group('Dataset loading and preprocessing')
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
     group.add_argument('--no-window', dest='window', action='store_false', help='Turn off real space windowing of dataset')
     group.add_argument('--window-r', type=float, default=.8, help='Real space inner windowing radius for cosine falloff to radius 1')
@@ -52,12 +53,12 @@ def add_args(parser):
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
     group.add_argument('--Apix', type=float, default=1.0, help='Override A/px from input starfile; useful if starfile does not have _rlnDetectorPixelSize col')
 
-    group.add_argument_group('Weighting and masking')
+    group = _parser.add_argument_group('Weighting and masking')
     group.add_argument('--recon-tilt-weight', action='store_true', help='Weight reconstruction loss by cosine(tilt_angle)')
     group.add_argument('--recon-dose-weight', action='store_true', help='Weight reconstruction loss per tilt per pixel by dose dependent amplitude attenuation')
     group.add_argument('--l-dose-mask', action='store_true', help='Do not train on frequencies exposed to > 2.5x critical dose. Training lattice is intersection of this with --l-extent')
 
-    group = parser.add_argument_group('Training parameters')
+    group = _parser.add_argument_group('Training parameters')
     group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs')
     group.add_argument('-b', '--batch-size', type=int, default=1, help='Minibatch size')
     group.add_argument('--wd', type=float, default=0, help='Weight decay in Adam optimizer')
@@ -68,7 +69,7 @@ def add_args(parser):
     group.add_argument('--no-amp', action='store_true', help='Disable use of mixed-precision training')
     group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs')
 
-    group = parser.add_argument_group('Encoder Network')
+    group = _parser.add_argument_group('Encoder Network')
     group.add_argument('--enc-layers-A', dest='qlayersA', type=int, default=3, help='Number of hidden layers for each tilt')
     group.add_argument('--enc-dim-A', dest='qdimA', type=int, default=256, help='Number of nodes in hidden layers for each tilt')
     group.add_argument('--out-dim-A', type=int, default=128, help='Number of nodes in output layer of encA == ntilts * number of nodes input to encB')
@@ -81,7 +82,7 @@ def add_args(parser):
     group.add_argument('--num-heads', type=int, default=4, help='number of heads for multi head attention blocks')
     group.add_argument('--layer-norm', action='store_true', help='whether to apply layer normalization in the set transformer block')
 
-    group = parser.add_argument_group('Decoder Network')
+    group = _parser.add_argument_group('Decoder Network')
     group.add_argument('--dec-layers', dest='players', type=int, default=3, help='Number of hidden layers')
     group.add_argument('--dec-dim', dest='pdim', type=int, default=256, help='Number of nodes in hidden layers')
     group.add_argument('--l-extent', type=float, default=0.5, help='Coordinate lattice size (if not using positional encoding) (default: %(default)s)')
@@ -90,12 +91,12 @@ def add_args(parser):
     group.add_argument('--pe-dim', type=int, help='Num features in positional encoding')
     group.add_argument('--activation', choices=('relu', 'leaky_relu'), default='relu', help='Activation')
 
-    group = parser.add_argument_group('Dataloader arguments')
+    group = _parser.add_argument_group('Dataloader arguments')
     group.add_argument('--num-workers', type=int, default=0, help='Number of workers to use when batching particles for training. Has moderate impact on epoch time')
     group.add_argument('--prefetch-factor', type=int, default=2, help='Number of particles to prefetch per worker for training. Has moderate impact on epoch time')
     group.add_argument('--persistent-workers', action='store_true', help='Whether to persist workers after dataset has been fully consumed. Has minimal impact on run time')
     group.add_argument('--pin-memory', action='store_true', help='Whether to use pinned memory for dataloader. Has large impact on epoch time. Recommended.')
-    return parser
+    return _parser
 
 
 def get_latest(args: argparse.Namespace,
@@ -199,12 +200,12 @@ def train_batch(*,
                 scaler: torch.GradScaler,
                 optim: torch.optim.Optimizer,
                 lattice: Lattice,
-                batch_images: torch.tensor,
-                batch_rots: torch.tensor,
-                batch_trans: torch.tensor,
-                batch_ctf_params: torch.tensor,
-                batch_recon_error_weights: torch.tensor,
-                batch_hartley_2d_mask: torch.tensor,
+                batch_images: torch.Tensor,
+                batch_rots: torch.Tensor,
+                batch_trans: torch.Tensor,
+                batch_ctf_params: torch.Tensor,
+                batch_recon_error_weights: torch.Tensor,
+                batch_hartley_2d_mask: torch.Tensor,
                 beta: float,
                 beta_control: float | None = None,
                 use_amp: bool = False) -> np.ndarray:
@@ -233,9 +234,6 @@ def train_batch(*,
     # prepare to train a new batch
     optim.zero_grad()
     model.train()
-
-    # get key dimension sizes
-    batchsize, ntilts, boxsize_ht, boxsize_ht = batch_images.shape
 
     # autocast auto-enabled and set to correct device
     with torch.autocast(device_type=batch_images.device.type, enabled=use_amp):
@@ -274,9 +272,9 @@ def train_batch(*,
 
 def preprocess_batch(*,
                      lattice: Lattice,
-                     batch_images: torch.tensor,
-                     batch_trans: torch.tensor,
-                     batch_ctf_params: torch.tensor) -> tuple[torch.tensor, Union[torch.tensor, None]]:
+                     batch_images: torch.Tensor,
+                     batch_trans: torch.Tensor,
+                     batch_ctf_params: torch.Tensor) -> tuple[torch.Tensor, Union[torch.Tensor, None]]:
     """
     Center images via translation and phase flip for partial CTF correction, as needed
     :param lattice: Hartley-transform lattice of points for voxel grid operations
@@ -286,20 +284,20 @@ def preprocess_batch(*,
     :param batch_ctf_params: Batch of CTF parameters corresponding to `batch_images` known CTF parameters, shape (batchsize, ntilts, 9).
             May be `torch.zeros((batchsize))` instead to indicate no CTF corruption should be applied to the reconstructed slice.
     :return batch_images: translationally-centered and phase-flipped batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht, boxsize_ht)
-    :return batch_ctf_weights: CTF evaluated at each spatial frequency corresponding to input images, shape (batchsize, ntilts, boxsize_ht, boxsize_ht)
+    :return batch_ctf_weights: CTF evaluated at each spatial frequency corresponding to input images, shape (batchsize, ntilts, boxsize_ht, boxsize_ht) or None if no CTF should be applied
     """
 
     # get key dimension sizes
     batchsize, ntilts, boxsize_ht, boxsize_ht = batch_images.shape
 
     # translate the image
-    if not torch.all(batch_trans == 0):
+    if not batch_trans == torch.zeros(batchsize):
         batch_images = lattice.translate_ht(batch_images.view(batchsize * ntilts, -1), batch_trans.view(batchsize * ntilts, 1, 2))
 
     batch_images = batch_images.view(batchsize, ntilts, boxsize_ht, boxsize_ht)
 
     # phase flip the input CTF-corrupted image and calculate CTF weights to apply later
-    if not torch.all(batch_ctf_params == 0):
+    if not batch_ctf_params == torch.zeros(batchsize):
         freqs = lattice.freqs2d.unsqueeze(0).expand(batchsize * ntilts, *lattice.freqs2d.shape).clone()  # one lattice copy per image in batch
         freqs /= batch_ctf_params[:, :, 1].view(batchsize * ntilts, 1, 1)  # convert units from 1/px to 1/Angstrom
         batch_ctf_weights = ctf.compute_ctf(freqs, *torch.split(batch_ctf_params.view(batchsize * ntilts, -1)[:, 2:], 1, 1))
@@ -314,16 +312,15 @@ def preprocess_batch(*,
 
 
 def encode_batch(*,
-                 model: TiltSeriesHetOnlyVAE,
-                 batch_images: torch.tensor) -> tuple[torch.tensor, torch.tensor, torch.tensor]:
                  model: TiltSeriesHetOnlyVAE | DataParallelPassthrough,
+                 batch_images: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Encode a batch of particles represented by multiple images to per-particle latent embeddings
     :param model: TiltSeriesHetOnlyVAE object to be trained
     :param batch_images: Batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht, boxsize_ht)
-    :return z_mu: Direct output of encoder module parameterizing the mean of the latent embedding for each particle, shape (batchsize, zdim)
-    :return z_logvar: Direct output of encoder module parameterizing the log variance of the latent embedding for each particle, shape (batchsize, zdim)
-    :return z: Resampling of the latent embedding for each particle parameterized as a gaussian with mean z_mu and variance z_logvar, shape (batchsize, zdim)
+    :return: z_mu: Direct output of encoder module parameterizing the mean of the latent embedding for each particle, shape (batchsize, zdim)
+    :return: z_logvar: Direct output of encoder module parameterizing the log variance of the latent embedding for each particle, shape (batchsize, zdim)
+    :return: z: Resampling of the latent embedding for each particle parameterized as a gaussian with mean `z_mu` and variance `z_logvar`, shape (batchsize, zdim)
     """
 
     # get key dimension sizes
@@ -587,7 +584,7 @@ def convergence_latent(z_mu_train, z_logvar_train, z_mu_test, z_logvar_test, wor
 
 
 def convergence_volumes_generate(z_train, z_test, epoch, workdir, weights_path, config_path, volume_count=100):
-    '''
+    """
     Select indices and generate corresponding test/train volumes for convergence metrics
     :param z_train: numpy array of shape (n_particles, zdim) of latent values deriving from train particle images
     :param z_test: numpy array of shape (n_particles) zdim) of latent values deriving from test particle images
@@ -596,7 +593,7 @@ def convergence_volumes_generate(z_train, z_test, epoch, workdir, weights_path, 
     :param weights_path:
     :param config_path:
     :param volume_count: int, number of volumes to generate for each of train/test
-    '''
+    """
     # sample volume_count particles
     n_particles = z_train.shape[0]
     ind_sel = np.sort(np.random.choice(n_particles, size=volume_count))
@@ -614,12 +611,12 @@ def convergence_volumes_generate(z_train, z_test, epoch, workdir, weights_path, 
 
 
 def convergence_volumes_testtrain_correlation(workdir, epoch, volume_count=100):
-    '''
+    """
     Calculate the correlation between volumes generated from test and train latent embeddings of the same particles in the same epoch
     :param workdir: str, absolute path to model workdir
     :param epoch: int, current epoch being evaluated
     :param volume_count: int, number of volumes to generate for each of train/test
-    '''
+    """
     # calculate pairwise FSC and return resolution of FSC=0.5
     resolutions_point5 = np.zeros(volume_count)
     fscs = []
@@ -635,13 +632,13 @@ def convergence_volumes_testtrain_correlation(workdir, epoch, volume_count=100):
     log(f'Convergence epoch {epoch}: 90th percentile of test/train map-map FSC 0.5 resolutions (units: 1/px): {np.percentile(resolutions_point5, 90)}')
 
 
-def convergence_volumes_testtest_scale(workdir, epoch, volume_count = 100):
-    '''
+def convergence_volumes_testtest_scale(workdir, epoch, volume_count=100):
+    """
     Calculate the scale of heterogeneity among all volumes generated from test latent embeddings of the same particles in the same epoch
     :param workdir: str, absolute path to model workdir
     :param epoch: int, current epoch being evaluated
     :param volume_count: int, number of volumes to generate for each of train/test
-    '''
+    """
     # initialize empty pairwise distance matrix for CCs and corresponding upper triangle (non-redundant) pairwise indices
     pairwise_ccs = np.zeros((volume_count, volume_count))
     ind_triu = np.triu_indices(n=volume_count, k=1, m=volume_count)
@@ -653,7 +650,7 @@ def convergence_volumes_testtest_scale(workdir, epoch, volume_count = 100):
     for i, j in zip(row_ind, col_ind):
         vol_train, vol_train_header = parse_mrc(f'{workdir}/scratch.{epoch}.train/vol_{i:03d}.mrc')
         vol_test, vol_test_header = parse_mrc(f'{workdir}/scratch.{epoch}.test/vol_{j:03d}.mrc')
-        pairwise_ccs[i,j] = calc_cc(vol_train, vol_test)
+        pairwise_ccs[i, j] = calc_cc(vol_train, vol_test)
 
     # calculate pairwise volume distances as 1 - CC
     pairwise_cc_dist = np.ones_like(pairwise_ccs) - pairwise_ccs
@@ -667,10 +664,10 @@ def main(args):
     t1 = dt.now()
     if args.outdir is not None and not os.path.exists(args.outdir):
         os.makedirs(args.outdir)
-    LOG = f'{args.outdir}/run.log'
+    logfile = f'{args.outdir}/run.log'
 
     def flog(msg):  # HACK: switch to logging module
-        return utils.flog(msg, LOG)
+        return utils.flog(msg, logfile)
 
     if args.load == 'latest':
         args = get_latest(args, flog)
@@ -681,7 +678,7 @@ def main(args):
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
-    ## set the device
+    # set the device
     device = utils.get_default_device()
     if device == torch.device('cpu'):
         args.no_amp = True
@@ -725,37 +722,37 @@ def main(args):
 
     # load the particles + poses + ctf from input starfile
     flog(f'Loading dataset from {args.particles}')
-    data_train = dataset.TiltSeriesMRCData(ptcls_star,
-                                           norm=args.norm,
-                                           invert_data=args.invert_data,
-                                           ind_ptcl=ind,
-                                           ind_img=inds_train,
-                                           window=args.window,
-                                           datadir=args.datadir,
-                                           window_r=args.window_r,
-                                           window_r_outer=args.window_r_outer,
-                                           recon_dose_weight=args.recon_dose_weight,
-                                           recon_tilt_weight=args.recon_tilt_weight,
-                                           l_dose_mask=args.l_dose_mask,
-                                           lazy=args.lazy,
-                                           use_all_images=True,
-                                           sequential_tilt_sampling=args.sequential_tilt_sampling)
+    data_train = TiltSeriesMRCData(ptcls_star,
+                                   norm=args.norm,
+                                   invert_data=args.invert_data,
+                                   ind_ptcl=ind,
+                                   ind_img=inds_train,
+                                   window=args.window,
+                                   datadir=args.datadir,
+                                   window_r=args.window_r,
+                                   window_r_outer=args.window_r_outer,
+                                   recon_dose_weight=args.recon_dose_weight,
+                                   recon_tilt_weight=args.recon_tilt_weight,
+                                   l_dose_mask=args.l_dose_mask,
+                                   lazy=args.lazy,
+                                   use_all_images=True,
+                                   sequential_tilt_sampling=args.sequential_tilt_sampling)
     if len(inds_test) > 0:
-        data_test = dataset.TiltSeriesMRCData(ptcls_star,
-                                              norm=data_train.norm,  # share normalization with train images
-                                              invert_data=args.invert_data,
-                                              ind_ptcl=ind,
-                                              ind_img=inds_test,
-                                              window=args.window,
-                                              datadir=args.datadir,
-                                              window_r=args.window_r,
-                                              window_r_outer=args.window_r_outer,
-                                              recon_dose_weight=args.recon_dose_weight,
-                                              recon_tilt_weight=args.recon_tilt_weight,
-                                              l_dose_mask=args.l_dose_mask,
-                                              lazy=args.lazy,
-                                              use_all_images=True,
-                                              sequential_tilt_sampling=args.sequential_tilt_sampling)
+        data_test = TiltSeriesMRCData(ptcls_star,
+                                      norm=data_train.norm,  # share normalization with train images
+                                      invert_data=args.invert_data,
+                                      ind_ptcl=ind,
+                                      ind_img=inds_test,
+                                      window=args.window,
+                                      datadir=args.datadir,
+                                      window_r=args.window_r,
+                                      window_r_outer=args.window_r_outer,
+                                      recon_dose_weight=args.recon_dose_weight,
+                                      recon_tilt_weight=args.recon_tilt_weight,
+                                      l_dose_mask=args.l_dose_mask,
+                                      lazy=args.lazy,
+                                      use_all_images=True,
+                                      sequential_tilt_sampling=args.sequential_tilt_sampling)
     else:
         data_test = None
     boxsize_ht = data_train.boxsize_ht
@@ -865,12 +862,28 @@ def main(args):
     # instantiate model
     activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]
     flog(f'Pooling function prior to encoder B: {args.pooling_function}')
-    model = TiltSeriesHetOnlyVAE(lattice, args.qlayersA, args.qdimA, args.out_dim_A, data_train.ntilts_training,
-                                 args.qlayersB, args.qdimB, args.players, args.pdim, in_dim, args.zdim,
-                                 enc_mask=enc_mask, enc_type=args.pe_type, enc_dim=args.pe_dim,
-                                 domain='fourier', activation=activation, l_dose_mask=args.l_dose_mask,
-                                 feat_sigma=args.feat_sigma, pooling_function=args.pooling_function,
-                                 num_seeds=args.num_seeds, num_heads=args.num_heads, layer_norm=args.layer_norm)
+    model = TiltSeriesHetOnlyVAE(lattice,
+                                 args.qlayersA,
+                                 args.qdimA,
+                                 args.out_dim_A,
+                                 data_train.ntilts_training,
+                                 args.qlayersB,
+                                 args.qdimB,
+                                 args.players,
+                                 args.pdim,
+                                 in_dim,
+                                 args.zdim,
+                                 enc_mask=enc_mask,
+                                 enc_type=args.pe_type,
+                                 enc_dim=args.pe_dim,
+                                 domain='fourier',
+                                 activation=activation,
+                                 l_dose_mask=args.l_dose_mask,
+                                 feat_sigma=args.feat_sigma,
+                                 pooling_function=args.pooling_function,
+                                 num_seeds=args.num_seeds,
+                                 num_heads=args.num_heads,
+                                 layer_norm=args.layer_norm)
     # model.to(device)
     flog(model)
     flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
@@ -894,12 +907,16 @@ def main(args):
     flog(f'AMP acceleration enabled (autocast + gradscaler) : {use_amp}')
     scaler = torch.GradScaler(device_type=device.type, enabled=use_amp)
     if use_amp:
-        if not args.batch_size % 8 == 0: flog('Warning: recommended to have batch size divisible by 8 for AMP training')
-        if not (boxsize_ht - 1) % 8 == 0: flog('Warning: recommended to have image size divisible by 8 for AMP training')
-        if in_dim % 8 != 0: flog('Warning: recommended to have masked image dimensions divisible by 8 for AMP training')
+        if not args.batch_size % 8 == 0:
+            flog('Warning: recommended to have batch size divisible by 8 for AMP training')
+        if not (boxsize_ht - 1) % 8 == 0:
+            flog('Warning: recommended to have image size divisible by 8 for AMP training')
+        if in_dim % 8 != 0:
+            flog('Warning: recommended to have masked image dimensions divisible by 8 for AMP training')
         assert args.qdimA % 8 == 0, "Encoder hidden layer dimension must be divisible by 8 for AMP training"
         assert args.qdimB % 8 == 0, "Encoder hidden layer dimension must be divisible by 8 for AMP training"
-        if args.zdim % 8 != 0: flog('Warning: recommended to have z dimension divisible by 8 for AMP training')
+        if args.zdim % 8 != 0:
+            flog('Warning: recommended to have z dimension divisible by 8 for AMP training')
         assert args.pdim % 8 == 0, "Decoder hidden layer dimension must be divisible by 8 for AMP training"
 
     # restart from checkpoint
@@ -913,11 +930,12 @@ def main(args):
         assert start_epoch < args.num_epochs
         try:
             scaler.load_state_dict(checkpoint['scaler'])
-        except:
+        except KeyError:
             flog('No GradScaler instance found in specified checkpoint; creating new GradScaler')
     else:
         start_epoch = 0
         model.to(device)
+    epoch = start_epoch
 
     # parallelize
     if args.multigpu and torch.cuda.device_count() > 1:
@@ -934,7 +952,7 @@ def main(args):
                                       persistent_workers=args.persistent_workers, pin_memory=args.pin_memory)
     for epoch in range(start_epoch, args.num_epochs):
         t2 = dt.now()
-        losses_accum = np.zeros((3), dtype=np.float32)
+        losses_accum = np.zeros(3, dtype=np.float32)
         batch_it = 0
 
         for batch_images, batch_rots, batch_trans, batch_ctf_params, batch_recon_error_weights, batch_hartley_2d_mask, batch_indices in data_train_generator:
@@ -968,10 +986,17 @@ def main(args):
 
             # logging
             if batch_it % args.log_interval == 0:
-                log(f'# [Train Epoch: {epoch + 1}/{args.num_epochs}] [{batch_it}/{nptcls} subtomos] gen loss={losses_batch[1]:.6f}, kld={losses_batch[2]:.6f}, beta={beta:.6f}, loss={losses_batch[0]:.6f}')
+                log(f'# [Train Epoch: {epoch + 1}/{args.num_epochs}] [{batch_it}/{nptcls} subtomos] '
+                    f'gen loss={losses_batch[1]:.6f}, '
+                    f'kld={losses_batch[2]:.6f}, beta={beta:.6f}, '
+                    f'loss={losses_batch[0]:.6f}')
             losses_accum += losses_batch * len(batch_images)
         flog(
-            f'# =====> Epoch: {epoch + 1} Average gen loss = {losses_accum[1] / batch_it:.6f}, KLD = {losses_accum[2] / batch_it:.6f}, total loss = {losses_accum[0] / batch_it:.6f}; Finished in {dt.now() - t2}')
+            f'# =====> Epoch: {epoch + 1} '
+            f'Average gen loss = {losses_accum[1] / batch_it:.6f}, '
+            f'KLD = {losses_accum[2] / batch_it:.6f}, '
+            f'total loss = {losses_accum[0] / batch_it:.6f}; '
+            f'Finished in {dt.now() - t2}')
         if args.checkpoint and (epoch + 1) % args.checkpoint == 0:
             if device.type != 'cpu':
                 flog(f'GPU memory usage: {utils.check_memory_usage()}')
@@ -1043,6 +1068,4 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    args = add_args(parser).parse_args()
-    utils._verbose = args.verbose
-    main(args)
+    main(add_args(parser).parse_args())
