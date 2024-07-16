@@ -96,7 +96,14 @@ def add_args(parser):
     return parser
 
 
-def get_latest(args, flog):
+def get_latest(args: argparse.Namespace,
+               flog) -> argparse.Namespace:
+    """
+    Detect the latest completed epoch of model training and update args to load that epoch's model weights.
+    :param args: argparse namespace from parse_args. Requires `num_epochs`, `outdir`, and `load` parameters
+    :param flog: file to log output to disk
+    :return: updated argparse namespace
+    """
     # assumes args.num_epochs > latest checkpoint
     flog('Detecting latest checkpoint...')
     weights = [f'{args.outdir}/weights.{i}.pkl' for i in range(args.num_epochs)]
