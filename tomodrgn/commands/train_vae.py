@@ -495,10 +495,34 @@ def encoder_inference(*,
             return z_mu_all, z_logvar_all
 
 
-def save_checkpoint(model, optim, epoch, z_mu_train, z_logvar_train, z_mu_test, z_logvar_test, out_weights, out_z_train, out_z_test, scaler):
-    '''
+def save_checkpoint(*,
+                    model: TiltSeriesHetOnlyVAE | DataParallelPassthrough,
+                    scaler: torch.GradScaler,
+                    optim: torch.optim.Optimizer,
+                    epoch: int,
+                    z_mu_train: np.ndarray,
+                    z_logvar_train: np.ndarray,
+                    out_weights: str,
+                    out_z_train: str,
+                    z_mu_test: np.ndarray = None,
+                    z_logvar_test: np.ndarray = None,
+                    out_z_test: str = None) -> None:
+    """
     Save model weights and latent encoding z
-    '''
+    :param model: TiltSeriesHetOnlyVAE object used for model training and evaluation
+    :param scaler: torch.GradScaler object used for scaling loss involving fp16 tensors to avoid over/underflow
+    :param optim: torch.optim.Optimizer object used for optimizing the model
+    :param epoch: epoch count at which checkpoint is being saved
+    :param z_mu_train: array of latent embedding means for the dataset train split
+    :param z_logvar_train: array of latent embedding log variances for the dataset train split
+    :param out_weights: name of output file to save model, optimizer, and scaler state dicts
+    :param out_z_train: name of output file to save latent embeddings for dataset train split
+    :param z_mu_test: array of latent embedding log variances for the dataset test split
+    :param z_logvar_test: array of latent embedding log variances for the dataset test split
+    :param out_z_test: name of output file to save latent embeddings for dataset test split
+    :return: None
+    """
+
     # save model weights
     torch.save({
         'epoch': epoch,
@@ -506,10 +530,13 @@ def save_checkpoint(model, optim, epoch, z_mu_train, z_logvar_train, z_mu_test, 
         'optimizer_state_dict': optim.state_dict(),
         'scaler': scaler.state_dict() if scaler is not None else None
     }, out_weights)
-    # save z
+
+    # save latent embeddings from dataset train split
     with open(out_z_train, 'wb') as f:
         pickle.dump(z_mu_train.astype(np.float32), f)
         pickle.dump(z_logvar_train.astype(np.float32), f)
+
+    # save latent embeddings from dataset test split
     if z_mu_test is not None:
         with open(out_z_test, 'wb') as f:
             pickle.dump(z_mu_test.astype(np.float32), f)
@@ -964,7 +991,17 @@ def main(args):
                                                              batchsize=args.batch_size)
             else:
                 z_mu_test, z_logvar_test, out_z_test = None, None, None
-            save_checkpoint(model, optim, epoch, z_mu_train, z_logvar_train, z_mu_test, z_logvar_test, out_weights, out_z_train, out_z_test, scaler)
+            save_checkpoint(model=model,
+                            scaler=scaler,
+                            optim=optim,
+                            epoch=epoch,
+                            z_mu_train=z_mu_train,
+                            z_logvar_train=z_logvar_train,
+                            out_weights=out_weights,
+                            out_z_train=out_z_train,
+                            z_mu_test=z_mu_test,
+                            z_logvar_test=z_logvar_test,
+                            out_z_test=out_z_test)
             if data_test:
                 flog('Calculating convergence metrics using test/train split...')
                 convergence_latent(z_mu_train, z_logvar_train, z_mu_test, z_logvar_test, args.outdir, epoch)
@@ -989,8 +1026,17 @@ def main(args):
                                                      batchsize=args.batch_size)
     else:
         z_mu_test, z_logvar_test, out_z_test = None, None, None
-    save_checkpoint(model, optim, epoch, z_mu_train, z_logvar_train, z_mu_test, z_logvar_test, out_weights, out_z_train, out_z_test, scaler)
-
+    save_checkpoint(model=model,
+                    scaler=scaler,
+                    optim=optim,
+                    epoch=epoch,
+                    z_mu_train=z_mu_train,
+                    z_logvar_train=z_logvar_train,
+                    out_weights=out_weights,
+                    out_z_train=out_z_train,
+                    z_mu_test=z_mu_test,
+                    z_logvar_test=z_logvar_test,
+                    out_z_test=out_z_test)
     td = dt.now() - t1
     flog(f'Finished in {td} ({td / (args.num_epochs - start_epoch)} per epoch)')
 
