@@ -33,16 +33,18 @@ def add_args(_parser):
     _parser.add_argument('--log-interval', type=int, default=200, help='Logging interval in N_PTCLS (default: %(default)s)')
     _parser.add_argument('-v', '--verbose', action='store_true', help='Increases verbosity')
     _parser.add_argument('--seed', type=int, default=np.random.randint(0, 100000), help='Random seed')
-    _parser.add_argument('--pose', type=os.path.abspath, help='Optionally override star file poses with cryodrgn-format pose.pkl')
-    _parser.add_argument('--ctf', type=os.path.abspath, help='Optionally override star file CTF with cryodrgn-format ctf.pkl')
 
-    group = _parser.add_argument_group('Particle starfile loading and train/test split')
-    group.add_argument('--ind', type=os.path.abspath, metavar='PKL', help='Filter starfile by particles (unique rlnGroupName values) using np array pkl')
-    group.add_argument('--first-ntilts', type=int, default=None, help='Derive new train/test split filtering each particle to first n tilts before train/test split')
+    group = _parser.add_argument_group('Particle starfile loading and filtering')
+    group.add_argument('--ind-ptcl', type=os.path.abspath, metavar='PKL', help='Filter starfile by particles (unique rlnGroupName values) using np array pkl as indices')
+    group.add_argument('--ind-img', type=os.path.abspath, help='Filter starfile by particle images (star file rows) using np array pkl as indices')
+    group.add_argument('--sort-ptcl-imgs', choices=('unsorted', 'dose_ascending', 'random'), default='unsorted', help='Sort the star file images on a per-particle basis by the specified criteria')
+    group.add_argument('--use-first-ntilts', type=int, default=-1, help='Keep the first `use_first_ntilts` images of each particle in the sorted star file.'
+                                                                        'Default -1 means to use all. Will drop particles with fewer than this many tilt images.')
+    group.add_argument('--use-first-nptcls', type=int, default=-1, help='Keep the first `use_first_nptcls` particles in the sorted star file. Default -1 means to use all.')
+
+    group = _parser.add_argument_group('Particle starfile train/test split')
     group.add_argument('--fraction-train', type=float, default=1., help='Derive new train/test split with this fraction of each particles images assigned to train')
-    group.add_argument('--ind-img-train', type=os.path.abspath, help='Filter starfile by images (rows) to train model using pre-existing np array pkl')
-    group.add_argument('--ind-img-test', type=os.path.abspath, help='Filter starfile by images (rows) to test model using pre-existing np array pkl')
-    group.add_argument('--sequential-tilt-sampling', action='store_true', help='Supply particle images of one particle to encoder in starfile order')
+    group.add_argument('--show-summary-stats', type=bool, default=True, help='Log distribution statistics of particle sampling for test/train splits')
 
     group = _parser.add_argument_group('Dataset loading and preprocessing')
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
@@ -52,6 +54,7 @@ def add_args(_parser):
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
     group.add_argument('--Apix', type=float, default=1.0, help='Override A/px from input starfile; useful if starfile does not have _rlnDetectorPixelSize col')
+    group.add_argument('--sequential-tilt-sampling', action='store_true', help='Supply particle images of one particle to encoder in filtered starfile order')
 
     group = _parser.add_argument_group('Weighting and masking')
     group.add_argument('--recon-tilt-weight', action='store_true', help='Weight reconstruction loss by cosine(tilt_angle)')
@@ -688,120 +691,56 @@ def main(args):
     # load star file
     ptcls_star = starfile.TiltSeriesStarfile(args.particles)
 
-    # load the particle indices
-    ptcls_to_imgs_ind = ptcls_star.get_ptcl_img_indices()
-    if args.ind is not None:
-        flog(f'Reading supplied particle indices {args.ind}')
-        ind = pickle.load(open(args.ind, 'rb'))
-        assert len(ptcls_to_imgs_ind) >= len(ind), 'More particles specified than particles found in star file'
-        assert len(ptcls_to_imgs_ind) >= max(ind), 'Specified particles exceed the number of particles found in star file'
-    else:
-        ind = None
+    # filter star file
+    ptcls_star.filter(ind_imgs=args.ind_imgs,
+                      ind_ptcls=args.ind_ptcls,
+                      sort_ptcl_imgs=args.sort_ptcl_imgs,
+                      use_first_ntilts=args.use_first_ntilts,
+                      use_first_nptcls=args.use_first_nptcls)
 
-    # prepare particle image train/test split
-    if args.ind_img_train:
-        flog(f'Reading supplied train image indices {args.ind_img_train}')
-        inds_train = utils.load_pkl(args.ind_img_train)
-        assert np.max(np.hstack(ptcls_to_imgs_ind)) >= len(inds_train), 'More particle images specified for train split than particle images found in star file'
-        assert np.max(np.hstack(ptcls_to_imgs_ind)) >= max(inds_train), 'Specified particle images for train split exceed then number of particle images found in star file'
-        if args.ind_img_test:
-            flog(f'Reading supplied test image indices {args.ind_img_test}')
-            inds_test = utils.load_pkl(args.ind_img_test)
-            assert np.max(np.hstack(ptcls_to_imgs_ind)) >= (len(inds_train) + len(inds_test)), 'More particle images specified for train and test splits than particle images found in star file'
-            assert np.max(np.hstack(ptcls_to_imgs_ind)) >= max(inds_test), 'Specified particle images for test split exceed then number of particle images found in star file'
-        else:
-            flog('No test image indices supplied, so none will be used')
-            inds_test = np.array([])
-    else:
-        flog(f'Creating new train/test split indices with fraction_train={args.fraction_train} and first_ntilts={args.first_ntilts}')
-        inds_train, inds_test = ptcls_star.make_test_train_split(fraction_train=args.fraction_train,
-                                                                 first_ntilts=args.first_ntilts,
-                                                                 show_summary_stats=True)
-        utils.save_pkl(inds_train, f'{args.outdir}/inds_imgs_train.pkl')
-        utils.save_pkl(inds_test, f'{args.outdir}/inds_imgs_test.pkl')
+    # split ptcls_star by into half sets per-particle for independent backprojection
+    ptcls_star.make_test_train_split(fraction_split1=args.fraction_train,
+                                     show_summary_stats=True)
+
+    # save filtered star file for future convenience (aligning latent embeddings with particles, re-extracting particles, mapbacks, etc.)
+    outstar = f'{os.path.dirname(args.o)}/{os.path.splitext(ptcls_star.sourcefile)[0]}_tomodrgn_preprocessed.star'
+    ptcls_star.write(outstar)
 
     # load the particles + poses + ctf from input starfile
     flog(f'Loading dataset from {args.particles}')
     data_train = TiltSeriesMRCData(ptcls_star,
+                                   star_random_subset=1,
+                                   datadir=args.datadir,
+                                   lazy=args.lazy,
                                    norm=args.norm,
                                    invert_data=args.invert_data,
-                                   ind_ptcl=ind,
-                                   ind_img=inds_train,
                                    window=args.window,
-                                   datadir=args.datadir,
                                    window_r=args.window_r,
                                    window_r_outer=args.window_r_outer,
                                    recon_dose_weight=args.recon_dose_weight,
                                    recon_tilt_weight=args.recon_tilt_weight,
                                    l_dose_mask=args.l_dose_mask,
-                                   lazy=args.lazy,
-                                   use_all_images=True,
+                                   constant_mintilt_sampling=True,
                                    sequential_tilt_sampling=args.sequential_tilt_sampling)
-    if len(inds_test) > 0:
+    if args.fraction_train < 1:
         data_test = TiltSeriesMRCData(ptcls_star,
-                                      norm=data_train.norm,  # share normalization with train images
-                                      invert_data=args.invert_data,
-                                      ind_ptcl=ind,
-                                      ind_img=inds_test,
-                                      window=args.window,
+                                      star_random_subset=2,
                                       datadir=args.datadir,
+                                      lazy=args.lazy,
+                                      norm=data_train.norm,
+                                      invert_data=args.invert_data,
+                                      window=args.window,
                                       window_r=args.window_r,
                                       window_r_outer=args.window_r_outer,
                                       recon_dose_weight=args.recon_dose_weight,
                                       recon_tilt_weight=args.recon_tilt_weight,
                                       l_dose_mask=args.l_dose_mask,
-                                      lazy=args.lazy,
-                                      use_all_images=True,
+                                      constant_mintilt_sampling=True,
                                       sequential_tilt_sampling=args.sequential_tilt_sampling)
     else:
         data_test = None
     boxsize_ht = data_train.boxsize_ht
     nptcls = data_train.nptcls
-
-    # load pose and CTF from pkl if supplied
-    if args.pose or args.ctf:
-        def load_pose_pkl(pose_path, ind_img=None):
-            rots, trans = utils.load_pkl(pose_path)
-            rots = np.asarray(rots, dtype=np.float32)
-            trans = np.asarray(trans, dtype=np.float32)
-            if ind_img is not None:
-                rots = rots[ind_img]
-                if trans is not None:
-                    trans = trans[ind_img]
-            return rots, trans
-
-        def load_ctf_pkl(ctf_path, ind_img=None):
-            ctf_params = utils.load_pkl(ctf_path)
-            ctf_params = np.asarray(ctf_params, dtype=np.float32)
-            if ind_img is not None:
-                ctf_params = ctf_params[ind_img]
-            return ctf_params
-
-        if args.pose is not None:
-            flog(f'Updating dataset to use poses from {args.pose}')
-            rots_train, trans_train = load_pose_pkl(args.pose, inds_train)
-            assert rots_train.shape == (data_train.nimgs, 3, 3)
-            data_train.rot = rots_train
-            if trans_train is not None:
-                assert trans_train.shape == (data_train.nimgs, 2)
-                data_train.trans = trans_train
-            if len(inds_test) > 0:
-                rots_test, trans_test = load_pose_pkl(args.pose, inds_test)
-                assert rots_test.shape == (data_test.nimgs, 3, 3)
-                data_test.rot = rots_test
-                if trans_test is not None:
-                    assert trans_test.shape == (data_test.nimgs, 2)
-                    data_test.trans = trans_test
-
-        if args.ctf is not None:
-            flog(f'Updating dataset to use CTF parameters from {args.ctf}')
-            ctf_params_train = load_ctf_pkl(args.ctf, inds_train)
-            assert ctf_params_train.shape == (data_train.nimgs, 9)
-            data_train.ctf_params = ctf_params_train
-            if len(inds_test) > 0:
-                ctf_params_test = load_ctf_pkl(args.ctf, inds_test)
-                assert ctf_params_test.shape == (data_test.nimgs, 9)
-                data_test.ctf_params = ctf_params_test
 
     # instantiate lattice
     lattice = Lattice(boxsize_ht, extent=args.l_extent, device=device)
@@ -842,6 +781,7 @@ def main(args):
             data_test.ntilts_training = None
             flog(f'Will sample {data_train.ntilts_training} tilts per particle for train split, to pass to encoder, due to model requirements of --pooling-function {args.pooling_function}')
             if len(inds_test) > 0:
+            if args.fraction_train < 1:
                 flog(f'Will sample {data_test.ntilts_training} tilts per particle for test split, to pass to encoder, due to model requirements of --pooling-function {args.pooling_function}')
         else:
             # TODO implement ntilt_training calculation for set-style encoder with batchsize > 1
@@ -849,7 +789,7 @@ def main(args):
     elif args.pooling_function in ['concatenate', 'set_encoder']:
         # requires same number of tilts for both test and train for every particle
         # therefore add further subset train/test to sample same number of tilts from each for each particle
-        if len(inds_test) > 0:
+        if args.fraction_train < 1:
             n_tilts_for_model = min(data_train.ntilts_range[0], data_test.ntilts_range[0])
             data_train.ntilts_training = n_tilts_for_model
             data_test.ntilts_training = n_tilts_for_model

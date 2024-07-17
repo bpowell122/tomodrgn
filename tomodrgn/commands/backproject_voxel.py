@@ -19,12 +19,19 @@ def add_args(_parser):
     _parser.add_argument('particles', type=os.path.abspath, help='Input particles_imageseries.star')
     _parser.add_argument('-o', type=os.path.abspath, required=True, help='Output .mrc file')
 
+    group = _parser.add_argument_group('Particle starfile loading and filtering')
+    group.add_argument('--ind-ptcls', type=os.path.abspath, metavar='PKL', help='Filter starfile by particles (unique rlnGroupName values) using np array pkl as indices')
+    group.add_argument('--ind-imgs', type=os.path.abspath, help='Filter starfile by particle images (star file rows) using np array pkl as indices')
+    group.add_argument('--sort-ptcl-imgs', choices=('unsorted', 'dose_ascending', 'random'), default='unsorted', help='Sort the star file images on a per-particle basis by the specified criteria')
+    group.add_argument('--use-first-ntilts', type=int, default=-1, help='Keep the first `use_first_ntilts` images of each particle in the sorted star file.'
+                                                                        'Default -1 means to use all. Will drop particles with fewer than this many tilt images.')
+    group.add_argument('--use-first-nptcls', type=int, default=-1, help='Keep the first `use_first_nptcls` particles in the sorted star file. Default -1 means to use all.')
+
     group = _parser.add_argument_group('Dataset loading options')
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths star file')
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
     group.add_argument('--ind', type=os.path.abspath, help='Indices of which particles to backproject corresponding tilt images (pkl)')
-    group.add_argument('--first', type=int, help='Backproject the first N particles (default is all)')
 
     group = _parser.add_argument_group('Reconstruction options')
     group.add_argument('--recon-tilt-weight', action='store_true', help='Weight images in fourier space by cosine(tilt_angle)')
@@ -176,49 +183,45 @@ def main(args):
     # load the star file
     ptcls_star = starfile.TiltSeriesStarfile(args.particles)
 
-    # filter by indices and/or manual selection of first N particles
-    if args.ind is not None:
-        log(f'Reading supplied particle indices {args.ind}')
-        ind_ptcls = utils.load_pkl(args.ind)
-        if args.first is not None:
-            log(f'Will only use first {args.first} particles of supplied indices')
-            ind_ptcls = ind_ptcls[:args.first]
-    else:
-        if args.first is not None:
-            log(f'Will only use first {args.first} particles')
-            ind_ptcls = np.arange(args.first)
-        else:
-            ind_ptcls = np.arange(len(ptcls_star.get_ptcl_img_indices()))
+    # filter star file
+    ptcls_star.filter(ind_imgs=args.ind_imgs,
+                      ind_ptcls=args.ind_ptcls,
+                      sort_ptcl_imgs=args.sort_ptcl_imgs,
+                      use_first_ntilts=args.use_first_ntilts,
+                      use_first_nptcls=args.use_first_nptcls)
 
-    # split ind_ptcls by into half sets for calculation of map-map FSC
-    log('Creating random half-set split of selected indices for calculation of map-map FSC')
-    ind_ptcls_half1 = np.sort(np.random.choice(ind_ptcls, size=len(ind_ptcls) // 2, replace=False))
-    ind_ptcls_half2 = np.sort(np.array(list(set(ind_ptcls) - set(ind_ptcls_half1))))
+    # split ptcls_star by into half sets per-particle for independent backprojection
+    ptcls_star.make_test_train_split(fraction_split1=0.5,
+                                     show_summary_stats=False)
 
+    # save filtered star file for future convenience (aligning latent embeddings with particles, re-extracting particles, mapbacks, etc.)
+    outstar = f'{os.path.dirname(args.o)}/{os.path.splitext(ptcls_star.sourcefile)[0]}_tomodrgn_preprocessed.star'
+    ptcls_star.write(outstar)
+
+    # load the dataset as two half-datasets for independent backprojection
     data_half1 = dataset.TiltSeriesMRCData(ptcls_star,
+                                           star_random_subset=1,
+                                           datadir=args.datadir,
+                                           lazy=args.lazy,
                                            norm=(0, 1),
                                            invert_data=args.invert_data,
-                                           ind_ptcl=ind_ptcls_half1,
                                            window=False,
-                                           datadir=args.datadir,
                                            recon_dose_weight=args.recon_dose_weight,
                                            recon_tilt_weight=args.recon_tilt_weight,
                                            l_dose_mask=False,
-                                           lazy=args.lazy,
-                                           use_all_images=True,
+                                           constant_mintilt_sampling=False,
                                            sequential_tilt_sampling=True)
-    ptcls_star = starfile.TiltSeriesStarfile(args.particles)  # re-load the star file object because loading dataset with ind filtering applies filtering in-place
     data_half2 = dataset.TiltSeriesMRCData(ptcls_star,
+                                           star_random_subset=2,
+                                           datadir=args.datadir,
+                                           lazy=args.lazy,
                                            norm=(0, 1),
                                            invert_data=args.invert_data,
-                                           ind_ptcl=ind_ptcls_half2,
                                            window=False,
-                                           datadir=args.datadir,
                                            recon_dose_weight=args.recon_dose_weight,
                                            recon_tilt_weight=args.recon_tilt_weight,
                                            l_dose_mask=False,
-                                           lazy=args.lazy,
-                                           use_all_images=True,
+                                           constant_mintilt_sampling=False,
                                            sequential_tilt_sampling=True)
     boxsize_ht = data_half1.boxsize_ht
     angpix = ptcls_star.get_tiltseries_pixelsize()
