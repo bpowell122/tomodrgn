@@ -12,6 +12,7 @@ from typing import Union
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+from torch.cuda.amp import GradScaler, autocast
 
 import tomodrgn
 from tomodrgn import utils, ctf, starfile
@@ -200,7 +201,7 @@ def save_config(args: argparse.Namespace,
 
 def train_batch(*,
                 model: TiltSeriesHetOnlyVAE | DataParallelPassthrough,
-                scaler: torch.GradScaler,
+                scaler: GradScaler,
                 optim: torch.optim.Optimizer,
                 lattice: Lattice,
                 batch_images: torch.Tensor,
@@ -215,7 +216,7 @@ def train_batch(*,
     """
     Train a TiltSeriesHetOnlyVAE model on a batch of tilt series particle images.
     :param model: TiltSeriesHetOnlyVAE object to be trained
-    :param scaler: torch.GradScaler object to be used for scaling loss involving fp16 tensors to avoid over/underflow
+    :param scaler: GradScaler object to be used for scaling loss involving fp16 tensors to avoid over/underflow
     :param optim: torch.optim.Optimizer object to be used for optimizing the model
     :param lattice: Hartley-transform lattice of points for voxel grid operations
     :param batch_images: Batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht, boxsize_ht)
@@ -231,7 +232,7 @@ def train_batch(*,
             Calculated as the intersection of critical dose exposure curves and a Nyquist-limited circular mask in reciprocal space, including masking the DC component.
     :param beta: scaling factor to apply to KLD during loss calculation.
     :param beta_control: KL-Controlled VAE gamma. Beta is KL target.
-    :param use_amp: If true, use Automatic Mixed Precision to reduce memory consumption and accelerate code execution via `torch.autocast` and `torch.scaler`
+    :param use_amp: If true, use Automatic Mixed Precision to reduce memory consumption and accelerate code execution via `autocast` and `GradScaler`
     :return: numpy array of losses: total loss, generative loss between reconstructed slices and input images, and kld loss between latent embeddings and standard normal
     """
     # prepare to train a new batch
@@ -239,7 +240,7 @@ def train_batch(*,
     model.train()
 
     # autocast auto-enabled and set to correct device
-    with torch.autocast(device_type=batch_images.device.type, enabled=use_amp):
+    with autocast(enabled=use_amp):
         # center images via translation and phase flip for partial CTF correction
         batch_images_preprocessed, batch_ctf_weights = preprocess_batch(lattice=lattice,
                                                                         batch_images=batch_images,
@@ -448,7 +449,7 @@ def encoder_inference(*,
     with torch.no_grad():
 
         # autocast auto-enabled and set to correct device
-        with torch.autocast(device_type=model.device.type, enabled=use_amp):
+        with autocast(enabled=use_amp):
 
             # pre-allocate tensors to store outputs
             z_mu_all = torch.zeros((data.nptcls, model.zdim),
@@ -497,7 +498,7 @@ def encoder_inference(*,
 
 def save_checkpoint(*,
                     model: TiltSeriesHetOnlyVAE | DataParallelPassthrough,
-                    scaler: torch.GradScaler,
+                    scaler: GradScaler,
                     optim: torch.optim.Optimizer,
                     epoch: int,
                     z_mu_train: np.ndarray,
@@ -510,7 +511,7 @@ def save_checkpoint(*,
     """
     Save model weights and latent encoding z
     :param model: TiltSeriesHetOnlyVAE object used for model training and evaluation
-    :param scaler: torch.GradScaler object used for scaling loss involving fp16 tensors to avoid over/underflow
+    :param scaler: GradScaler object used for scaling loss involving fp16 tensors to avoid over/underflow
     :param optim: torch.optim.Optimizer object used for optimizing the model
     :param epoch: epoch count at which checkpoint is being saved
     :param z_mu_train: array of latent embedding means for the dataset train split
@@ -845,7 +846,7 @@ def main(args):
     # Mixed precision training with AMP
     use_amp = not args.no_amp
     flog(f'AMP acceleration enabled (autocast + gradscaler) : {use_amp}')
-    scaler = torch.GradScaler(device_type=device.type, enabled=use_amp)
+    scaler = GradScaler(enabled=use_amp)
     if use_amp:
         if not args.batch_size % 8 == 0:
             flog('Warning: recommended to have batch size divisible by 8 for AMP training')
