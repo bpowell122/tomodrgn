@@ -84,6 +84,7 @@ class GenericStarfile:
             self.preambles = [['', 'data_', '', 'loop_']]
             self.block_names = ['data_']
             self.blocks = {'data_': dataframe}
+        log('Loaded star file into memory.')
 
     def __len__(self):
         return len(self.block_names)
