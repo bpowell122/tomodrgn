@@ -121,12 +121,12 @@ class TiltSeriesMRCData(data.Dataset):
             raise ValueError(f'Random star subset label not supported: {self.star_random_subset}')
 
         # filter particles by image indices and particle indices
-        self.ptcls_list = self.star.df.loc[self.star.header_ptcl_uid].unique()
+        self.ptcls_list = self.star.df[self.star.header_ptcl_uid].unique()
         self.nimgs = len(self.star.df)
         self.nptcls = len(self.ptcls_list)
 
         # get mapping of particle indices to image indices using star file ordering
-        ptcls_to_imgs_ind = ptcls_star.get_ptcl_img_indices()
+        ptcls_to_imgs_ind = self.star.get_ptcl_img_indices()
         self.ptcls_to_imgs_ind = ptcls_to_imgs_ind
 
         # get distribution of number of tilt images per particle across star file

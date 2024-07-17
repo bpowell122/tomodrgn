@@ -120,8 +120,8 @@ def add_slice(vol_ht: torch.tensor,
     boxsize_ht = vol_ht.shape[0]
     d2 = int(boxsize_ht / 2)
     ff_coord = ff_coord.transpose(0, 1)
-    xf, yf, zf = ff_coord.floor().int()
-    xc, yc, zc = ff_coord.ceil().int()
+    xf, yf, zf = ff_coord.floor().long()
+    xc, yc, zc = ff_coord.ceil().long()
 
     def add_for_corner(_xi: torch.tensor,
                        _yi: torch.tensor,
@@ -195,7 +195,7 @@ def main(args):
                                      show_summary_stats=False)
 
     # save filtered star file for future convenience (aligning latent embeddings with particles, re-extracting particles, mapbacks, etc.)
-    outstar = f'{os.path.dirname(args.o)}/{os.path.splitext(ptcls_star.sourcefile)[0]}_tomodrgn_preprocessed.star'
+    outstar = f'{os.path.dirname(args.o)}/{os.path.splitext(os.path.basename(ptcls_star.sourcefile))[0]}_tomodrgn_preprocessed.star'
     ptcls_star.write(outstar)
 
     # load the dataset as two half-datasets for independent backprojection

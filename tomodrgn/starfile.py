@@ -810,14 +810,14 @@ class TiltSeriesStarfile(GenericStarfile):
 
             # if a particledoes not have ntilts images, drop it
             rows_to_drop = self.df.loc[self.df.groupby(self.header_ptcl_uid)[self.header_ptcl_uid].transform('count') < use_first_ntilts].index
-            num_ptcls_to_drop = len(self.df[rows_to_drop][self.header_ptcl_uid].unique())
+            num_ptcls_to_drop = len(self.df.loc[rows_to_drop, self.header_ptcl_uid].unique())
             if num_ptcls_to_drop > 0:
                 log(f'Dropping {num_ptcls_to_drop} from star file due to having fewer than {use_first_ntilts=} tilt images per particle')
             self.df = self.df.drop(rows_to_drop).reset_index(drop=True)
 
         # keep the first nptcls particles
         if use_first_nptcls != -1:
-            log(f'Keeping first {use_first_nptcls} particles.')
+            log(f'Keeping first {use_first_nptcls=} particles.')
             ptcls_unique_list = self.df[self.header_ptcl_uid].unique().to_numpy()
             ptcls_unique_list = ptcls_unique_list[:use_first_nptcls]
             self.df = self.df[self.df[self.header_ptcl_uid].isin(ptcls_unique_list)]

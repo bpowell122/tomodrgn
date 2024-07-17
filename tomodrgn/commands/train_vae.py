@@ -703,7 +703,7 @@ def main(args):
                                      show_summary_stats=True)
 
     # save filtered star file for future convenience (aligning latent embeddings with particles, re-extracting particles, mapbacks, etc.)
-    outstar = f'{os.path.dirname(args.o)}/{os.path.splitext(ptcls_star.sourcefile)[0]}_tomodrgn_preprocessed.star'
+    outstar = f'{os.path.dirname(args.o)}/{os.path.splitext(os.path.basename(ptcls_star.sourcefile))[0]}_tomodrgn_preprocessed.star'
     ptcls_star.write(outstar)
 
     # load the particles + poses + ctf from input starfile
