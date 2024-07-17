@@ -2,10 +2,8 @@
 Classes and functions for interfacing with particle image data and associated starfile metadata.
 """
 
-import os
 import numpy as np
 from torch.utils import data
-from typing import Literal
 
 from tomodrgn import fft, mrc, utils, starfile, dose, ctf
 
@@ -212,108 +210,6 @@ class TiltSeriesMRCData(data.Dataset):
 
     def get(self, index):
         return self.ptcls[index]
-
-    def _filter_ptcls_star(self,
-                           ind_img: np.ndarray | str = None,
-                           ind_ptcl: np.ndarray | str = None,
-                           sort_ptcl_imgs: Literal['unsorted', 'dose_ascending', 'random'] = 'unsorted',
-                           use_first_ntilts: int = -1,
-                           use_first_nptcls: int = -1) -> np.ndarray:
-        """
-        Filter the TiltSeriesStarfile associated with this TiltSeriesMRCData by image indices (rows) and particle indices (groups of rows).
-        :param ind_img: numpy array or path to numpy array of integer row indices to preserve, shape (N)
-        :param ind_ptcl: numpy array or path to numpy array of integer particle indices to preserve, shape (N)
-        :param sort_ptcl_imgs: aort the star file images on a per-particle basis by the specified criteria
-        :param use_first_ntilts: keep the first `use_first_ntilts` images of each particle in the sorted star file.
-                Default -1 means to use all. Will drop particles with fewer than this many tilt images.
-        :param use_first_nptcls: keep the first `use_first_nptcls` particles in the sorted star file.
-                Default -1 means to use all.
-        :return: numpy array of UIDs assocated with preserved particles, shape: (nptcls)
-        """
-
-        # how many particles does the star file initially contain
-        ptcls_unique_list = self.star.df[self.star.header_ptcl_uid].unique().to_numpy()
-        log(f'Found {len(ptcls_unique_list)} particles in input star file')
-
-        # filter by image (row of dataframe) by presupplied indices
-        if ind_img is not None:
-            log('Filtering particle images by supplied indices')
-
-            if type(ind_img) is str:
-                if ind_img.endswith('.pkl'):
-                    ind_ptcl = utils.load_pkl(ind_ptcl)
-                else:
-                    raise ValueError(f'Expected .pkl file for {ind_img=}')
-
-            assert min(ind_img) >= 0
-            assert max(ind_img) <= len(self.star.df)
-
-            self.star.df = self.star.df.iloc[ind_img].reset_index(drop=True)
-
-        # filter by particle (group of rows sharing common header_ptcl_uid) by presupplied indices
-        if ind_ptcl is not None:
-            log('Filtering particles by supplied indices')
-
-            if type(ind_ptcl) is str:
-                if ind_ptcl.endswith('.pkl'):
-                    ind_ptcl = utils.load_pkl(ind_ptcl)
-                else:
-                    raise ValueError(f'Expected .pkl file for {ind_ptcl=}')
-
-            assert min(ind_ptcl) >= 0
-            assert max(ind_ptcl) <= len(ptcls_unique_list)
-
-            ptcls_unique_list = ptcls_unique_list[ind_ptcl]
-            self.star.df = self.star.df[self.star.df[self.star.header_ptcl_uid].isin(ptcls_unique_list)]
-            self.star.df = self.star.df.reset_index(drop=True)
-
-            assert len(self.star.df[self.star.header_ptcl_uid].unique().to_numpy()) == len(ind_ptcl), 'Make sure particle indices file does not contain duplicates'
-
-        # sort the star file per-particle by the specified method
-        if sort_ptcl_imgs != 'unsorted':
-            log(f'Sorting star file per-particle by {sort_ptcl_imgs}')
-            if sort_ptcl_imgs == 'dose_ascending':
-                # sort by header_ptcl_uid first to keep images of the same particle together, then sort by header_ptcl_dose
-                self.star.df = self.star.df.sort_values(by=[self.star.header_ptcl_uid, self.star.header_ptcl_dose], ascending=True).reset_index(drop=True)
-            elif sort_ptcl_imgs == 'random':
-                # group by header_ptcl_uid first to keep images of the same particle together, then shuffle rows within each group
-                self.star.df = self.star.df.groupby(self.star.header_ptcl_uid, sort=False).sample(frac=1).reset_index(drop=True)
-            else:
-                raise ValueError(f'Unsupported value for {sort_ptcl_imgs=}')
-
-        # keep the first ntilts images of each particle
-        if use_first_ntilts != -1:
-            log(f'Keeping first {use_first_ntilts} images of each particle. Excluding particles with fewer than this many images.')
-            self.star.df = self.star.df.groupby(self.star.header_ptcl_uid).head(use_first_ntilts).reset_index(drop=True)
-
-            # if a particledoes not have ntilts images, drop it
-            rows_to_drop = self.star.df.loc[self.star.df.groupby(self.star.header_ptcl_uid)[self.star.header_ptcl_uid].transform('count') < use_first_ntilts].index
-            num_ptcls_to_drop = len(self.star.df[rows_to_drop][self.star.header_ptcl_uid].unique())
-            if num_ptcls_to_drop > 0:
-                log(f'Dropping {num_ptcls_to_drop} from star file due to having fewer than {use_first_ntilts=} tilt images per particle')
-            self.star.df = self.star.df.drop(rows_to_drop).reset_index(drop=True)
-
-        # keep the first nptcls particles
-        if use_first_nptcls != -1:
-            log(f'Keeping first {use_first_nptcls} particles.')
-            ptcls_unique_list = self.star.df[self.star.header_ptcl_uid].unique().to_numpy()
-            ptcls_unique_list = ptcls_unique_list[:use_first_nptcls]
-            self.star.df = self.star.df[self.star.df[self.star.header_ptcl_uid].isin(ptcls_unique_list)]
-            self.star.df = self.star.df.reset_index(drop=True)
-
-        # order the final star file by header_ptcl_image for contiguous file I/O
-        images = [x.split('@') for x in self.star.df[self.star.header_ptcl_image]]  # assumed format is index@path_to_mrc
-        self.star.df['_rlnImageNameInd'] = [int(x[0]) - 1 for x in images]  # convert to 0-based indexing of full dataset
-        self.star.df['_rlnImageNameBase'] = [x[1] for x in images]
-        self.star.df = self.star.df.sort_values(by=['_rlnImageNameBase', '_rlnImageNameInd'], ascending=True).reset_index(drop=True)
-        self.star.df = self.star.df.drop(['_rlnImageNameBase', '_rlnImageNameInd'], axis=1)
-
-        # save the star file for ease of future reference (aligning latent embeddings with particles, re-extracting particles, mapbacks, etc.)
-        outstar = f'{os.path.splitext(self.star.sourcefile)[0]}_tomodrgnfiltered.star'
-        self.star.write(outstar)
-
-        ptcls_unique_list = self.star.df[self.star.header_ptcl_uid].unique().to_numpy()
-        return ptcls_unique_list
 
     def _load_pose_params(self) -> tuple[np.ndarray, np.ndarray]:
         """

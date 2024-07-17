@@ -7,7 +7,7 @@ import pandas as pd
 from datetime import datetime as dt
 import os
 import matplotlib.pyplot as plt
-from typing import TextIO
+from typing import TextIO, Literal
 
 from tomodrgn import mrc, utils
 from tomodrgn.mrc import LazyImage
@@ -731,6 +731,102 @@ class TiltSeriesStarfile(GenericStarfile):
         assert os.path.exists(stack_path), f'{stack_path} not found'
         header = mrc.parse_header(stack_path)
         return header.D
+
+    def filter(self,
+               ind_imgs: np.ndarray | str = None,
+               ind_ptcls: np.ndarray | str = None,
+               sort_ptcl_imgs: Literal['unsorted', 'dose_ascending', 'random'] = 'unsorted',
+               use_first_ntilts: int = -1,
+               use_first_nptcls: int = -1) -> None:
+        """
+        Filter the TiltSeriesStarfile in-place by image indices (rows) and particle indices (groups of rows corresponding to the same particle).
+        Operations are applied in order: `ind_img -> ind_ptcl -> sort_ptcl_imgs -> use_first_ntilts -> use_first_nptcls`.
+        :param ind_imgs: numpy array or path to numpy array of integer row indices to preserve, shape (N)
+        :param ind_ptcls: numpy array or path to numpy array of integer particle indices to preserve, shape (N)
+        :param sort_ptcl_imgs: aort the star file images on a per-particle basis by the specified criteria
+        :param use_first_ntilts: keep the first `use_first_ntilts` images of each particle in the sorted star file.
+                Default -1 means to use all. Will drop particles with fewer than this many tilt images.
+        :param use_first_nptcls: keep the first `use_first_nptcls` particles in the sorted star file.
+                Default -1 means to use all.
+        :return: None
+        """
+
+        # how many particles does the star file initially contain
+        ptcls_unique_list = self.df[self.header_ptcl_uid].unique().to_numpy()
+        log(f'Found {len(ptcls_unique_list)} particles in input star file')
+
+        # filter by image (row of dataframe) by presupplied indices
+        if ind_imgs is not None:
+            log('Filtering particle images by supplied indices')
+
+            if type(ind_imgs) is str:
+                if ind_imgs.endswith('.pkl'):
+                    ind_imgs = utils.load_pkl(ind_imgs)
+                else:
+                    raise ValueError(f'Expected .pkl file for {ind_imgs=}')
+
+            assert min(ind_imgs) >= 0
+            assert max(ind_imgs) <= len(self.df)
+
+            self.df = self.df.iloc[ind_imgs].reset_index(drop=True)
+
+        # filter by particle (group of rows sharing common header_ptcl_uid) by presupplied indices
+        if ind_ptcls is not None:
+            log('Filtering particles by supplied indices')
+
+            if type(ind_ptcls) is str:
+                if ind_ptcls.endswith('.pkl'):
+                    ind_ptcls = utils.load_pkl(ind_ptcls)
+                else:
+                    raise ValueError(f'Expected .pkl file for {ind_ptcls=}')
+
+            assert min(ind_ptcls) >= 0
+            assert max(ind_ptcls) <= len(ptcls_unique_list)
+
+            ptcls_unique_list = ptcls_unique_list[ind_ptcls]
+            self.df = self.df[self.df[self.header_ptcl_uid].isin(ptcls_unique_list)]
+            self.df = self.df.reset_index(drop=True)
+
+            assert len(self.df[self.header_ptcl_uid].unique().to_numpy()) == len(ind_ptcls), 'Make sure particle indices file does not contain duplicates'
+
+        # sort the star file per-particle by the specified method
+        if sort_ptcl_imgs != 'unsorted':
+            log(f'Sorting star file per-particle by {sort_ptcl_imgs}')
+            if sort_ptcl_imgs == 'dose_ascending':
+                # sort by header_ptcl_uid first to keep images of the same particle together, then sort by header_ptcl_dose
+                self.df = self.df.sort_values(by=[self.header_ptcl_uid, self.header_ptcl_dose], ascending=True).reset_index(drop=True)
+            elif sort_ptcl_imgs == 'random':
+                # group by header_ptcl_uid first to keep images of the same particle together, then shuffle rows within each group
+                self.df = self.df.groupby(self.header_ptcl_uid, sort=False).sample(frac=1).reset_index(drop=True)
+            else:
+                raise ValueError(f'Unsupported value for {sort_ptcl_imgs=}')
+
+        # keep the first ntilts images of each particle
+        if use_first_ntilts != -1:
+            log(f'Keeping first {use_first_ntilts} images of each particle. Excluding particles with fewer than this many images.')
+            self.df = self.df.groupby(self.header_ptcl_uid).head(use_first_ntilts).reset_index(drop=True)
+
+            # if a particledoes not have ntilts images, drop it
+            rows_to_drop = self.df.loc[self.df.groupby(self.header_ptcl_uid)[self.header_ptcl_uid].transform('count') < use_first_ntilts].index
+            num_ptcls_to_drop = len(self.df[rows_to_drop][self.header_ptcl_uid].unique())
+            if num_ptcls_to_drop > 0:
+                log(f'Dropping {num_ptcls_to_drop} from star file due to having fewer than {use_first_ntilts=} tilt images per particle')
+            self.df = self.df.drop(rows_to_drop).reset_index(drop=True)
+
+        # keep the first nptcls particles
+        if use_first_nptcls != -1:
+            log(f'Keeping first {use_first_nptcls} particles.')
+            ptcls_unique_list = self.df[self.header_ptcl_uid].unique().to_numpy()
+            ptcls_unique_list = ptcls_unique_list[:use_first_nptcls]
+            self.df = self.df[self.df[self.header_ptcl_uid].isin(ptcls_unique_list)]
+            self.df = self.df.reset_index(drop=True)
+
+        # order the final star file by header_ptcl_image for contiguous file I/O
+        images = [x.split('@') for x in self.df[self.header_ptcl_image]]  # assumed format is index@path_to_mrc
+        self.df['_rlnImageNameInd'] = [int(x[0]) - 1 for x in images]  # convert to 0-based indexing of full dataset
+        self.df['_rlnImageNameBase'] = [x[1] for x in images]
+        self.df = self.df.sort_values(by=['_rlnImageNameBase', '_rlnImageNameInd'], ascending=True).reset_index(drop=True)
+        self.df = self.df.drop(['_rlnImageNameBase', '_rlnImageNameInd'], axis=1)
 
     def make_test_train_split(self,
                               fraction_train: float = 0.5,
