@@ -3,6 +3,7 @@ Classes and functions for interfacing with particle image data and associated st
 """
 
 import numpy as np
+from copy import deepcopy
 from torch.utils import data
 
 from tomodrgn import fft, mrc, utils, starfile, dose, ctf
@@ -79,13 +80,9 @@ class TiltSeriesMRCData(data.Dataset):
 
     def __init__(self,
                  ptcls_star: starfile.TiltSeriesStarfile,
+                 star_random_subset: int = -1,
                  datadir: str = None,
                  lazy: bool = True,
-                 ind_ptcl: str | np.ndarray = None,
-                 ind_img: np.ndarray = None,
-                 sort_ptcl_imgs: Literal['unsorted', 'dose_ascending', 'random'] = 'unsorted',
-                 use_first_ntilts: int = -1,
-                 use_first_nptcls: int = -1,
                  norm: tuple[float, float] | None = None,
                  invert_data: bool = False,
                  window: bool = True,
@@ -98,10 +95,8 @@ class TiltSeriesMRCData(data.Dataset):
                  sequential_tilt_sampling: bool = False, ):
 
         # set attributes known immediately at creation time
-        self.star = ptcls_star
-        self.sort_ptcl_imgs = sort_ptcl_imgs
-        self.use_first_ntilts = use_first_ntilts
-        self.use_first_nptcls = use_first_nptcls
+        self.star = deepcopy(ptcls_star)
+        self.star_random_subset = star_random_subset
         self.datadir = datadir
         self.lazy = lazy
         self.window = window
@@ -115,12 +110,18 @@ class TiltSeriesMRCData(data.Dataset):
         self.l_dose_mask = l_dose_mask
         self.norm = norm
 
+        # filter particle images by random subset within each particle
+        if self.star_random_subset == -1:
+            pass
+        elif self.star_random_subset == 1:
+            self.star.df = self.star.df.drop(self.star.df.loc[self.star.df[self.star.header_image_random_split] != 1].index).reset_index(drop=True)
+        elif self.star_random_subset == 2:
+            self.star.df = self.star.df.drop(self.star.df.loc[self.star.df[self.star.header_image_random_split] != 2].index).reset_index(drop=True)
+        else:
+            raise ValueError(f'Random star subset label not supported: {self.star_random_subset}')
+
         # filter particles by image indices and particle indices
-        self.ptcls_list = self._filter_ptcls_star(ind_img=ind_img,
-                                                  ind_ptcl=ind_ptcl,
-                                                  sort_ptcl_imgs=sort_ptcl_imgs,
-                                                  use_first_ntilts=use_first_ntilts,
-                                                  use_first_nptcls=use_first_nptcls)
+        self.ptcls_list = self.star.df.loc[self.star.header_ptcl_uid].unique()
         self.nimgs = len(self.star.df)
         self.nptcls = len(self.ptcls_list)
 
@@ -398,8 +399,6 @@ class TiltSeriesMRCData(data.Dataset):
         return TiltSeriesMRCData(ptcls_star=star,
                                  datadir=config['dataset_args']['datadir'],
                                  lazy=config['training_args']['lazy'],
-                                 ind_ptcl=config['dataset_args']['ind'],
-                                 ind_img=config['dataset_args']['ind_img'],
                                  norm=config['dataset_args']['norm'],
                                  invert_data=config['dataset_args']['invert_data'],
                                  window=config['dataset_args']['window'],
