@@ -407,6 +407,7 @@ class TiltSeriesStarfile(GenericStarfile):
         self.header_ptcl_image = None
         self.header_ptcl_micrograph = None
 
+        self.header_image_random_split = '_tomodrgnRandomSubset'
         self.image_ctf_corrected = None
         self.image_dose_weighted = None
         self.image_tilt_weighted = None
@@ -829,21 +830,20 @@ class TiltSeriesStarfile(GenericStarfile):
         self.df = self.df.drop(['_rlnImageNameBase', '_rlnImageNameInd'], axis=1)
 
     def make_test_train_split(self,
-                              fraction_train: float = 0.5,
-                              first_ntilts: int = None,
-                              show_summary_stats: bool = True) -> tuple[np.ndarray, np.ndarray]:
+                              fraction_split1: float = 0.5,
+                              show_summary_stats: bool = True) -> None:
         """
-        Create indices for tilt images assigned to train vs test split
-        :param fraction_train: fraction of each particle's tilt images to put in train dataset
-        :param first_ntilts: if not None, only use first ntilts images of each particle in star file
-        :param show_summary_stats: log summary statistics of particle sampling for test/train
-        :return: inds_train: array of indices of tilt images assigned to train split from particles dataframe
-        :return: inds_test: array of indices of tilt images assigned to test split from particles dataframe
+        Create indices for tilt images assigned to train vs test split.
+        Images are randomly assigned to one set or the other by respecting `fraction_train` on a per-particle basis.
+        Random split is stored in `self.df` under the `self.header_image_random_split` column.
+        :param fraction_split1: fraction of each particle's tilt images to label split1. All others will be labeled split2.
+        :param show_summary_stats: log distribution statistics of particle sampling for test/train splits
+        :return: None
         """
 
         # check required inputs are present
         df_grouped = self.df.groupby(self.header_ptcl_uid, sort=False)
-        assert 0 < fraction_train <= 1.0
+        assert 0 < fraction_split1 <= 1.0
 
         # find minimum number of tilts present for any particle
         mintilt_df = np.nan
@@ -858,12 +858,8 @@ class TiltSeriesStarfile(GenericStarfile):
             # get all image indices of this particle
             inds_img = group.index.to_numpy(dtype=int)
 
-            if first_ntilts is not None:
-                assert len(inds_img) >= first_ntilts, f'Requested use_first_ntilts: {first_ntilts} larger than number of tilts: {len(inds_img)} for particle: {particle_id}'
-                inds_img = inds_img[:first_ntilts]
-
             # calculate the number of images to use in train split for this particle
-            n_inds_train = np.rint(len(inds_img) * fraction_train).astype(int)
+            n_inds_train = np.rint(len(inds_img) * fraction_split1).astype(int)
 
             # generate sorted indices for images in train split by sampling without replacement
             inds_img_train = np.random.choice(inds_img, size=n_inds_train, replace=False)
@@ -886,10 +882,12 @@ class TiltSeriesStarfile(GenericStarfile):
         # sanity check: the intersection of inds_train and inds_test should be empty
         assert len(set(inds_train) & set(inds_test)) == 0, len(set(inds_train) & set(inds_test))
         # sanity check: the union of inds_train and inds_test should be the total number of images in the particles dataframe
-        if first_ntilts is None:
-            assert len(set(inds_train) | set(inds_test)) == len(self.df), len(set(inds_train) | set(inds_test))
+        assert len(set(inds_train) | set(inds_test)) == len(self.df), len(set(inds_train) | set(inds_test))
 
-        return inds_train, inds_test
+        # store random split in particles dataframe
+        self.df[self.header_image_random_split] = np.zeros(len(self.df), dtype=np.uint8)
+        self.df.loc[inds_train, self.header_image_random_split] = 1
+        self.df.loc[inds_test, self.header_image_random_split] = 2
 
     def plot_particle_uid_ntilt_distribution(self,
                                              outdir: str = None) -> None:
