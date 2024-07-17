@@ -91,8 +91,8 @@ class TiltSeriesMRCData(data.Dataset):
                  recon_dose_weight: bool = False,
                  recon_tilt_weight: bool = False,
                  l_dose_mask: bool = False,
-                 use_all_images: bool = False,
-                 sequential_tilt_sampling: bool = False, ):
+                 constant_mintilt_sampling: bool = False,
+                 sequential_tilt_sampling: bool = False):
 
         # set attributes known immediately at creation time
         self.star = deepcopy(ptcls_star)
@@ -103,7 +103,7 @@ class TiltSeriesMRCData(data.Dataset):
         self.window_r = window_r
         self.window_r_outer = window_r_outer
         self.invert_data = invert_data
-        self.use_all_images = use_all_images
+        self.constant_mintilt_sampling = constant_mintilt_sampling
         self.sequential_tilt_sampling = sequential_tilt_sampling
         self.recon_tilt_weight = recon_tilt_weight
         self.recon_dose_weight = recon_dose_weight
@@ -163,7 +163,7 @@ class TiltSeriesMRCData(data.Dataset):
         ptcl_img_ind = self.ptcls_to_imgs_ind[idx_ptcl].astype(int)
 
         # determine the order in which to return the images and related parameters
-        if not self.use_all_images:
+        if self.constant_mintilt_sampling:
             if self.sequential_tilt_sampling:
                 zero_indexed_ind = np.arange(self.ntilts_training)  # take first ntilts_training images for deterministic loading/debugging
             else:
