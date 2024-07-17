@@ -36,8 +36,8 @@ def add_args(_parser):
     _parser.add_argument('--seed', type=int, default=np.random.randint(0, 100000), help='Random seed')
 
     group = _parser.add_argument_group('Particle starfile loading and filtering')
-    group.add_argument('--ind-ptcl', type=os.path.abspath, metavar='PKL', help='Filter starfile by particles (unique rlnGroupName values) using np array pkl as indices')
-    group.add_argument('--ind-img', type=os.path.abspath, help='Filter starfile by particle images (star file rows) using np array pkl as indices')
+    group.add_argument('--ind-ptcls', type=os.path.abspath, metavar='PKL', help='Filter starfile by particles (unique rlnGroupName values) using np array pkl as indices')
+    group.add_argument('--ind-imgs', type=os.path.abspath, help='Filter starfile by particle images (star file rows) using np array pkl as indices')
     group.add_argument('--sort-ptcl-imgs', choices=('unsorted', 'dose_ascending', 'random'), default='unsorted', help='Sort the star file images on a per-particle basis by the specified criteria')
     group.add_argument('--use-first-ntilts', type=int, default=-1, help='Keep the first `use_first_ntilts` images of each particle in the sorted star file.'
                                                                         'Default -1 means to use all. Will drop particles with fewer than this many tilt images.')
@@ -138,16 +138,13 @@ def save_config(args: argparse.Namespace,
                         norm=data.norm,
                         ntilts=data.ntilts_training,
                         invert_data=args.invert_data,
-                        ind=args.ind,
-                        ind_img=np.hstack(data.ptcls_to_imgs_ind),
+                        ind_ptcls=args.ind_ptcls,
+                        ind_imgs=np.hstack(data.ptcls_to_imgs_ind),
                         window=args.window,
                         window_r=args.window_r,
                         window_r_outer=args.window_r_outer,
                         datadir=args.datadir,
-                        sequential_tilt_sampling=args.sequential_tilt_sampling,
-                        pose=args.pose,
-                        ctf=args.ctf,
-                        starfile_source=args.starfile_source)
+                        sequential_tilt_sampling=args.sequential_tilt_sampling)
     lattice_args = dict(D=lattice.D,
                         extent=lattice.extent,
                         ignore_DC=lattice.ignore_DC)
@@ -295,13 +292,13 @@ def preprocess_batch(*,
     batchsize, ntilts, boxsize_ht, boxsize_ht = batch_images.shape
 
     # translate the image
-    if not batch_trans == torch.zeros(batchsize):
+    if not torch.all(batch_trans == torch.zeros(batchsize, device=batch_trans.device)):
         batch_images = lattice.translate_ht(batch_images.view(batchsize * ntilts, -1), batch_trans.view(batchsize * ntilts, 1, 2))
 
     batch_images = batch_images.view(batchsize, ntilts, boxsize_ht, boxsize_ht)
 
     # phase flip the input CTF-corrupted image and calculate CTF weights to apply later
-    if not batch_ctf_params == torch.zeros(batchsize):
+    if not torch.all(batch_ctf_params == torch.zeros(batchsize, device=batch_ctf_params.device)):
         freqs = lattice.freqs2d.unsqueeze(0).expand(batchsize * ntilts, *lattice.freqs2d.shape).clone()  # one lattice copy per image in batch
         freqs /= batch_ctf_params[:, :, 1].view(batchsize * ntilts, 1, 1)  # convert units from 1/px to 1/Angstrom
         batch_ctf_weights = ctf.compute_ctf(freqs, *torch.split(batch_ctf_params.view(batchsize * ntilts, -1)[:, 2:], 1, 1))
@@ -704,7 +701,7 @@ def main(args):
                                      show_summary_stats=True)
 
     # save filtered star file for future convenience (aligning latent embeddings with particles, re-extracting particles, mapbacks, etc.)
-    outstar = f'{os.path.dirname(args.o)}/{os.path.splitext(os.path.basename(ptcls_star.sourcefile))[0]}_tomodrgn_preprocessed.star'
+    outstar = f'{args.outdir}/{os.path.splitext(os.path.basename(ptcls_star.sourcefile))[0]}_tomodrgn_preprocessed.star'
     ptcls_star.write(outstar)
 
     # load the particles + poses + ctf from input starfile
