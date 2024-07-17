@@ -154,6 +154,8 @@ class TiltSeriesMRCData(data.Dataset):
         spatial_frequencies_critical_dose, hartley_2d_mask = self._get_spatial_frequencies_critical_dose()
         self.spatial_frequencies_critical_dose = spatial_frequencies_critical_dose
         self.hartley_2d_mask = hartley_2d_mask
+        self.cumulative_doses = self.star.df[self.star.header_ptcl_dose].to_numpy(dtype=np.float32)
+        self.tilts = self.star.df[self.star.header_ptcl_tilt].to_numpy(dtype=np.float32)
 
     def __len__(self):
         return self.nptcls
@@ -185,7 +187,7 @@ class TiltSeriesMRCData(data.Dataset):
             images = self.ptcls[ptcl_img_ind]
 
         # get metadata to be used in calculating what to return
-        cumulative_doses = self.star.df[self.star.header_ptcl_dose].iloc[ptcl_img_ind].to_numpy(dtype=images.dtype)
+        cumulative_doses = self.cumulative_doses[ptcl_img_ind]
 
         # get the associated metadata to be returned
         rot = self.rot[ptcl_img_ind]
@@ -201,7 +203,7 @@ class TiltSeriesMRCData(data.Dataset):
             dose_weights = np.ones((len(ptcl_img_ind), self.boxsize_ht, self.boxsize_ht), dtype=images.dtype)
             decoder_mask = np.repeat(self.hartley_2d_mask[np.newaxis, :, :], len(ptcl_img_ind), axis=0)
         if self.recon_tilt_weight:
-            tilts = self.star.df[self.star.header_ptcl_tilt].iloc[ptcl_img_ind].to_numpy(dtype=images.dtype)
+            tilts = self.tilts[ptcl_img_ind]
             tilt_weights = np.cos(tilts)
         else:
             tilt_weights = np.ones(len(ptcl_img_ind))

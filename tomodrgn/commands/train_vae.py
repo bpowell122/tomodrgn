@@ -780,8 +780,8 @@ def main(args):
             data_train.ntilts_training = None
             data_test.ntilts_training = None
             flog(f'Will sample {data_train.ntilts_training} tilts per particle for train split, to pass to encoder, due to model requirements of --pooling-function {args.pooling_function}')
-            if len(inds_test) > 0:
             if args.fraction_train < 1:
+                data_test.ntilts_training = None
                 flog(f'Will sample {data_test.ntilts_training} tilts per particle for test split, to pass to encoder, due to model requirements of --pooling-function {args.pooling_function}')
         else:
             # TODO implement ntilt_training calculation for set-style encoder with batchsize > 1
