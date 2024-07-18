@@ -704,7 +704,7 @@ def main(args):
 
     # load star file
     ptcls_star = TiltSeriesStarfile(args.particles)
-    ptcls_star.plot_particle_uid_ntilt_distribution(outdir=f'{args.outdir}/{os.path.basename(ptcls_star.sourcefile)}_ntilt_distribution.png')
+    ptcls_star.plot_particle_uid_ntilt_distribution(outpath=f'{args.outdir}/{os.path.basename(ptcls_star.sourcefile)}_particle_uid_ntilt_distribution.png')
 
     # filter star file
     ptcls_star.filter(ind_imgs=args.ind_imgs,
