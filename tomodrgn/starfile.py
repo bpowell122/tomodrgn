@@ -647,7 +647,7 @@ class TiltSeriesStarfile(GenericStarfile):
                 self.header_ptcl_micrograph = '_rlnMicrographName'
 
                 # merge optics groups block with particle data block
-                self.df = self.df.merge(self.blocks['data_optics'], on='_rlnOpticsGroup', how='left', validate='many_to_one')
+                self.df = self.df.merge(self.blocks['data_optics'], on='_rlnOpticsGroup', how='inner', validate='many_to_one', suffixes=('', '_DROP')).filter(regex='^(?!.*_DROP)')
 
                 # set additional headers needed by tomodrgn
                 self.df[self.header_ptcl_dose] = self.df['_rlnCtfBfactor'] / -4
