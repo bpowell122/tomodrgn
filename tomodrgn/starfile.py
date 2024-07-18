@@ -382,6 +382,7 @@ class TiltSeriesStarfile(GenericStarfile):
         super().__init__(starfile)
 
         # pre-initialize header aliases as None, to be set as appropriate by guess_metadata_interpretation()
+        self.block_optics = None
         self.block_particles = None
 
         self.header_pose_phi = None
@@ -619,6 +620,7 @@ class TiltSeriesStarfile(GenericStarfile):
                 log('Detected STAR source software: nextPYP')
 
                 # easy reference to particles data block
+                self.block_optics = 'data_optics'
                 self.block_particles = 'data_particles'
 
                 # set header aliases used by tomodrgn
@@ -647,13 +649,13 @@ class TiltSeriesStarfile(GenericStarfile):
                 self.header_ptcl_micrograph = '_rlnMicrographName'
 
                 # merge optics groups block with particle data block
-                self.df = self.df.merge(self.blocks['data_optics'], on='_rlnOpticsGroup', how='inner', validate='many_to_one', suffixes=('', '_DROP')).filter(regex='^(?!.*_DROP)')
+                self.df = self.df.merge(self.blocks[self.block_optics], on='_rlnOpticsGroup', how='inner', validate='many_to_one', suffixes=('', '_DROP')).filter(regex='^(?!.*_DROP)')
 
                 # set additional headers needed by tomodrgn
                 self.df[self.header_ptcl_dose] = self.df['_rlnCtfBfactor'] / -4
                 self.df[self.header_ptcl_tilt] = np.arccos(self.df['_rlnCtfScalefactor'])
-                self.df[self.header_pose_tx] = self.df[self.header_pose_tx_angst] / self.df[self.header_ctf_angpix].iloc[0]
-                self.df[self.header_pose_ty] = self.df[self.header_pose_ty_angst] / self.df[self.header_ctf_angpix].iloc[0]
+                self.df[self.header_pose_tx] = self.df[self.header_pose_tx_angst] / self.df[self.header_ctf_angpix]
+                self.df[self.header_pose_ty] = self.df[self.header_pose_ty_angst] / self.df[self.header_ctf_angpix]
 
                 # image processing applied during particle extraction
                 self.image_ctf_corrected = False
@@ -973,3 +975,27 @@ class TiltSeriesStarfile(GenericStarfile):
                                            particles_path_column=self.header_ptcl_image,
                                            datadir=datadir,
                                            lazy=lazy)
+
+    def write(self,
+              *args,
+              **kwargs) -> None:
+        """
+        Temporarily removes columns in data_particles dataframe that are present in data_optics dataframe (to restore expected input star file format), then calls parent GenericStarfile write.
+        :param args: Passed to parent GenericStarfile write
+        :param kwargs: Passed to parent GenericStarfile write
+        :return: None
+        """
+        if self.block_optics is not None:
+            # during loading TiltSeriesStarfile, block_optics and block_particles are merged for internal convenience when different upstream software either do or do not include data_optics block
+            columns_in_common = self.df.columns.intersection(self.blocks[self.block_optics].columns)
+            # need to preserve the optics groups in the data_particles block
+            columns_in_common = columns_in_common.drop('_rlnOpticsGroup')
+            # drop all other columns in common from the data_particles block
+            self.df = self.df.drop(columns_in_common, axis=1)
+
+        # now call parent write method
+        super().write(*args, **kwargs)
+
+        if self.block_optics is not None:
+            # re-merge data_optics with data_particles so that the starfile object appears unchanged after calling this method
+            self.df = self.df.merge(self.blocks[self.block_optics], on='_rlnOpticsGroup', how='inner', validate='many_to_one', suffixes=('', '_DROP')).filter(regex='^(?!.*_DROP)')
