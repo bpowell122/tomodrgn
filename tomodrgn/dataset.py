@@ -397,10 +397,11 @@ class TiltSeriesMRCData(data.Dataset):
         """
 
         config = utils.load_pkl(config) if type(config) is str else config
-        star = starfile.TiltSeriesStarfile(config['dataset_args']['particles'])
-        return TiltSeriesMRCData(ptcls_star=star,
+        ptcls_star = starfile.TiltSeriesStarfile(config['starfile_args']['sourcefile_filtered'])
+        return TiltSeriesMRCData(ptcls_star=ptcls_star,
+                                 star_random_subset=config['dataset_args']['star_random_subset'],
                                  datadir=config['dataset_args']['datadir'],
-                                 lazy=config['training_args']['lazy'],
+                                 lazy=config['dataset_args']['lazy'],
                                  norm=config['dataset_args']['norm'],
                                  invert_data=config['dataset_args']['invert_data'],
                                  window=config['dataset_args']['window'],
@@ -409,4 +410,5 @@ class TiltSeriesMRCData(data.Dataset):
                                  recon_dose_weight=config['training_args']['recon_dose_weight'],
                                  recon_tilt_weight=config['training_args']['recon_tilt_weight'],
                                  l_dose_mask=config['model_args']['l_dose_mask'],
+                                 constant_mintilt_sampling=config['dataset_args']['constant_mintilt_sampling'],
                                  sequential_tilt_sampling=config['dataset_args']['sequential_tilt_sampling'])

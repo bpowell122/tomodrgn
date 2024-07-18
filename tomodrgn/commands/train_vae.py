@@ -15,7 +15,8 @@ from torch.utils.data import DataLoader
 from torch.cuda.amp import GradScaler, autocast
 
 import tomodrgn
-from tomodrgn import utils, ctf, starfile
+from tomodrgn import utils, ctf
+from tomodrgn.starfile import TiltSeriesStarfile
 from tomodrgn.dataset import TiltSeriesMRCData
 from tomodrgn.models import TiltSeriesHetOnlyVAE, DataParallelPassthrough
 from tomodrgn.lattice import Lattice
@@ -121,6 +122,7 @@ def get_latest(args: argparse.Namespace,
 
 
 def save_config(args: argparse.Namespace,
+                star: TiltSeriesStarfile,
                 data: TiltSeriesMRCData,
                 lattice: Lattice,
                 model: TiltSeriesHetOnlyVAE | DataParallelPassthrough,
@@ -128,26 +130,39 @@ def save_config(args: argparse.Namespace,
     """
     Save input arguments and precalculated data, lattice, and model metadata.
     :param args: argparse namespace from parse_args
+    :param star: TiltSeriesStarfile object describing input data
     :param data: TiltSeriesMRCData object containing input data
     :param lattice: Lattice object created using input data
     :param model: TiltSeriesHetOnlyVAE object created using input data (no weights included)
     :param out_config: name of output `.pkl` file in whcih to save configuration
     :return: None
     """
-    dataset_args = dict(particles=args.particles,
+    starfile_args = dict(sourcefile=star.sourcefile,
+                         ind_imgs=star.ind_imgs,
+                         ind_ptcls=star.ind_ptcls,
+                         sort_ptcl_imgs=star.sort_ptcl_imgs,
+                         use_first_ntilts=star.use_first_ntilts,
+                         use_first_nptcls=star.use_first_nptcls,
+                         sourcefile_filtered=star.sourcefile_filtered)
+
+    dataset_args = dict(star_random_subset=data.star_random_subset,
+                        datadir=data.datadir,
+                        lazy=data.lazy,
                         norm=data.norm,
-                        ntilts=data.ntilts_training,
-                        invert_data=args.invert_data,
-                        ind_ptcls=args.ind_ptcls,
-                        ind_imgs=np.hstack(data.ptcls_to_imgs_ind),
-                        window=args.window,
-                        window_r=args.window_r,
-                        window_r_outer=args.window_r_outer,
-                        datadir=args.datadir,
-                        sequential_tilt_sampling=args.sequential_tilt_sampling)
+                        invert_data=data.invert_data,
+                        window=data.window,
+                        window_r=data.window_r,
+                        window_r_outer=data.window_r_outer,
+                        recon_dose_weight=data.recon_dose_weight,
+                        recon_tilt_weight=data.recon_tilt_weight,
+                        l_dose_mask=data.l_dose_mask,
+                        constant_mintilt_sampling=data.constant_mintilt_sampling,
+                        sequential_tilt_sampling=data.sequential_tilt_sampling)
+
     lattice_args = dict(D=lattice.D,
                         extent=lattice.extent,
                         ignore_DC=lattice.ignore_DC)
+
     model_args = dict(in_dim=model.in_dim.item(),  # .item() converts tensor to int for unpickling on non-gpu systems
                       qlayersA=args.qlayersA,
                       qdimA=args.qdimA,
@@ -183,7 +198,8 @@ def save_config(args: argparse.Namespace,
                          log_interval=args.log_interval,
                          checkpoint=args.checkpoint,
                          outdir=args.outdir)
-    config = dict(dataset_args=dataset_args,
+    config = dict(starfile_args=starfile_args,
+                  dataset_args=dataset_args,
                   lattice_args=lattice_args,
                   model_args=model_args,
                   training_args=training_args)
@@ -688,6 +704,7 @@ def main(args):
 
     # load star file
     ptcls_star = starfile.TiltSeriesStarfile(args.particles)
+    ptcls_star = TiltSeriesStarfile(args.particles)
 
     # filter star file
     ptcls_star.filter(ind_imgs=args.ind_imgs,
@@ -702,11 +719,12 @@ def main(args):
 
     # save filtered star file for future convenience (aligning latent embeddings with particles, re-extracting particles, mapbacks, etc.)
     outstar = f'{args.outdir}/{os.path.splitext(os.path.basename(ptcls_star.sourcefile))[0]}_tomodrgn_preprocessed.star'
+    ptcls_star.sourcefile_filtered = outstar
     ptcls_star.write(outstar)
 
     # load the particles + poses + ctf from input starfile
     flog(f'Loading dataset from {args.particles}')
-    data_train = TiltSeriesMRCData(ptcls_star,
+    data_train = TiltSeriesMRCData(ptcls_star=ptcls_star,
                                    star_random_subset=1,
                                    datadir=args.datadir,
                                    lazy=args.lazy,
@@ -830,7 +848,7 @@ def main(args):
 
     # save configuration
     out_config = f'{args.outdir}/config.pkl'
-    save_config(args, data_train, lattice, model, out_config)
+    save_config(args, ptcls_star, data_train, lattice, model, out_config)
 
     # set beta schedule
     if args.beta is None:

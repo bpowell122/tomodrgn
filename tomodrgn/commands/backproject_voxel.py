@@ -195,10 +195,11 @@ def main(args):
 
     # save filtered star file for future convenience (aligning latent embeddings with particles, re-extracting particles, mapbacks, etc.)
     outstar = f'{os.path.dirname(args.o)}/{os.path.splitext(os.path.basename(ptcls_star.sourcefile))[0]}_tomodrgn_preprocessed.star'
+    ptcls_star.sourcefile_filtered = outstar
     ptcls_star.write(outstar)
 
     # load the dataset as two half-datasets for independent backprojection
-    data_half1 = dataset.TiltSeriesMRCData(ptcls_star,
+    data_half1 = dataset.TiltSeriesMRCData(ptcls_star=ptcls_star,
                                            star_random_subset=1,
                                            datadir=args.datadir,
                                            lazy=args.lazy,
@@ -210,7 +211,7 @@ def main(args):
                                            l_dose_mask=False,
                                            constant_mintilt_sampling=False,
                                            sequential_tilt_sampling=True)
-    data_half2 = dataset.TiltSeriesMRCData(ptcls_star,
+    data_half2 = dataset.TiltSeriesMRCData(ptcls_star=ptcls_star,
                                            star_random_subset=2,
                                            datadir=args.datadir,
                                            lazy=args.lazy,

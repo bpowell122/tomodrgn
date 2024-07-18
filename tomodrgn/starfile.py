@@ -413,6 +413,13 @@ class TiltSeriesStarfile(GenericStarfile):
         self.image_dose_weighted = None
         self.image_tilt_weighted = None
 
+        self.ind_imgs = None
+        self.ind_ptcls = None
+        self.sort_ptcl_imgs = 'unsorted'
+        self.use_first_ntilts = -1
+        self.use_first_nptcls = -1
+        self.sourcefile_filtered = None
+
         # infer the upstream metadata format
         self._infer_metadata_mapping()
 
@@ -778,6 +785,13 @@ class TiltSeriesStarfile(GenericStarfile):
                 Default -1 means to use all.
         :return: None
         """
+
+        # save inputs as attributes of object for ease of future saving config
+        self.ind_imgs = ind_imgs
+        self.ind_ptcls = ind_ptcls
+        self.sort_ptcl_imgs = sort_ptcl_imgs
+        self.use_first_ntilts = use_first_ntilts
+        self.use_first_nptcls = use_first_nptcls
 
         # how many particles does the star file initially contain
         ptcls_unique_list = self.df[self.header_ptcl_uid].unique().to_numpy()
