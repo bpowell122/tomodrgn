@@ -367,7 +367,6 @@ class TiltSeriesMRCData(data.Dataset):
         ntilts_set = set(self.star.df.groupby(self.star.header_ptcl_uid, sort=False).size().values)
         ntilts_min = min(ntilts_set)
         ntilts_max = max(ntilts_set)
-        self.star.plot_particle_uid_ntilt_distribution()
         log(f'Found {ntilts_min} (min) to {ntilts_max} (max) tilt images per particle')
 
         return ntilts_min, ntilts_max
