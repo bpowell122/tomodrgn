@@ -159,24 +159,15 @@ class TiltSeriesHetOnlyVAE(nn.Module):
             HetOnlyVAE instance, Lattice instance
         '''
         cfg = utils.load_pkl(config) if type(config) is str else config
-        ntilts = cfg['dataset_args']['ntilts']
         lat = lattice.Lattice(cfg['lattice_args']['D'], extent=cfg['lattice_args']['extent'], device=device)
-        c = cfg['model_args']
-        if cfg['model_args']['enc_mask'] > 0:
-            enc_mask = lat.get_circular_mask(c['enc_mask'])
-            in_dim = int(enc_mask.sum())
-        else:
-            assert c['enc_mask'] == -1
-            enc_mask = None
-            in_dim = lat.D ** 2
         activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[cfg['model_args']['activation']]
         model = TiltSeriesHetOnlyVAE(lat,
                                      cfg['model_args']['qlayersA'], cfg['model_args']['qdimA'],
-                                     cfg['model_args']['out_dimA'], ntilts,
+                                     cfg['model_args']['out_dimA'], cfg['model_args']['ntilts'],
                                      cfg['model_args']['qlayersB'], cfg['model_args']['qdimB'],
                                      cfg['model_args']['players'], cfg['model_args']['pdim'],
-                                     in_dim, cfg['model_args']['zdim'],
-                                     enc_mask=enc_mask,
+                                     cfg['model_args']['in_dim'], cfg['model_args']['zdim'],
+                                     enc_mask=cfg['model_args']['enc_mask'],
                                      enc_type=cfg['model_args']['pe_type'],
                                      enc_dim=cfg['model_args']['pe_dim'],
                                      domain=cfg['model_args']['domain'],
