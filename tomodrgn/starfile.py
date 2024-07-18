@@ -661,18 +661,30 @@ class TiltSeriesStarfile(GenericStarfile):
                 raise NotImplementedError(f'STAR file headers do not match any pattern known to tomoDRGN: {headers}')
 
     @property
-    def headers_rot(self):
+    def headers_rot(self) -> list[str]:
+        """
+        Shortcut to return headers associated with rotation parameters.
+        :return: list of particles dataframe header names for rotations
+        """
         return [self.header_pose_phi,
                 self.header_pose_theta,
                 self.header_pose_psi]
 
     @property
-    def headers_trans(self):
+    def headers_trans(self) -> list[str]:
+        """
+        Shortcut to return headers associated with translation parameters.
+        :return: list of particles dataframe header names for translations
+        """
         return [self.header_pose_tx,
                 self.header_pose_ty]
 
     @property
-    def headers_ctf(self):
+    def headers_ctf(self) -> list[str]:
+        """
+        Shortcut to return headers associated with CTF parameters.
+        :return: list of particles dataframe header names for CTF parameters
+        """
         return [self.header_ctf_angpix,
                 self.header_ctf_defocus_u,
                 self.header_ctf_defocus_v,
@@ -683,14 +695,28 @@ class TiltSeriesStarfile(GenericStarfile):
                 self.header_ctf_ps]
 
     @property
-    def df(self):
+    def df(self) -> pd.DataFrame:
+        """
+        Shortcut to access the particles dataframe associated with the TiltSeriesStarfile object.
+        :return: pandas dataframe of particles metadata
+        """
         return self.blocks[self.block_particles]
 
     @df.setter
-    def df(self, value):
+    def df(self,
+           value: pd.DataFrame) -> None:
+        """
+        Shortcut to update the particles dataframe associated with the TiltSeriesStarfile object
+        :param value: modified particles dataframe
+        :return: None
+        """
         self.blocks[self.block_particles] = value
 
     def __len__(self) -> int:
+        """
+        Return the number of rows (images) in the particles dataframe associated with the TiltSeriesStarfile object.
+        :return: the number of rows in the dataframe
+        """
         return len(self.df)
 
     def get_tiltseries_pixelsize(self) -> float | int:
