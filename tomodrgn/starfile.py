@@ -899,16 +899,17 @@ class TiltSeriesStarfile(GenericStarfile):
         :return: None
         """
         ptcls_to_imgs_ind = self.get_ptcl_img_indices()
-        n_tilts = np.asarray([len(ptcl_to_imgs_ind) for ptcl_to_imgs_ind in ptcls_to_imgs_ind])
+        ntilts_per_particle = np.asarray([len(ptcl_to_imgs_ind) for ptcl_to_imgs_ind in ptcls_to_imgs_ind])
+        ntilts, counts_per_ntilt = np.unique(ntilts_per_particle, return_counts=True)
 
-        fig, axes = plt.subplots(2, 1)
-        axes[0].plot(n_tilts, linewidth=0.5)
-        axes[0].set_xlabel('star file particle index')
-        axes[0].set_ylabel('ntilts per particle')
+        fig, (ax1, ax2) = plt.subplots(2, 1)
+        ax1.plot(ntilts_per_particle, linewidth=0.5)
+        ax1.set_xlabel('star file particle index')
+        ax1.set_ylabel('ntilts per particle')
 
-        axes[1].hist(n_tilts, bins=np.arange(np.min(n_tilts), np.max(n_tilts) + 2, 1))
-        axes[1].set_xlabel('ntilts per particle')
-        axes[1].set_ylabel('count')
+        ax2.bar(ntilts, counts_per_ntilt)
+        ax2.set_xlabel('ntilts per particle')
+        ax2.set_ylabel('count')
 
         plt.tight_layout()
         if outdir is None:
