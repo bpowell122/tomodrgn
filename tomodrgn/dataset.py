@@ -396,7 +396,8 @@ class TiltSeriesMRCData(data.Dataset):
         """
 
         config = utils.load_pkl(config) if type(config) is str else config
-        ptcls_star = starfile.TiltSeriesStarfile(config['starfile_args']['sourcefile_filtered'])
+        ptcls_star = starfile.TiltSeriesStarfile(config['starfile_args']['sourcefile_filtered'],
+                                                 source_software=config['starfile_args']['source_software'])
         return TiltSeriesMRCData(ptcls_star=ptcls_star,
                                  star_random_subset=config['dataset_args']['star_random_subset'],
                                  datadir=config['dataset_args']['datadir'],

@@ -377,7 +377,9 @@ class TiltSeriesStarfile(GenericStarfile):
         get_particles_stack  :  loads all particle images specified by the star file into a numpy array using partially predefined parent class get_particles_stack
     """
 
-    def __init__(self, starfile: str):
+    def __init__(self,
+                 starfile: str,
+                 source_software: str = 'auto'):
         # initialize object from parent class with parent attributes assigned at parent __init__
         super().__init__(starfile)
 
@@ -421,8 +423,150 @@ class TiltSeriesStarfile(GenericStarfile):
         self.use_first_nptcls = -1
         self.sourcefile_filtered = None
 
+        self.source_software = source_software
+
         # infer the upstream metadata format
-        self._infer_metadata_mapping()
+        if source_software == 'auto':
+            self._infer_metadata_mapping()
+        elif source_software == 'warp_v1':
+            self._warpv1_metadata_mapping()
+        elif source_software == 'cryosrpnt':
+            self._cryosrpnt_metadata_mapping()
+        elif source_software == 'nextpyp':
+            self._nextpyp_metadata_mapping()
+        elif source_software == 'relion_v5':
+            self._relionv5_metadata_mapping()
+        elif source_software == 'cistem':
+            self._cistem_metadata_mapping()
+        elif source_software == 'warp_v2':
+            self._warpv2_metadata_mapping()
+        else:
+            raise ValueError(f'Unrecognized source software: {source_software}')
+
+    def _warpv1_metadata_mapping(self):
+        log('Using STAR source software: Warp_v1 | M_v1')
+
+        # easy reference to particles data block
+        self.block_particles = 'data_'
+
+        # set header aliases used by tomodrgn
+        self.header_pose_phi = '_rlnAngleRot'
+        self.header_pose_theta = '_rlnAngleTilt'
+        self.header_pose_psi = '_rlnAnglePsi'
+        self.header_pose_tx = '_rlnOriginX'
+        self.header_pose_ty = '_rlnOriginY'
+        self.header_ctf_angpix = '_rlnDetectorPixelSize'
+        self.header_ctf_defocus_u = '_rlnDefocusU'
+        self.header_ctf_defocus_v = '_rlnDefocusV'
+        self.header_ctf_defocus_ang = '_rlnDefocusAngle'
+        self.header_ctf_voltage = '_rlnVoltage'
+        self.header_ctf_cs = '_rlnSphericalAberration'
+        self.header_ctf_w = '_rlnAmplitudeContrast'
+        self.header_ctf_ps = '_rlnPhaseShift'
+        self.header_ptcl_uid = '_rlnGroupName'
+        self.header_ptcl_dose = '_tomodrgnTotalDose'
+        self.header_ptcl_tilt = '_tomodrgnPseudoStageTilt'  # pseudo because arccos returns values in [0,pi] so lose +/- tilt information
+        self.header_ptcl_image = '_rlnImageName'
+        self.header_ptcl_micrograph = '_rlnMicrographName'
+
+        # set additional headers needed by tomodrgn
+        self.df[self.header_ptcl_dose] = self.df['_rlnCtfBfactor'] / -4
+        self.df[self.header_ptcl_tilt] = np.arccos(self.df['_rlnCtfScalefactor'])
+
+        # image processing applied during particle extraction
+        self.image_ctf_corrected = False
+        self.image_dose_weighted = False
+        self.image_tilt_weighted = False
+
+    def _cryosrpnt_metadata_mapping(self):
+        log('Using STAR source software: cryoSRPNT_v0.1')
+
+        # easy reference to particles data block
+        self.block_particles = 'data_'
+
+        # set header aliases used by tomodrgn
+        self.header_pose_phi = '_rlnAngleRot'
+        self.header_pose_theta = '_rlnAngleTilt'
+        self.header_pose_psi = '_rlnAnglePsi'
+        self.header_pose_tx = '_rlnOriginX'
+        self.header_pose_ty = '_rlnOriginY'
+        self.header_ctf_angpix = '_rlnDetectorPixelSize'
+        self.header_ctf_defocus_u = '_rlnDefocusU'
+        self.header_ctf_defocus_v = '_rlnDefocusV'
+        self.header_ctf_defocus_ang = '_rlnDefocusAngle'
+        self.header_ctf_voltage = '_rlnVoltage'
+        self.header_ctf_cs = '_rlnSphericalAberration'
+        self.header_ctf_w = '_rlnAmplitudeContrast'
+        self.header_ctf_ps = '_rlnPhaseShift'
+        self.header_ptcl_uid = '_rlnGroupName'
+        self.header_ptcl_dose = '_tomodrgnTotalDose'
+        self.header_ptcl_tilt = '_tomodrgnPseudoStageTilt'  # pseudo because arccos returns values in [0,pi] so lose +/- tilt information
+        self.header_ptcl_image = '_rlnImageName'
+        self.header_ptcl_micrograph = '_rlnMicrographName'
+
+        # set additional headers needed by tomodrgn
+        self.df[self.header_ptcl_dose] = self.df['_rlnCtfBfactor'] / -4
+        self.df[self.header_ptcl_tilt] = np.arccos(self.df['_rlnCtfScalefactor'])
+
+        # image processing applied during particle extraction
+        self.image_ctf_corrected = False
+        self.image_dose_weighted = False
+        self.image_tilt_weighted = False
+
+    def _nextpyp_metadata_mapping(self):
+        log('Using STAR source software: nextPYP')
+
+        # easy reference to particles data block
+        self.block_optics = 'data_optics'
+        self.block_particles = 'data_particles'
+
+        # set header aliases used by tomodrgn
+        self.header_pose_phi = '_rlnAngleRot'
+        self.header_pose_theta = '_rlnAngleTilt'
+        self.header_pose_psi = '_rlnAnglePsi'
+
+        self.header_pose_tx = '_rlnOriginX'  # note: may not yet exist
+        self.header_pose_tx_angst = '_rlnOriginXAngst'
+        self.header_pose_ty = '_rlnOriginY'  # note: may not yet exist
+        self.header_pose_ty_angst = '_rlnOriginYAngst'
+
+        self.header_ctf_angpix = '_rlnImagePixelSize'
+        self.header_ctf_defocus_u = '_rlnDefocusU'
+        self.header_ctf_defocus_v = '_rlnDefocusV'
+        self.header_ctf_defocus_ang = '_rlnDefocusAngle'
+        self.header_ctf_voltage = '_rlnVoltage'
+        self.header_ctf_cs = '_rlnSphericalAberration'
+        self.header_ctf_w = '_rlnAmplitudeContrast'
+        self.header_ctf_ps = '_rlnPhaseShift'
+
+        self.header_ptcl_uid = '_rlnGroupNumber'
+        self.header_ptcl_dose = '_tomodrgnTotalDose'
+        self.header_ptcl_tilt = '_tomodrgnPseudoStageTilt'  # pseudo because arccos returns values in [0,pi] so lose +/- tilt information
+        self.header_ptcl_image = '_rlnImageName'
+        self.header_ptcl_micrograph = '_rlnMicrographName'
+
+        # merge optics groups block with particle data block
+        self.df = self.df.merge(self.blocks[self.block_optics], on='_rlnOpticsGroup', how='inner', validate='many_to_one', suffixes=('', '_DROP')).filter(regex='^(?!.*_DROP)')
+
+        # set additional headers needed by tomodrgn
+        self.df[self.header_ptcl_dose] = self.df['_rlnCtfBfactor'] / -4
+        self.df[self.header_ptcl_tilt] = np.arccos(self.df['_rlnCtfScalefactor'])
+        self.df[self.header_pose_tx] = self.df[self.header_pose_tx_angst] / self.df[self.header_ctf_angpix]
+        self.df[self.header_pose_ty] = self.df[self.header_pose_ty_angst] / self.df[self.header_ctf_angpix]
+
+        # image processing applied during particle extraction
+        self.image_ctf_corrected = False
+        self.image_dose_weighted = False
+        self.image_tilt_weighted = False
+
+    def _relionv5_metadata_mapping(self):
+        raise NotImplementedError
+
+    def _cistem_metadata_mapping(self):
+        raise NotImplementedError
+
+    def _warpv2_metadata_mapping(self):
+        raise NotImplementedError
 
     def _infer_metadata_mapping(self) -> None:
         """
@@ -547,127 +691,23 @@ class TiltSeriesStarfile(GenericStarfile):
 
             case {'data_': headers1} if set(known_star_headers['warpm_v1']['data_']).issubset(headers1):
                 log('Detected STAR source software: Warp_v1 | M_v1')
-
-                # easy reference to particles data block
-                self.block_particles = 'data_'
-
-                # set header aliases used by tomodrgn
-                self.header_pose_phi = '_rlnAngleRot'
-                self.header_pose_theta = '_rlnAngleTilt'
-                self.header_pose_psi = '_rlnAnglePsi'
-                self.header_pose_tx = '_rlnOriginX'
-                self.header_pose_ty = '_rlnOriginY'
-                self.header_ctf_angpix = '_rlnDetectorPixelSize'
-                self.header_ctf_defocus_u = '_rlnDefocusU'
-                self.header_ctf_defocus_v = '_rlnDefocusV'
-                self.header_ctf_defocus_ang = '_rlnDefocusAngle'
-                self.header_ctf_voltage = '_rlnVoltage'
-                self.header_ctf_cs = '_rlnSphericalAberration'
-                self.header_ctf_w = '_rlnAmplitudeContrast'
-                self.header_ctf_ps = '_rlnPhaseShift'
-                self.header_ptcl_uid = '_rlnGroupName'
-                self.header_ptcl_dose = '_tomodrgnTotalDose'
-                self.header_ptcl_tilt = '_tomodrgnPseudoStageTilt'  # pseudo because arccos returns values in [0,pi] so lose +/- tilt information
-                self.header_ptcl_image = '_rlnImageName'
-                self.header_ptcl_micrograph = '_rlnMicrographName'
-
-                # set additional headers needed by tomodrgn
-                self.df[self.header_ptcl_dose] = self.df['_rlnCtfBfactor'] / -4
-                self.df[self.header_ptcl_tilt] = np.arccos(self.df['_rlnCtfScalefactor'])
-
-                # image processing applied during particle extraction
-                self.image_ctf_corrected = False
-                self.image_dose_weighted = False
-                self.image_tilt_weighted = False
+                self._warpv1_metadata_mapping()
 
             case {'data_': headers1} if set(known_star_headers['cryosrpnt_v0.1']['data_']).issubset(headers1):
                 log('Detected STAR source software: cryoSRPNT_v0.1')
-
-                # easy reference to particles data block
-                self.block_particles = 'data_'
-
-                # set header aliases used by tomodrgn
-                self.header_pose_phi = '_rlnAngleRot'
-                self.header_pose_theta = '_rlnAngleTilt'
-                self.header_pose_psi = '_rlnAnglePsi'
-                self.header_pose_tx = '_rlnOriginX'
-                self.header_pose_ty = '_rlnOriginY'
-                self.header_ctf_angpix = '_rlnDetectorPixelSize'
-                self.header_ctf_defocus_u = '_rlnDefocusU'
-                self.header_ctf_defocus_v = '_rlnDefocusV'
-                self.header_ctf_defocus_ang = '_rlnDefocusAngle'
-                self.header_ctf_voltage = '_rlnVoltage'
-                self.header_ctf_cs = '_rlnSphericalAberration'
-                self.header_ctf_w = '_rlnAmplitudeContrast'
-                self.header_ctf_ps = '_rlnPhaseShift'
-                self.header_ptcl_uid = '_rlnGroupName'
-                self.header_ptcl_dose = '_tomodrgnTotalDose'
-                self.header_ptcl_tilt = '_tomodrgnPseudoStageTilt'  # pseudo because arccos returns values in [0,pi] so lose +/- tilt information
-                self.header_ptcl_image = '_rlnImageName'
-                self.header_ptcl_micrograph = '_rlnMicrographName'
-
-                # set additional headers needed by tomodrgn
-                self.df[self.header_ptcl_dose] = self.df['_rlnCtfBfactor'] / -4
-                self.df[self.header_ptcl_tilt] = np.arccos(self.df['_rlnCtfScalefactor'])
-
-                # image processing applied during particle extraction
-                self.image_ctf_corrected = False
-                self.image_dose_weighted = False
-                self.image_tilt_weighted = False
+                self._cryosrpnt_metadata_mapping()
 
             case {'data_optics': headers1, 'data_particles': headers2} if (
                     set(known_star_headers['nextpyp']['data_optics']).issubset(headers1) and set(known_star_headers['nextpyp']['data_particles']).issubset(headers2)):
                 log('Detected STAR source software: nextPYP')
-
-                # easy reference to particles data block
-                self.block_optics = 'data_optics'
-                self.block_particles = 'data_particles'
-
-                # set header aliases used by tomodrgn
-                self.header_pose_phi = '_rlnAngleRot'
-                self.header_pose_theta = '_rlnAngleTilt'
-                self.header_pose_psi = '_rlnAnglePsi'
-
-                self.header_pose_tx = '_rlnOriginX'  # note: may not yet exist
-                self.header_pose_tx_angst = '_rlnOriginXAngst'
-                self.header_pose_ty = '_rlnOriginY'  # note: may not yet exist
-                self.header_pose_ty_angst = '_rlnOriginYAngst'
-
-                self.header_ctf_angpix = '_rlnImagePixelSize'
-                self.header_ctf_defocus_u = '_rlnDefocusU'
-                self.header_ctf_defocus_v = '_rlnDefocusV'
-                self.header_ctf_defocus_ang = '_rlnDefocusAngle'
-                self.header_ctf_voltage = '_rlnVoltage'
-                self.header_ctf_cs = '_rlnSphericalAberration'
-                self.header_ctf_w = '_rlnAmplitudeContrast'
-                self.header_ctf_ps = '_rlnPhaseShift'
-
-                self.header_ptcl_uid = '_rlnGroupNumber'
-                self.header_ptcl_dose = '_tomodrgnTotalDose'
-                self.header_ptcl_tilt = '_tomodrgnPseudoStageTilt'  # pseudo because arccos returns values in [0,pi] so lose +/- tilt information
-                self.header_ptcl_image = '_rlnImageName'
-                self.header_ptcl_micrograph = '_rlnMicrographName'
-
-                # merge optics groups block with particle data block
-                self.df = self.df.merge(self.blocks[self.block_optics], on='_rlnOpticsGroup', how='inner', validate='many_to_one', suffixes=('', '_DROP')).filter(regex='^(?!.*_DROP)')
-
-                # set additional headers needed by tomodrgn
-                self.df[self.header_ptcl_dose] = self.df['_rlnCtfBfactor'] / -4
-                self.df[self.header_ptcl_tilt] = np.arccos(self.df['_rlnCtfScalefactor'])
-                self.df[self.header_pose_tx] = self.df[self.header_pose_tx_angst] / self.df[self.header_ctf_angpix]
-                self.df[self.header_pose_ty] = self.df[self.header_pose_ty_angst] / self.df[self.header_ctf_angpix]
-
-                # image processing applied during particle extraction
-                self.image_ctf_corrected = False
-                self.image_dose_weighted = False
-                self.image_tilt_weighted = False
+                self._nextpyp_metadata_mapping()
 
             case {'data_': headers1} if set(known_star_headers['cistem']['data_']).issubset(headers1):
                 log('Detected STAR source software: cisTEM')
-                raise NotImplementedError
+                self._cistem_metadata_mapping()
 
             case _:
-                raise NotImplementedError(f'STAR file headers do not match any pattern known to tomoDRGN: {headers}')
+                raise NotImplementedError(f'Auto detection of source software failed. STAR file headers do not match any pattern known to tomoDRGN: {headers}')
 
     @property
     def headers_rot(self) -> list[str]:

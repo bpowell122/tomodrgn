@@ -9,7 +9,9 @@ import matplotlib.pyplot as plt
 import torch
 from torch.utils.data import DataLoader
 
-from tomodrgn import utils, mrc, fft, dataset, ctf, starfile
+from tomodrgn import utils, mrc, fft, ctf
+from tomodrgn.starfile import TiltSeriesStarfile
+from tomodrgn.dataset import TiltSeriesMRCData
 from tomodrgn.lattice import Lattice
 
 log = utils.log
@@ -20,6 +22,8 @@ def add_args(_parser):
     _parser.add_argument('-o', type=os.path.abspath, required=True, help='Output .mrc file')
 
     group = _parser.add_argument_group('Particle starfile loading and filtering')
+    group.add_argument('--source-software', type='str', choices=('auto', 'warp_v1', 'nextpyp', 'relion_v5', 'warp_v2'), default='auto',
+                       help='Manually set the software used to extract particles. Default is to auto-detect.')
     group.add_argument('--ind-ptcls', type=os.path.abspath, metavar='PKL', help='Filter starfile by particles (unique rlnGroupName values) using np array pkl as indices')
     group.add_argument('--ind-imgs', type=os.path.abspath, help='Filter starfile by particle images (star file rows) using np array pkl as indices')
     group.add_argument('--sort-ptcl-imgs', choices=('unsorted', 'dose_ascending', 'random'), default='unsorted', help='Sort the star file images on a per-particle basis by the specified criteria')
@@ -41,7 +45,7 @@ def add_args(_parser):
     return _parser
 
 
-def backproject_dataset(data: dataset.TiltSeriesMRCData,
+def backproject_dataset(data: TiltSeriesMRCData,
                         lattice: Lattice = None,
                         device: torch.device = torch.device('cpu')) -> tuple[torch.tensor, torch.tensor]:
     """
@@ -180,7 +184,8 @@ def main(args):
     device = utils.get_default_device()
 
     # load the star file
-    ptcls_star = starfile.TiltSeriesStarfile(args.particles)
+    ptcls_star = TiltSeriesStarfile(args.particles,
+                                    source_software=args.source_software)
     ptcls_star.plot_particle_uid_ntilt_distribution(outpath=f'{os.path.dirname(args.o)}/{os.path.basename(ptcls_star.sourcefile)}_particle_uid_ntilt_distribution.png')
 
     # filter star file
@@ -200,30 +205,30 @@ def main(args):
     ptcls_star.write(outstar)
 
     # load the dataset as two half-datasets for independent backprojection
-    data_half1 = dataset.TiltSeriesMRCData(ptcls_star=ptcls_star,
-                                           star_random_subset=1,
-                                           datadir=args.datadir,
-                                           lazy=args.lazy,
-                                           norm=(0, 1),
-                                           invert_data=args.invert_data,
-                                           window=False,
-                                           recon_dose_weight=args.recon_dose_weight,
-                                           recon_tilt_weight=args.recon_tilt_weight,
-                                           l_dose_mask=False,
-                                           constant_mintilt_sampling=False,
-                                           sequential_tilt_sampling=True)
-    data_half2 = dataset.TiltSeriesMRCData(ptcls_star=ptcls_star,
-                                           star_random_subset=2,
-                                           datadir=args.datadir,
-                                           lazy=args.lazy,
-                                           norm=(0, 1),
-                                           invert_data=args.invert_data,
-                                           window=False,
-                                           recon_dose_weight=args.recon_dose_weight,
-                                           recon_tilt_weight=args.recon_tilt_weight,
-                                           l_dose_mask=False,
-                                           constant_mintilt_sampling=False,
-                                           sequential_tilt_sampling=True)
+    data_half1 = TiltSeriesMRCData(ptcls_star=ptcls_star,
+                                   star_random_subset=1,
+                                   datadir=args.datadir,
+                                   lazy=args.lazy,
+                                   norm=(0, 1),
+                                   invert_data=args.invert_data,
+                                   window=False,
+                                   recon_dose_weight=args.recon_dose_weight,
+                                   recon_tilt_weight=args.recon_tilt_weight,
+                                   l_dose_mask=False,
+                                   constant_mintilt_sampling=False,
+                                   sequential_tilt_sampling=True)
+    data_half2 = TiltSeriesMRCData(ptcls_star=ptcls_star,
+                                   star_random_subset=2,
+                                   datadir=args.datadir,
+                                   lazy=args.lazy,
+                                   norm=(0, 1),
+                                   invert_data=args.invert_data,
+                                   window=False,
+                                   recon_dose_weight=args.recon_dose_weight,
+                                   recon_tilt_weight=args.recon_tilt_weight,
+                                   l_dose_mask=False,
+                                   constant_mintilt_sampling=False,
+                                   sequential_tilt_sampling=True)
     boxsize_ht = data_half1.boxsize_ht
     angpix = ptcls_star.get_tiltseries_pixelsize()
 

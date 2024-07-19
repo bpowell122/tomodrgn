@@ -37,6 +37,8 @@ def add_args(_parser):
     _parser.add_argument('--seed', type=int, default=np.random.randint(0, 100000), help='Random seed')
 
     group = _parser.add_argument_group('Particle starfile loading and filtering')
+    group.add_argument('--source-software', type='str', choices=('auto', 'warp_v1', 'nextpyp', 'relion_v5', 'warp_v2'), default='auto',
+                       help='Manually set the software used to extract particles. Default is to auto-detect.')
     group.add_argument('--ind-ptcls', type=os.path.abspath, metavar='PKL', help='Filter starfile by particles (unique rlnGroupName values) using np array pkl as indices')
     group.add_argument('--ind-imgs', type=os.path.abspath, help='Filter starfile by particle images (star file rows) using np array pkl as indices')
     group.add_argument('--sort-ptcl-imgs', choices=('unsorted', 'dose_ascending', 'random'), default='unsorted', help='Sort the star file images on a per-particle basis by the specified criteria')
@@ -138,6 +140,7 @@ def save_config(args: argparse.Namespace,
     :return: None
     """
     starfile_args = dict(sourcefile=star.sourcefile,
+                         source_software=star.source_software,
                          ind_imgs=star.ind_imgs,
                          ind_ptcls=star.ind_ptcls,
                          sort_ptcl_imgs=star.sort_ptcl_imgs,
@@ -706,7 +709,8 @@ def main(args):
         # https://github.com/pytorch/pytorch/issues/55374
 
     # load star file
-    ptcls_star = TiltSeriesStarfile(args.particles)
+    ptcls_star = TiltSeriesStarfile(args.particles,
+                                    ptcl_source=args.ptcl_source)
     ptcls_star.plot_particle_uid_ntilt_distribution(outpath=f'{args.outdir}/{os.path.basename(ptcls_star.sourcefile)}_particle_uid_ntilt_distribution.png')
 
     # filter star file
