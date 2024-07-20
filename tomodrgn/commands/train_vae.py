@@ -469,7 +469,7 @@ def encoder_inference(*,
 
             # pre-allocate tensors to store outputs
             z_mu_all = torch.zeros((data.nptcls, model.zdim),
-                                   device=model.device,
+                                   device=lattice.device,
                                    dtype=torch.half if use_amp else torch.float)
             z_logvar_all = torch.zeros_like(z_mu_all)
 
@@ -481,9 +481,9 @@ def encoder_inference(*,
 
             for batch_images, _, batch_trans, batch_ctf_params, _, _, batch_indices in data_generator:
                 # transfer to GPU
-                batch_images = batch_images.to(model.device)
-                batch_ctf_params = batch_ctf_params.to(model.device)
-                batch_trans = batch_trans.to(model.device)
+                batch_images = batch_images.to(lattice.device)
+                batch_ctf_params = batch_ctf_params.to(lattice.device)
+                batch_trans = batch_trans.to(lattice.device)
 
                 # encode the translated and CTF-phase-flipped images
                 batch_images, ctf_weights = preprocess_batch(lattice=lattice,
