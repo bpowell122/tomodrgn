@@ -29,6 +29,10 @@ class Lattice:
 
         self.freqs2d = self.coords[:, 0:2] / extent / 2
 
+        # precalculate values used each time we compute the CTF for an image
+        self.freqs2d_s2 = (self.freqs2d[:, 0] ** 2 + self.freqs2d[:, 1] ** 2).view(1, -1)
+        self.freqs2d_angle = torch.atan2(self.freqs2d[:, 1], self.freqs2d[:, 0]).view(1, -1)
+
         self.ignore_DC = ignore_DC
         self.device = device
 

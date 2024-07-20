@@ -68,7 +68,7 @@ def backproject_dataset(data: TiltSeriesMRCData,
     batchsize = 1
     data_generator = DataLoader(data, batch_size=batchsize, shuffle=False)
 
-    for batch_images, batch_rot, batch_trans, batch_ctf, batch_frequency_weights, _, batch_indices in data_generator:
+    for batch_images, batch_rot, batch_trans, batch_ctf_params, batch_frequency_weights, _, batch_indices in data_generator:
 
         # logging
         n_ptcls_backprojected += len(batch_indices)
@@ -79,20 +79,18 @@ def backproject_dataset(data: TiltSeriesMRCData,
         batch_images = batch_images.to(device)
         batch_rot = batch_rot.to(device)
         batch_trans = batch_trans.to(device)
-        batch_ctf = batch_ctf.to(device)
+        batch_ctf_params = batch_ctf_params.to(device)
         batch_frequency_weights = batch_frequency_weights.to(device)
         ntilts = batch_images.shape[1]
 
         # correct for translations
-        if not torch.all(batch_trans == 0):
+        if not torch.all(batch_trans == torch.zeros(batchsize, device=batch_trans.device)):
             batch_images = lattice.translate_ht(batch_images.view(batchsize * ntilts, -1), batch_trans.view(batchsize * ntilts, 1, 2))
 
         # correct CTF by phase flipping images
-        if not torch.all(batch_ctf == 0):
-            freqs = lattice.freqs2d.unsqueeze(0).expand(batchsize * ntilts, *lattice.freqs2d.shape)
-            freqs = freqs / batch_ctf[:, :, 1].view(batchsize * ntilts, 1, 1)  # convert units from 1/px to 1/Angstrom
-            ctf_weights = ctf.compute_ctf(freqs, *torch.split(batch_ctf.view(batchsize * ntilts, -1)[:, 2:], 1, 1))
-            batch_images = batch_images.view(batchsize, ntilts, boxsize_ht * boxsize_ht) * ctf_weights.view(batchsize, ntilts, boxsize_ht * boxsize_ht).sign()
+        if not torch.all(batch_ctf_params == torch.zeros(batchsize, device=batch_ctf_params.device)):
+            batch_ctf_weights = ctf.compute_ctf(lattice, *torch.split(batch_ctf_params.view(batchsize * ntilts, 9)[:, 1:], 1, 1))
+            batch_images *= batch_ctf_weights.view(*batch_images.shape).sign()  # phase flip by CTF to be all positive amplitudes
 
         # weight by dose and tilt
         batch_images = batch_images * batch_frequency_weights.view(batchsize, ntilts, boxsize_ht * boxsize_ht)

@@ -321,11 +321,8 @@ def preprocess_batch(*,
 
     # phase flip the input CTF-corrupted image and calculate CTF weights to apply later
     if not torch.all(batch_ctf_params == torch.zeros(batchsize, device=batch_ctf_params.device)):
-        freqs = lattice.freqs2d.unsqueeze(0).expand(batchsize * ntilts, *lattice.freqs2d.shape).clone()  # one lattice copy per image in batch
-        freqs /= batch_ctf_params[:, :, 1].view(batchsize * ntilts, 1, 1)  # convert units from 1/px to 1/Angstrom
-        batch_ctf_weights = ctf.compute_ctf(freqs, *torch.split(batch_ctf_params.view(batchsize * ntilts, -1)[:, 2:], 1, 1))
-        batch_ctf_weights = batch_ctf_weights.view(batchsize, ntilts, boxsize_ht, boxsize_ht)
-        batch_images *= batch_ctf_weights.sign()  # phase flip by CTF to be all positive amplitudes
+        batch_ctf_weights = ctf.compute_ctf(lattice, *torch.split(batch_ctf_params.view(batchsize * ntilts, 9)[:, 1:], 1, 1))
+        batch_images *= batch_ctf_weights.view(*batch_images.shape).sign()  # phase flip by CTF to be all positive amplitudes
     else:
         batch_ctf_weights = None
 
