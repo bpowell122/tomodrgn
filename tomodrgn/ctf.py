@@ -1,3 +1,7 @@
+"""
+Functions for Contrast Transfer Function calculation, correction, and display
+"""
+
 import numpy as np
 import torch
 
