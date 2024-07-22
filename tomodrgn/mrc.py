@@ -1,23 +1,39 @@
+"""
+Classes and functions for loading and writing .mrc(s) headers and data.
+
+Generally adheres to the MRC2014 Update 20141 specification.
+    - MRC2014: Extensions to the MRC format header for electron cryo-microscopy and tomography
+    - https://www.ccpem.ac.uk/mrc_format/mrc2014.php
+    - https://github.com/ccpem/mrcfile/blob/master/mrcfile/dtypes.py
+
+Deviations from this standard include:
+    (1) any data in the extended header is read (and maintained for later writing), but is not interpreted or used in any way;
+    (2) the `machst` attribute of the header is unpacked as a byte string (e.g b`DA\x00\x00`) rather than as an array of uint8 (e.g. `[68, 65,  0,  0]`);
+    (3) the `label` attribute of the header is unpacked as a concatenated byte string rather than as an array of byte strings for all 10 80-character labels that may exist
+"""
+
 import numpy as np
+import numpy.typing as npt
+from typing import BinaryIO
 import os
+import sys
 import struct
 from collections import OrderedDict
 from itertools import groupby
 
-# See ref:
-# MRC2014: Extensions to the MRC format header for electron cryo-microscopy and tomography
-# And:
-# https://www.ccpem.ac.uk/mrc_format/mrc2014.php
+DTYPE_FOR_MODE = {
+    0: np.int8,
+    1: np.int16,
+    2: np.float32,
+    3: '2h',  # complex number from 2 shorts
+    4: np.complex64,
+    6: np.uint16,
+    7: np.int32,
+    12: np.float16,  # IEEE754
+    16: '3B',  # RBG values
+}
+MODE_FOR_DTYPE = {vv: kk for kk, vv in DTYPE_FOR_MODE.items()}
 
-DTYPE_FOR_MODE = {0:np.int8,
-                  1:np.int16,
-                  2:np.float32,
-                  3:'2h', # complex number from 2 shorts
-                  4:np.complex64,
-                  6:np.uint16,
-                  12:np.float16,
-                  16:'3B'} # RBG values
-MODE_FOR_DTYPE = {vv:kk for kk,vv in DTYPE_FOR_MODE.items()}
 
 class MRCHeader:
     """
@@ -292,6 +308,7 @@ class MRCHeader:
         self.fields['yorg'] = yorg
         self.fields['zorg'] = zorg
 
+
 class LazyImage:
     '''On-the-fly image loading'''
 
@@ -332,6 +349,7 @@ class LazyImageStack:
     get:
         loads and returns images specified at class instantiation as (N,D,D) numpy array
     """
+
     def __init__(self, fname, dtype_pixel, shape_image, indices_image):
         self.fname = fname
         self.dtype_pixel = dtype_pixel
@@ -347,11 +365,10 @@ class LazyImageStack:
 
         for _, elements in groupby(positions):
             length_contiguous_subset = len(list(elements))
-            contiguous_indices.append(self.indices_image[offset : offset + length_contiguous_subset])
+            contiguous_indices.append(self.indices_image[offset: offset + length_contiguous_subset])
             offset += length_contiguous_subset
 
         return contiguous_indices
-
 
     def get(self):
 
@@ -359,7 +376,7 @@ class LazyImageStack:
             stack = np.zeros((len(self.indices_image), *self.shape_image), dtype=np.float32)
 
             offset_file = 1024 + self.indices_image[0] * self.stride_image
-            f.seek(offset_file, 0) # define read to beginning of file including header
+            f.seek(offset_file, 0)  # define read to beginning of file including header
 
             offset_stack = 0
             for i, inds_contiguous in enumerate(self.indices_image_contiguous):
@@ -367,28 +384,32 @@ class LazyImageStack:
                 if (i > 0) and (inds_contiguous[0] != previous_ind + 1):
                     # np.fromfile advances file pointer by one image's stride on the previous loop
                     # further update file pointer if next image is more than one image's stride away
-                    offset_file = (inds_contiguous[0] - (previous_ind+1)) * self.stride_image
+                    offset_file = (inds_contiguous[0] - (previous_ind + 1)) * self.stride_image
                     f.seek(offset_file, 1)
 
                 length_contiguous_subset = len(inds_contiguous)
-                stack[offset_stack : offset_stack + length_contiguous_subset] = \
-                    np.fromfile(f, dtype=self.dtype_pixel, count=self.shape_image[0]*self.shape_image[1]*length_contiguous_subset)\
+                stack[offset_stack: offset_stack + length_contiguous_subset] = \
+                    np.fromfile(f, dtype=self.dtype_pixel, count=self.shape_image[0] * self.shape_image[1] * length_contiguous_subset) \
                         .reshape(length_contiguous_subset, self.shape_image[0], self.shape_image[1])
                 offset_stack += length_contiguous_subset
                 previous_ind = inds_contiguous[-1]
 
         return stack
 
+
 def parse_header(fname):
     return MRCHeader.parse(fname)
 
+
 def parse_mrc_list(txtfile, lazy=False):
-    lines = open(txtfile,'r').readlines()
+    lines = open(txtfile, 'r').readlines()
+
     def abspath(f):
         if os.path.isabs(f):
             return f
         base = os.path.dirname(os.path.abspath(txtfile))
-        return os.path.join(base,f)
+        return os.path.join(base, f)
+
     lines = [abspath(x) for x in lines]
     if not lazy:
         particles = np.vstack([parse_mrc(x.strip(), lazy=False)[0] for x in lines])
@@ -396,36 +417,38 @@ def parse_mrc_list(txtfile, lazy=False):
         particles = [img for x in lines for img in parse_mrc(x.strip(), lazy=True)[0]]
     return particles
 
+
 def parse_mrc(fname, lazy=False):
     # parse the header
     header = MRCHeader.parse(fname)
-    
+
     ## get the number of bytes in extended header
     extbytes = header.fields['next']
-    start = 1024+extbytes # start of image data
+    start = 1024 + extbytes  # start of image data
 
     dtype = header.dtype
     nz, ny, nx = header.fields['nz'], header.fields['ny'], header.fields['nx']
-    
+
     # load all in one block
     if not lazy:
         with open(fname, 'rb') as fh:
-            fh.read(start) # skip the header + extended header
-            array = np.fromfile(fh, dtype=dtype).reshape((nz,ny,nx))
+            fh.read(start)  # skip the header + extended header
+            array = np.fromfile(fh, dtype=dtype).reshape((nz, ny, nx))
 
     # or list of LazyImages
     else:
-        stride = dtype().itemsize*ny*nx
-        array = [LazyImage(fname, (ny, nx), dtype, start+i*stride) for i in range(nz)]
+        stride = dtype().itemsize * ny * nx
+        array = [LazyImage(fname, (ny, nx), dtype, start + i * stride) for i in range(nz)]
     return array, header
-   
+
+
 def write(fname, array, header=None, Apix=1., xorg=0., yorg=0., zorg=0., is_vol=None):
     # get a default header
     if header is None:
         if is_vol is None:
-            is_vol = True if len(set(array.shape)) == 1 else False # Guess whether data is vol or image stack
+            is_vol = True if len(set(array.shape)) == 1 else False  # Guess whether data is vol or image stack
         header = MRCHeader.make_default_header(array, is_vol, Apix, xorg, yorg, zorg)
     # write the header
-    f = open(fname,'wb')
+    f = open(fname, 'wb')
     header.write(f)
     f.write(array.tobytes())
