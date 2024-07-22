@@ -323,7 +323,7 @@ class GenericStarfile:
         dtype = header.dtype
         stride = dtype().itemsize * boxsize * boxsize
         if lazy:
-            lazyparticles = [LazyImage(file, (boxsize, boxsize), dtype, 1024 + ind_img * stride)
+            lazyparticles = [LazyImage(file, (boxsize, boxsize), dtype, header.total_header_bytes + ind_img * stride)
                              for ind_stack, file in zip(ind, mrcs)
                              for ind_img in ind_stack]
             return lazyparticles
@@ -807,7 +807,7 @@ class TiltSeriesStarfile(GenericStarfile):
             stack_path = prefix_paths([stack_path], datadir)[0]
         assert os.path.exists(stack_path), f'{stack_path} not found'
         header = mrc.parse_header(stack_path)
-        return header.D
+        return header.boxsize
 
     def filter(self,
                ind_imgs: np.ndarray | str = None,

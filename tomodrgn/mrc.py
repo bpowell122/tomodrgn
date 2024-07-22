@@ -317,6 +317,14 @@ class MRCHeader:
         self.fields['yorg'] = yorg
         self.fields['zorg'] = zorg
 
+    @property
+    def total_header_bytes(self) -> int:
+        """
+        Calculate the total header length as standard header (1024 bytes) + optional extended header (>= 0)
+        :return:
+        """
+        return 1024 + len(self.extended_header)
+
 
 class LazyImage:
     """
@@ -454,23 +462,19 @@ def parse_mrc(fname, lazy=False):
     # parse the header
     header = MRCHeader.parse(fname)
 
-    ## get the number of bytes in extended header
-    extbytes = header.fields['next']
-    start = 1024 + extbytes  # start of image data
-
     dtype = header.dtype
     nz, ny, nx = header.fields['nz'], header.fields['ny'], header.fields['nx']
 
     # load all in one block
     if not lazy:
         with open(fname, 'rb') as fh:
-            fh.read(start)  # skip the header + extended header
+            fh.read(header.total_header_bytes)  # skip the header + extended header
             array = np.fromfile(fh, dtype=dtype).reshape((nz, ny, nx))
 
     # or list of LazyImages
     else:
         stride = dtype().itemsize * ny * nx
-        array = [LazyImage(fname, (ny, nx), dtype, start + i * stride) for i in range(nz)]
+        array = [LazyImage(fname, (ny, nx), dtype, header.total_header_bytes + i * stride) for i in range(nz)]
     return array, header
 
 
