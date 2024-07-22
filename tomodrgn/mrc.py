@@ -20,92 +20,274 @@ DTYPE_FOR_MODE = {0:np.int8,
 MODE_FOR_DTYPE = {vv:kk for kk,vv in DTYPE_FOR_MODE.items()}
 
 class MRCHeader:
-    '''MRC header class'''
-    FIELDS = ['nx','ny','nz', # int
-              'mode', # int
-              'nxstart','nystart','nzstart', # int
-              'mx','my','mz', # int
-              'xlen','ylen','zlen', # float
-              'alpha','beta','gamma', # float
-              'mapc','mapr','maps',# int
-              'amin','amax','amean', # float
-              'ispg','next','creatid', # int, int, short, [pad 30]
-              'nint','nreal', # short, [pad 20]
-              'imodStamp','imodFlags', # int
-              'idtype','lens','nd1','nd2','vd1','vd2', # short
-              'tilt_ox','tilt_oy','tilt_oz', # float
-              'tilt_cx','tilt_cy','tilt_cz', # float
-              'xorg','yorg','zorg', # float
-              'cmap','stamp','rms', # char[4], float
-              'nlabl','labels'] # int, char[10][80]
-    FSTR = '3ii3i3i3f3f3i3f2ih30x2h20x2i6h6f3f4s4sfi800s'
-    STRUCT = struct.Struct(FSTR) 
+    """
+    Class to parse the header of an MRC file, with methods to load associated data and to write a new MRC file to disk.
+    """
+    fieldnames_structformats = (
+        ('nx', 'i'),
+        ('ny', 'i'),
+        ('nz', 'i'),
 
-    def __init__(self, header_values, extended_header=b''):
-        self.fields = OrderedDict(zip(self.FIELDS,header_values))
+        ('mode', 'i'),
+
+        ('nxstart', 'i'),
+        ('nystart', 'i'),
+        ('nzstart', 'i'),
+
+        ('mx', 'i'),
+        ('my', 'i'),
+        ('mz', 'i'),
+
+        ('cella_xlen', 'f'),
+        ('cella_ylen', 'f'),
+        ('cella_zlen', 'f'),
+
+        ('cellb_alpha', 'f'),
+        ('cellb_beta', 'f'),
+        ('cellb_gamma', 'f'),
+
+        ('mapc', 'i'),
+        ('mapr', 'i'),
+        ('maps', 'i'),
+
+        ('dmin', 'f'),
+        ('dmax', 'f'),
+        ('dmean', 'f'),
+
+        ('ispg', 'i'),
+        ('nsymbt', 'i'),
+
+        ('extra1', '8s'),
+        ('exttyp', '4p'),
+        ('nversion', 'i'),
+        ('extra2', '84s'),
+
+        ('origin_x', 'f'),
+        ('origin_y', 'f'),
+        ('origin_z', 'f'),
+
+        ('map', '4s'),
+        ('machst', '4s'),  # technically this should be 4B but unpacks as an array of `uint8` which is not then mapped to one `machst`
+
+        ('rms', 'f'),
+
+        ('nlabl', 'i'),
+        ('label', f'{10 * 80}s')  # technically this should be f'{10*"80s"}', but unpacks as an array of `char which is not then mapped to one `label`
+    )
+
+    field_names, struct_formats = zip(*fieldnames_structformats)
+    struct_format_string = ''.join(struct_formats)
+
+    def __init__(self,
+                 header_values: tuple,
+                 extended_header: bytes = b''):
+        """
+        Directly initialize a MRCHeader object with pre-parsed header values.
+        :param header_values: tuple of values in correct order to be assigned to `MRCHeader.field_names`, derived from standard 1024-byte header of MRC file
+        :param extended_header: byte string of data in extended header of MRC file. Read in but not used.
+        """
+        self.fields = OrderedDict(zip(self.field_names, header_values))
         self.extended_header = extended_header
-        self.D = self.fields['nx']
+        self.boxsize = self.fields['nx']
         self.dtype = DTYPE_FOR_MODE[self.fields['mode']]
 
     def __str__(self):
         return f'Header: {self.fields}\nExtended header: {self.extended_header}'
 
     @classmethod
-    def parse(cls, fname):
-        with open(fname,'rb') as f:
-            header = cls(cls.STRUCT.unpack(f.read(1024)))
-            extbytes = header.fields['next']
+    def parse(cls,
+              fname: str):
+        """
+        Constructor method to create an MRCHeader object from an MRC file name.
+        :param fname: path to MRC file on disk
+        :return: MRCHeader object
+        """
+        with open(fname, 'rb') as f:
+            # load and unpack the header
+            header_values = struct.Struct(cls.struct_format_string).unpack(f.read(1024))
+
+            # instantiate the MRCHeader object
+            header = cls(header_values)
+
+            # load the extended header if declared present
+            extbytes = header.fields['nsymbt']
             extended_header = f.read(extbytes)
             header.extended_header = extended_header
+
         return header
-    
+
     @classmethod
-    def make_default_header(cls, data, is_vol=True, Apix=1., xorg=0., yorg=0., zorg=0.):
+    def make_default_header(cls,
+                            data: np.ndarray,
+                            is_vol: bool = True,
+                            angpix: float = 1,
+                            origin_x: float = 0,
+                            origin_y: float = 0,
+                            origin_z: float = 0):
+        """
+        Constructor method to create an MRCHeader object describing a 3-D data array.
+
+        Automaticaly calculates and sets:
+            `nx`,
+            `ny`,
+            `nz`,
+            `mode`,
+            `cella_xlen`,
+            `cella_ylen`,
+            `cella_zlen`
+            `dmin`
+            `dmax`
+            `dmean`
+            `ispg`
+            `map`
+            `machst`
+
+        Assumes default values for:
+            `nxstart = nystart = nzstart := 0`,
+            `mx := nx`,
+            `my := ny`,
+            `mz := nz`,
+            `cellb_alpha = cellb_beta = cellb_gamma := 90`
+            `mapc := 1`
+            `mapr := 2`
+            `maps := 3`
+            `nsymbt := 0`
+            `extra1 := b'\x00' * 8`
+            `exttyp := b''`
+            `nversion := 0`
+            `extra2 := b'\x00' * 84`
+            `origin_x = origin_y = origin_z = 0`
+            `rms := -1`
+            `nlabl := 0`
+            `labels := b'\x00' * 84`
+
+
+        :param data: array of data to be described by this header
+        :param is_vol: whether the data array is a 3-D volume instead of a stack of 2-D images
+        :param angpix: pixel size in angstroms per pixel of the data array
+        :param origin_x: coordinate system origin along x-axis in angstroms, or the phase origin of the transformed image in pixels for MODE 3 or 4 data
+        :param origin_y: coordinate system origin along y-axis in angstroms, or the phase origin of the transformed image in pixels for MODE 3 or 4 data
+        :param origin_z: coordinate system origin along z-axis in angstroms, or the phase origin of the transformed image in pixels for MODE 3 or 4 data
+        :return: MRCHeader object
+        """
+        # get the number of sections, columns, and rows
         nz, ny, nx = data.shape
+
+        # set the space group header for an image stack (0) or a 3-D volume (1) following the MRC2014 standard
         ispg = 1 if is_vol else 0
+
+        # set endianness
+        if sys.byteorder == 'little':
+            machst = b'\x44\x44\x00\x00'
+        elif sys.byteorder == 'big':
+            machst = b'\x11\x11\x00\x00'
+        else:
+            raise RuntimeError(f'Unrecognized byteorder {sys.byteorder}')
+
+        # set data statistics for header
         if is_vol:
+            # calculate data statistics directly
             dmin, dmax, dmean, rms = data.min(), data.max(), data.mean(), data.std()
-        else: # use undefined values for image stacks
+        else:
+            # use undefined values for image stacks since the stack could be very large and costly to evaluate min/max/mean/rms
+            # in keeping with standard convention, (1) dmax < dmin, (2) dmean < min(dmax, dmin), (3) rms < 0
             dmin, dmax, dmean, rms = -1, -2, -3, -1
-        vals = [nx, ny, nz,
-                2, # mode = 2 for 32-bit float
-                0, 0, 0, # nxstart, nystart, nzstart
-                nx, ny, nz, # mx, my, mz
-                Apix*nx, Apix*ny, Apix*nz, # cella
-                90., 90., 90., # cellb
-                1, 2, 3, # mapc, mapr, maps
-                dmin, dmax, dmean,
-                ispg,
-                0, # exthd_size
-                0, # creatid
-                0, 0, # nint, nreal
-                0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0,
-                xorg, yorg, zorg,
-                b'MAP ' if is_vol else b'\x00'*4, b'\x00'*4, #cmap, stamp
-                rms, # rms
-                0, # nlabl
-                b'\x00'*800, # labels
-                ]
+
+        # populate the values in the order defined by MRCHeader.field_names
+        vals = (
+            nx,  # nx
+            ny,  # ny
+            nz,  # nz
+            MODE_FOR_DTYPE[data.dtype],  # mode
+            0,  # nxstart
+            0,  # nystart
+            0,  # nzstart
+            nx,  # mx
+            ny,  # my
+            nz,  # mz
+            angpix * nx,  # cella_xlen
+            angpix * ny,  # cella_ylen
+            angpix * nz,  # cella_zlen
+            90.,  # cellb_alpha
+            90.,  # cellb_beta
+            90.,  # cellb_gamma
+            1,  # mapc
+            2,  # mapr
+            3,  # mapz,
+            dmin,  # dmin
+            dmax,  # dmax
+            dmean,  # dmean
+            ispg,  # space group header
+            0,  # nsymbt, length of extended header
+            b'\x00' * 8,  # extra1
+            b'',  # exttyp
+            0,  # nversion of MRC format
+            b'\x00' * 84,  # extra2
+            origin_x,  # origin_x
+            origin_y,  # origin_y
+            origin_z,  # origin_z
+            b'MAP ' if is_vol else b'\x00' * 4,  # map
+            machst,  # machst
+            rms,  # rms
+            0,  # nlabl
+            b'\x00' * 800,  # labels
+        )
+
         return cls(vals)
 
-    def write(self, fh):
-        buf = self.STRUCT.pack(*list(self.fields.values()))
+    def write(self,
+              fh: BinaryIO) -> None:
+        """
+        Write an MRC file header to the specified file handle.
+        :param fh: filehandle to file on disk opened in binary mode
+        :return: None
+        """
+        # check that the actual and declared length of the extended header are in sync
+        self.fields['nymbt'] = len(self.extended_header)
+
+        # pack the header into appropriate binary format
+        buf = struct.Struct(self.struct_format_string).pack(*list(self.fields.values()))
+
+        # write the header and extended header
         fh.write(buf)
         fh.write(self.extended_header)
 
-    def get_apix(self):
-        return self.fields['xlen']/self.fields['nx']
-    
-    def update_apix(self, Apix):
-        self.fields['xlen'] = self.fields['nx']*Apix
-        self.fields['ylen'] = self.fields['ny']*Apix
-        self.fields['zlen'] = self.fields['nz']*Apix
-    
-    def get_origin(self):
-        return self.fields['xorg'], self.fields['yorg'], self.fields['zorg']
+    def get_apix(self) -> float:
+        """
+        Get the pixel size in angstroms per pixel based on header `cella_xlen` and `nx` ratio
+        :return: pixel size in angstroms
+        """
+        return self.fields['cella_xlen'] / self.fields['nx']
 
-    def update_origin(self, xorg, yorg, zorg):
+    def update_apix(self,
+                    angpix: float) -> None:
+        """
+        Update the pixel size in angstrom by adjusting the header `cella_xlen`, `cella_ylen`, and `cella_zlen`
+        :param angpix:
+        :return: None
+        """
+        self.fields['cella_xlen'] = self.fields['nx'] * angpix
+        self.fields['cella_ylen'] = self.fields['ny'] * angpix
+        self.fields['cella_zlen'] = self.fields['nz'] * angpix
+
+    def get_origin(self) -> tuple[float, float, float]:
+        """
+        Get the origin of the data coordinate system.
+        :return: origin in (x, y, z)
+        """
+        return self.fields['origin_x'], self.fields['origin_y'], self.fields['origin_z']
+
+    def update_origin(self,
+                      xorg: float,
+                      yorg: float,
+                      zorg: float) -> None:
+        """
+        Update the origin of the data coordinate system.
+        :param xorg: new origin along x axis
+        :param yorg: new origin along y axis
+        :param zorg: new origin along z axis
+        :return: None
+        """
         self.fields['xorg'] = xorg
         self.fields['yorg'] = yorg
         self.fields['zorg'] = zorg

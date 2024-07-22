@@ -319,7 +319,7 @@ class GenericStarfile:
             assert os.path.exists(path), f'{path} not found'
 
         header = mrc.parse_header(mrcs[0])
-        boxsize = header.D  # image size along one dimension in pixels
+        boxsize = header.boxsize  # image size along one dimension in pixels
         dtype = header.dtype
         stride = dtype().itemsize * boxsize * boxsize
         if lazy:
