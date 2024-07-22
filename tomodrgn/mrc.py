@@ -310,17 +310,40 @@ class MRCHeader:
 
 
 class LazyImage:
-    '''On-the-fly image loading'''
+    """
+    Class to lazily load data from an MRC file on-the-fly
+    """
 
-    def __init__(self, fname, shape, dtype, offset):
+    def __init__(self,
+                 fname: str,
+                 shape: tuple[int, ...],
+                 dtype: npt.DTypeLike,
+                 offset: int):
+        """
+        Initialize a LazyImage object. No disk access required or performed by creating the object.
+        :param fname: path to the .mrc file on disk
+        :param shape: shape of the section of data to be lazily loaded from the .mrc file, e.g. `(128,128)` for a single box128 image
+        :param dtype: the data type of the .mrc file contents, as described by the .mrc file header `mode` key
+        :param offset: offset from the start of the file to the beginning of the section of data to be lazily loaded, in bytes.
+                Should include standard 1024 byte mrc header, optional extended header, and number of data bytes preceeding data to be loaded.
+        """
         self.fname = fname
         self.shape = shape
         self.dtype = dtype
         self.offset = offset
-    def get(self):
-        with open(self.fname) as f:
+
+    def get(self) -> np.ndarray:
+        """
+        Load the data from disk to a numpy array
+        :return: numpy array of data loaded from disk
+        """
+        # create a file handle to open the file
+        with open(self.fname, 'rb') as f:
+            # go to the specified offset from the start of the file
             f.seek(self.offset)
-            image = np.fromfile(f, dtype=self.dtype, count=np.product(self.shape)).reshape(self.shape)
+            # load bytes from disk into a numpy array of specified shape
+            image = np.fromfile(f, dtype=self.dtype, count=np.prod(self.shape)).reshape(self.shape)
+
         return image
 
 
