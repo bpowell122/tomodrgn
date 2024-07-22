@@ -37,7 +37,16 @@ MODE_FOR_DTYPE = {vv: kk for kk, vv in DTYPE_FOR_MODE.items()}
 
 class MRCHeader:
     """
-    Class to parse the header of an MRC file, with methods to load associated data and to write a new MRC file to disk.
+    Class to parse the header of an MRC file and to write a new MRC header to disk.
+
+    Methods:
+        parse : Constructor method to create an MRCHeader object from an MRC file name.
+        make_default_header : Constructor method to create an MRCHeader object describing a 3-D data array.
+        write : Write an MRC file header to the specified file handle.
+        get_apix : Get the pixel size in angstroms per pixel based on header `cella_xlen` and `nx` ratio
+        update_apix : Update the pixel size in angstrom by adjusting the header `cella_xlen`, `cella_ylen`, and `cella_zlen`
+        get_origin : Get the origin of the data coordinate system.
+        update_origin : Update the origin of the data coordinate system.
     """
     fieldnames_structformats = (
         ('nx', 'i'),
