@@ -22,19 +22,6 @@ from collections import OrderedDict
 from itertools import groupby
 from tomodrgn.starfile import prefix_paths
 
-DTYPE_FOR_MODE = {
-    0: np.int8,
-    1: np.int16,
-    2: np.float32,
-    3: '2h',  # complex number from 2 shorts
-    4: np.complex64,
-    6: np.uint16,
-    7: np.int32,
-    12: np.float16,  # IEEE754
-    16: '3B',  # RBG values
-}
-MODE_FOR_DTYPE = {vv: kk for kk, vv in DTYPE_FOR_MODE.items()}
-
 
 class MRCHeader:
     """
@@ -49,6 +36,7 @@ class MRCHeader:
         get_origin : Get the origin of the data coordinate system.
         update_origin : Update the origin of the data coordinate system.
     """
+    # define 1024-byte header fields and associated data types to use when decoding bytes
     fieldnames_structformats = (
         ('nx', 'i'),
         ('ny', 'i'),
@@ -104,6 +92,20 @@ class MRCHeader:
     field_names, struct_formats = zip(*fieldnames_structformats)
     struct_format_string = ''.join(struct_formats)
 
+    # define the MRC standard `mode` values and corresponding numpy dtypes
+    dtype_for_mode = {
+        0: np.int8,
+        1: np.int16,
+        2: np.float32,
+        3: '2h',  # complex number from 2 shorts
+        4: np.complex64,
+        6: np.uint16,
+        7: np.int32,
+        12: np.float16,  # IEEE754
+        16: '3B',  # RBG values
+    }
+    mode_for_dtype = {vv: kk for kk, vv in dtype_for_mode.items()}
+
     def __init__(self,
                  header_values: tuple,
                  extended_header: bytes = b''):
@@ -115,7 +117,7 @@ class MRCHeader:
         self.fields = OrderedDict(zip(self.field_names, header_values))
         self.extended_header = extended_header
         self.boxsize = self.fields['nx']
-        self.dtype = DTYPE_FOR_MODE[self.fields['mode']]
+        self.dtype = self.dtype_for_mode[self.fields['mode']]
 
     def __str__(self):
         return f'Header: {self.fields}\nExtended header: {self.extended_header}'
@@ -224,7 +226,7 @@ class MRCHeader:
             nx,  # nx
             ny,  # ny
             nz,  # nz
-            MODE_FOR_DTYPE[data.dtype],  # mode
+            cls.mode_for_dtype[data.dtype],  # mode
             0,  # nxstart
             0,  # nystart
             0,  # nzstart
@@ -540,7 +542,7 @@ def write(fname: str,
         header.fields['nz'] = array.shape[0]
         header.fields['ny'] = array.shape[1]
         header.fields['nx'] = array.shape[2]
-        header.fields['mode'] = MODE_FOR_DTYPE[array.dtype]
+        header.fields['mode'] = header.mode_for_dtype[array.dtype]
 
     with open(fname, 'wb') as f:
         # write the header (and extended header if present)
