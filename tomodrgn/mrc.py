@@ -451,7 +451,8 @@ def parse_mrc_list(txtfile: str,
     :return: numpy array or list of LazyImages of all images in all MRC files
     """
     # get the names of MRC file(s) to load
-    lines = open(txtfile, 'r').readlines()
+    with open(txtfile, 'r') as f:
+        lines = f.readlines()
 
     # confirm where to load MRC file(s) from disk
     lines = prefix_paths(mrcs=lines,
