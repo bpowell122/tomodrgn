@@ -475,6 +475,8 @@ def parse_mrc(fname: str,
     :return: array: numpy array of MRC data in header-specified dtype and shape, or list of a LazyImage for each section along the nz axis in the MRC file
             header: an MRCHeader object containing the information encoded in the header and extended header of the MRC file
     """
+    # TODO move to method of MRCHeader (which should be renamed MRCFile or inherited from)
+    #   -> might make it more clear / easy to have extended data offset for lazyimage / lazyimagestack
     # parse the header
     header = MRCHeader.parse(fname)
 
@@ -502,13 +504,45 @@ def parse_mrc(fname: str,
     return array, header
 
 
-def write(fname, array, header=None, Apix=1., xorg=0., yorg=0., zorg=0., is_vol=None):
-    # get a default header
+def write(fname: str,
+          array: np.ndarray,
+          header: MRCHeader | None = None,
+          angpix: float = 1,
+          origin_x: float = 0,
+          origin_y: float = 0,
+          origin_z: float = 0,
+          is_vol: bool | None = None) -> None:
+    """
+    Write a data array to disk in MRC format.
+    :param fname: Name of the MRC file to write
+    :param array: Array of data to write as data block of MRC file
+    :param header: MRCFile header object to be written as the header of the new MRC file. `None` means that a default header will be created using the following parameters:
+    :param angpix: Pixel size of the data to be used in creating the default header
+    :param origin_x: new origin along x axis
+    :param origin_y: new origin along y axis
+    :param origin_z: new origin along z axis
+    :param is_vol: Whether the data array represents a volume (versus an image or image stack). `None` means to infer based on whether data array is a cube (volume-like).
+    :return: None
+    """
     if header is None:
+        # get a default header if not provided
         if is_vol is None:
             is_vol = True if len(set(array.shape)) == 1 else False  # Guess whether data is vol or image stack
-        header = MRCHeader.make_default_header(array, is_vol, Apix, xorg, yorg, zorg)
-    # write the header
-    f = open(fname, 'wb')
-    header.write(f)
-    f.write(array.tobytes())
+        header = MRCHeader.make_default_header(data=array,
+                                               is_vol=is_vol,
+                                               angpix=angpix,
+                                               origin_x=origin_x,
+                                               origin_y=origin_y,
+                                               origin_z=origin_z)
+    else:
+        # ensure that the supplied header describes the data correctly
+        header.fields['nz'] = array.shape[0]
+        header.fields['ny'] = array.shape[1]
+        header.fields['nx'] = array.shape[2]
+        header.fields['mode'] = MODE_FOR_DTYPE[array.dtype]
+
+    with open(fname, 'wb') as f:
+        # write the header (and extended header if present)
+        header.write(f)
+        # write the data array
+        f.write(array.tobytes())
