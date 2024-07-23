@@ -298,33 +298,34 @@ class GenericStarfile:
         assert particles_block_name is not None
         assert particles_path_column is not None
 
-        images = self.blocks[particles_block_name][particles_path_column]
-        images = [x.split('@') for x in images]  # assumed format is index@path_to_mrc
-        self.blocks[particles_block_name]['_rlnImageNameInd'] = [int(x[0]) - 1 for x in images]  # convert to 0-based indexing of full dataset
-        self.blocks[particles_block_name]['_rlnImageNameBase'] = [x[1] for x in images]
+        # group star file by mrcs file and get indices of each image within corresponding mrcs file
+        mrcs_files, mrcs_grouped_image_inds = self._group_image_inds_by_mrcs(particles_block_name=particles_block_name,
+                                                                             particles_path_column=particles_path_column)
 
-        mrcs = []
-        ind = []
-        # handle starfiles where .mrcs stacks are referenced non-contiguously
-        for i, group in self.blocks[particles_block_name].groupby(
-                (self.blocks[particles_block_name]['_rlnImageNameBase'].shift() != self.blocks[particles_block_name]['_rlnImageNameBase']).cumsum(), sort=False):
-            # mrcs = [path1, path2, ...]
-            mrcs.append(group['_rlnImageNameBase'].iloc[0])
-            # ind = [ [0, 1, 2, ..., N], [0, 3, 4, ..., M], ..., ]
-            ind.append(group['_rlnImageNameInd'].to_numpy())
-
+        # confirm where to load MRC file(s) from disk
         if datadir is not None:
-            mrcs = prefix_paths(mrcs, datadir)
-        for path in set(mrcs):
-            assert os.path.exists(path), f'{path} not found'
+            mrcs_files = prefix_paths(mrcs_files, datadir)
 
-        header = mrc.parse_header(mrcs[0])
+        # identify key parameters for creating image data array using the first mrcs file
+        header = mrc.parse_header(mrcs_files[0])
         boxsize = header.boxsize  # image size along one dimension in pixels
         dtype = header.dtype
+
+        # confirm that all mrcs files match this boxsize and dtype
+        for mrcs_file in mrcs_files:
+            _h = mrc.parse_header(mrcs_file)
+            assert boxsize == _h.boxsize
+            assert dtype == _h.dtype
+
+        # calculate the number of bytes corresponding to one image in the mrcs files
         stride = dtype().itemsize * boxsize * boxsize
+
         if lazy:
-            lazyparticles = [LazyImage(file, (boxsize, boxsize), dtype, header.total_header_bytes + ind_img * stride)
-                             for ind_stack, file in zip(ind, mrcs)
+            lazyparticles = [LazyImage(fname=file,
+                                       shape=(boxsize, boxsize),
+                                       dtype=dtype,
+                                       offset=header.total_header_bytes + ind_img * stride)
+                             for ind_stack, file in zip(mrcs_grouped_image_inds, mrcs_files)
                              for ind_img in ind_stack]
             return lazyparticles
         else:
@@ -337,6 +338,37 @@ class GenericStarfile:
                                                                                                        indices_image=ind_stack).get()
                 loaded_images += len(ind_stack)
             return particles
+
+    def _group_image_inds_by_mrcs(self,
+                                  particles_block_name: str = None,
+                                  particles_path_column: str = None) -> tuple[list[str], list[np.ndarray]]:
+        """
+        Group the starfile `particles_path_column` by its referenced mrcs files, then by the indices of images referenced within those mrcs files, respecting star file row order.
+        :param particles_block_name: name of star file block containing particle path column (e.g. `data_`, `data_particles`)
+        :param particles_path_column: name of star file column containing path to particle images .mrcs (e.g. `_rlnImageName`)
+        :return: mrcs_files: list of each mrcs path found in the star file that is unique from the preceeding row.
+                 mrcs_grouped_image_inds: list of indices of images within the associated mrcs file which are referenced by the star file
+        """
+        # get the star file column containing the location of each image on disk
+        images = self.blocks[particles_block_name][particles_path_column]
+        images = [x.split('@') for x in images]  # assumed format is index@path_to_mrc
+
+        # create new columns for 0-indexed image index and associated mrcs file
+        self.blocks[particles_block_name]['_rlnImageNameInd'] = [int(x[0]) - 1 for x in images]  # convert to 0-based indexing of full dataset
+        self.blocks[particles_block_name]['_rlnImageNameBase'] = [x[1] for x in images]
+
+        # group image indices by associated mrcs file, respecting star file order
+        # i.e. a mrcs file may be referenced discontinously in input star file, and should its images be separately grouped here
+        mrcs_files = []
+        mrcs_grouped_image_inds = []
+        for i, group in self.blocks[particles_block_name].groupby(
+                (self.blocks[particles_block_name]['_rlnImageNameBase'].shift() != self.blocks[particles_block_name]['_rlnImageNameBase']).cumsum(), sort=False):
+            # mrcs_files = [path1, path2, ...]
+            mrcs_files.append(group['_rlnImageNameBase'].iloc[0])
+            # grouped_image_inds = [ [0, 1, 2, ..., N], [0, 3, 4, ..., M], ..., ]
+            mrcs_grouped_image_inds.append(group['_rlnImageNameInd'].to_numpy())
+
+        return mrcs_files, mrcs_grouped_image_inds
 
 
 class TiltSeriesStarfile(GenericStarfile):
