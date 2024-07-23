@@ -910,9 +910,11 @@ class TiltSeriesStarfile(GenericStarfile):
         # sort the star file per-particle by the specified method
         if sort_ptcl_imgs != 'unsorted':
             log(f'Sorting star file per-particle by {sort_ptcl_imgs}')
+            # create temp mapping of input particle order in star file to preserve after sorting
+            self.df['_temp_input_ptcl_order'] = self.df.groupby(self.header_ptcl_uid, sort=False).ngroup()
             if sort_ptcl_imgs == 'dose_ascending':
                 # sort by header_ptcl_uid first to keep images of the same particle together, then sort by header_ptcl_dose
-                self.df = self.df.sort_values(by=[self.header_ptcl_uid, self.header_ptcl_dose], ascending=True).reset_index(drop=True)
+                self.df = self.df.sort_values(by=['_temp_input_ptcl_order', self.header_ptcl_dose], ascending=True).reset_index(drop=True)
             elif sort_ptcl_imgs == 'random':
                 # group by header_ptcl_uid first to keep images of the same particle together, then shuffle rows within each group
                 self.df = self.df.groupby(self.header_ptcl_uid, sort=False).sample(frac=1).reset_index(drop=True)
@@ -939,12 +941,11 @@ class TiltSeriesStarfile(GenericStarfile):
             self.df = self.df[self.df[self.header_ptcl_uid].isin(ptcls_unique_list)]
             self.df = self.df.reset_index(drop=True)
 
-        # order the final star file by header_ptcl_image for contiguous file I/O
+        # order the final star file by input particle order, then by image indices in MRC file for contiguous file I/O
         images = [x.split('@') for x in self.df[self.header_ptcl_image]]  # assumed format is index@path_to_mrc
         self.df['_rlnImageNameInd'] = [int(x[0]) - 1 for x in images]  # convert to 0-based indexing of full dataset
-        self.df['_rlnImageNameBase'] = [x[1] for x in images]
-        self.df = self.df.sort_values(by=['_rlnImageNameBase', '_rlnImageNameInd'], ascending=True).reset_index(drop=True)
-        self.df = self.df.drop(['_rlnImageNameBase', '_rlnImageNameInd'], axis=1)
+        self.df = self.df.sort_values(by=['_temp_input_ptcl_order', '_rlnImageNameInd'], ascending=True).reset_index(drop=True)
+        self.df = self.df.drop(['_temp_input_ptcl_order', '_rlnImageNameInd'], axis=1)
 
     def make_test_train_split(self,
                               fraction_split1: float = 0.5,
