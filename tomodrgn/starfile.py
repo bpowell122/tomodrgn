@@ -329,11 +329,13 @@ class GenericStarfile:
             return lazyparticles
         else:
             # preallocating numpy array for in-place loading, fourier transform, fourier transform centering, etc
+            # allocating 1 extra pixel along x and y dimensions in anticipation of symmetrizing the hartley transform in-place
             particles = np.zeros((len(self.blocks[particles_block_name]), boxsize + 1, boxsize + 1), dtype=np.float32)
-            offset = 0
-            for ind_stack, file in zip(ind, mrcs):
-                particles[offset:offset + len(ind_stack), :-1, :-1] = mrc.LazyImageStack(file, dtype, (boxsize, boxsize), ind_stack).get()
-                offset += len(ind_stack)
+            loaded_images = 0
+            for ind_stack, file in zip(mrcs_grouped_image_inds, mrcs_files):
+                particles[loaded_images:loaded_images + len(ind_stack), :-1, :-1] = mrc.LazyImageStack(fname=file,
+                                                                                                       indices_image=ind_stack).get()
+                loaded_images += len(ind_stack)
             return particles
 
 
