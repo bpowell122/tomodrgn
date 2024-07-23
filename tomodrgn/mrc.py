@@ -441,20 +441,27 @@ def parse_header(fname):
     return MRCHeader.parse(fname)
 
 
-def parse_mrc_list(txtfile, lazy=False):
+def parse_mrc_list(txtfile: str,
+                   lazy: bool = False) -> np.ndarray | list[LazyImage]:
+    """
+    Load the MRC file(s) specified in a text file into memory as either a numpy array or a list of LazyImages.
+    :param txtfile: path to newline-delimited text file listing the absolute path to the MRC file(s) to be loaded, or the path to the MRC file(s) relative to `txtfile`.
+    :param lazy: whether to load particle images now in memory (False) or later on-the-fly (True)
+    :return: numpy array or list of LazyImages of all images in all MRC files
+    """
+    # get the names of MRC file(s) to load
     lines = open(txtfile, 'r').readlines()
 
-    def abspath(f):
-        if os.path.isabs(f):
-            return f
-        base = os.path.dirname(os.path.abspath(txtfile))
-        return os.path.join(base, f)
+    # confirm where to load MRC file(s) from disk
+    lines = prefix_paths(mrcs=lines,
+                         datadir=os.path.dirname(os.path.abspath(txtfile)))
 
-    lines = [abspath(x) for x in lines]
+    # load the particles
     if not lazy:
         particles = np.vstack([parse_mrc(x.strip(), lazy=False)[0] for x in lines])
     else:
         particles = [img for x in lines for img in parse_mrc(x.strip(), lazy=True)[0]]
+
     return particles
 
 
