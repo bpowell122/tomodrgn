@@ -20,6 +20,7 @@ import sys
 import struct
 from collections import OrderedDict
 from itertools import groupby
+from tomodrgn.starfile import prefix_paths
 
 DTYPE_FOR_MODE = {
     0: np.int8,
@@ -465,23 +466,39 @@ def parse_mrc_list(txtfile: str,
     return particles
 
 
-def parse_mrc(fname, lazy=False):
+def parse_mrc(fname: str,
+              lazy: bool = False) -> tuple[np.ndarray | list[LazyImage], MRCHeader]:
+    """
+    Load an entire MRC file into memory as either a numpy array or a list of LazyImages
+    :param fname: path to MRC file on disk
+    :param lazy: whether to load particle images now in memory (False) or later on-the-fly (True)
+    :return: array: numpy array of MRC data in header-specified dtype and shape, or list of a LazyImage for each section along the nz axis in the MRC file
+            header: an MRCHeader object containing the information encoded in the header and extended header of the MRC file
+    """
     # parse the header
     header = MRCHeader.parse(fname)
 
+    # get information describing the data array size and layout
     dtype = header.dtype
     nz, ny, nx = header.fields['nz'], header.fields['ny'], header.fields['nx']
 
-    # load all in one block
+    # load all data in one block
     if not lazy:
         with open(fname, 'rb') as fh:
-            fh.read(header.total_header_bytes)  # skip the header + extended header
+            # skip the header + extended header
+            fh.seek(header.total_header_bytes)
+            # load all bytes remaining in file from disk into a numpy array of specified shape
             array = np.fromfile(fh, dtype=dtype).reshape((nz, ny, nx))
 
     # or list of LazyImages
     else:
+        # calculate the size of each image in bytes
         stride = dtype().itemsize * ny * nx
-        array = [LazyImage(fname, (ny, nx), dtype, header.total_header_bytes + i * stride) for i in range(nz)]
+        array = [LazyImage(fname=fname,
+                           shape=(ny, nx),
+                           dtype=dtype,
+                           offset=header.total_header_bytes + i * stride)
+                 for i in range(nz)]
     return array, header
 
 
