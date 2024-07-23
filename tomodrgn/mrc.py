@@ -10,6 +10,14 @@ Deviations from this standard include:
     (1) any data in the extended header is read (and maintained for later writing), but is not interpreted or used in any way;
     (2) the `machst` attribute of the header is unpacked as a byte string (e.g b`DA\x00\x00`) rather than as an array of uint8 (e.g. `[68, 65,  0,  0]`);
     (3) the `label` attribute of the header is unpacked as a concatenated byte string rather than as an array of byte strings for all 10 80-character labels that may exist
+
+Prefer the following uses:
+    - interfacing with MRC headers: mrc.MRCHeader.parse() or mrc.parse_header()
+    - loading an entire MRC file into memory: mrc.parse_mrc()
+    - loading a list of MRC files into memory: mrc.parse_mrc_list()
+    - lazily loading a single image from an MRC file: mrc.LazyImage
+    - lazily loading a group of images from an MRC file: mrc.LazyImageStack
+    - writing an MRC file to disk: mrc.write()
 """
 
 import numpy as np
