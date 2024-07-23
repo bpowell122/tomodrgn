@@ -457,7 +457,12 @@ class LazyImageStack:
         return stack
 
 
-def parse_header(fname):
+def parse_header(fname: str) -> MRCHeader:
+    """
+    Convenience function to create an MRCHeader object given an MRC file name
+    :param fname: path to MRC file on disk
+    :return: MRCHeader object
+    """
     return MRCHeader.parse(fname)
 
 
