@@ -304,19 +304,19 @@ class MRCHeader:
         return self.fields['origin_x'], self.fields['origin_y'], self.fields['origin_z']
 
     def update_origin(self,
-                      xorg: float,
-                      yorg: float,
-                      zorg: float) -> None:
+                      origin_x: float,
+                      origin_y: float,
+                      origin_z: float) -> None:
         """
         Update the origin of the data coordinate system.
-        :param xorg: new origin along x axis
-        :param yorg: new origin along y axis
-        :param zorg: new origin along z axis
+        :param origin_x: new origin along x axis
+        :param origin_y: new origin along y axis
+        :param origin_z: new origin along z axis
         :return: None
         """
-        self.fields['xorg'] = xorg
-        self.fields['yorg'] = yorg
-        self.fields['zorg'] = zorg
+        self.fields['origin_x'] = origin_x
+        self.fields['origin_y'] = origin_y
+        self.fields['origin_z'] = origin_z
 
     @property
     def total_header_bytes(self) -> int:
