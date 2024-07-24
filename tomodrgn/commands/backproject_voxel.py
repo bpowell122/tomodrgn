@@ -62,7 +62,7 @@ def backproject_dataset(data: TiltSeriesMRCData,
     counts = torch.zeros_like(vol_ht)
 
     n_ptcls_backprojected = 0
-    mask = lattice.get_circular_mask(boxsize_ht // 2)
+    mask = lattice.get_circular_mask(boxsize_ht)
 
     # prepare the data loader
     batchsize = 1

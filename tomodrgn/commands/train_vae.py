@@ -82,7 +82,7 @@ def add_args(_parser):
     group.add_argument('--out-dim-A', type=int, default=128, help='Number of nodes in output layer of encA == ntilts * number of nodes input to encB')
     group.add_argument('--enc-layers-B', dest='qlayersB', type=int, default=3, help='Number of hidden layers encoding merged tilts')
     group.add_argument('--enc-dim-B', dest='qdimB', type=int, default=512, help='Number of nodes in hidden layers encoding merged tilts')
-    group.add_argument('--enc-mask', type=int, help='Circular mask of image for encoder (default: D/2; -1 for no mask)')
+    group.add_argument('--enc-mask', type=int, help='Diameter of circular mask of image for encoder in pixels (default: boxsize+1 to use up to Nyquist; -1 for no mask)')
     group.add_argument('--pooling-function', type=str, choices=('concatenate', 'max', 'mean', 'median', 'set_encoder'), default='concatenate',
                        help='Function used to pool features along ntilts dimension after encA')
     group.add_argument('--num-seeds', type=int, default=1, help='number of seeds for PMA')
@@ -767,10 +767,10 @@ def main(args):
 
     # determine which pixels to encode (equivalently applicable to all particles)
     if args.enc_mask is None:
-        args.enc_mask = boxsize_ht // 2
+        args.enc_mask = boxsize_ht
     if args.enc_mask > 0:
         # encode pixels within defined circular radius in fourier space
-        assert args.enc_mask <= boxsize_ht // 2
+        assert args.enc_mask <= boxsize_ht
         enc_mask = lattice.get_circular_mask(args.enc_mask)
         in_dim = enc_mask.sum()
     elif args.enc_mask == -1:

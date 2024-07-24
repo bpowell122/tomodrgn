@@ -102,17 +102,36 @@ class Lattice:
 
         return mask
 
-    def get_circular_mask(self, R):
-        '''Return a binary mask for self.coords which restricts coordinates to a centered circular lattice'''
-        if R in self.circle_mask:
-            return self.circle_mask[R]
-        assert 2 * R + 1 <= self.boxsize, 'Mask with radius {} too large for lattice with size {}'.format(R, self.boxsize)
-        r = R / (self.boxsize // 2) * self.extent
-        mask = self.coords.pow(2).sum(-1) <= r ** 2
+    def get_circular_mask(self,
+                          diameter: int) -> torch.Tensor:
+        # TODO update usages to diameter not R
+        """
+        Return a binary mask for self.coords which restricts coordinates to a centered circular lattice
+        :param diameter: number of grid points to include in the mask along each dimension
+        :return: binary mask, shape (lattice.boxsize ** 2)
+        """
+        # return precomputed result if cached
+        if diameter in self.circle_mask:
+            return self.circle_mask[diameter]
+
+        # sanity check inputs
+        assert diameter <= self.boxsize, f'Circular mask with diameter {diameter} too large for lattice with size {self.boxsize}'
+
+        # calculate the range of the original lattice to keep after masking
+        mask_radius = ((diameter-1) / 2) * (self.extent / self.boxcenter)
+
+        # create the mask as a flattened array
+        mask = self.coords.pow(2).sum(-1) <= mask_radius ** 2
+
+        # ignore the DC coordinate which is the center in the coords array
         if self.ignore_dc:
-            assert self.coords[self.boxsize ** 2 // 2].sum() == 0.0
-            mask[self.boxsize ** 2 // 2] = 0
-        self.circle_mask[R] = mask
+            ind_dc_flattened_coords = self.boxsize ** 2 // 2
+            assert self.coords[ind_dc_flattened_coords].sum() == 0.0
+            mask[ind_dc_flattened_coords] = 0
+
+        # cache the result
+        self.circle_mask[diameter] = mask
+
         return mask
 
     def rotate(self, images, theta):
