@@ -68,27 +68,38 @@ class Lattice:
 
         return downsample_coords
 
-    def get_square_mask(self, L):
-        '''Return a binary mask for self.coords which restricts coordinates to a centered square lattice'''
-        if L in self.square_mask:
-            return self.square_mask[L]
-        assert 2*L+1 <= self.D, 'Mask with size {} too large for lattice with size {}'.format(L,self.D)
-        log('Using square lattice of size {}x{}'.format(2*L+1,2*L+1))
-        b,e = self.D2-L, self.D2+L
-        c1 = self.coords.view(self.D,self.D,3)[b,b]
-        c2 = self.coords.view(self.D,self.D,3)[e,e]
-        m1 = self.coords[:,0] >= c1[0]
-        m2 = self.coords[:,0] <= c2[0]
-        m3 = self.coords[:,1] >= c1[1]
-        m4 = self.coords[:,1] <= c2[1]
-        mask = m1*m2*m3*m4
-        assert 2 * L + 1 <= self.boxsize, 'Mask with size {} too large for lattice with size {}'.format(L, self.boxsize)
-        b, e = self.boxcenter - L, self.boxcenter + L
-        c1 = self.coords.view(self.boxsize, self.boxsize, 3)[b, b]
-        c2 = self.coords.view(self.boxsize, self.boxsize, 3)[e, e]
-        self.square_mask[L] = mask
+    def get_square_mask(self,
+                        sidelength: int) -> torch.Tensor:
+        """
+        Return a binary mask for self.coords which restricts coordinates to a centered square lattice
+        :param sidelength: number of grid points to include in the mask along each dimension
+        :return: binary mask, shape (lattice.boxsize ** 2)
+        """
+        # return precomputed result if cached
+        if sidelength in self.square_mask:
+            return self.square_mask[sidelength]
+
+        # sanity check inputs
+        assert sidelength <= self.boxsize
+        assert sidelength % 2 == 1, f'Square mask side length ({sidelength=}) must be an odd integer to be centered on odd-length lattice'
+
+        # calculate the range of the original lattice to keep after masking
+        ind_low = self.boxcenter - sidelength // 2
+        ind_high = self.boxcenter + sidelength // 2 + 1
+
+        # create the mask as a flattened array
+        mask = torch.ones((self.boxsize, self.boxsize), dtype=torch.bool, device=self.device)
+        mask[:, :ind_low] = 0
+        mask[:, ind_high:] = 0
+        mask[:ind_low, :] = 0
+        mask[ind_high:, :] = 0
         if self.ignore_dc:
-            raise NotImplementedError
+            mask[self.boxcenter, self.boxcenter] = 0
+        mask = mask.view(-1)
+
+        # cache the result
+        self.square_mask[sidelength] = mask
+
         return mask
 
     def get_circular_mask(self, R):
