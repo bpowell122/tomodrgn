@@ -134,21 +134,34 @@ class Lattice:
 
         return mask
 
-    def rotate(self, images, theta):
-        '''
-        images: BxYxX
-        theta: Q, in radians
-        '''
-        images = images.expand(len(theta), *images.shape) # QxBxYxX
+    def rotate(self,
+               images: torch.Tensor,
+               theta: torch.Tensor) -> torch.Tensor:
+        """
+        Resample a stack of images on the lattice grid rotated in-plane counterclockwise by a batch of theta angles.
+        :param images: stack of images to rotate, shape (B,Y,X)
+        :param theta: batch of angles in radians, shape (Q)
+        :return: rotated images, shape (B,Q,Y,X)
+        """
+        # prepare the (transposed) rotation matrix for multiplication from the right
         cos = torch.cos(theta)
         sin = torch.sin(theta)
         rot = torch.stack([cos, sin, -sin, cos], 1).view(-1, 2, 2)
-        grid = self.coords[:,0:2]/self.extent @ rot # grid between -1 and 1
-        grid += offset[:,None,None,:]
-        rotated = F.grid_sample(images, grid) # QxBxYxX
-        return rotated.transpose(0,1) # BxQxYxX
-        grid = grid.view(len(rot), self.boxsize, self.boxsize, 2)  # QxYxXx2
-        offset = self.center - grid[:, self.boxcenter, self.boxcenter]  # Qx2
+
+        # rescale the lattice from (-0.5, 0.5) to (-1, 1) and rotate all lattice points counterclockwise by theta radians
+        grid = self.coords[:, 0:2] / self.extent @ rot  # shape (Q, Y*X, 2)
+        grid = grid.view(len(rot), self.boxsize, self.boxsize, 2)  # shape (Q, Y, X, 2)
+
+        # correct for translational offsets
+        offset = self.center - grid[:, self.boxcenter, self.boxcenter]  # shape (Q, 2)
+        grid += offset[:, None, None, :]
+
+        # resample the images on the rotated grids
+        images = images.expand(len(theta), *images.shape)  # shape (Q, B, Y, X)
+        # use "border" padding rather than "0" padding to avoid introducing abrupt level transitions
+        rotated = F.grid_sample(images, grid, padding_mode='border')  # shape (Q, B, Y, X)
+
+        return rotated.transpose(0, 1)  # shape (B, Q, Y, X)
 
     def translate_ft(self, img, t, mask=None):
         '''
