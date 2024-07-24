@@ -9,29 +9,46 @@ from tomodrgn import utils
 log = utils.log
 
 class Lattice:
-    def __init__(self, D, extent=0.5, ignore_DC=True, device=None):
-        assert D % 2 == 1, "Lattice size must be odd"
-        x0, x1 = np.meshgrid(np.linspace(-extent, extent, D, endpoint=True),
-                             np.linspace(-extent, extent, D, endpoint=True))
-        coords = np.stack([x0.ravel(), x1.ravel(), np.zeros(D ** 2)], 1).astype(np.float32)
+    def __init__(self,
+                 boxsize: int,
+                 extent: float = 0.5,
+                 ignore_dc: bool = True,
+                 device: torch.device | None = None):
+        """
+        Class for handling a 2-D voxel grid with an odd number of points along each dimension.
+        Grid is centered at `(0,0)` and runs from `-extent` to `+extent` with `boxsize` points.
+        Frequently used to in the context of a symmetrized Hartley transform in units of 1/px where DC is at the center of the lattice.
+        :param boxsize: number of grid points along each dimension. Should be odd.
+        :param extent: maximum value of the grid along each dimension, typically <= 0.5
+        :param ignore_dc: whether to exclude the DC component (0, 0) when generating masks via methods of this class.
+        :param device: torch device on which to store tensor attributes and return tensors from methods of this class.
+        """
+        # sanity check inputs
+        assert boxsize % 2 == 1, "Lattice size must be odd"
+
+        # create the lattice of 2-D points along the X-Y plane in 3-D space
+        x0, x1 = np.meshgrid(np.linspace(-extent, extent, boxsize, endpoint=True),
+                             np.linspace(-extent, extent, boxsize, endpoint=True))
+        coords = np.stack([x0.ravel(), x1.ravel(), np.zeros(boxsize ** 2)], 1).astype(np.float32)
         self.coords = torch.tensor(coords, device=device)
+
+        # additional attributes about the lattice
         self.extent = extent
-        self.D = D
-        self.D2 = int(D / 2)
-
-        # todo: center should now just be 0,0; check Lattice.rotate...
-        # c = 2/(D-1)*(D/2) -1
-        # self.center = torch.tensor([c,c]) # pixel coordinate for img[D/2,D/2]
+        self.boxsize = boxsize
+        self.boxcenter = int(boxsize / 2)  # should round down, boxsize=65 should give boxcenter of 32
         self.center = torch.tensor([0., 0.], device=device)
+        self.ignore_dc = ignore_dc
+        self.device = device
 
+        # create dictionaries to cache computation of masks with given radius / sidelength
         self.square_mask = {}
         self.circle_mask = {}
 
-        self.freqs2d = self.coords[:, 0:2] / extent / 2
-
         # precalculate values used each time we compute the CTF for an image
-        self.freqs2d_s2 = (self.freqs2d[:, 0] ** 2 + self.freqs2d[:, 1] ** 2).view(1, -1)
-        self.freqs2d_angle = torch.atan2(self.freqs2d[:, 1], self.freqs2d[:, 0]).view(1, -1)
+        self.freqs2d = self.coords[:, 0:2] / extent / 2  # spatial frequencies at each lattice point normalized to scale from -0.5 to 0.5 (Nyquist)
+        self.freqs2d_s2 = (self.freqs2d[:, 0] ** 2 + self.freqs2d[:, 1] ** 2).view(1, -1)  # spatial frequency magnitude at each lattice point, dim0 of length 1 for broadcasting across multiple images
+        self.freqs2d_angle = torch.atan2(self.freqs2d[:, 1], self.freqs2d[:, 0]).view(1, -1)  # spatial frequency angle from x axis at each lattice point
+        assert boxsize_new < self.boxsize
 
         self.ignore_DC = ignore_DC
         self.device = device
@@ -45,8 +62,8 @@ class Lattice:
         return torch.tensor(coords, device=self.device)
 
     def get_square_lattice(self, L):
-        b,e = self.D2-L, self.D2+L+1
-        center_lattice = self.coords.view(self.D,self.D,3)[b:e,b:e,:].contiguous().view(-1,3)
+        b, e = self.boxcenter - L, self.boxcenter + L + 1
+        center_lattice = self.coords.view(self.boxsize, self.boxsize, 3)[b:e, b:e, :].contiguous().view(-1, 3)
         return center_lattice
 
     def get_square_mask(self, L):
@@ -63,8 +80,12 @@ class Lattice:
         m3 = self.coords[:,1] >= c1[1]
         m4 = self.coords[:,1] <= c2[1]
         mask = m1*m2*m3*m4
+        assert 2 * L + 1 <= self.boxsize, 'Mask with size {} too large for lattice with size {}'.format(L, self.boxsize)
+        b, e = self.boxcenter - L, self.boxcenter + L
+        c1 = self.coords.view(self.boxsize, self.boxsize, 3)[b, b]
+        c2 = self.coords.view(self.boxsize, self.boxsize, 3)[e, e]
         self.square_mask[L] = mask
-        if self.ignore_DC:
+        if self.ignore_dc:
             raise NotImplementedError
         return mask
 
@@ -72,12 +93,12 @@ class Lattice:
         '''Return a binary mask for self.coords which restricts coordinates to a centered circular lattice'''
         if R in self.circle_mask:
             return self.circle_mask[R]
-        assert 2*R+1 <= self.D, 'Mask with radius {} too large for lattice with size {}'.format(R,self.D)
-        r = R/(self.D//2)*self.extent
-        mask = self.coords.pow(2).sum(-1) <= r**2
-        if self.ignore_DC:
-            assert self.coords[self.D**2//2].sum() == 0.0
-            mask[self.D**2//2] = 0
+        assert 2 * R + 1 <= self.boxsize, 'Mask with radius {} too large for lattice with size {}'.format(R, self.boxsize)
+        r = R / (self.boxsize // 2) * self.extent
+        mask = self.coords.pow(2).sum(-1) <= r ** 2
+        if self.ignore_dc:
+            assert self.coords[self.boxsize ** 2 // 2].sum() == 0.0
+            mask[self.boxsize ** 2 // 2] = 0
         self.circle_mask[R] = mask
         return mask
 
@@ -91,11 +112,11 @@ class Lattice:
         sin = torch.sin(theta)
         rot = torch.stack([cos, sin, -sin, cos], 1).view(-1, 2, 2)
         grid = self.coords[:,0:2]/self.extent @ rot # grid between -1 and 1
-        grid = grid.view(len(rot), self.D, self.D, 2) # QxYxXx2
-        offset = self.center - grid[:,self.D2,self.D2] # Qx2
         grid += offset[:,None,None,:]
         rotated = F.grid_sample(images, grid) # QxBxYxX
         return rotated.transpose(0,1) # BxQxYxX
+        grid = grid.view(len(rot), self.boxsize, self.boxsize, 2)  # QxYxXx2
+        offset = self.center - grid[:, self.boxcenter, self.boxcenter]  # Qx2
 
     def translate_ft(self, img, t, mask=None):
         '''
