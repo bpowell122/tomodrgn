@@ -163,54 +163,61 @@ class Lattice:
 
         return rotated.transpose(0, 1)  # shape (B, Q, Y, X)
 
-    def translate_ft(self, img, t, mask=None):
-        '''
-        Translate an image by phase shifting its Fourier transform
-
-        Inputs:
-            img: FT of image (B x img_dims x 2)
-            t: shift in pixels (B x T x 2)
-            mask: Mask for lattice coords (img_dims x 1)
-
-        Returns:
-            Shifted images (B x T x img_dims x 2)
-
-        img_dims can either be 2D or 1D (unraveled image)
-        '''
-        # F'(k) = exp(-2*pi*k*x0)*F(k)
+    def translate_ft(self,
+                     images: torch.Tensor,
+                     trans: torch.Tensor,
+                     mask: np.ndarray | torch.Tensor | None = None) -> torch.Tensor:
+        """
+        Translate an image by phase shifting its Fourier transform.
+        `F'(k) = exp(-2*pi*k*x0)*F(k)`
+        Note that shape img_dims below can either be 2D or 1D (unraveled image)
+        :param images: fourier transform of image, shape (B, img_dims, 2)
+        :param trans: shift in pixels, shape (B, T, 2)
+        :param mask: optional mask for lattice coords (img_dims, 1)
+        :return: translated images, shape (B, T, img_dims, 2)
+        """
+        # if input images are masked, the same mask must be applied to associated grid coordinates
         coords = self.freqs2d if mask is None else self.freqs2d[mask]
-        img = img.unsqueeze(1)  # Bx1xNx2
-        t = t.unsqueeze(-1)  # BxTx2x1 to be able to do bmm
-        tfilt = coords @ t * -2 * np.pi  # BxTxNx1
+
+        # apply the translations to the grid coordinates via batched matrix multiplication of the translation matrices
+        trans = trans.unsqueeze(-1)  # BxTx2x1 to be able to do bmm
+        tfilt = coords @ trans * -2 * np.pi  # BxTxNx1
         tfilt = tfilt.squeeze(-1)  # BxTxN
+
+        # calculate and apply phase shift to the images
         c = torch.cos(tfilt)  # BxTxN
         s = torch.sin(tfilt)  # BxTxN
-        return torch.stack([img[..., 0] * c - img[..., 1] * s, img[..., 0] * s + img[..., 1] * c], -1)
+        images_flattened = images.unsqueeze(1)  # Bx1xNx2
+        return torch.stack([images_flattened[..., 0] * c - images_flattened[..., 1] * s,
+                            images_flattened[..., 0] * s + images_flattened[..., 1] * c], -1)
 
-    def translate_ht(self, img, t, mask=None):
-        '''
+    def translate_ht(self,
+                     images: torch.Tensor,
+                     trans: torch.Tensor,
+                     mask: np.ndarray | torch.Tensor | None = None) -> torch.Tensor:
+        """
         Translate an image by phase shifting its Hartley transform
-
-        Inputs:
-            img: HT of image (B x img_dims)
-            t: shift in pixels (B x T x 2)
-            mask: Mask for lattice coords (img_dims x 1)
-
-        Returns:
-            Shifted images (B x T x img_dims)
-
+        `H'(k) = cos(2*pi*k*t0)H(k) + sin(2*pi*k*t0)H(-k)`
         img must be 1D unraveled image, symmetric around DC component
-        '''
-        # H'(k) = cos(2*pi*k*t0)H(k) + sin(2*pi*k*t0)H(-k)
+        :param images: hartley transform of image, shape (B, boxsize_ht)
+        :param trans: shift in pixels, shape (B, T, 2)
+        :param mask: mask for lattice coords, shape (boxsize_ht, 1)
+        :return: translated images, shape (B, T, boxsize_ht)
+        """
+        # if input images are masked, the same mask must be applied to associated grid coordinates
         coords = self.freqs2d if mask is None else self.freqs2d[mask]
-        center = int(len(coords) / 2)
-        img = img.unsqueeze(1)  # Bx1xN
-        t = t.unsqueeze(-1)  # BxTx2x1 to be able to do bmm
-        tfilt = coords @ t * 2 * np.pi  # BxTxNx1
+
+        # apply the translations to the grid coordinates via batched matrix multiplication of the translation matrices
+        trans = trans.unsqueeze(-1)  # BxTx2x1 to be able to do bmm
+        tfilt = coords @ trans * 2 * np.pi  # BxTxNx1
         tfilt = tfilt.squeeze(-1)  # BxTxN
+
+        # calculate and apply phase shift to the images
         c = torch.cos(tfilt)  # BxTxN
         s = torch.sin(tfilt)  # BxTxN
-        return c * img + s * img[:, :, np.arange(len(coords) - 1, -1, -1)]
+        images = images.unsqueeze(1)  # Bx1xN
+        return c * images + s * images[:, :, np.arange(len(coords) - 1, -1, -1)]
+
 
 
 class EvenLattice(Lattice):
