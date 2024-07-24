@@ -48,23 +48,25 @@ class Lattice:
         self.freqs2d = self.coords[:, 0:2] / extent / 2  # spatial frequencies at each lattice point normalized to scale from -0.5 to 0.5 (Nyquist)
         self.freqs2d_s2 = (self.freqs2d[:, 0] ** 2 + self.freqs2d[:, 1] ** 2).view(1, -1)  # spatial frequency magnitude at each lattice point, dim0 of length 1 for broadcasting across multiple images
         self.freqs2d_angle = torch.atan2(self.freqs2d[:, 1], self.freqs2d[:, 0]).view(1, -1)  # spatial frequency angle from x axis at each lattice point
+
+    def get_downsample_coords(self, boxsize_new):
+        """
+        Return a 2-D lattice of coordinates representing a downsampled (fourier-cropped) copy of the original lattice.
+        :param boxsize_new: number of grid points along each dimension in the downsampled lattice. Should be odd.
+        :return: coordinates of the downsampled lattice, shape (boxsize_new ** 2, 3)
+        """
+        # sanity check inputs
+        assert boxsize_new % 2 == 1
         assert boxsize_new < self.boxsize
 
-        self.ignore_DC = ignore_DC
-        self.device = device
+        # calculate the range of the original lattice to keep after cropping
+        ind_low = self.boxcenter - boxsize_new // 2
+        ind_high = self.boxcenter + boxsize_new // 2 + 1
 
-    def get_downsample_coords(self, d):
-        assert d % 2 == 1
-        extent = self.extent * (d-1) / (self.D-1)
-        x0, x1 = np.meshgrid(np.linspace(-extent, extent, d, endpoint=True),
-                             np.linspace(-extent, extent, d, endpoint=True))
-        coords = np.stack([x0.ravel(),x1.ravel(),np.zeros(d**2)],1).astype(np.float32)
-        return torch.tensor(coords, device=self.device)
+        # crop the lattice
+        downsample_coords = self.coords.view(self.boxsize, self.boxsize, 3)[ind_low:ind_high, ind_low: ind_high, :].contiguous().view(-1, 3)
 
-    def get_square_lattice(self, L):
-        b, e = self.boxcenter - L, self.boxcenter + L + 1
-        center_lattice = self.coords.view(self.boxsize, self.boxsize, 3)[b:e, b:e, :].contiguous().view(-1, 3)
-        return center_lattice
+        return downsample_coords
 
     def get_square_mask(self, L):
         '''Return a binary mask for self.coords which restricts coordinates to a centered square lattice'''
