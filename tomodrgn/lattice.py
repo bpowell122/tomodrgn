@@ -97,9 +97,13 @@ class Lattice:
         mask[:, ind_high:] = 0
         mask[:ind_low, :] = 0
         mask[ind_high:, :] = 0
-        if self.ignore_dc:
-            mask[self.boxcenter, self.boxcenter] = 0
         mask = mask.view(-1)
+
+        # ignore the DC coordinate which is the center in the coords array
+        if self.ignore_dc:
+            ind_dc_flattened_coords = self.boxsize ** 2 // 2
+            assert self.coords[ind_dc_flattened_coords].sum() == 0.0
+            mask[ind_dc_flattened_coords] = 0
 
         # cache the result
         self.square_mask[sidelength] = mask
