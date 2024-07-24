@@ -1,4 +1,6 @@
-'''Lattice object'''
+"""
+Classes and functions for interfacing with 2-D voxel grids representing a lattice of voxel coordinates.
+"""
 
 import numpy as np
 import torch
@@ -7,6 +9,7 @@ import torch.nn.functional as F
 from tomodrgn import utils
 
 log = utils.log
+
 
 class Lattice:
     def __init__(self,
@@ -35,8 +38,8 @@ class Lattice:
         # additional attributes about the lattice
         self.extent = extent
         self.boxsize = boxsize
-        self.boxcenter = int(boxsize / 2)  # should round down, boxsize=65 should give boxcenter of 32
-        self.center = torch.tensor([0., 0.], device=device)
+        self.boxcenter = int(boxsize / 2)  # coords center in 0-indexed space, boxsize=65 should give boxcenter of 32
+        self.center = torch.tensor([0., 0.], device=device)  # coords center in coordinate space
         self.ignore_dc = ignore_dc
         self.device = device
 
@@ -49,7 +52,8 @@ class Lattice:
         self.freqs2d_s2 = (self.freqs2d[:, 0] ** 2 + self.freqs2d[:, 1] ** 2).view(1, -1)  # spatial frequency magnitude at each lattice point, dim0 of length 1 for broadcasting across multiple images
         self.freqs2d_angle = torch.atan2(self.freqs2d[:, 1], self.freqs2d[:, 0]).view(1, -1)  # spatial frequency angle from x axis at each lattice point
 
-    def get_downsample_coords(self, boxsize_new):
+    def get_downsample_coords(self,
+                              boxsize_new: int) -> torch.Tensor:
         """
         Return a 2-D lattice of coordinates representing a downsampled (fourier-cropped) copy of the original lattice.
         :param boxsize_new: number of grid points along each dimension in the downsampled lattice. Should be odd.
@@ -80,8 +84,8 @@ class Lattice:
             return self.square_mask[sidelength]
 
         # sanity check inputs
-        assert sidelength <= self.boxsize
-        assert sidelength % 2 == 1, f'Square mask side length ({sidelength=}) must be an odd integer to be centered on odd-length lattice'
+        assert sidelength <= self.boxsize, f'Square mask with side length ({sidelength=}) too large for lattice with size {self.boxsize}'
+        assert sidelength % 2 == 1, f'Square mask with side length ({sidelength=}) must be an odd integer to be centered on odd-length lattice'
 
         # calculate the range of the original lattice to keep after masking
         ind_low = self.boxcenter - sidelength // 2
@@ -104,7 +108,6 @@ class Lattice:
 
     def get_circular_mask(self,
                           diameter: int) -> torch.Tensor:
-        # TODO update usages to diameter not R
         """
         Return a binary mask for self.coords which restricts coordinates to a centered circular lattice
         :param diameter: number of grid points to include in the mask along each dimension
@@ -158,7 +161,7 @@ class Lattice:
 
         # resample the images on the rotated grids
         images = images.expand(len(theta), *images.shape)  # shape (Q, B, Y, X)
-        # use "border" padding rather than "0" padding to avoid introducing abrupt level transitions
+        # use "border" padding rather than "0" padding to avoid introducing abrupt level transitions for grid corners that are rotated out of input range (-1, 1)
         rotated = F.grid_sample(images, grid, padding_mode='border')  # shape (Q, B, Y, X)
 
         return rotated.transpose(0, 1)  # shape (B, Q, Y, X)
