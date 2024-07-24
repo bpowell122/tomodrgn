@@ -219,30 +219,46 @@ class Lattice:
         return c * images + s * images[:, :, np.arange(len(coords) - 1, -1, -1)]
 
 
+class EvenLattice:
 
-class EvenLattice(Lattice):
-    '''For a DxD lattice where D is even, we set D/2,D/2 pixel to the center'''
-    def __init__(self, D, extent=0.5, ignore_DC=False, device=None):
+    def __init__(self,
+                 boxsize: int,
+                 extent: float = 0.5,
+                 ignore_dc: bool = False,
+                 device: torch.device | None = None):
+        """
+        Class for handling a 2-D voxel grid with an even number of points along each dimension.
+        Grid is centered at `(0,0)` and runs from `-extent` (inclusive) to `+extent` (exclusive) with `boxsize` points.
+        :param boxsize: number of grid points along each dimension. Should be even.
+        :param extent: maximum value of the grid along each dimension, typically <= 0.5
+        :param ignore_dc: whether to exclude the DC component (0, 0) when generating masks via methods of this class.
+        :param device: torch device on which to store tensor attributes and return tensors from methods of this class.
+        """
+
+        # sanity check inputs
+        assert boxsize % 2 == 0, "Lattice size must be even"
+        if ignore_dc:
+            raise NotImplementedError
+
+        # create the lattice of 2-D points along the X-Y plane in 3-D space
         # centered and scaled xy plane, values between -1 and 1
         # endpoint=False since FT is not symmetric around origin
-        assert D % 2 == 0, "Lattice size must be even"
-        if ignore_DC: raise NotImplementedError
-        x0, x1 = np.meshgrid(np.linspace(-1, 1, D, endpoint=False), 
-                             np.linspace(-1, 1, D, endpoint=False))
-        coords = np.stack([x0.ravel(),x1.ravel(),np.zeros(D**2)],1).astype(np.float32)
+        x0, x1 = np.meshgrid(np.linspace(-1, 1, boxsize, endpoint=False),
+                             np.linspace(-1, 1, boxsize, endpoint=False))
+        coords = np.stack([x0.ravel(), x1.ravel(), np.zeros(boxsize ** 2)], 1).astype(np.float32)
         self.coords = torch.tensor(coords, device=device)
-        self.extent = extent
-        self.D = D
-        self.D2 = int(D/2)
 
-        c = 2/(D-1)*(D/2) -1 
-        self.center = torch.tensor([c,c], device=device) # pixel coordinate for img[D/2,D/2]
-        
+        # additional attributes about the lattice
+        self.extent = extent
+        self.boxsize = boxsize
+        self.boxcenter = int(boxsize / 2)  # coords center in 0-indexed space, boxsize=64 should give boxcenter of 32
+        self.center = torch.tensor([0., 0.], device=device)  # coords center in coordinate space
+        self.ignore_dc = ignore_dc
+        self.device = device
+
+        # create dictionaries to cache computation of masks with given radius / sidelength
         self.square_mask = {}
         self.circle_mask = {}
-
-        self.ignore_DC = ignore_DC
-        self.device = device
 
     def get_downsampled_coords(self, d):
         raise NotImplementedError
