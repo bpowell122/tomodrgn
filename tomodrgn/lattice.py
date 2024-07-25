@@ -155,8 +155,8 @@ class Lattice:
         sin = torch.sin(theta)
         rot = torch.stack([cos, sin, -sin, cos], 1).view(-1, 2, 2)
 
-        # rescale the lattice from (-0.5, 0.5) to (-1, 1) and rotate all lattice points counterclockwise by theta radians
-        grid = self.coords[:, 0:2] / self.extent @ rot  # shape (Q, Y*X, 2)
+        # rotate all lattice points counterclockwise by theta radians
+        grid = self.coords[:, 0:2] @ rot  # shape (Q, Y*X, 2)
         grid = grid.view(len(rot), self.boxsize, self.boxsize, 2)  # shape (Q, Y, X, 2)
 
         # correct for translational offsets
