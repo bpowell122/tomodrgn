@@ -17,7 +17,7 @@ def load_particles(mrcs_txt_star: str,
     """
     Load particle stack from a .mrcs file, a .star file, or a .txt file containing paths to .mrcs files
     :param mrcs_txt_star: path to .mrcs, .star, or .txt file referencing images to load
-    :param lazy: return numpy array if True, or return list of LazyImages
+    :param lazy: whether to load particle images now in memory (False) or later on-the-fly (True)
     :param datadir: relative or absolute path to overwrite path to particle image .mrcs specified in the STAR file
     :return: numpy array of particle images of shape (n_images, boxsize+1, boxsize+1), or list of LazyImage objects
     """
@@ -177,7 +177,7 @@ class TiltSeriesMRCData(data.Dataset):
             images = np.asarray([self.ptcls[i].get() for i in ptcl_img_ind])
             if self.window:
                 images *= self.real_space_2d_mask
-            for i, img in enumerate(images):
+            for (i, img) in enumerate(images):
                 images[i] = fft.ht2_center(img)
             if self.invert_data:
                 images *= -1
@@ -204,9 +204,9 @@ class TiltSeriesMRCData(data.Dataset):
             decoder_mask = np.repeat(self.hartley_2d_mask[np.newaxis, :, :], len(ptcl_img_ind), axis=0)
         if self.recon_tilt_weight:
             tilts = self.tilts[ptcl_img_ind]
-            tilt_weights = np.cos(tilts)
+            tilt_weights = dose.calculate_tilt_weights(tilts)
         else:
-            tilt_weights = np.ones(len(ptcl_img_ind))
+            tilt_weights = np.ones(len(ptcl_img_ind), dtype=images.stype)
         decoder_weights = dose.combine_dose_tilt_weights(dose_weights, tilt_weights).astype(np.float32)
 
         return images, rot, trans, ctf_params, decoder_weights, decoder_mask, idx_ptcl
@@ -348,7 +348,7 @@ class TiltSeriesMRCData(data.Dataset):
         imgs = np.asarray([self.ptcls[i].get() for i in random_imgs_for_normalization])
         if self.window:
             imgs *= self.real_space_2d_mask
-        for i, img in enumerate(imgs):
+        for (i, img) in enumerate(imgs):
             imgs[i] = fft.ht2_center(img)
         if self.invert_data:
             imgs *= -1
