@@ -221,7 +221,7 @@ def write_mapback_script(df_one_tomo, outdir_one_tomo, all_vols, rots_cols, tran
 
             # prepare rotation matrix
             eulers_relion = df_one_tomo.iloc[i][rots_cols].to_numpy(dtype=np.float32)
-            rot = utils.R_from_relion(eulers_relion[0], eulers_relion[1], eulers_relion[2])
+            rot = utils.rot_3d_from_relion(eulers_relion[0], eulers_relion[1], eulers_relion[2])
 
             # prepare tomogram-scale translations
             coord_px = df_one_tomo.iloc[i][trans_cols].to_numpy(dtype=np.float32)

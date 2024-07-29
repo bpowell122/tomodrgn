@@ -218,7 +218,7 @@ class TiltSeriesMRCData(data.Dataset):
         euler = self.star.df[self.star.headers_rot].to_numpy(dtype=np.float32)
         log(f'First image Euler angles (Rot, Tilt, Psi): {euler[0]}')
         log('Converting to rotation matrix:')
-        rot = np.asarray([utils.R_from_relion(*x) for x in euler], dtype=np.float32)
+        rot = np.asarray([utils.rot_3d_from_relion(*x) for x in euler], dtype=np.float32)
         log(f'First image rotation matrix: {rot[0]}')
 
         # parse translations (if present, default none for warp-exported particleseries)
