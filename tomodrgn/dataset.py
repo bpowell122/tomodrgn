@@ -6,7 +6,7 @@ import numpy as np
 from copy import deepcopy
 from torch.utils import data
 
-from tomodrgn import fft, mrc, utils, starfile, dose, ctf
+from tomodrgn import fft, mrc, utils, starfile, dose, ctf, lattice
 
 log = utils.log
 
@@ -151,9 +151,9 @@ class TiltSeriesMRCData(data.Dataset):
         self.boxsize_ht = int(self.ctf_params[0, 0] + 1)
 
         # get critical dose for each spatial frequency
-        spatial_frequencies_critical_dose, hartley_2d_mask = self._get_spatial_frequencies_critical_dose()
+        spatial_frequencies_critical_dose = self._get_spatial_frequencies_critical_dose()
         self.spatial_frequencies_critical_dose = spatial_frequencies_critical_dose
-        self.hartley_2d_mask = hartley_2d_mask
+        self.hartley_2d_mask = lattice.Lattice(self.boxsize_ht, ignore_dc=True).get_circular_mask(self.boxsize_ht).numpy()
         self.cumulative_doses = self.star.df[self.star.header_ptcl_dose].to_numpy(dtype=np.float32)
         self.tilts = self.star.df[self.star.header_ptcl_tilt].to_numpy(dtype=np.float32)
 
@@ -371,7 +371,7 @@ class TiltSeriesMRCData(data.Dataset):
 
         return ntilts_min, ntilts_max
 
-    def _get_spatial_frequencies_critical_dose(self) -> tuple[np.ndarray, np.ndarray]:
+    def _get_spatial_frequencies_critical_dose(self) -> np.ndarray:
         """
         Calculate the critical dose at all spatial frequencies sampled by the dataset's box size and pixel size.
         :return: spatial_frequencies_critical_dose: numpy array of critical dose at each spatial frequency, shape (real_boxsize+1, real_boxsize+1)
@@ -382,9 +382,8 @@ class TiltSeriesMRCData(data.Dataset):
 
         spatial_frequencies = dose.calculate_spatial_frequencies(angpix, self.boxsize_ht).astype(np.float32)
         spatial_frequencies_critical_dose = dose.calculate_critical_dose_per_frequency(spatial_frequencies, voltage).astype(np.float32)
-        hartley_2d_mask = dose.calculate_circular_mask(self.boxsize_ht)
 
-        return spatial_frequencies_critical_dose, hartley_2d_mask
+        return spatial_frequencies_critical_dose
 
     @classmethod
     def load(cls,

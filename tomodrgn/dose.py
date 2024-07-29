@@ -1,3 +1,6 @@
+"""
+Functions to model transmission electron microscopy signal degradation as a function of cumulative electron dose and stage tilt
+"""
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
@@ -131,24 +134,6 @@ def combine_dose_tilt_weights(dose_weights: np.ndarray,
     """
     weights = dose_weights * tilt_weights.reshape(-1, 1, 1)
     return weights
-
-
-def calculate_circular_mask(boxsize_ht: int) -> np.ndarray:
-    """
-    Produces binary mask of circle inscribed in box of side length D, with central pixel set to False (DC component)
-    :param boxsize_ht: scalar of box size in pixels, dtype int
-    :return: numpy array of circular mask of pixels, shape (D, D), dtype bool
-    """
-    center = (boxsize_ht // 2, boxsize_ht // 2)
-    radius = boxsize_ht // 2
-
-    grid_y, grid_x = np.ogrid[:boxsize_ht, :boxsize_ht]
-    dist_from_center = np.sqrt((grid_x - center[0]) ** 2 + (grid_y - center[1]) ** 2)
-
-    circular_mask = dist_from_center <= radius
-    circular_mask[center] = False
-
-    return circular_mask
 
 
 def calculate_dose_mask(dose_weights: np.ndarray,
