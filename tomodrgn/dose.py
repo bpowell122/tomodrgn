@@ -124,15 +124,15 @@ def calculate_tilt_weights(tilts: np.ndarray) -> np.ndarray:
     return tilt_weights
 
 
-def combine_dose_tilt_weights(dose_weights: np.ndarray,
-                              tilt_weights: np.ndarray) -> np.ndarray:
+def combine_dose_tilt_weights(dose_weights: list[np.ndarray],
+                              tilt_weights: list[np.ndarray]) -> list[np.ndarray]:
     """
     Merge dose weights (per frequency and per tilt) with tilt weights (per tilt) for single output array
-    :param dose_weights: numpy array of weight for each spatial frequency at each cumulative dose, shape (ntilts, D, D), dtype float
-    :param tilt_weights: numpy array of weight per tilt image, shape (ntilts,) dtype float
-    :return: merged weights per frequency and per tilt, shape (ntilts, D, D), dtype float
+    :param dose_weights: list of 2-D numpy arrays of weight for each spatial frequency at each cumulative dose, shape (D, D), dtype float
+    :param tilt_weights: list of scalar weights per tilt image, shape (1), dtype float
+    :return: merged weights per frequency and per tilt, shape (D, D), dtype float
     """
-    weights = dose_weights * tilt_weights.reshape(-1, 1, 1)
+    weights = [dose_weight * tilt_weight for dose_weight, tilt_weight in zip(dose_weights, tilt_weights)]
     return weights
 
 

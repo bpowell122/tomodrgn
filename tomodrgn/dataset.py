@@ -150,12 +150,15 @@ class TiltSeriesMRCData(data.Dataset):
         self.ctf_params = ctf_params
         self.boxsize_ht = int(self.ctf_params[0, 0] + 1)
 
-        # get critical dose for each spatial frequency
-        spatial_frequencies_critical_dose = self._get_spatial_frequencies_critical_dose()
-        self.spatial_frequencies_critical_dose = spatial_frequencies_critical_dose
-        self.hartley_2d_mask = lattice.Lattice(self.boxsize_ht, ignore_dc=True).get_circular_mask(self.boxsize_ht).numpy()
+        # get dose weights and masks for each spatial frequency
         self.cumulative_doses = self.star.df[self.star.header_ptcl_dose].to_numpy(dtype=np.float32)
+        spatial_frequency_dose_weights, spatial_frequency_dose_masks = self._precalculate_dose_weights_masks()
+        self.spatial_frequency_dose_weights = spatial_frequency_dose_weights
+        self.spatial_frequency_dose_masks = spatial_frequency_dose_masks
+
+        # get tilt weights for each image
         self.tilts = self.star.df[self.star.header_ptcl_tilt].to_numpy(dtype=np.float32)
+        self.spatial_frequency_tilt_weights = self._precalculate_tilt_weights()
 
     def __len__(self):
         return self.nptcls
@@ -186,9 +189,6 @@ class TiltSeriesMRCData(data.Dataset):
         else:
             images = self.ptcls[ptcl_img_ind]
 
-        # get metadata to be used in calculating what to return
-        cumulative_doses = self.cumulative_doses[ptcl_img_ind]
-
         # get the associated metadata to be returned
         rot = self.rot[ptcl_img_ind]
         # collate_fn does not allow returning None, so return 0 to tell downstream usages to skip translating image
@@ -196,18 +196,11 @@ class TiltSeriesMRCData(data.Dataset):
         # collate_fn does not allow returning None, so return 0 to tell downstream usages to skip applying CTF to image
         ctf_params = 0 if self.ctf_params is None else self.ctf_params[ptcl_img_ind]
 
-        if self.recon_dose_weight or self.l_dose_mask:
-            dose_weights = dose.calculate_dose_weights(self.spatial_frequencies_critical_dose, cumulative_doses).astype(images.dtype)
-            decoder_mask = dose.calculate_dose_mask(dose_weights, self.hartley_2d_mask) if self.l_dose_mask else np.repeat(self.hartley_2d_mask[np.newaxis, :, :], len(ptcl_img_ind), axis=0)
-        else:
-            dose_weights = np.ones((len(ptcl_img_ind), self.boxsize_ht, self.boxsize_ht), dtype=images.dtype)
-            decoder_mask = np.repeat(self.hartley_2d_mask[np.newaxis, :, :], len(ptcl_img_ind), axis=0)
-        if self.recon_tilt_weight:
-            tilts = self.tilts[ptcl_img_ind]
-            tilt_weights = dose.calculate_tilt_weights(tilts)
-        else:
-            tilt_weights = np.ones(len(ptcl_img_ind), dtype=images.stype)
-        decoder_weights = dose.combine_dose_tilt_weights(dose_weights, tilt_weights).astype(np.float32)
+        # get weighting and masking metadata to be returned
+        tilt_weights = [self.spatial_frequency_tilt_weights.get(tilt) for tilt in self.tilts[ptcl_img_ind]]
+        dose_weights = [self.spatial_frequency_dose_weights.get(cumulative_dose) for cumulative_dose in self.cumulative_doses[ptcl_img_ind]]
+        decoder_mask = [self.spatial_frequency_dose_masks.get(cumulative_dose) for cumulative_dose in self.cumulative_doses[ptcl_img_ind]]
+        decoder_weights = dose.combine_dose_tilt_weights(dose_weights, tilt_weights)
 
         return images, rot, trans, ctf_params, decoder_weights, decoder_mask, idx_ptcl
 
@@ -371,19 +364,52 @@ class TiltSeriesMRCData(data.Dataset):
 
         return ntilts_min, ntilts_max
 
-    def _get_spatial_frequencies_critical_dose(self) -> np.ndarray:
+    def _precalculate_dose_weights_masks(self) -> tuple[dict[float, np.ndarray], dict[float, np.ndarray]]:
         """
-        Calculate the critical dose at all spatial frequencies sampled by the dataset's box size and pixel size.
-        :return: spatial_frequencies_critical_dose: numpy array of critical dose at each spatial frequency, shape (real_boxsize+1, real_boxsize+1)
-        :return: hartley_mask: numpy array of binary mask of spatial frequencies to consider when drawing upon the critical dose array, shape (real_boxsize+1, real_boxsize+1)
+        Precalculate the spatial frequency weights and masks based on fixed dose exposure curves.
+        :return: frequency_weights_dose: dict mapping cumulative dose to numpy array of relative weights at each spatial frequency, shape (boxsize_ht, boxsize_ht)
+        :return: frequency_masks_dose: dict mapping cumulative dose to numpy array of mask of spatial frequencies to evaluate, shape (boxsize_ht, boxsize_ht)
         """
+        # get the unique set of dose values for which to calculate 2D weights and masks
+        unique_doses = np.unique(self.cumulative_doses)
+
+        # calculate the critical dose per spatial frequency given pixel size, voltage, and box size
         angpix = self.star.get_tiltseries_pixelsize()
         voltage = self.star.get_tiltseries_voltage()
-
         spatial_frequencies = dose.calculate_spatial_frequencies(angpix, self.boxsize_ht).astype(np.float32)
         spatial_frequencies_critical_dose = dose.calculate_critical_dose_per_frequency(spatial_frequencies, voltage).astype(np.float32)
 
-        return spatial_frequencies_critical_dose
+        # calculate the 2-D spatial frequency weights for each dose and cache result
+        unique_dose_weights = dose.calculate_dose_weights(spatial_frequencies_critical_dose, unique_doses).astype(np.float32)
+        if self.recon_dose_weight:
+            frequency_weights_dose = {cumulative_dose: frequency_weights_per_dose
+                                      for cumulative_dose, frequency_weights_per_dose in zip(unique_doses, unique_dose_weights)}
+        else:
+            frequency_weights_dose = {cumulative_dose: np.ones((self.boxsize_ht, self.boxsize_ht), dtype=np.float32)
+                                      for cumulative_dose in unique_doses}
+
+        # calculate the 2-D spatial frequency masks for each dose and cache result
+        hartley_2d_mask = lattice.Lattice(boxsize=self.boxsize_ht, extent=0.5, ignore_dc=True).get_circular_mask(diameter=self.boxsize_ht).numpy()
+        frequency_masks_dose = {cumulative_dose: dose.calculate_dose_mask(frequency_weights_per_dose, hartley_2d_mask)
+                                for cumulative_dose, frequency_weights_per_dose in zip(unique_doses, unique_dose_weights)}
+
+        return frequency_weights_dose, frequency_masks_dose
+
+    def _precalculate_tilt_weights(self) -> dict[float, np.ndarray]:
+        """
+        Precalculate the spatial frequency weights and masks based on global stage tilt.
+        :return: frequency_weights_tilt: dict mapping stage tilt to numpy array of relative weights at each spatial frequency, shape (1)
+        """
+        # get the unique set of tilt values for which to calculate 2D weights
+        unique_tilts = np.unique(self.tilts)
+
+        # calculate the per-image weights for each tilt and cache result
+        if self.recon_tilt_weight:
+            frequency_weights_tilt = {tilt: dose.calculate_tilt_weights(tilt) for tilt in unique_tilts}
+        else:
+            frequency_weights_tilt = {tilt: np.array(1) for tilt in unique_tilts}
+
+        return frequency_weights_tilt
 
     @classmethod
     def load(cls,
