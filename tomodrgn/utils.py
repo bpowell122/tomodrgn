@@ -8,6 +8,7 @@ import numpy as np
 import pickle
 import collections
 import functools
+from typing import Any
 from tomodrgn import mrc, fft
 from scipy import ndimage
 from scipy.spatial.transform import Rotation
@@ -17,18 +18,35 @@ import torch
 _verbose = False
 
 
-def log(msg):
+def log(msg: str | Exception) -> None:
+    """
+    Write a string to STDOUT with a standardized datetime format.
+    :param msg: Text to write to STDOUT.
+    :return: None
+    """
     print('{}     {}'.format(dt.now().strftime('%Y-%m-%d %H:%M:%S'), msg))
     sys.stdout.flush()
 
 
-def vlog(msg):
+def vlog(msg: str) -> None:
+    """
+    Write a string to STDOUT with a standardized datetime format only if `_verbose` is True.
+    :param msg: Text to write to STDOUT.
+    :return: None
+    """
     if _verbose:
         print('{}     {}'.format(dt.now().strftime('%Y-%m-%d %H:%M:%S'), msg))
         sys.stdout.flush()
 
 
-def flog(msg, outfile):
+def flog(msg: str,
+         outfile: str) -> None:
+    """
+    Write a string to `outfile` with a standardized datetime format.
+    :param msg: Text to write to `outfile`.
+    :param outfile: Name of log file to write.
+    :return: None
+    """
     msg = '{}     {}'.format(dt.now().strftime('%Y-%m-%d %H:%M:%S'), msg)
     print(msg)
     sys.stdout.flush()
@@ -40,17 +58,18 @@ def flog(msg, outfile):
 
 
 class Memoized(object):
-    """Decorator. Caches a function's return value each time it is called.
-   If called later with the same arguments, the cached value is returned
-   (not reevaluated).
-   """
+    """
+    Decorator. Caches a function's return value each time it is called.
+    If called later with the same arguments, the cached value is returned
+    (not reevaluated).
+    """
 
     def __init__(self, func):
         self.func = func
         self.cache = {}
 
     def __call__(self, *args):
-        if not isinstance(args, collections.Hashable):
+        if not isinstance(args, collections.abc.Hashable):
             # uncacheable. a list, for instance.
             # better to not cache than blow up.
             return self.func(*args)
@@ -70,20 +89,42 @@ class Memoized(object):
         return functools.partial(self.__call__, obj)
 
 
-def load_pkl(pkl):
+def load_pkl(pkl: str) -> Any:
+    """
+    Convenience function to read a binary pickle file.
+    Only performs one read of the pickle file (so will not return multiple values if the file was created with repeated calls to `pickle.dump`)
+    :param pkl: Path to file to load from disk.
+    :return: Unpickled object.
+    """
     with open(pkl, 'rb') as f:
         x = pickle.load(f)
     return x
 
 
-def save_pkl(data, out_pkl):
+def save_pkl(data: Any,
+             out_pkl: str) -> None:
+    """
+    Convenience function to write `data` to a binary pickle file.
+    :param data: Data to be written to disk.
+    :param out_pkl: Path to file to write to disk.
+    :return: None
+    """
     if os.path.exists(out_pkl):
         vlog(f'Warning: {out_pkl} already exists. Overwriting.')
     with open(out_pkl, 'wb') as f:
         pickle.dump(data, f)
 
 
-def rot_3d_from_eman(a, b, y):
+def rot_3d_from_eman(a: float,
+                     b: float,
+                     y: float) -> np.ndarray:
+    """
+    Convert Euler angles from EMAN to a 3-D rotation matrix.
+    :param a: Rotation angle A in degrees.
+    :param b: Rotation angle B in degrees.
+    :param y: Rotation angle Y in degrees.
+    :return: 3-D rotation matrix, shape (3, 3)
+    """
     a *= np.pi / 180.
     b *= np.pi / 180.
     y *= np.pi / 180.
@@ -102,7 +143,16 @@ def rot_3d_from_eman(a, b, y):
     return rot
 
 
-def rot_3d_from_relion(a, b, y):
+def rot_3d_from_relion(a: float,
+                       b: float,
+                       y: float) -> np.ndarray:
+    """
+    Convert Euler angles from RELION to a 3-D rotation matrix.
+    :param a: Rotation angle A in degrees (typically _rlnAngleRot).
+    :param b: Rotation angle B in degrees (typically _rlnAngleTilt).
+    :param y: Rotation angle Y in degrees (typically _rlnAnglePsi).
+    :return: 3-D rotation matrix, shape (3, 3)
+    """
     a *= np.pi / 180.
     b *= np.pi / 180.
     y *= np.pi / 180.
@@ -120,8 +170,14 @@ def rot_3d_from_relion(a, b, y):
     return rot
 
 
-def rot_3d_from_relion_scipy(euler_, degrees=True):
-    """Nx3 array of RELION euler angles to rotation matrix"""
+def rot_3d_from_relion_scipy(euler_: np.ndarray,
+                             degrees: bool = True) -> np.ndarray:
+    """
+    Convert a Nx3 array of RELION euler angles to rotation matrices using Scipy Rotations class.
+    :param euler_: Array of Euler angles to convert to rotation matrices.
+    :param degrees: Whether angles in `euler_` are expressed in degrees.
+    :return: Nx3x3 array of rotation matrices.
+    """
     euler = euler_.copy()
     if euler.shape == (3,):
         euler = euler.reshape(1, 3)
@@ -136,8 +192,14 @@ def rot_3d_from_relion_scipy(euler_, degrees=True):
     return rot
 
 
-def rot_3d_to_relion_scipy(rot, degrees=True):
-    """Nx3x3 rotation matrices to RELION euler angles"""
+def rot_3d_to_relion_scipy(rot: np.ndarray,
+                           degrees: bool = True) -> np.ndarray:
+    """
+    Convert an array of Nx3x3 rotation matrices to RELION euler angles using Scipy Rotations class.
+    :param rot: Nx3x3 array of rotation matrices.
+    :param degrees: Whether to express the output Euler angles in degrees
+    :return: Nx3 array of RELION euler angles
+    """
     if rot.shape == (3, 3):
         rot = rot.reshape(1, 3, 3)
     assert len(rot.shape) == 3, "Input must have dim Nx3x3"
@@ -157,8 +219,12 @@ def rot_3d_to_relion_scipy(rot, degrees=True):
     return euler
 
 
-def xrot(tilt_deg):
-    """Return rotation matrix associated with rotation over the x-axis"""
+def xrot(tilt_deg: float) -> np.ndarray:
+    """
+    Return rotation matrix associated with rotation over the x-axis.
+    :param tilt_deg: Rotation angle in degrees.
+    :return: 3x3 rotation matrix.
+    """
     theta = tilt_deg * np.pi / 180
     tilt = np.array([[1., 0., 0.],
                      [0, np.cos(theta), -np.sin(theta)],
@@ -166,8 +232,12 @@ def xrot(tilt_deg):
     return tilt
 
 
-def yrot(tilt_deg):
-    """Return rotation matrix associated with rotation over the y-axis"""
+def yrot(tilt_deg: float) -> np.ndarray:
+    """
+    Return rotation matrix associated with rotation over the y-axis
+    :param tilt_deg: Rotation angle in degrees.
+    :return: 3x3 rotation matrix.
+    """
     theta = tilt_deg * np.pi / 180
     tilt = np.array([[np.cos(theta), 0., np.sin(theta)],
                      [0., 1., 0.],
@@ -176,32 +246,46 @@ def yrot(tilt_deg):
 
 
 @Memoized
-def _zero_sphere_helper(boxsize):
+def _zero_sphere_helper(boxsize: int) -> np.ndarray:
+    """
+    Calculate a mask of coordinates corresponding to a sphere inscribed within a cube.
+    :param boxsize: The number of discrete points along each cube edge
+    :return: mask array corresponding to values within the sphere, shape (boxsize, boxsize, boxsize)
+    """
     xx = np.linspace(-1, 1, boxsize, endpoint=True if boxsize % 2 == 1 else False)
     z, y, x = np.meshgrid(xx, xx, xx)
     coords = np.stack((x, y, z), -1)
     r = np.sum(coords ** 2, axis=-1) ** .5
-    return np.where(r > 1)
+    return np.where(r > 1, 0, 1)
 
 
-def zero_sphere(vol):
-    """Zero values of @vol outside the sphere"""
+def zero_sphere(vol: np.ndarray) -> np.ndarray:
+    """
+    Set volume values outside of a sphere inscribed within a cube to zero.
+    :param vol: Volume array to be modified, shape (boxsize, boxsize, boxsize).
+    :return: Volume array after setting corner values to zero, shape (boxsize, boxsize, boxsize).
+    """
     assert len(set(vol.shape)) == 1, 'volume must be a cube'
     boxsize = vol.shape[0]
     tmp = _zero_sphere_helper(boxsize)
-    vlog('Zeroing {} pixels'.format(len(tmp[0])))
-    vol[tmp] = 0
+    vlog('Zeroing {} pixels'.format(np.sum(tmp)))
+    vol *= tmp
     return vol
 
 
-def calc_fsc(vol1, vol2, mask='none', dilate=3, dist=10):
+def calc_fsc(vol1: np.ndarray | str,
+             vol2: np.ndarray | str,
+             mask: str | None = None,
+             dilate: int = 3,
+             dist: int = 10) -> tuple[np.ndarray, np.ndarray]:
     """
-    Function to calculate the FSC between two volumes
-    vol1: path to volume1.mrc, boxsize D,D,D, or ndarray of vol1 voxels
-    vol2: path to volume2.mrc, boxsize D,D,D, or ndarray of vol2 voxels
-    mask: one of ['none', 'sphere', 'tight', 'soft', path to mask.mrc with boxsize D,D,D]
-    dilate: int of px to expand tight mask when creating soft mask
-    dist: int of px over which to apply soft edge when creating soft mask
+    Calculate the FSC between two volumes with optional masking.
+    :param vol1: path to volume1.mrc, boxsize D,D,D, or ndarray of vol1 voxels
+    :param vol2: path to volume2.mrc, boxsize D,D,D, or ndarray of vol2 voxels
+    :param mask: mask to apply to volumes, one of [None, 'sphere', 'tight', 'soft', path to mask.mrc with boxsize D,D,D]
+    :param dilate: for soft mask, number of pixels to expand auto-determined tight mask
+    :param dist: for soft mask, number of pixels over which to apply soft edge
+    :return: x: spatial resolution in units of (1/px). fsc: the Fourier Shell Correlation at each resolution shell specified by `x`.
     """
     # load masked volumes in real space
     if isinstance(vol1, np.ndarray):
@@ -222,7 +306,7 @@ def calc_fsc(vol1, vol2, mask='none', dilate=3, dist=10):
     bin_labels = np.searchsorted(bins, r, side='left')  # bin_label=0 is DC, bin_label=r_max+r_step is highest included freq, bin_label=r_max+2*r_step is frequencies excluded by D//2 spherical mask
 
     # prepare mask
-    if mask == 'none':
+    if mask is None:
         mask = np.ones_like(vol1)
     elif mask == 'sphere':
         mask = np.where(r <= boxsize // 2, True, False)
@@ -259,10 +343,15 @@ def calc_fsc(vol1, vol2, mask='none', dilate=3, dist=10):
     return x, fsc
 
 
-def lowpass_filter(vol_ft, angpix, lowpass):
+def lowpass_filter(vol_ft: np.ndarray | torch.Tensor,
+                   angpix: float,
+                   lowpass: float) -> np.ndarray | torch.Tensor:
     """
     Lowpass-filters a volume in reciprocal space
-    Takes in a reciprocal-space volume array, returns a reciprocal-space volume array of same dtype
+    :param vol_ft: Fourier space symmetrized (DC is box center) volume as numpy array or torch tensor, shape (boxsize, boxsize, boxsize)
+    :param angpix: Pixel size of the volume in Ångstroms per pixel.
+    :param lowpass: Resolution to filter volume in Ångstroms.
+    :return: Lowpass filtered fourier space symmetrized volume, shape (boxsize, boxsize, boxsize).
     """
     # get real space box width (assumes non-symmetrized box, i.e. even box width)
     boxsize = vol_ft.shape[0]
@@ -294,7 +383,13 @@ def lowpass_filter(vol_ft, angpix, lowpass):
     return vol_ft
 
 
-def check_memory_usage():
+def check_memory_usage() -> list[str]:
+    """
+    Get the current VRAM memory usage of each visible GPU.
+    Tries using torch functionality to get memory usage.
+    If installed torch does not have this method available, then uses subprocess call to nvidia-smi and parses output.
+    :return: VRAM usage of each visible GPU as a pre-formatted string.
+    """
     try:
         usage = [torch.cuda.mem_get_info(i) for i in range(torch.cuda.device_count())]
         return [f'{(total - free) // 1024 ** 2} MiB / {total // 1024 ** 2} MiB' for free, total in usage]
@@ -303,11 +398,21 @@ def check_memory_usage():
         return [f'{gpu.split(", ")[0]} / {gpu.split(", ")[1]}' for gpu in gpu_memory_usage]
 
 
-def check_git_revision_hash(repo_path):
+def check_git_revision_hash(repo_path: str) -> str:
+    """
+    Get the git revision hash of a git repository.
+    Uses subprocess call to git and parses output.
+    :param repo_path: Path to repository for which to check revision hash.
+    :return: Git revision hash of HEAD in `repo_path`.
+    """
     return subprocess.check_output(['git', '--git-dir', repo_path, 'rev-parse', 'HEAD']).decode('ascii').strip()
 
 
-def get_default_device():
+def get_default_device() -> torch.device:
+    """
+    Determine whether a CUDA-capable GPU is availble or not for torch operations.
+    :return: `torch.device('cuda')` if CUDA-capable GPU is available, else `torch.device('cpu')`.
+    """
     use_cuda = torch.cuda.is_available()
     device = torch.device('cuda' if use_cuda else 'cpu')
     log(f'Use cuda {use_cuda}')
@@ -316,26 +421,68 @@ def get_default_device():
     return device
 
 
-def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='*', end_character="\r"):
-    percent = f'{100 * iteration / float(total):3.{decimals}f}'
-    filled_length = int(length * iteration // total)
+def print_progress_bar(curr_iteration: int,
+                       num_iterations: int,
+                       prefix: str = '',
+                       suffix: str = '',
+                       decimals: int = 1,
+                       length: int = 100,
+                       fill: str = '*',
+                       end_character: str = "\r") -> None:
+    """
+    Display an ASCII progress bar in STDOUT.
+    Display format is: `PREFIX |*****-----| 50.0% SUFFIX`, updated in-place at STDOUT.
+    Intended method of use is calling this function repeatedly within a loop with updated `curr_iteration`.
+    The final call in which `curr_iteration == num_iterations` updates the progress bar (in place) and adds a newline for subsequent output.
+    :param curr_iteration: the current step number through the process being monitored.
+    :param num_iterations: the total number of steps in the process being monitored.
+    :param prefix: text to be prepended before the progress bar.
+    :param suffix: text to by appended after the progress bar.
+    :param decimals: the number of decimals to show in the % completion text of the progress bar.
+    :param length: the number of characters defining the length of the progress bar.
+            Does not change to preserve a constant display width if prefix, suffix, or decimals change.
+    :param fill: the character used to denote the completed portion of the progress bar.
+    :param end_character: the character at the end of the progress bar, typically carraige return or newline.
+    :return: None
+    """
+    # this function is most often called in a for loop where the value of `iteration` runs from 0 to `total-1`
+    # therefore, offset total to be 0-indexed such that the final iteration has `iteration`==`total`
+    num_iterations = num_iterations - 1
+
+    # prepare the progress bar
+    percent = f'{100 * curr_iteration / float(num_iterations):3.{decimals}f}'
+    filled_length = length * curr_iteration // num_iterations
     bar = fill * filled_length + '-' * (length - filled_length)
+
+    # print the progress bar and flush stdout to ensure it displays correctly
     print(f'\r{prefix} |{bar}| {percent}% {suffix}', end=end_character)
     sys.stdout.flush()
-    if iteration == total:
+
+    # add a newline for the final iteration so that the next text to STDOUT does not overwrite the progress bar
+    if curr_iteration == num_iterations:
         print()
 
 
-def first_n_factors(target, n=1, lower_bound=None):
+@Memoized
+def first_n_factors(target: int,
+                    n: int = 1,
+                    lower_bound: int | None = None) -> list[int]:
     """
-    calculate the first `n` factors of a number `target`, with factors no smaller than `lower_bound`
-    useful to calculate an internal "batch size" when dealing with otherwise ragged tensors that can be freely reshaped
-    enables splitting batch along batch_dim > 1, as required for multi-gpu DataParallel
+    Return a list of the first `n` multiplicative factors of a number `target` where no factor is smaller than `lower_bound`.
+    Useful to reshape arrays or tensors.
+    For example, enables splitting a tensor with batch_dim == 1 to produce batch_dim > 1, as required for multi-gpu DataParallel.
+    :param target: The number for which to calculate multiplicative factors.
+    :param n: The number of multiplicative factors to return.
+    :param lower_bound: The minimum multiplicative factor to return.
+    :return: list of multiplicative factors of target sorted by increasing value
     """
+    # initialize the list of factors (which will always include 1 by definition)
     factors = []
+    # define the efficient upper search limit as the square root of the target number
     upper_bound = target ** 0.5
+    # initialize the factor from which to search increasing values
     i = 2 if lower_bound is None else lower_bound
-    while (len(factors) < n) and (i <= upper_bound):
+    while (len(factors) < n + 1) and (i <= upper_bound):
         if not target % i:
             factors.append(i)
         i += 1
