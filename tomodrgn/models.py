@@ -737,9 +737,17 @@ class MedianPool1d(nn.Module):
 
 class DataParallelPassthrough(torch.nn.DataParallel):
     """
-    Class to wrap underlying module in DataParallel for GPU-parallelized computations, but allow accessing underlying module attributes and methods
+    Class to wrap underlying module in DataParallel for GPU-parallelized computations, but allow accessing underlying module attributes and methods.
+    Intended use: `model = DataParallelPassthrough(model)`
     """
-    def __getattr__(self, name):
+
+    def __getattr__(self,
+                    name: str):
+        """
+        Get the requested attribute or method from the parent DataParallel module if it exists, otherwise from the wrapped module.
+        :param name: name of the attribute or method to request
+        :return: the requested attribute or method
+        """
         try:
             return super().__getattr__(name)
         except AttributeError:
