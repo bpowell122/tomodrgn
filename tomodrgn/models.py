@@ -707,7 +707,34 @@ class ResidLinear(nn.Module):
         z = self.linear(x) + x
         return z
 
-        
+
+class MedianPool1d(nn.Module):
+    """
+    Median pool module.
+    Primarily exists due to limitations in pre-existing layer-based definitions of median.
+     * torch.nn does not have a MedianPool module
+     * einops does not support a callable (such as `torch.median`) when defining a Reduce layer.
+    """
+
+    def __init__(self, pooling_axis=-2):
+        """
+        Create the MedianPool1d layer.
+        :param pooling_axis: the tensor axis over which to take the median
+        """
+        super().__init__()
+        self.pooling_axis = pooling_axis
+
+    def forward(self, x):
+        """
+        Pass data forward through the layer.
+        :param x: Input data tensor.
+        :return: Output data tensor.
+        """
+        with autocast(enabled=False):  # torch.quantile and torch.median do not support fp16 so casting to fp32 in case AMP is used
+            x = x.quantile(dim=self.pooling_axis, q=0.5)
+            return x
+
+
 class DataParallelPassthrough(torch.nn.DataParallel):
     """
     Class to wrap underlying module in DataParallel for GPU-parallelized computations, but allow accessing underlying module attributes and methods
