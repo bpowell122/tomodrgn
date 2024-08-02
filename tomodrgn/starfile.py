@@ -808,14 +808,24 @@ class TiltSeriesStarfile(GenericStarfile):
         Assumes all particles have the same pixel size.
         :return: pixel size in Ångstroms/pixel
         """
-        return self.df[self.header_ctf_angpix].iloc[0]
+        pixel_sizes = self.df[self.header_ctf_angpix].value_counts().index.to_numpy()
+        if len(pixel_sizes) > 1:
+            print(f'WARNING: found multiple pixel sizes {pixel_sizes} in star file! '
+                  f' TomoDRGN does not support this for any volume-space reconstructions (e.g. backproject_voxel, train_vae).'
+                  f' Will use the most common pixel size {pixel_sizes[0]}, but this will almost certainly lead to incorrect results.')
+        return pixel_sizes[0]
 
     def get_tiltseries_voltage(self) -> float | int:
         """
         Returns the voltage of the microscope used to image the particles in kV.
         :return: voltage in kV
         """
-        return self.df[self.header_ctf_voltage].iloc[0]
+        voltages = self.df[self.header_ctf_voltage].value_counts().index.to_numpy()
+        if len(voltages) > 1:
+            print(f'WARNING: found multiple voltages {voltages} in star file! '
+                  f' TomoDRGN does not support this for any volume-space reconstructions (e.g. backproject_voxel, train_vae).'
+                  f' Will use the most common voltage {voltages[0]}, but this will almost certainly lead to incorrect results.')
+        return voltages[0]
 
     def get_ptcl_img_indices(self) -> list[np.ndarray[int]]:
         """
