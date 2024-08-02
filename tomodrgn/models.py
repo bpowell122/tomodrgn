@@ -677,13 +677,33 @@ class ResidLinearMLP(nn.Module):
         """
         return self.main(x)
 
-class ResidLinear(nn.Module):
-    def __init__(self, nin, nout):
-        super(ResidLinear, self).__init__()
-        self.linear = nn.Linear(nin, nout)
-        #self.linear = nn.utils.weight_norm(nn.Linear(nin, nout))
 
-    def forward(self, x):
+class ResidLinear(nn.Module):
+    """
+    A Residual Block layer consisting of a single linear layer with an identity skip connection.
+    Note that the identity mapping requires that the number of input and output features are the same for element-wise addition.
+    References: https://arxiv.org/abs/1512.03385
+    """
+
+    def __init__(self,
+                 nin: int,
+                 nout: int):
+        """
+        Create the ResidLinear layer.
+        :param nin: number of input features to the linear layer
+        :param nout: number of output features to the linear layer
+        """
+        super().__init__()
+        self.linear = nn.Linear(nin, nout)
+
+    def forward(self,
+                x: torch.Tensor) -> torch.Tensor:
+        """
+        Pass data forward through the layer.
+        :param x: Input data tensor.
+        :return: Output data tensor.
+        """
+        # output is element-wise addition of the output of the linear layer given x with (identity-mapped) input x
         z = self.linear(x) + x
         return z
 
