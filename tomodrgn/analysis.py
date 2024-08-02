@@ -104,7 +104,8 @@ def cluster_kmeans(z, K, on_data=True, reorder=True):
     '''
     kmeans = KMeans(n_clusters=K,
                     random_state=0,
-                    max_iter=10)
+                    max_iter=10,
+                    n_init=10)  # sklearn/cluster/_kmeans.py:870: FutureWarning: The default value of `n_init` will change from 10 to 'auto' in 1.4. Set the value of `n_init` explicitly to suppress the warning
     labels = kmeans.fit_predict(z)
     centers = kmeans.cluster_centers_
 
