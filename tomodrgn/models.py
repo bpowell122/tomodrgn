@@ -341,6 +341,7 @@ class FTPositionalDecoder(nn.Module):
         :return: Decoded voxel intensities at the specified 3-D spatial frequencies.
         """
         # evaluate model on all pixel coordinates for each image
+        # TODO revisit whether it is worth leveraging Hermitian symmetry to only evaluate half of each image
         full_image = self.decode(coords=coords, z=z)
 
         # return hartley information (FT real - FT imag) for each image
@@ -445,6 +446,7 @@ class FTPositionalDecoder(nn.Module):
         """
         assert not self.training
         with torch.inference_mode():
+            # TODO add amp context manager?
             # evaluate the volume by zslice to avoid memory overflows
             batch_size, boxsize_ht, _, _ = coords.shape
             batch_vol_f = torch.zeros((batch_size, boxsize_ht, boxsize_ht, boxsize_ht), dtype=coords.dtype, device=coords.device)
@@ -470,80 +472,155 @@ class FTPositionalDecoder(nn.Module):
 
 
 class TiltSeriesEncoder(nn.Module):
-    def __init__(self, in_dim, nlayersA, hidden_dimA, out_dimA, nlayersB,
-                 hidden_dimB, out_dim, activation, ntilts, pooling_function,
-                 num_seeds, num_heads, layer_norm):
-        super(TiltSeriesEncoder, self).__init__()
+    """
+    A module to encode multiple (tilt) images of a particle to a latent embedding.
+    The module comprises two submodules: `encoder_a` and `encoder_b`.
+    Encoder_a is a ResidLinearMLP module that embeds a single tilt image of a particle with `in_dim` features (pixels) to an embedding with `out_dim_a` features.
+    Encoder_b is a ResidLinearMLP module that pools all per-tilt-image embeddings from `encoder_a` by a `pooling_function`,
+    and embeds this pooled representation to a single latent embedding with `out_dim` features.
+    """
+
+    def __init__(self,
+                 in_dim: int,
+                 hidden_layers_a: int = 3,
+                 hidden_dim_a: int = 256,
+                 out_dim_a: int = 128,
+                 hidden_layers_b: int = 3,
+                 hidden_dim_b: int = 256,
+                 out_dim: int = 64*2,
+                 activation: torch.nn.ReLU | torch.nn.LeakyReLU = torch.nn.ReLU,
+                 ntilts: int = 41,
+                 pooling_function: Literal['concatenate', 'max', 'mean', 'median', 'set_encoder'] = 'concatenate',
+                 num_seeds: int = 1,
+                 num_heads: int = 4,
+                 layer_norm: bool = False):
+        """
+        Create the TiltSeriesEncoder module.
+        :param in_dim: number of input features to the module (typically the number of pixels in a masked image)
+        :param hidden_layers_a: number of intermediate hidden layers in the encoder_a submodule
+        :param hidden_dim_a: number of features in each hidden layer in the encoder_a submodule
+        :param out_dim_a: number of output features from the encoder_a submodule (sometimes referred to as the intermediate latent embedding dimensionality)
+        :param hidden_layers_b: number of intermediate hidden layers in the encoder_b submodule
+        :param hidden_dim_b: number of features in each hidden layer in the encoder_b submodule
+        :param out_dim: number of output features from the encoder_b submodule (sometimes referred to as the latent embedding dimensionality or zdim)
+        :param activation: activation function to be applied after each layer, either `torch.nn.ReLU` or `torch.nn.LeakyReLU`
+        :param ntilts: the number of tilt images per particle, used in setting the number of input features to `encoder_b`
+        :param pooling_function: the method used to pool the per-tilt-image intermediate latent representations prior to `encoder_b`
+        :param num_seeds: number of seed vectors to use in the set encoder module. Generally should be set to 1
+        :param num_heads: number of heads for multihead attention in the set encoder module. Generally should be set to a power of 2
+        :param layer_norm: whether to apply layer normalization in the set encoder module
+        """
+        # initialize the parent nn.Module class
+        super().__init__()
+
+        # assign attributes from parameters used at instance creation
         self.in_dim = in_dim
-        self.out_dimA = out_dimA
+        self.hidden_layers_a = hidden_layers_a
+        self.hidden_dim_a = hidden_dim_a
+        self.out_dim_a = out_dim_a
+        self.hidden_layers_b = hidden_layers_b
+        self.hidden_dim_b = hidden_dim_b
+        self.out_dim = out_dim
+        self.activation = activation
         self.ntilts = ntilts
         self.pooling_function = pooling_function
-        assert nlayersA + nlayersB > 2
+        self.num_seeds = num_seeds
+        self.num_heads = num_heads
+        self.layer_norm = layer_norm
+
+        assert hidden_layers_a >= 0  # possible to have no hidden layers, just a direct mapping from input to output
+        assert hidden_layers_b >= 0  # possible to have no hidden layers, just a direct mapping from input to output
+        assert ntilts > 1  # having ntilts == 1 is very likely to cause problems with squeezing and broadcasting tensors
 
         # encoder1 encodes each identically-masked tilt image, independently
-        self.encoder1 = ResidLinearMLP(in_dim, nlayersA, hidden_dimA, out_dimA, activation)
+        self.encoder_a = ResidLinearMLP(in_dim, hidden_layers_a, hidden_dim_a, out_dim_a, activation)
 
         # encoder2 merges ntilts-concatenated encoder1 information and encodes further to latent space via one of
         # ('concatenate', 'max', 'mean', 'median', 'set_encoder')
         if self.pooling_function == 'concatenate':
-            self.encoder2 = ResidLinearMLP(in_dim = out_dimA * ntilts, nlayers = nlayersB, hidden_dim = hidden_dimB,
-                                           out_dim = out_dim, activation = activation)
+            self.pooling_layer = nn.Sequential(Rearrange('batch tilt pixels -> batch (tilt pixels)'),
+                                               activation())
+            self.encoder_b = ResidLinearMLP(in_dim=out_dim_a * ntilts,
+                                            nlayers=hidden_layers_b,
+                                            hidden_dim=hidden_dim_b,
+                                            out_dim=out_dim,
+                                            activation=activation)
 
         elif self.pooling_function == 'max':
-            self.encoder2 = ResidLinearMLP(in_dim = out_dimA, nlayers = nlayersB, hidden_dim = hidden_dimB,
-                                           out_dim = out_dim, activation = activation)
+            self.pooling_layer = nn.Sequential(Reduce('batch tilt pixels -> batch pixels', 'max'),
+                                               activation())
+            self.encoder_b = ResidLinearMLP(in_dim=out_dim_a,
+                                            nlayers=hidden_layers_b,
+                                            hidden_dim=hidden_dim_b,
+                                            out_dim=out_dim,
+                                            activation=activation)
 
         elif self.pooling_function == 'mean':
-            self.encoder2 = ResidLinearMLP(in_dim=out_dimA, nlayers=nlayersB, hidden_dim=hidden_dimB,
-                                           out_dim=out_dim, activation=activation)
+            self.pooling_layer = nn.Sequential(Reduce('batch tilt pixels -> batch pixels', 'mean'),
+                                               activation())
+            self.encoder_b = ResidLinearMLP(in_dim=out_dim_a,
+                                            nlayers=hidden_layers_b,
+                                            hidden_dim=hidden_dim_b,
+                                            out_dim=out_dim,
+                                            activation=activation)
 
         elif self.pooling_function == 'median':
-            self.encoder2 = ResidLinearMLP(in_dim=out_dimA, nlayers=nlayersB, hidden_dim=hidden_dimB,
-                                           out_dim=out_dim, activation=activation)
+            self.pooling_layer = nn.Sequential(MedianPool1d(pooling_axis=-2),
+                                               activation())
+            self.encoder_b = ResidLinearMLP(in_dim=out_dim_a,
+                                            nlayers=hidden_layers_b,
+                                            hidden_dim=hidden_dim_b,
+                                            out_dim=out_dim,
+                                            activation=activation)
 
         elif self.pooling_function == 'set_encoder':
-            self.encoder2 = set_transformer.SetTransformer(dim_input = out_dimA, num_outputs = num_seeds, dim_output = out_dim,
-                                                           dim_hidden = hidden_dimB, num_heads = num_heads, ln = layer_norm)
+            self.pooling_layer = nn.Sequential(set_transformer.SetTransformer(dim_input=out_dim_a,
+                                                                              num_outputs=num_seeds,
+                                                                              dim_output=out_dim,
+                                                                              dim_hidden=hidden_dim_b,
+                                                                              num_heads=num_heads,
+                                                                              ln=layer_norm),
+                                               Rearrange('batch 1 latent -> batch latent'))
+            self.encoder_b = nn.Identity()
 
         else:
             raise ValueError
 
-
     def forward(self, batch):
-        # input: B x ntilts x D*D[lattice_circular_mask]
-        batch_tilts_intermediate = self.encoder1(batch)
+        """
+        Pass data forward through the module.
+        :param batch: Input data tensor, shape (batch, ntilts, boxsize*boxsize[enc_mask])
+        :return: Output data tensor, shape (batch, zdim*2)
+        """
+        # pass each tilt independently through encoder_a (parallelizing along both batch and ntilts dimensions)
+        batch_tilts_intermediate = self.encoder_a(batch)
+        # pool each tilt's intermediate latent embedding along the ntilts dimension
+        batch_tilts_pooled = self.pooling_layer(batch_tilts_intermediate)
+        # obtain parameters for per-particle latent embedding mean and log(variance) as a single concatenated tensor output
+        z = self.encoder_b(batch_tilts_pooled)
 
-        # input: B x ntilts x out_dim_A
-        if self.pooling_function != 'set_encoder':
+        return z
 
-            if self.pooling_function == 'concatenate':
-                batch_pooled_tilts = batch_tilts_intermediate.view(batch.shape[0], self.out_dimA * self.ntilts)
+    def reparameterize(self,
+                       mu: torch.Tensor,
+                       logvar: torch.Tensor) -> torch.Tensor:
+        """
+        Reparamaterization trick to allow backpropogation through semi-randomly sampled latent embedding.
+        Sampling a latent embedding from a gaussian parameterized by mu and logvar is an operation without an associated gradient with respect to inputs, and therefore breaks training.
+        We reparamaterize such that the latent embedding is deterministically calculated as `z = epsilon * standard_deviation + mean`.
+        This representation "outsources" the randomness from `z` itself to `epsilon`, and allows gradient calculation through `z` to `standard_deviation` and `mean`, and onward to earlier layers.
+        :param mu: mean parameterizing latent embeddings `z`, shape (batch, zdim)
+        :param logvar: log(variance) parameterizing latent embeddings `z`, shape (batch, zdim)
+        :return: reparameterized latent embeddings `z`, shape (batch, zdim)
+        """
+        # no need for reparameterization at inference time; better to be deterministic
+        if not self.training:
+            return mu
 
-            elif self.pooling_function == 'max':
-                batch_pooled_tilts = batch_tilts_intermediate.max(dim = 1)[0]
-                batch_pooled_tilts = torch.nn.functional.relu(batch_pooled_tilts)
-
-            elif self.pooling_function == 'mean':
-                batch_pooled_tilts = batch_tilts_intermediate.mean(dim = 1)
-                batch_pooled_tilts = torch.nn.functional.relu(batch_pooled_tilts)
-
-            elif self.pooling_function == 'median':
-                with autocast(enabled=False):  # torch.quantile and torch.median do not support fp16 so casting to fp32 assuming AMP is used
-                    batch_pooled_tilts = batch_tilts_intermediate.to(torch.float32).quantile(dim = 1, q = 0.5)
-                    batch_pooled_tilts = torch.nn.functional.relu(batch_pooled_tilts)
-
-            else:
-                raise ValueError
-
-            # input: B x out_dim_A
-            z = self.encoder2(batch_pooled_tilts)  # reshape to encode all tilts of one ptcl together
-
-        else:
-            # with autocast(enabled=False):  # set encoder appears numerically unstable in half-precision
-            z = self.encoder2(batch_tilts_intermediate)
-            z = z.squeeze(0)
-
-        return z  # B x zdim
+        # otherwise perform reparameterization
+        std = torch.exp(.5 * logvar)
+        eps = torch.randn_like(std)
+        return eps * std + mu
 
 
 class ResidLinearMLP(nn.Module):
