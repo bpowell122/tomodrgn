@@ -1,9 +1,15 @@
-'''Pytorch models'''
+"""
+Classes for creating, loading, training, and evaluating pytorch models.
+"""
 
 import numpy as np
 import torch
 import torch.nn as nn
 from torch.cuda.amp import autocast
+from typing import Literal
+from einops import rearrange
+from einops.layers.torch import Reduce, Rearrange
+import torchinfo
 
 from tomodrgn import fft, utils, lattice, set_transformer
 
@@ -11,98 +17,173 @@ log = utils.log
 
 
 class TiltSeriesHetOnlyVAE(nn.Module):
+    # TODO move sequential tilt sampling from dataset.__getitem__ to encoder A -> B transition
+    # TODO add torch.compile here and to other common functions (calc ctf? eval vol batch? ffts?) https://discuss.pytorch.org/t/how-should-i-use-torch-compile-properly/179021
+    """
+    A module to encode multiple tilt images of a particle to a learned low-dimensional latent space embedding,
+    then decode spatial frequency coordinates to corresponding voxel amplitudes conditioned on the per-particle latent embedding.
+    """
     # No pose inference
-    def __init__(self, lattice, qlayersA, qdimA, out_dimA, ntilts, qlayersB, qdimB, players, pdim,
-                 in_dim, zdim=1, enc_mask=None, enc_type='geom_lowf', enc_dim=None, domain='fourier',
-                 activation = nn.ReLU, l_dose_mask=False, feat_sigma = None, pooling_function='mean',
-                 num_seeds=1, num_heads=4, layer_norm=False):
-        super(TiltSeriesHetOnlyVAE, self).__init__()
-        self.lattice = lattice
+    def __init__(self,
+                 in_dim: int,
+                 hidden_layers_a: int,
+                 hidden_dim_a: int,
+                 out_dim_a: int,
+                 ntilts: int,
+                 hidden_layers_b: int,
+                 hidden_dim_b: int,
+                 zdim: int,
+                 hidden_layers_decoder: int,
+                 hidden_dim_decoder: int,
+                 lat: lattice.Lattice,
+                 activation: nn.ReLU | nn.LeakyReLU = nn.ReLU,
+                 enc_mask: torch.Tensor | None = None,
+                 pooling_function: Literal['concatenate', 'max', 'mean', 'median', 'set_encoder'] = 'mean',
+                 feat_sigma: float = 0.5,
+                 num_seeds: int = 1,
+                 num_heads: int = 4,
+                 layer_norm: bool = False,
+                 pe_type: Literal['geom_ft', 'geom_full', 'geom_lowf', 'geom_nohighf', 'linear_lowf', 'gaussian', 'none'] = 'geom_lowf',
+                 pe_dim: int | None = None):
+
+        # initialize the parent nn.Module class
+        super().__init__()
+
+        # save attributes used elsewhere
+        self.enc_mask = enc_mask
+        self.in_dim = in_dim
         self.ntilts = ntilts
         self.zdim = zdim
-        self.in_dim = in_dim
-        self.enc_mask = enc_mask
-        self.l_dose_mask = l_dose_mask
-        self.encoder = TiltSeriesEncoder(in_dim, qlayersA, qdimA, out_dimA, qlayersB, qdimB, zdim * 2, activation,
-                                         ntilts, pooling_function, num_seeds, num_heads, layer_norm)
-        self.decoder = FTPositionalDecoder(3+zdim, lattice.D, players, pdim, activation, enc_type, enc_dim, feat_sigma)
+        self.lat = lat
+
+        # instantiate the encoder module
+        self.encoder = TiltSeriesEncoder(in_dim=in_dim,
+                                         hidden_layers_a=hidden_layers_a,
+                                         hidden_dim_a=hidden_dim_a,
+                                         out_dim_a=out_dim_a,
+                                         hidden_layers_b=hidden_layers_b,
+                                         hidden_dim_b=hidden_dim_b,
+                                         out_dim=zdim * 2,
+                                         activation=activation,
+                                         ntilts=ntilts,
+                                         pooling_function=pooling_function,
+                                         num_seeds=num_seeds,
+                                         num_heads=num_heads,
+                                         layer_norm=layer_norm)
+
+        # instantiate the decoder module
+        self.decoder = FTPositionalDecoder(boxsize_ht=lat.boxsize,
+                                           in_dim=3+zdim,
+                                           hidden_layers=hidden_layers_decoder,
+                                           hidden_dim=hidden_dim_decoder,
+                                           activation=activation,
+                                           pe_type=pe_type,
+                                           pe_dim=pe_dim,
+                                           feat_sigma=feat_sigma)
 
     @classmethod
-    def load(self, config, weights=None, device=None):
-        '''Instantiate a model from a config.pkl
+    def load(cls,
+             config: str | dict,
+             weights: str,
+             device: torch.device = torch.device('cpu')):
+        """
+        Constructor method to create an TiltSeriesHetOnlyVAE object from a config.pkl.
+        :param config: Path to config.pkl or loaded config.pkl
+        :param weights: Path to weights.pkl
+        :param device: `torch.device` object
+        :return: TiltSeriesHetOnlyVAE instance, Lattice instance
+        """
+        # load the config dict if not preloaded
+        cfg: dict = utils.load_pkl(config) if type(config) is str else config
 
-        Inputs:
-            config (str, dict): Path to config.pkl or loaded config.pkl
-            weights (str): Path to weights.pkl
-            device: torch.device object
+        # create the Lattice object
+        lat = lattice.Lattice(boxsize=cfg['lattice_args']['D'],
+                              extent=cfg['lattice_args']['extent'],
+                              device=device)
 
-        Returns:
-            HetOnlyVAE instance, Lattice instance
-        '''
-        cfg = utils.load_pkl(config) if type(config) is str else config
-        lat = lattice.Lattice(cfg['lattice_args']['D'], extent=cfg['lattice_args']['extent'], device=device)
+        # create the TiltSeriesHetOnlyVAE object
         activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[cfg['model_args']['activation']]
-        model = TiltSeriesHetOnlyVAE(lat,
-                                     cfg['model_args']['qlayersA'], cfg['model_args']['qdimA'],
-                                     cfg['model_args']['out_dimA'], cfg['model_args']['ntilts'],
-                                     cfg['model_args']['qlayersB'], cfg['model_args']['qdimB'],
-                                     cfg['model_args']['players'], cfg['model_args']['pdim'],
-                                     cfg['model_args']['in_dim'], cfg['model_args']['zdim'],
-                                     enc_mask=cfg['model_args']['enc_mask'],
-                                     enc_type=cfg['model_args']['pe_type'],
-                                     enc_dim=cfg['model_args']['pe_dim'],
-                                     domain=cfg['model_args']['domain'],
+        model = TiltSeriesHetOnlyVAE(in_dim=cfg['model_args']['in_dim'],
+                                     hidden_layers_a=cfg['model_args']['qlayersA'],
+                                     hidden_dim_a=cfg['model_args']['qdimA'],
+                                     out_dim_a=cfg['model_args']['out_dimA'],
+                                     ntilts=cfg['model_args']['ntilts'],
+                                     hidden_layers_b=cfg['model_args']['qlayersB'],
+                                     hidden_dim_b=cfg['model_args']['qdimB'],
+                                     zdim=cfg['model_args']['zdim'],
+                                     hidden_layers_decoder=cfg['model_args']['players'],
+                                     hidden_dim_decoder=cfg['model_args']['pdim'],
+                                     lat=lat,
                                      activation=activation,
-                                     l_dose_mask=cfg['model_args']['l_dose_mask'],
-                                     feat_sigma=cfg['model_args']['feat_sigma'],
+                                     enc_mask=cfg['model_args']['enc_mask'],
                                      pooling_function=cfg['model_args']['pooling_function'],
+                                     feat_sigma=cfg['model_args']['feat_sigma'],
                                      num_seeds=cfg['model_args']['num_seeds'],
                                      num_heads=cfg['model_args']['num_heads'],
-                                     layer_norm=cfg['model_args']['layer_norm'])
+                                     layer_norm=cfg['model_args']['layer_norm'],
+                                     pe_type=cfg['model_args']['pe_type'],
+                                     pe_dim=cfg['model_args']['pe_dim'],)
 
+        # load weights if provided
         if weights is not None:
             ckpt = torch.load(weights)
             model.load_state_dict(ckpt['model_state_dict'])
-        if device is not None:
-            model.to(device)
+
+        # move the model to the requested device
+        model.to(device)
+
         return model, lat
 
-    def reparameterize(self, mu, logvar):
-        if not self.training:
-            return mu
-        std = torch.exp(.5 * logvar)
-        eps = torch.randn_like(std)
-        return eps * std + mu
-
-    def encode(self, batch, B, ntilts):
-        # input batch is of shape B x ntilts x D x D
-        batch = batch.view(B,ntilts,-1)  # B x ntilts x D*D
+    def encode(self,
+               batch: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Encode the input batch of particle's tilt images to a corresponding batch of latent embeddings.
+        Input images are masked by `self.enc_mask` if provided.
+        :param batch: batch of particle tilt images to encode, shape (batch, ntilts, boxsize, boxsize)
+        :return: `mu`: batch of mean values parameterizing latent embedding as Gaussian, shape (batch, zdim).
+                `logvar`: batch of log variance values parameterizing latent embedding as Gaussian, shape (batch, zdim).
+        """
+        # input batch is of shape B x ntilts x D x D, need to flatten last two dimensions to apply flat encoder mask and to pass into flat model input layer
+        batch = rearrange(batch, 'batch tilts boxsize_y boxsize_x -> batch tilts (boxsize_y boxsize_x)')  # B x ntilts x D*D
         if self.enc_mask is not None:
-            batch = batch[:,:,self.enc_mask] # B x ntilts x D*D[mask]
-        z = self.encoder(batch)  # B x zdim
+            batch = batch[:, :, self.enc_mask]  # B x ntilts x D*D[mask]
+        z = self.encoder(batch)  # B x zdim*2
 
-        return z[:, :self.zdim], z[:, self.zdim:] # B x zdim
+        return z[:, :self.zdim], z[:, self.zdim:]  # B x zdim
 
-    def cat_z(self, coords, z):
-        '''
-        coords: B x ntilts*D*D[mask] x 3 image coordinates
-        z: B x zdim latent coordinate
-        returns: B x ntilts*D*D[mask] x 3+zdim
-        '''
-        assert coords.size(0) == z.size(0)
-        z = z.view(z.size(0), *([1] * (coords.ndimension() - 2)), self.zdim)
-        z = torch.cat((coords, z.expand(*coords.shape[:-1], self.zdim)), dim=-1)
-        return z
+    def decode(self,
+               coords: torch.Tensor,
+               z: torch.Tensor) -> torch.Tensor:
+        """
+        Decode a batch of lattice coordinates concatenated with the corresponding latent embedding to infer the associated voxel intensities.
+        :param coords: 3-D spatial frequency coordinates (e.g. from Lattice.coords) concatenated with the
+                shape (batch, ntilts * boxsize_ht * boxsize_ht [mask], 3).
+                Coords may be a NestedTensor (along the batch dimension, ragged along the ntilts dimension)
+                due to typically unequal numbers of coordinates retained per-particle or per-tilt-image after upstream masking.
+        :param z: latent embedding per-particle, shape (batch, zdim)
+        :return: Decoded voxel intensities at the specified 3-D spatial frequencies.
+        """
+        return self.decoder(coords, z)
 
-    def decode(self, coords_z):
-        '''
-        coords_z: B x ntilts*D*D[critical_exposure_mask] x 3 image coordinates + zdim
-        '''
-        return self.decoder(coords_z)
-
-    # Need forward func for DataParallel -- TODO: refactor
-    def forward(self, *args, **kwargs):
-        return self.decode(*args, **kwargs)
+    def print_model_info(self) -> None:
+        """
+        Wrapper around torchinfo to display summary of model layers, input and output tensor shapes, and number of trainable parameters.
+        Note that the predicted model size assumes float32 input tensors and model weights, which is an overestimate by ~2x if AMP is enabled.
+        :return: None
+        """
+        # print the encoder module which we know input size exactly due to fixed ntilt sampling
+        print(torchinfo.summary(self.encoder,
+                                input_size=(self.ntilts, self.in_dim),
+                                batch_dim=0,
+                                col_names=('input_size', 'output_size', 'num_params'),
+                                depth=5))
+        # print the decoder module which will be a conservative overestimate of input size without lattice masking
+        # this is because each particle has a potentially unique lattice mask and therefore this is an upper bound on model size
+        print(torchinfo.summary(self.decoder,
+                                input_data=torch.rand(self.ntilts * self.boxsize_ht * self.boxsize_ht, 3 + self.zdim) - 0.5,
+                                batch_dim=0,
+                                col_names=('input_size', 'output_size', 'num_params'),
+                                depth=5))
 
 
 class FTPositionalDecoder(nn.Module):
