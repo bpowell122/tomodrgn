@@ -187,186 +187,285 @@ class TiltSeriesHetOnlyVAE(nn.Module):
 
 
 class FTPositionalDecoder(nn.Module):
-    def __init__(self, in_dim, D, nlayers, hidden_dim, activation, enc_type='linear_lowf', enc_dim=None, feat_sigma=None):
-        super(FTPositionalDecoder, self).__init__()
-        assert in_dim >= 3
-        self.zdim = in_dim - 3
-        self.D = D
-        self.D2 = D // 2
-        self.DD = 2 * (D // 2)
-        self.enc_type = enc_type
-        self.enc_dim = self.D2 if enc_dim is None else enc_dim
-        self.in_dim = 3 * (self.enc_dim) * 2 + self.zdim
-        self.decoder = ResidLinearMLP(self.in_dim, nlayers, hidden_dim, 2, activation)
+    """
+    A module to decode a (batch of tilts of) spatial frequency coordinates spanning (-0.5, 0.5) to the corresponding spatial frequency amplitude.
+    The output may optionally be conditioned on a latent embedding `z`.
+    """
+    def __init__(self,
+                 boxsize_ht: int,
+                 in_dim: int = 3,
+                 hidden_layers: int = 3,
+                 hidden_dim: int = 256,
+                 activation: torch.nn.ReLU | torch.nn.LeakyReLU = torch.nn.ReLU,
+                 pe_type: Literal['geom_ft', 'geom_full', 'geom_lowf', 'geom_nohighf', 'linear_lowf', 'gaussian', 'none'] = 'geom_lowf',
+                 pe_dim: int | None = None,
+                 feat_sigma: float = 0.5):
+        """
+        Create the FTPositionalDecoder module.
+        :param boxsize_ht: fourier-symmetrized box width in pixels (typically odd, 1px larger than input image)
+        :param in_dim: number of dimensions of input coordinate lattice, typically 3 (x,y,z) + zdim
+        :param hidden_layers: number of intermediate hidden layers in the decoder module
+        :param hidden_dim: number of features in each hidden layer in the decoder module
+        :param activation: activation function to be applied after each layer, either `torch.nn.ReLU` or `torch.nn.LeakyReLU`
+        :param pe_type: the type of positional encoding to map each spatial frequency coordinate (x,y,z) to a higher dimensional representation to be passed to the decoder.
+        :param pe_dim: the dimension of the higher dimensional representation of the positional encoding, typically automatically set to half of the box size to sample up to Nyquist.
+        :param feat_sigma: the scale of random frequency vectors sampled from a gaussian for pe_type gaussian.
+        """
+        # initialize the parent nn.Module class
+        super().__init__()
 
-        if enc_type == "gaussian":
-            # We construct 3 * self.enc_dim random vector frequences, to match the original positional encoding:
-            # In the positional encoding we produce self.enc_dim features for each of the x,y,z dimensions,
-            # whereas in gaussian encoding we produce self.enc_dim features each with random x,y,z components
+        # sanity check inputs
+        assert in_dim >= 3
+
+        # determine the latent dimensionality as the input dimensionality minus the expected three spatial dimensions
+        self.zdim = in_dim - 3
+
+        # commonly referenced boxsize-related constants
+        self.D = boxsize_ht
+        self.D2 = boxsize_ht // 2
+        self.DD = 2 * (boxsize_ht // 2)
+
+        # what type of positional encoding to use
+        self.pe_type = pe_type
+
+        # the dimensionality of the positional encoding defaults to half of the input coordinate box size
+        self.pe_dim = self.D2 if pe_dim is None else pe_dim
+
+        # the final number of features the decoder network receives as input per 3-D coordinate to evaluate
+        # each of the 3 spatial frequency axes will have pe_dim features expressed as both sin and cos, finally concatenated with latent embedding
+        self.in_dim = 3 * self.pe_dim * 2 + self.zdim
+
+        # construct the decoder ResidLinearMLP module
+        self.decoder = ResidLinearMLP(in_dim=self.in_dim,
+                                      nlayers=hidden_layers,
+                                      hidden_dim=hidden_dim,
+                                      out_dim=2,
+                                      activation=activation)
+
+        if self.pe_type == 'geom_ft':
+            # option 1: 2/D to 1
+            freqs = torch.arange(self.pe_dim, dtype=torch.float)
+            self.freqs = self.DD * np.pi * (2. / self.DD) ** (freqs / (self.pe_dim - 1))
+        elif self.pe_type == 'geom_full':
+            # option 2: 2/D to 2pi
+            freqs = torch.arange(self.pe_dim, dtype=torch.float)
+            self.freqs = self.DD * np.pi * (1. / self.DD / np.pi) ** (freqs / (self.pe_dim - 1))
+        elif self.pe_type == 'geom_lowf':
+            # option 3: 2/D*2pi to 2pi
+            freqs = torch.arange(self.pe_dim, dtype=torch.float)
+            self.freqs = self.D2 * (1. / self.D2) ** (freqs / (self.pe_dim - 1))
+        elif self.pe_type == 'geom_nohighf':
+            # option 4: 2/D*2pi to 1
+            freqs = torch.arange(self.pe_dim, dtype=torch.float)
+            self.freqs = self.D2 * (2. * np.pi / self.D2) ** (freqs / (self.pe_dim - 1))
+        elif self.pe_type == "gaussian":
+            # We construct 3 * self.pe_dim random vector frequences, to match the original positional encoding:
+            # In the positional encoding we produce self.pe_dim features for each of the x,y,z dimensions,
+            # whereas in gaussian encoding we produce self.pe_dim features each with random x,y,z components
             #
             # Each of the random feats is the sine/cosine of the dot product of the coordinates with a frequency
             # vector sampled from a gaussian with std of feat_sigma
-            rand_freqs = torch.randn((3 * self.enc_dim, 3), dtype=torch.float) * feat_sigma
-            # make rand_feats a parameter so it is saved in the checkpoint, but do not perform SGD on it
-            self.rand_freqs = nn.Parameter(rand_freqs, requires_grad=False)
+            freqs = torch.randn((3 * self.pe_dim, 3), dtype=torch.float) * feat_sigma * self.D2
+            # make rand_feats a parameter so that it is saved in the checkpoint, but do not perform SGD on it
+            self.freqs = nn.Parameter(freqs, requires_grad=False)
+        elif self.pe_type == 'linear':
+            # construct a linear increase in frequency, i.e. cos(k*n/N), sin(k*n/N), n=0,...,N//2
+            self.freqs = torch.arange(1, self.D2 + 1, dtype=torch.float)
         else:
-            self.rand_feats = None
-    
-    def positional_encoding_geom(self, coords):
-        '''Expand coordinates in the Fourier basis with geometrically spaced wavelengths from 2/D to 2pi'''
-        if self.enc_type == "gaussian":
-            return self.random_fourier_encoding(coords)
-        freqs = torch.arange(self.enc_dim, dtype=torch.float, device=coords.device)
-        if self.enc_type == 'geom_ft':
-            freqs = self.DD*np.pi*(2./self.DD)**(freqs/(self.enc_dim-1)) # option 1: 2/D to 1 
-        elif self.enc_type == 'geom_full':
-            freqs = self.DD*np.pi*(1./self.DD/np.pi)**(freqs/(self.enc_dim-1)) # option 2: 2/D to 2pi
-        elif self.enc_type == 'geom_lowf':
-            freqs = self.D2*(1./self.D2)**(freqs/(self.enc_dim-1)) # option 3: 2/D*2pi to 2pi 
-        elif self.enc_type == 'geom_nohighf':
-            freqs = self.D2*(2.*np.pi/self.D2)**(freqs/(self.enc_dim-1)) # option 4: 2/D*2pi to 1 
-        elif self.enc_type == 'linear_lowf':
-            return self.positional_encoding_linear(coords)
+            raise ValueError(f'Invalid pe_type {pe_type}')
+
+    def positional_encoding(self,
+                            coords: torch.Tensor) -> torch.Tensor:
+        """
+        Expand coordinates in the Fourier basis with variably spaced wavelengths
+        :param coords: Tensor or NestedTensor shape (batch, ntilts * boxsize_ht * boxsize_ht [mask], 3).
+        :return: Positionally encoded spatial coordinates
+        """
+        if self.pe_type == 'gaussian':
+            # expand freqs with singleton dimension along the batch dimensions, e.g. dim (1, ..., 1, n_feats, 3)
+            freqs = self.freqs.view(1, 1, -1, 3)  # 1 x 1 x 3*D2 x 3
+            # calculate features as torch.dot(k, freqs): compute x,y,z components of k then sum x,y,z components
+            kxkykz = coords[..., None, :] * freqs  # B x N*D*D[mask] x 3*D2 x 3
+            k = kxkykz.sum(-1)  # B x N*D*D[mask] x 3*D2
+            k = k.reshape(coords.size(0), -1, 3, self.pe_dim)  # B x N*D*D[mask] x 3 x D2 (where .size(0) and -1 are required for NestedTensor)
         else:
-            raise RuntimeError('Encoding type {} not recognized'.format(self.enc_type))
-        freqs = freqs.view(*[1] * len(coords.shape), -1)  # 1 x 1 x 1 x D2
-        coords = coords.unsqueeze(-1)  # B x N x 3 x 1
+            # expand freqs with singleton dimension along the batch dimensions, e.g. dim (1, ..., 1, n_feats)
+            freqs = self.freqs.view(1, 1, 1, -1)  # 1 x 1 x 1 x D2
+            # calculate the features as freqs scaled by coords
+            k = coords[..., None] * freqs  # B x N*D*D[mask] x 3 x D2
 
-        k = coords[..., 0:3, :] * freqs  # B x N x 3 x D2
-        s = torch.sin(k)  # B x N x 3 x D2
-        c = torch.cos(k)  # B x N x 3 x D2
-        x = torch.cat([s, c], -1)  # B x N x 3 x D
-        x = x.view(*coords.shape[:-2], self.in_dim - self.zdim)  # B x N x in_dim-zdim
-        if self.zdim > 0:
-            x = torch.cat([x, coords[..., 3:, :].squeeze(-1)], -1)
-            assert x.shape[-1] == self.in_dim
+        s = torch.sin(k)  # B x N*D*D[mask] x 3 x D2
+        c = torch.cos(k)  # B x N*D*D[mask] x 3 x D2
+        x = torch.cat([s, c], -1)  # B x N*D*D[mask] x 3 x D
+        x = x.view(coords.size(0), -1, self.in_dim - self.zdim)  # B x N*D*D[mask] x in_dim-zdim
+
         return x
 
-    def random_fourier_encoding(self, coords):
-        assert self.rand_freqs is not None
-        # k = coords . rand_freqs
-        # expand rand_freqs with singleton dimension along the batch dimensions
-        # e.g. dim (1, ..., 1, n_rand_feats, 3)
-        freqs = self.rand_freqs.view(1, 1, -1, 3) * self.D2     # 1 x 1 x 3*D2 x 3
+    @staticmethod
+    def cat_z(coords: torch.Tensor,
+              z: torch.Tensor) -> torch.Tensor:
+        """
+        Concatenate each 3-D spatial coordinate (from a particular particle's particular tilt image) with the latent embedding assigned to that particle.
+        :param coords: 3-D spatial frequency coordinates at which to decode corresponding voxel intensity, possibly NestedTensor, shape (batch, ntilts * boxsize**2 [mask], self.in_dim - zdim)
+        :param z: latent embedding for each particle, shape (batch, zdim)
+        :return: concatenated coordinates and latent embedding tensors, possibly NestedTensor, shape (batch, ntilts * boxsize**2 [mask], self.in_dim)
+        """
+        # confirm coords and z have same batch size (axis over which they will eventualy be aligned)
+        if z.ndim == 1:
+            # coords should have batch dimension populated from positional_encoding, but z might not
+            z = z.unsqueeze(0)
+        assert coords.size(0) == z.size(0)
+        assert z.ndim == 2
 
-        # compute x,y,z components of k then sum x,y,z components
-        k = coords[..., None, 0:3] * freqs                 # 1 x B*N[mask] x 3*D2 x 3
-        k = k.sum(-1)                                      # 1 x B*N[mask] x 3*D2
-        x = torch.zeros((*k.shape, 2), dtype=k.dtype, device=k.device)  # preallocate memory to slightly lower allocation requirement
-        x[...,0] = torch.sin(k)                            # 1 x B*N[mask] x 3*D2 x 2
-        x[...,1] = torch.cos(k)
-        x = x.view(*coords.shape[:-1], self.in_dim - self.zdim)   # 1 x B*N[mask] x 3*D2*2
+        # repeat z along a new axis corresponding to spatial frequency coordinates for each particle's images
+        # z = repeat(z, 'batch zdim -> batch repeat_ntilts repeat_pixels zdim', repeat_ntilts=coords.shape[1], repeat_pixels=coords.shape[2])
+        # unbind returns a view into the coords NestedTensor; iterating over the batch dim and calling len() to get the number of pixels per particle
+        z_expanded = torch.nested.as_nested_tensor([z_ptcl.repeat(len(coords_ptcl), 1) for z_ptcl, coords_ptcl in zip(z, coords.unbind())])
 
-        if self.zdim > 0:
-            x = torch.cat([x, coords[..., 3:]], -1)
-            assert x.shape[-1] == self.in_dim
-        return x
+        # concatenate coords with z along the last axis (coordinate + zdim value)
+        # coords_z, _ = pack([coords, z], 'batch ntilts coords *')
+        coords_z = torch.cat([coords, z_expanded], -1)
 
-    def positional_encoding_linear(self, coords):
-        '''Expand coordinates in the Fourier basis, i.e. cos(k*n/N), sin(k*n/N), n=0,...,N//2'''
-        freqs = torch.arange(1, self.D2+1, dtype=torch.float, device=coords.device)
-        freqs = freqs.view(*[1]*len(coords.shape), -1) # 1 x 1 x D2
-        coords = coords.unsqueeze(-1) # B x 3 x 1
-        k = coords[...,0:3,:] * freqs # B x 3 x D2
-        s = torch.sin(k) # B x 3 x D2
-        c = torch.cos(k) # B x 3 x D2
-        x = torch.cat([s,c], -1) # B x 3 x D
-        x = x.view(*coords.shape[:-2], self.in_dim-self.zdim) # B x in_dim-zdim
-        if self.zdim > 0:
-            x = torch.cat([x,coords[...,3:,:].squeeze(-1)], -1)
-            assert x.shape[-1] == self.in_dim
-        return x
+        return coords_z
 
-    def forward(self, lattice):
-        '''
-        lattice: 1 x B*ntilts*N[mask] x 3+zdim, useful when images are different sizes to avoid ragged tensors
-        '''
+    def forward(self,
+                coords: torch.Tensor,
+                z: torch.Tensor = None) -> torch.Tensor:
+        """
+        Decode a batch of lattice coordinates concatenated with the corresponding latent embedding to Hartley Transform spatial frequency amplitudes.
+        :param coords: 3-D spatial frequency coordinates (e.g. from Lattice.coords) concatenated with the
+                shape (batch, ntilts * boxsize_ht * boxsize_ht [mask], 3).
+                Coords may be a NestedTensor (along the batch dimension, ragged along the ntilts dimension)
+                due to typically unequal numbers of coordinates retained per-particle or per-tilt-image after upstream masking.
+        :param z: latent embedding per-particle, shape (batch, zdim)
+        :return: Decoded voxel intensities at the specified 3-D spatial frequencies.
+        """
         # evaluate model on all pixel coordinates for each image
-        full_image = self.decode(lattice)
+        full_image = self.decode(coords=coords, z=z)
 
         # return hartley information (FT real - FT imag) for each image
-        image = full_image[...,0] - full_image[...,1]
+        image = full_image[..., 0] - full_image[..., 1]
 
         return image
 
+    def decode(self,
+               coords: torch.Tensor,
+               z: torch.Tensor | None = None) -> torch.Tensor:
+        """
+        Decode a batch of lattice coordinates concatenated with the corresponding latent embedding to Fourier Transform spatial frequency amplitudes.
+        :param coords: 3-D spatial frequency coordinates (e.g. from Lattice.coords) concatenated with the
+                shape (batch, ntilts * boxsize_ht * boxsize_ht [mask], 3).
+                Coords may be a NestedTensor (along the batch dimension, ragged along the ntilts dimension)
+                due to typically unequal numbers of coordinates retained per-particle or per-tilt-image after upstream masking.
+        :param z: latent embedding per-particle, shape (batch, zdim)
+        :return: Decoded voxel intensities at the specified 3-D spatial frequencies.
+        """
+        # sanity check inputs coordinates are within range (-0.5, 0.5)
+        assert (coords.abs() - 0.5 < 1e-4).all(), f'coords.max(): {coords.max()}; coords.min(): {coords.min()}'
 
-    def decode(self, lattice):
-        '''Return FT transform'''
-        assert (lattice[...,0:3].abs() - 0.5 < 1e-4).all(), \
-            f'lattice[...,0:3].max(): {lattice[...,0:3].max().to(torch.float32)}; ' \
-            f'lattice[...,0:3].min(): {lattice[...,0:3].min().to(torch.float32)}'
         # convention: only evaluate the -z points
-        w = lattice[...,2] > 0.0
-        w_zflipper = torch.ones_like(lattice, device=lattice.device, requires_grad=False)
-        w_zflipper[..., 0:3][w] *= -1
-        lattice = lattice * w_zflipper  # avoids "modifying tensor in-place" warnings+errors
-        # lattice[..., 0:3][w] = -lattice[..., 0:3][w]  # negate lattice coordinates where z > 0
-        result = self.decoder(self.positional_encoding_geom(lattice))
-        result[...,1][w] *= -1 # replace with complex conjugate to get correct values for original lattice positions
-        return result
+        zflipper = torch.where(coords[..., 2] > 0, -1, 1)
+        coords_flipped = coords * zflipper  # avoids "modifying tensor in-place" warnings+errors
 
-    def eval_volume(self, coords, D, extent, norm, zval=None):
-        '''
-        Evaluate the model on a DxDxD volume
-        
-        Inputs:
-            coords: lattice coords on the x-y plane (D^2 x 3)
-            D: size of lattice
-            extent: extent of lattice [-extent, extent]
-            norm: data normalization 
-            zval: value of latent (zdim) ... or 1 x zdim from eval_vol?
-        '''
+        # positionally encode x,y,z 3-D coordinate
+        coords_pe = self.positional_encoding(coords_flipped)
+
+        # concatenate each spatial coordinate with the appropriate latent embedding to be conditioned on
+        if z:
+            coords_pe = self.cat_z(coords_pe, z)
+
+        # evaluate the model
+        result = self.decoder(coords_pe)
+
+        # replace with complex conjugate to get correct values for original lattice positions
+        result_flipped = torch.cat([result[..., 0], result[..., 1] * zflipper], -1)
+
+        return result_flipped
+
+    def eval_volume(self,
+                    coords: torch.Tensor,
+                    boxsize_ht: int,
+                    extent: float,
+                    norm: tuple[float, float],
+                    z: torch.Tensor | None = None) -> np.ndarray:
+        """
+        Evaluate the model on a DxDxD volume, optionally conditioned on a latent embedding z
+        :param coords: lattice coords on the x-y plane, shape (boxsize_ht**2, 3)
+        :param boxsize_ht:  number of grid points along each dimension. Should be odd.
+        :param extent: maximum value of the grid along each dimension, typically <= 0.5 to constrain points to range (-0.5, 0.5)
+        :param norm: tuple of floats representing mean and standard deviation of preprocessed particles used during model training
+        :param z: latent embedding associated with the volume to decode, shape (1, zdim)
+        :return: reconstructed volume, shape (boxsize, boxsize, boxsize)
+        """
+        # sanity check inputs
         assert extent <= 0.5
-        if zval is not None:
-            zdim = len(zval)
-            z = torch.tensor(zval, dtype=torch.float32, device=coords.device)
 
-        vol_f = torch.zeros((D, D, D), dtype=coords.dtype, device=coords.device, requires_grad=False)
+        # prepare for model evaluation
         assert not self.training
-        # evaluate the volume by zslice to avoid memory overflows
-        for i, dz in enumerate(np.linspace(-extent, extent, D, endpoint=True, dtype=np.float32)):
-            x = coords + torch.tensor([0, 0, dz], device=coords.device)
-            keep = x.pow(2).sum(dim=1) <= extent ** 2
-            x = x[keep]
-            if zval is not None:
-                x = torch.cat((x, z.expand(x.shape[0], zdim)), dim=-1)
-            with torch.no_grad():
-                if dz == 0.0:
-                    y = self.forward(x)
-                else:
-                    y = self.decode(x)
-                    y = y[..., 0] - y[..., 1]
-                slice_ = torch.zeros((D ** 2), dtype=coords.dtype, device=coords.device, requires_grad=False)
-                slice_[keep] = y.to(slice_.dtype)
-                vol_f[i] = slice_.view(D, D)
-        vol_f = vol_f.cpu().numpy()
-        vol_f = vol_f * norm[1] + norm[0]
-        vol = fft.iht3_center(vol_f[:-1, :-1, :-1])  # remove last +k freq for inverse FFT
+        with torch.inference_mode():
+
+            # evaluate the volume by slicing through z to avoid memory overflows
+            vol_f = torch.zeros((boxsize_ht, boxsize_ht, boxsize_ht), dtype=np.float32, device=coords.device)
+            for i, dz in enumerate(np.linspace(-extent, extent, boxsize_ht, endpoint=True, dtype=np.float32)):
+                # create the z slice to evaluate
+                xy_coords = coords + torch.tensor([0, 0, dz], device=coords.device)
+
+                # only evaluate coords within `extent` limit (if extent==0.5, nyquist limit in reciprocal space)
+                keep = xy_coords.pow(2).sum(dim=1) <= extent ** 2
+                xy_coords = xy_coords[keep]
+
+                # reconstruct the slice by passing it through the model
+                xy_slice = self.forward(coords=xy_coords, z=z)
+
+                # fill the corresponding slice in the 3-D volume with these amplitudes
+                slice_ = torch.zeros((boxsize_ht ** 2), dtype=vol_f.dtype, device=vol_f.device)
+                slice_[keep] = xy_slice.to(slice_.dtype)
+                vol_f[i] = slice_.view(boxsize_ht, boxsize_ht)
+
+            # convert the volume from tensor to ndarray
+            vol_f = vol_f.cpu().numpy()
+            # normalize the volume (mean and standard deviation) by normalization used when training the model
+            vol_f = vol_f * norm[1] + norm[0]
+            # inverse DHT,  remove last +k freq that is present due to symmetrizing of DHT
+            vol = fft.iht3_center(vol_f[:-1, :-1, :-1])
         return vol
 
-    def eval_volume_batch(self, coords_zz, keep, norm):
-        '''
+    def eval_volume_batch(self,
+                          coords: torch.Tensor,
+                          z: torch.Tensor,
+                          keep: torch.Tensor,
+                          norm: np.ndarray) -> np.ndarray:
+        """
         Evaluate the model on a batch of DxDxD volumes sharing pre-defined masked coords, D, extent
-
-        Inputs:
-            coords_zz: pre-batched and z-concatenated lattice coords (B x D(z) x D**2(xy) x 3+zdim)
-            keep: mask of which coords to keep per z-plane (satisfying extent) (B=1 x D(z) x D**2(xy))
-            norm: data normalization (B=1 x 2)
-        '''
-        batch_size, D, _, _ = coords_zz.shape
-        batch_vol_f = torch.zeros((batch_size, D, D, D), dtype=coords_zz.dtype, device=coords_zz.device, requires_grad=False)
+        :param coords: batch of lattice coords on the x-y plane, shape (batch, boxsize_ht**2, 3)
+        :param z: latent embedding associated with the volume to decode, shape (batch, zdim)
+        :param keep: mask of which coords to keep per z-plane (satisfying extent) (B=1 x D(z) x D**2(xy))
+        :param norm: mean and standard deviation of preprocessed particles used during model training, shape (batch=0, 2)
+        :return: batch of reconstructed volume, shape (batch, boxsize, boxsize, boxsize)
+        """
         assert not self.training
-        # evaluate the volume by zslice to avoid memory overflows
-        for i in range(D):
-            with torch.no_grad():
-                x = coords_zz[:, i, keep[0, i], :]
-                y = self.decode(x)
-                y = y[..., 0] - y[..., 1]
-                slice_ = torch.zeros((batch_size, D ** 2), dtype=coords_zz.dtype, device=coords_zz.device, requires_grad=False)
-                slice_[:, keep[0, i]] = y.to(slice_.dtype)
-                batch_vol_f[:, i] = slice_.view(batch_size, D, D)
-        batch_vol_f = batch_vol_f * norm[0, 1] + norm[0, 0]
-        batch_vol = fft.iht3_center_torch(batch_vol_f[:, :-1, :-1, :-1])  # remove last +k freq for inverse FFT
+        with torch.inference_mode():
+            # evaluate the volume by zslice to avoid memory overflows
+            batch_size, boxsize_ht, _, _ = coords.shape
+            batch_vol_f = torch.zeros((batch_size, boxsize_ht, boxsize_ht, boxsize_ht), dtype=coords.dtype, device=coords.device)
+            for i in range(boxsize_ht):
+                # get the coords across all volumes (batchdim) of one slice `i` to evaluate, premasked by the `keep` extent
+                batch_xy_coords = coords[:, i, keep[0, i], :]
+
+                # reconstruct the slices by passing them through the model
+                batch_xy_slice = self.forward(coords=batch_xy_coords, z=z)
+
+                # fill the corresponding slices in the batch of 3-D volumes with these amplitudes
+                batch_slice_ = torch.zeros((batch_size, boxsize_ht ** 2), dtype=batch_vol_f.dtype, device=batch_vol_f.device)
+                batch_slice_[:, keep[0, i]] = batch_xy_slice.to(batch_slice_.dtype)
+                batch_vol_f[:, i] = batch_slice_.view(batch_size, boxsize_ht, boxsize_ht)
+
+            # convert the volume from tensor to ndarray
+            batch_vol_f = batch_vol_f.cpu().numpy()
+            # normalize the volume (mean and standard deviation) by normalization used when training the model
+            batch_vol_f = batch_vol_f * norm[0, 1] + norm[0, 0]
+            # inverse DHT,  remove last +k freq that is present due to symmetrizing of DHT
+            batch_vol = fft.iht3_center(batch_vol_f[:, :-1, :-1, :-1])
         return batch_vol
 
 
