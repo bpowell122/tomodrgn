@@ -624,16 +624,57 @@ class TiltSeriesEncoder(nn.Module):
 
 
 class ResidLinearMLP(nn.Module):
-    def __init__(self, in_dim, nlayers, hidden_dim, out_dim, activation):
-        super(ResidLinearMLP, self).__init__()
-        layers = [ResidLinear(in_dim, hidden_dim) if in_dim == hidden_dim else nn.Linear(in_dim, hidden_dim), activation()]
+    """
+    Multiple connected Residual Blocks as a Multi-Layer Perceptron.
+    """
+
+    def __init__(self,
+                 in_dim: int,
+                 nlayers: int,
+                 hidden_dim: int,
+                 out_dim: int,
+                 activation: torch.nn.ReLU | torch.nn.LeakyReLU):
+        """
+        Create the ResidLinearMLP module.
+        :param in_dim: number of input features to the module
+        :param nlayers: number of intermediate hidden layers in the module
+        :param hidden_dim: number of features in each hidden layer
+        :param out_dim: number of output features from the module
+        :param activation: activation function to be applied after each layer, either `torch.nn.ReLU` or `torch.nn.LeakyReLU`
+        """
+        # intialize the parent nn.Module class
+        super().__init__()
+
+        # create the first layer to receive input
+        # the layer will be a ResidLinear layer if possible, otherwise a Linear layer
+        if in_dim == hidden_dim:
+            layers = [ResidLinear(in_dim, hidden_dim)]
+        else:
+            layers = [nn.Linear(in_dim, hidden_dim)]
+        layers.append(activation())
+
+        # append the hidden layers to the module as ResidLinear layers
         for n in range(nlayers):
             layers.append(ResidLinear(hidden_dim, hidden_dim))
             layers.append(activation())
-        layers.append(ResidLinear(hidden_dim, out_dim) if out_dim == hidden_dim else nn.Linear(hidden_dim, out_dim))
+
+        # append the output layer to the module without a final activation function
+        # the layer will be a ResidLinear layer if possible, otherwise a Linear layer
+        if out_dim == hidden_dim:
+            layers.append(ResidLinear(hidden_dim, out_dim))
+        else:
+            layers.append(nn.Linear(hidden_dim, out_dim))
+
+        # create the overall module as a sequential pass through the defined layers
         self.main = nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self,
+                x: torch.Tensor) -> torch.Tensor:
+        """
+        Pass data forward through the module.
+        :param x: Input data tensor.
+        :return: Output data tensor.
+        """
         return self.main(x)
 
 class ResidLinear(nn.Module):
