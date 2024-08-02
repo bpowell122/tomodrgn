@@ -42,7 +42,7 @@ class EquivarianceLoss(nn.Module):
         batch_images_rot = torch.squeeze(batch_images_rot)
 
         # encode the rotated images
-        batch_images_rot_enc = self.model.encode(batch_images_rot, B=batchsize, ntilts=ntilts)[0]
+        batch_images_rot_enc = self.model.encode(batch_images_rot)[0]
 
         # compute the MSE between input unrotated image encodings and rotated image encodings
         diffs = (batch_encoding - batch_images_rot_enc).pow(2).view(batchsize, -1).sum(-1)
