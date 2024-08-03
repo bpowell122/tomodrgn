@@ -8,8 +8,6 @@ from torch.utils import data
 
 from tomodrgn import fft, mrc, utils, starfile, dose, ctf, lattice
 
-log = utils.log
-
 
 def load_particles(mrcs_txt_star: str,
                    lazy: bool = False,
@@ -214,22 +212,22 @@ class TiltSeriesMRCData(data.Dataset):
         :return: trans: numpy array of translation vectors in pixels, shape (nimgs, 2)
         """
         # parse rotations
-        log('Loading rotations from star file')
+        utils.log('Loading rotations from star file')
         euler = self.star.df[self.star.headers_rot].to_numpy(dtype=np.float32)
-        log(f'First image Euler angles (Rot, Tilt, Psi): {euler[0]}')
-        log('Converting to rotation matrix:')
+        utils.log(f'First image Euler angles (Rot, Tilt, Psi): {euler[0]}')
+        utils.log('Converting to rotation matrix:')
         rot = np.asarray([utils.rot_3d_from_relion(*x) for x in euler], dtype=np.float32)
-        log(f'First image rotation matrix: {rot[0]}')
+        utils.log(f'First image rotation matrix: {rot[0]}')
 
         # parse translations (if present, default none for warp-exported particleseries)
-        log('Loading translations from star file (if any)')
+        utils.log('Loading translations from star file (if any)')
         if all(header_trans in self.star.df.columns for header_trans in self.star.headers_trans):
             trans = self.star.df[self.star.headers_trans].to_numpy(dtype=np.float32)
-            log('Translations (pixels):')
-            log(f'First image translation matrix: {trans[0]}')
+            utils.log('Translations (pixels):')
+            utils.log(f'First image translation matrix: {trans[0]}')
         else:
             trans = None
-            log('Translations not found in star file. Reconstruction will not have translations applied.')
+            utils.log('Translations not found in star file. Reconstruction will not have translations applied.')
 
         return rot, trans
 
@@ -243,11 +241,11 @@ class TiltSeriesMRCData(data.Dataset):
         ctf_params = None
 
         if self.star.image_ctf_corrected:
-            log('Particles exported by detected STAR file source software are pre-CTF corrected. During training, reconstructed Fourier central slices will not have CTF applied.')
+            utils.log('Particles exported by detected STAR file source software are pre-CTF corrected. During training, reconstructed Fourier central slices will not have CTF applied.')
             return ctf_params
 
         if not all(header_ctf in self.star.df.columns for header_ctf in self.star.headers_ctf):
-            log('CTF parameters not found in star file. During training, reconstructed Fourier central slices will not have CTF applied.')
+            utils.log('CTF parameters not found in star file. During training, reconstructed Fourier central slices will not have CTF applied.')
             return ctf_params
 
         num_images = len(self.star.df)
@@ -268,7 +266,7 @@ class TiltSeriesMRCData(data.Dataset):
         """
 
         # load the image stack
-        log(f'Loading particles with {self.lazy=}...')
+        utils.log(f'Loading particles with {self.lazy=}...')
         particles = self.star.get_particles_stack(datadir=self.datadir,
                                                   lazy=self.lazy)
         nx = self.star.get_image_size(datadir=self.datadir)
@@ -284,33 +282,33 @@ class TiltSeriesMRCData(data.Dataset):
 
         # preprocess particles in memory if not lazily loading
         if not self.lazy:
-            log('Preprocessing particles...')
+            utils.log('Preprocessing particles...')
             assert particles.shape[-1] == particles.shape[-2], "Images must be square"
             assert nx % 2 == 0, "Image size must be even"
 
             # apply soft circular real space window
             if self.window:
-                log('Windowing particles...')
+                utils.log('Windowing particles...')
                 particles[:, :-1, :-1] *= real_space_2d_mask
 
             # convert real space particles to real-valued reciprocal space via hartley transform
-            log('Converting to reciprocal space via Hartley transform...')
+            utils.log('Converting to reciprocal space via Hartley transform...')
             for i, img in enumerate(particles):
                 particles[i, :-1, :-1] = fft.ht2_center(img[:-1, :-1])
 
             if self.invert_data:
-                log('Inverting data sign...')
+                utils.log('Inverting data sign...')
                 particles *= -1
 
             # symmetrize HT
-            log('Symmetrizing Hartley transform...')
+            utils.log('Symmetrizing Hartley transform...')
             particles = fft.symmetrize_ht(particles,
                                           preallocated=True)
             _, ny_ht, nx_ht = particles.shape
 
             # normalize HT to zero mean and unit standard deviation
             if self.norm is None:
-                log('Calculating normalization factor...')
+                utils.log('Calculating normalization factor...')
                 # using a random subset of 1% of all images to calculate normalization factors
                 random_imgs_for_normalization = np.random.choice(np.arange(nimgs),
                                                                  size=nimgs // 100,
@@ -322,12 +320,12 @@ class TiltSeriesMRCData(data.Dataset):
                 norm = self.norm
             particles -= norm[0]  # zero mean
             particles /= norm[1]  # unit stdev, separate line required to avoid redundant memory allocation
-            log(f'Normalized HT by mean offset {norm[0]} and standard deviation scaling {norm[1]}')
+            utils.log(f'Normalized HT by mean offset {norm[0]} and standard deviation scaling {norm[1]}')
 
-            log(f'Finished loading and preprocessing subtomo particleseries in memory')
+            utils.log(f'Finished loading and preprocessing subtomo particleseries in memory')
         else:
             norm = self.norm
-            log('Will lazily load and preprocess particles on the fly')
+            utils.log('Will lazily load and preprocess particles on the fly')
 
         return particles, norm, real_space_2d_mask
 
@@ -348,7 +346,7 @@ class TiltSeriesMRCData(data.Dataset):
         imgs = fft.symmetrize_ht(imgs)
         norm = [np.mean(imgs), np.std(imgs)]
         norm[0] = 0.0
-        log(f'Normalizing HT by {norm[0]} +/- {norm[1]}')
+        utils.log(f'Normalizing HT by {norm[0]} +/- {norm[1]}')
         return norm
 
     def _get_ntilts_distribution(self) -> tuple[int, int]:
@@ -360,7 +358,7 @@ class TiltSeriesMRCData(data.Dataset):
         ntilts_set = set(self.star.df.groupby(self.star.header_ptcl_uid, sort=False).size().values)
         ntilts_min = min(ntilts_set)
         ntilts_max = max(ntilts_set)
-        log(f'Found {ntilts_min} (min) to {ntilts_max} (max) tilt images per particle')
+        utils.log(f'Found {ntilts_min} (min) to {ntilts_max} (max) tilt images per particle')
 
         return ntilts_min, ntilts_max
 

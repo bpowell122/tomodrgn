@@ -18,6 +18,29 @@ import torch
 _verbose = False
 
 
+def prefix_paths(mrcs: list[str],
+                 datadir: str) -> list[str]:
+    """
+    Test which of various modifications to the image .mrcs files correctly locates the files on disk.
+    Tries no modification; prepending `datadir` to the basename of each image; prepending `datadir` to the full path of each image.
+    :param mrcs: list of strings corresponding to the path to each image file specified in the star file (expected format: the `path_to_mrc` part of `index@path_to_mrc`)
+    :param datadir: str corresponding to absolute or relative path to prepend to `mrcs`
+    :return: list of strings corresponding to the confirmed path to each image file
+    """
+
+    filename_patterns = [
+        mrcs,
+        [f'{datadir}/{os.path.basename(x)}' for x in mrcs],
+        [f'{datadir}/{x}' for x in mrcs],
+    ]
+
+    for filename_pattern in filename_patterns:
+        if all([os.path.isfile(file) for file in set(filename_pattern)]):
+            return filename_pattern
+
+    raise FileNotFoundError(f'Not all files (or possibly no files) could be found using any of the filename patterns: {[filename_pattern[0] for filename_pattern in filename_patterns]}')
+
+
 def log(msg: str | Exception) -> None:
     """
     Write a string to STDOUT with a standardized datetime format.

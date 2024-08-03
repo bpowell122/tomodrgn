@@ -6,10 +6,6 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from tomodrgn import utils
-
-log = utils.log
-
 
 class Lattice:
     def __init__(self,

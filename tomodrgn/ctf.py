@@ -1,14 +1,16 @@
 """
 Functions for Contrast Transfer Function calculation, correction, and display
 """
+from __future__ import annotations
 
 import numpy as np
 import torch
 
 from tomodrgn import utils
-from tomodrgn.lattice import Lattice
 
-log = utils.log
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from tomodrgn.lattice import Lattice
 
 
 def compute_ctf(lattice: Lattice,
@@ -66,14 +68,14 @@ def compute_ctf(lattice: Lattice,
     return ctf, df, gamma
 
 
-def print_ctf_params(params):
+def print_ctf_params(params: np.ndarray | torch.Tensor) -> None:
     assert len(params) == 9
-    log('Image size (pix)  : {}'.format(params[0]))
-    log('A/pix             : {}'.format(params[1]))
-    log('DefocusU (A)      : {}'.format(params[2]))
-    log('DefocusV (A)      : {}'.format(params[3]))
-    log('Dfang (deg)       : {}'.format(params[4]))
-    log('voltage (kV)      : {}'.format(params[5]))
-    log('cs (mm)           : {}'.format(params[6]))
-    log('w                 : {}'.format(params[7]))
-    log('Phase shift (deg) : {}'.format(params[8]))
+    utils.log('Image size (pix)  : {}'.format(params[0]))
+    utils.log('Å/pix             : {}'.format(params[1]))
+    utils.log('DefocusU (Å)      : {}'.format(params[2]))
+    utils.log('DefocusV (Å)      : {}'.format(params[3]))
+    utils.log('Dfang (deg)       : {}'.format(params[4]))
+    utils.log('voltage (kV)      : {}'.format(params[5]))
+    utils.log('cs (mm)           : {}'.format(params[6]))
+    utils.log('w                 : {}'.format(params[7]))
+    utils.log('Phase shift (deg) : {}'.format(params[8]))

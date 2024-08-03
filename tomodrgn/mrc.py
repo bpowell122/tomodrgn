@@ -28,7 +28,7 @@ import sys
 import struct
 from collections import OrderedDict
 from itertools import groupby
-from tomodrgn.starfile import prefix_paths
+from tomodrgn import utils
 
 
 class MRCHeader:
@@ -479,8 +479,8 @@ def parse_mrc_list(txtfile: str,
         lines = f.readlines()
 
     # confirm where to load MRC file(s) from disk
-    lines = prefix_paths(mrcs=lines,
-                         datadir=os.path.dirname(os.path.abspath(txtfile)))
+    lines = utils.prefix_paths(mrcs=lines,
+                               datadir=os.path.dirname(os.path.abspath(txtfile)))
 
     # load the particles
     if not lazy:

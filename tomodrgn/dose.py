@@ -4,9 +4,6 @@ Functions to model transmission electron microscopy signal degradation as a func
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
-from tomodrgn import utils
-
-log = utils.log
 
 
 def plot_weight_distribution(cumulative_weights: np.ndarray,

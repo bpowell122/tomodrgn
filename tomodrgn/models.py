@@ -13,8 +13,6 @@ import torchinfo
 
 from tomodrgn import fft, utils, lattice, set_transformer
 
-log = utils.log
-
 
 class TiltSeriesHetOnlyVAE(nn.Module):
     # TODO move sequential tilt sampling from dataset.__getitem__ to encoder A -> B transition

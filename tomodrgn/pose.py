@@ -4,7 +4,7 @@ import numpy as np
 import pickle
 
 from tomodrgn import lie_tools, utils
-log = utils.log
+
 
 class PoseTracker(nn.Module):
     def __init__(self, rots_np, trans_np=None, D=None, emb_type=None):
@@ -74,7 +74,7 @@ class PoseTracker(nn.Module):
             assert np.all(trans <= 1), "ERROR: Old pose format detected. Translations must be in units of fraction of box."
             trans *= D # convert from fraction to pixels
         else: 
-            log('WARNING: No translations provided')
+            utils.log('WARNING: No translations provided')
             trans = None
 
         return cls(rots, trans, D, emb_type)

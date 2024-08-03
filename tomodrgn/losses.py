@@ -1,13 +1,16 @@
 """
 Classes and functions for handling model loss calculations
 """
+from __future__ import annotations
 
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from tomodrgn.models import TiltSeriesHetOnlyVAE
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from tomodrgn.models import TiltSeriesHetOnlyVAE
 
 
 class EquivarianceLoss(nn.Module):

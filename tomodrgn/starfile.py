@@ -10,33 +10,6 @@ import matplotlib.pyplot as plt
 from typing import TextIO, Literal
 
 from tomodrgn import mrc, utils
-from tomodrgn.mrc import LazyImage
-
-log = utils.log
-vlog = utils.vlog
-
-
-def prefix_paths(mrcs: list[str],
-                 datadir: str) -> list[str]:
-    """
-    Test which of various modifications to the image .mrcs files correctly locates the files on disk.
-    Tries no modification; prepending `datadir` to the basename of each image; prepending `datadir` to the full path of each image.
-    :param mrcs: list of strings corresponding to the path to each image file specified in the star file (expected format: the `path_to_mrc` part of `index@path_to_mrc`)
-    :param datadir: str corresponding to absolute or relative path to prepend to `mrcs`
-    :return: list of strings corresponding to the confirmed path to each image file
-    """
-
-    filename_patterns = [
-        mrcs,
-        [f'{datadir}/{os.path.basename(x)}' for x in mrcs],
-        [f'{datadir}/{x}' for x in mrcs],
-    ]
-
-    for filename_pattern in filename_patterns:
-        if all([os.path.isfile(file) for file in set(filename_pattern)]):
-            return filename_pattern
-
-    raise FileNotFoundError(f'Not all files (or possibly no files) could be found using any of the filename patterns: {[filename_pattern[0] for filename_pattern in filename_patterns]}')
 
 
 class GenericStarfile:
@@ -84,7 +57,7 @@ class GenericStarfile:
             self.preambles = [['', 'data_', '', 'loop_']]
             self.block_names = ['data_']
             self.blocks = {'data_': dataframe}
-        log('Loaded star file into memory.')
+        utils.log('Loaded star file into memory.')
 
     def __len__(self):
         return len(self.block_names)
@@ -147,7 +120,7 @@ class GenericStarfile:
                     continue
                 elif line.startswith('#'):
                     # line is a comment, discarding for now
-                    log(f'Found comment at STAR file line {_line_count}, will not be preserved if writing star file later')
+                    utils.log(f'Found comment at STAR file line {_line_count}, will not be preserved if writing star file later')
                     continue
                 elif len(line.split()) == len([column for column in _header if column.startswith('_')]):
                     # first data line
@@ -278,13 +251,13 @@ class GenericStarfile:
                 write_single_block(f, block_name)
                 f.write('\n')
 
-        log(f'Wrote {os.path.abspath(outstar)}')
+        utils.log(f'Wrote {os.path.abspath(outstar)}')
 
     def get_particles_stack(self,
                             particles_block_name: str = None,
                             particles_path_column: str = None,
                             datadir: str = None,
-                            lazy: bool = False) -> np.ndarray | list[LazyImage]:
+                            lazy: bool = False) -> np.ndarray | list[mrc.LazyImage]:
         """
         Load particle images referenced by starfile
         :param particles_block_name: name of star file block containing particle path column (e.g. `data_`, `data_particles`)
@@ -304,7 +277,7 @@ class GenericStarfile:
 
         # confirm where to load MRC file(s) from disk
         if datadir is not None:
-            mrcs_files = prefix_paths(mrcs_files, datadir)
+            mrcs_files = utils.prefix_paths(mrcs_files, datadir)
 
         # identify key parameters for creating image data array using the first mrcs file
         header = mrc.parse_header(mrcs_files[0])
@@ -321,10 +294,10 @@ class GenericStarfile:
         stride = dtype().itemsize * boxsize * boxsize
 
         if lazy:
-            lazyparticles = [LazyImage(fname=file,
-                                       shape=(boxsize, boxsize),
-                                       dtype=dtype,
-                                       offset=header.total_header_bytes + ind_img * stride)
+            lazyparticles = [mrc.LazyImage(fname=file,
+                                           shape=(boxsize, boxsize),
+                                           dtype=dtype,
+                                           offset=header.total_header_bytes + ind_img * stride)
                              for ind_stack, file in zip(mrcs_grouped_image_inds, mrcs_files)
                              for ind_img in ind_stack]
             return lazyparticles
@@ -478,7 +451,7 @@ class TiltSeriesStarfile(GenericStarfile):
             raise ValueError(f'Unrecognized source software: {source_software}')
 
     def _warpv1_metadata_mapping(self):
-        log('Using STAR source software: Warp_v1 | M_v1')
+        utils.log('Using STAR source software: Warp_v1 | M_v1')
 
         # easy reference to particles data block
         self.block_particles = 'data_'
@@ -513,7 +486,7 @@ class TiltSeriesStarfile(GenericStarfile):
         self.image_tilt_weighted = False
 
     def _cryosrpnt_metadata_mapping(self):
-        log('Using STAR source software: cryoSRPNT_v0.1')
+        utils.log('Using STAR source software: cryoSRPNT_v0.1')
 
         # easy reference to particles data block
         self.block_particles = 'data_'
@@ -548,7 +521,7 @@ class TiltSeriesStarfile(GenericStarfile):
         self.image_tilt_weighted = False
 
     def _nextpyp_metadata_mapping(self):
-        log('Using STAR source software: nextPYP')
+        utils.log('Using STAR source software: nextPYP')
 
         # easy reference to particles data block
         self.block_optics = 'data_optics'
@@ -724,20 +697,20 @@ class TiltSeriesStarfile(GenericStarfile):
         match headers:
 
             case {'data_': headers1} if set(known_star_headers['warpm_v1']['data_']).issubset(headers1):
-                log('Detected STAR source software: Warp_v1 | M_v1')
+                utils.log('Detected STAR source software: Warp_v1 | M_v1')
                 self._warpv1_metadata_mapping()
 
             case {'data_': headers1} if set(known_star_headers['cryosrpnt_v0.1']['data_']).issubset(headers1):
-                log('Detected STAR source software: cryoSRPNT_v0.1')
+                utils.log('Detected STAR source software: cryoSRPNT_v0.1')
                 self._cryosrpnt_metadata_mapping()
 
             case {'data_optics': headers1, 'data_particles': headers2} if (
                     set(known_star_headers['nextpyp']['data_optics']).issubset(headers1) and set(known_star_headers['nextpyp']['data_particles']).issubset(headers2)):
-                log('Detected STAR source software: nextPYP')
+                utils.log('Detected STAR source software: nextPYP')
                 self._nextpyp_metadata_mapping()
 
             case {'data_': headers1} if set(known_star_headers['cistem']['data_']).issubset(headers1):
-                log('Detected STAR source software: cisTEM')
+                utils.log('Detected STAR source software: cisTEM')
                 self._cistem_metadata_mapping()
 
             case _:
@@ -848,7 +821,7 @@ class TiltSeriesStarfile(GenericStarfile):
         first_image = self.df[self.header_ptcl_image].iloc[0]
         stack_index, stack_path = first_image.split('@')
         if datadir is not None:
-            stack_path = prefix_paths([stack_path], datadir)[0]
+            stack_path = utils.prefix_paths([stack_path], datadir)[0]
         assert os.path.exists(stack_path), f'{stack_path} not found'
         header = mrc.parse_header(stack_path)
         return header.boxsize
@@ -881,11 +854,11 @@ class TiltSeriesStarfile(GenericStarfile):
 
         # how many particles does the star file initially contain
         ptcls_unique_list = self.df[self.header_ptcl_uid].unique().to_numpy()
-        log(f'Found {len(ptcls_unique_list)} particles in input star file')
+        utils.log(f'Found {len(ptcls_unique_list)} particles in input star file')
 
         # filter by image (row of dataframe) by presupplied indices
         if ind_imgs is not None:
-            log('Filtering particle images by supplied indices')
+            utils.log('Filtering particle images by supplied indices')
 
             if type(ind_imgs) is str:
                 if ind_imgs.endswith('.pkl'):
@@ -900,7 +873,7 @@ class TiltSeriesStarfile(GenericStarfile):
 
         # filter by particle (group of rows sharing common header_ptcl_uid) by presupplied indices
         if ind_ptcls is not None:
-            log('Filtering particles by supplied indices')
+            utils.log('Filtering particles by supplied indices')
 
             if type(ind_ptcls) is str:
                 if ind_ptcls.endswith('.pkl'):
@@ -919,7 +892,7 @@ class TiltSeriesStarfile(GenericStarfile):
 
         # sort the star file per-particle by the specified method
         if sort_ptcl_imgs != 'unsorted':
-            log(f'Sorting star file per-particle by {sort_ptcl_imgs}')
+            utils.log(f'Sorting star file per-particle by {sort_ptcl_imgs}')
             # create temp mapping of input particle order in star file to preserve after sorting
             self.df['_temp_input_ptcl_order'] = self.df.groupby(self.header_ptcl_uid, sort=False).ngroup()
             if sort_ptcl_imgs == 'dose_ascending':
@@ -933,19 +906,19 @@ class TiltSeriesStarfile(GenericStarfile):
 
         # keep the first ntilts images of each particle
         if use_first_ntilts != -1:
-            log(f'Keeping first {use_first_ntilts} images of each particle. Excluding particles with fewer than this many images.')
+            utils.log(f'Keeping first {use_first_ntilts} images of each particle. Excluding particles with fewer than this many images.')
             self.df = self.df.groupby(self.header_ptcl_uid).head(use_first_ntilts).reset_index(drop=True)
 
             # if a particledoes not have ntilts images, drop it
             rows_to_drop = self.df.loc[self.df.groupby(self.header_ptcl_uid)[self.header_ptcl_uid].transform('count') < use_first_ntilts].index
             num_ptcls_to_drop = len(self.df.loc[rows_to_drop, self.header_ptcl_uid].unique())
             if num_ptcls_to_drop > 0:
-                log(f'Dropping {num_ptcls_to_drop} from star file due to having fewer than {use_first_ntilts=} tilt images per particle')
+                utils.log(f'Dropping {num_ptcls_to_drop} from star file due to having fewer than {use_first_ntilts=} tilt images per particle')
             self.df = self.df.drop(rows_to_drop).reset_index(drop=True)
 
         # keep the first nptcls particles
         if use_first_nptcls != -1:
-            log(f'Keeping first {use_first_nptcls=} particles.')
+            utils.log(f'Keeping first {use_first_nptcls=} particles.')
             ptcls_unique_list = self.df[self.header_ptcl_uid].unique().to_numpy()
             ptcls_unique_list = ptcls_unique_list[:use_first_nptcls]
             self.df = self.df[self.df[self.header_ptcl_uid].isin(ptcls_unique_list)]
@@ -1000,8 +973,8 @@ class TiltSeriesStarfile(GenericStarfile):
 
         # provide summary statistics
         if show_summary_stats:
-            log(f'    Number of tilts sampled by inds_train: {set([len(inds_img_train) for inds_img_train in inds_train])}')
-            log(f'    Number of tilts sampled by inds_test: {set([len(inds_img_test) for inds_img_test in inds_test])}')
+            utils.log(f'    Number of tilts sampled by inds_train: {set([len(inds_img_train) for inds_img_train in inds_train])}')
+            utils.log(f'    Number of tilts sampled by inds_test: {set([len(inds_img_test) for inds_img_test in inds_test])}')
 
         # flatten indices
         inds_train = np.asarray([ind_img for inds_img_train in inds_train for ind_img in inds_img_train])
@@ -1048,7 +1021,7 @@ class TiltSeriesStarfile(GenericStarfile):
                             *,
                             datadir: str = None,
                             lazy: bool = False,
-                            **kwargs) -> np.ndarray | list[LazyImage]:
+                            **kwargs) -> np.ndarray | list[mrc.LazyImage]:
         """
         Calls parent GenericStarfile get_particles_stack.
         Parent method parameters `particles_block_name` and `particles_path_column` are presupplied due to identification of these values during TiltSeriesStarfile instance creation.
