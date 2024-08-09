@@ -750,3 +750,49 @@ class DataParallelPassthrough(torch.nn.DataParallel):
             return super().__getattr__(name)
         except AttributeError:
             return getattr(self.module, name)
+
+
+def print_mlp_ascii(input_dim: int, hidden_dims: list[int], output_dim: int):
+    """
+    Create ASCII art of a fully connected multi-layer perceptron.
+    Constraints: number of digits in each dimension cannot exceed 5.
+    Sample usage: ``print_mlp_ascii(input_dim=12345, hidden_dims=[128, 128, 128], output_dim=2)``
+    :param input_dim: dimensionality of input layer
+    :param hidden_dims: list of dimensionalities of hidden layers
+    :param output_dim: dimensionality of output layer
+    :return: None
+    """
+    output = []
+    art_height = 9  # 9 lines tall
+    node_symbol = '\u25CF'
+    node_connection_symbol = '\u292C'
+    for i in range(art_height):
+        if i in (0, 2, 6, 8):
+            # draw the conneciton lines and nodes
+            if i in (0, 8):
+                # top or bottom line, number of nodes = len(hidden_dims)
+                line = f'        {node_symbol} ' + ''.join([f'--- {node_symbol} ' for _ in range(len(hidden_dims) - 1)])
+            else:
+                # central two lines, number of nodes = len(hidden_dims + 2)
+                line = f'  {node_symbol} ---' + ''.join([f' {node_symbol} ---' for _ in range(len(hidden_dims))]) + f' {node_symbol} '
+        elif i in (1, 3, 5, 7):
+            # draw the connection lines and colons only
+            if i == 1:
+                # top line, number of connections with X = len(hidden_dims)-1
+                line = '     /     ' + ''.join([f'{node_connection_symbol}     ' for _ in range(len(hidden_dims) - 1)]) + '\\'
+            elif i == 3:
+                # central two lines, number of connections with X = len(hidden_dims)-1 and need to draw colons connecting nodes
+                line = '  :  \\ ' + ''.join([f' :  {node_connection_symbol} ' for _ in range(len(hidden_dims) - 1)]) + ' :  /  :'
+            elif i == 5:
+                # central two lines, number of connections with X = len(hidden_dims)-1 and need to draw colons connecting nodes
+                line = '  :  / ' + ''.join([f' :  {node_connection_symbol} ' for _ in range(len(hidden_dims) - 1)]) + ' :  \\  :'
+            else:
+                # bottom line, number of connections with X = len(hidden_dims)-1
+                line = '     \\     ' + ''.join([f'{node_connection_symbol}     ' for _ in range(len(hidden_dims) - 1)]) + '/'
+        else:
+            # draw the center padded node numbers
+            # f'{input_dim:^5}'
+            line = f'{input_dim:^5} ' + ''.join([f'{hidden_dim:^5} ' for hidden_dim in hidden_dims]) + f'{output_dim:^5}'
+        output.append(line)
+    for line in output:
+        print(line)
