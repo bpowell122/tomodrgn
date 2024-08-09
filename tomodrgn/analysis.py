@@ -1075,445 +1075,724 @@ def load_dataframe(*,
     return df
 
 
-### TOMOGRAM RENDERING FUNCTIONS ###
-
-def render_tomogram_volume(tomogram):
-    # note: manually decrease brightness slider to make greyscale
-    # note: manually decrease opacity slider to increase interpretability of volume
-    ipv.gcf()
-    tomoplot = ipv.volshow(tomogram,
-                           level=[0.00, 0.68, 1.00],
-                           opacity=[0.00, 0.68, 1.00],
-                           downscale=2,
-                           lighting=True,
-                           controls=True,
-                           max_opacity=1.0)
+##################################################
+# Interactive 3-D particle and tomogram plotting #
+##################################################
 
 
-def render_tomogram_xyzslices(tomogram):
-    zmax, ymax, xmax = tomogram.shape
-    # these tomograms are (510,680,680)
-
-    triangles = [(0, 1, 2), (0, 2, 3)]
-    u = [0., 1., 1., 0.]
-    v = [1., 1., 0., 0.]
-
-    def calculate_tomogram_slice(slice_middle, thickness=10, axis='z'):
-        if thickness == 1:
-            slice_min = slice_middle
-            slice_max = slice_middle + 1
-        else:
-            slice_min = slice_middle - thickness // 2
-            slice_max = slice_min + thickness // 2
-
-        if axis == 'z':
-            texture = np.sum(tomogram[slice_min:slice_max, :, :], axis=0)
-            x = [0.0, xmax, xmax, 0.0]
-            y = [0.0, 0.0, ymax, ymax]
-            z = [slice_middle, slice_middle, slice_middle, slice_middle]
-        elif axis == 'y':
-            texture = np.sum(tomogram[:, slice_min:slice_max, :], axis=1)
-            x = [0.0, xmax, xmax, 0.0]
-            y = [slice_middle, slice_middle, slice_middle, slice_middle]
-            z = [0.0, 0.0, zmax, zmax]
-        elif axis == 'x':
-            texture = np.sum(tomogram[:, :, slice_min:slice_max], axis=2)
-            x = [slice_middle, slice_middle, slice_middle, slice_middle]
-            y = [0, ymax, ymax, 0]
-            z = [0.0, 0, zmax, zmax]
-
-        texture = (texture - texture.min()) / (texture.max() - texture.min()) * 255
-        PIL_texture = Image.fromarray(np.uint8(texture), mode="L")
-
-        return PIL_texture, x, y, z
-
-    # TODO: if quiverplot is not None, update quiverplot by displaying points within slice thickness only
-    def update_slice(*args):
-        slice_middle_new = slice_slider.value
-        thickness = thickness_slider.value
-        axis = axis_dropdown.value
-
-        PIL_texture_new, x_new, y_new, z_new = calculate_tomogram_slice(slice_middle_new,
-                                                                        thickness=thickness,
-                                                                        axis=axis)
-
-        tomoplot.x = x_new
-        tomoplot.y = y_new
-        tomoplot.z = z_new
-        tomoplot.texture = PIL_texture_new
-
-    def update_slider_range(*args):
-        thickness = thickness_slider.value
-        axis = axis_dropdown.value
-
-        axis_max = {'x': xmax, 'y': ymax, 'z': zmax}[axis]
-        slice_slider.max = axis_max - thickness_slider.value // 2
-        slice_slider.min = thickness_slider.value // 2
-
-    def update_slice_and_slider(*args):
-        update_slider_range()
-        update_slice()
-
-    # create interactive widgets
-    slice_slider = widgets.IntSlider(min=0,
-                                     max=zmax,
-                                     value=255,
-                                     continuous_update=True,
-                                     description='Slice')
-    thickness_slider = widgets.IntSlider(min=1,
-                                         max=50,
-                                         value=5,
-                                         continuous_update=True,
-                                         description='Thickness')
-    axis_dropdown = widgets.Dropdown(options=['x', 'y', 'z'],
-                                     value='z',
-                                     description='Axis to slice',
-                                     disabled=False)
-    continuous_update_check = widgets.Checkbox(value=True,
-                                               description='Continuous updates',
-                                               disabled=False)
-
-    # define widget behavior
-    slice_slider.observe(update_slice, 'value')
-    thickness_slider.observe(update_slice_and_slider, 'value')
-    axis_dropdown.observe(update_slice_and_slider, 'value')
-    widgets.jslink((continuous_update_check, 'value'), (slice_slider, 'continuous_update'))
-    widgets.jslink((continuous_update_check, 'value'), (thickness_slider, 'continuous_update'))
-
-    # create plot
-    PIL_texture, x, y, z = calculate_tomogram_slice(250, thickness=20, axis='z')
-    ipv.gcf()
-    tomoplot = ipv.plot_trisurf(x, y, z, color='grey', triangles=triangles, texture=PIL_texture, u=u, v=v)
-    ipv.xlim(0, xmax)
-    ipv.ylim(0, ymax)
-    ipv.zlim(0, zmax)
-
-    # define UI layout
-    ui = widgets.VBox([widgets.HBox(
-        [slice_slider, thickness_slider],
-        layout=widgets.Layout(width='100%', display='inline-flex', flex_flow='row wrap')
-    ),
-        widgets.HBox(
-            [axis_dropdown, continuous_update_check],
-            layout=widgets.Layout(width='100%', display='inline-flex', flex_flow='row wrap')
-        )])
-    display(ui)
-
-
-def render_tomogram_isosurface(tomogram):
-    ipv.gcf()
-    tomoplot = ipv.plot_isosurface(tomogram,
-                                   level=0.2,
-                                   wireframe=True,
-                                   surface=True,
-                                   controls=True,
-                                   extent=None)
-
-
-### PLOTTING PARTICLES ASSOCIATED WITH ONE TOMOGRAM ###
-
-def rescale_df_coordinates(df, tomo_max_xyz_nm=(680, 680, 510), tomo_pixelsize=10, starfile_pixelsize=1):
-    # reconstructed tomos encompass some volume measured in nm
-    # pixel sizes should be supplied as A/px
-    tomo_max_x_nm, tomo_max_y_nm, tomo_max_z_nm = tomo_max_xyz_nm  # units = nm
+def convert_angstroms_to_voxels(df: pd.DataFrame,
+                                tomogram_array_shape: tuple[int, int, int],
+                                tomo_pixelsize: float,
+                                starfile_pixelsize: float = 1) -> pd.DataFrame:
+    """
+    Rescale dataframe coordinates from angstroms to unitless voxels corresponding to reconstructed tomograms.
+    A starfile (loaded as a dataframe) expresses the 3-D coordinate of each particle typically in either Ångstroms or in pixels (with a pixel size set at particle extraction time).
+    In subsequent operations we will wish to plot particle locations superimposed on tomogram voxel data.
+    This requires rescaling the particle coordinates from units of Ångstroms or extraction-sized-pixels to tomogram-sized-voxels.
+    :param df: dataframe containing particle coordinates to rescale
+    :param tomogram_array_shape: shape of reconstructed tomogram in voxels
+    :param tomo_pixelsize: pixel size of reconstructed tomogram in Å/px
+    :param starfile_pixelsize: pixel size of particles at extraction time when writing the star file from which `df` was loaded.
+            Note: star files produced from particle extraction in M always have pixel size 1 Å/px.
+    :return: dataframe with rescaled coordinates aligned to the tomogram voxel array
+    """
+    # unpack the shape of the tomogram 3-D volume array
+    tomo_px_x, tomo_px_y, tomo_px_z = tomogram_array_shape
 
     # rlnCoordinate from starfile is measured in px, so needs to be rescaled to dimensionless tomo voxels
     df.loc[:, '_rlnCoordinateX'] = df['_rlnCoordinateX'].astype('float') * starfile_pixelsize / tomo_pixelsize
     df.loc[:, '_rlnCoordinateY'] = df['_rlnCoordinateY'].astype('float') * starfile_pixelsize / tomo_pixelsize
     df.loc[:, '_rlnCoordinateZ'] = df['_rlnCoordinateZ'].astype('float') * starfile_pixelsize / tomo_pixelsize
 
-    assert 0 <= df['_rlnCoordinateX'].all() <= tomo_max_x_nm
-    assert 0 <= df['_rlnCoordinateY'].all() <= tomo_max_y_nm
-    assert 0 <= df['_rlnCoordinateZ'].all() <= tomo_max_z_nm
+    # sanity check that all particle coordinates now fall within the tomogram voxel limits
+    assert 0 <= df['_rlnCoordinateX'].all() <= tomo_px_x
+    assert 0 <= df['_rlnCoordinateY'].all() <= tomo_px_y
+    assert 0 <= df['_rlnCoordinateZ'].all() <= tomo_px_z
 
     return df
 
 
-def subset_ptcls_and_render(df, tomo_name_for_df):
-    def subset_df(df, tomo_name_for_df):
-        # subset selected tomogram from dropdown
-        df_subset = df[df['_rlnMicrographName'] == tomo_name_for_df]
+def ipy_tomo_ptcl_viewer(tomogram_list: list[str], df_particles: pd.DataFrame) -> widgets.Box:
+    """
+    An interactive tomogram and particle viewer using plotly and ipywidgets.
+    Allows correlation of tomogram image data with particle locations with particle metadata attributes expressed in `df_particles`.
+    """
+    # TODO add tomogram_list mapping to tomogram name for df_particles selection
+    class TomoDataContainer:
+        def __init__(self):
+            self.tomogram = None
+            self.tomo_x_vx = 0
+            self.tomo_y_vx = 0
+            self.tomo_z_vx = 0
+            self.df_particles_sub = None
+            self.scatter_x_vx = 0
+            self.scatter_y_vx = 0
+            self.scatter_z_vx = 0
 
-        # reset index
-        df_subset = df_subset.reset_index(drop=True)
-        df['index_this_tomo_particles'] = df.index
+    def tomo_load_callback(b):
+        """
+        Load the selected tomogram into memory and render it as image slices along the z axis.
+        """
+        # this function must take a parameter for the callback to function, but we do not currently use it
+        _ = b
 
-        return df_subset
-
-    def pose_to_vector(df):
-        # TODO: implement symmetry parsing
-        # right now only poses from subtomos refined in C1 display correctly
-        # Rot and Psi must cover [-180,180] or [0,360], and Tilt must cover [0,180]
-        # otherwise particles with "C1 poses" outside "sym-restricted rot/tilt/psi" will appear misaligned
-        # extract scaled image coordinates
-        x = df['_rlnCoordinateX'].to_numpy(dtype=float)
-        y = df['_rlnCoordinateY'].to_numpy(dtype=float)
-        z = df['_rlnCoordinateZ'].to_numpy(dtype=float)
-
-        # extract euler angles and convert to radians
-        rot = df['_rlnAngleRot'].to_numpy(dtype=float) * np.pi / 180
-        tilt = df['_rlnAngleTilt'].to_numpy(dtype=float) * np.pi / 180
-        psi = df['_rlnAnglePsi'].to_numpy(dtype=float) * np.pi / 180
-
-        # convert euler angles to xyz view vector
-        # following formulation of doi: 10.1016/j.jsb.2005.06.001 section 2.2.5
-        xv = np.cos(rot) * np.sin(tilt)
-        yv = np.sin(rot) * np.sin(tilt)
-        zv = np.cos(tilt)
-
-        return x, y, z, xv, yv, zv
-
-    class ParticleLabelPopup(ipv.ui.Popup):
-        # index_all_ptcls is a list corresponding to the unfiltered particle indices for all tomograms
-        # value is the index of the hovered point among all points in the plot
-
-        index_all_ptcls = traitlets.List().tag(sync=True)
-        sel_column = traitlets.Unicode().tag(sync=True)
-        sel_column_values = traitlets.List().tag(sync=True)
-
-        template_file = None  # disable the loading from file
-        @traitlets.default("template")
-        def _default_template(self):
-            return """
-                    <template>
-                        <div :style="{padding: '4px', 'background-color': 'black', color: 'white'}">
-                            Particle {{index_all_ptcls[value]}}
-                            <br>
-                            {{sel_column}}: {{sel_column_values[value]}}
-                        </div>
-                    </template>
-                    """
-
-    def generate_colormap_from_column(df_subset_selected_column, colormap=None):
-        # derive colormap from selected column
-        cmap = plt.get_cmap(colormap)
-
-        metric_min = df[df_subset_selected_column].min()
-        metric_max = df[df_subset_selected_column].max()
-        metric_subset = df_subset[df_subset_selected_column]
-
-        normalized_metric = (metric_subset - metric_min) / (metric_max - metric_min)
-        return cmap(normalized_metric)
-
-    def selcolumn_dropdown_eventhandler(change):
-        df_subset_selected_column = column_selection.value
-
-        # update popup extra data
-        popup.sel_column = df_subset_selected_column
-        popup.sel_column_values = df_subset.loc[:, df_subset_selected_column].to_list()
-
-        # update the colormap
-        colormap = colormap_selection.value
-        if colormap is not None:
-            colors = generate_colormap_from_column(df_subset_selected_column, colormap)
+        selected_tomogram = tomo_selection_widget.value
+        if selected_tomogram is None:
+            with output:
+                print('Use the "Tomogram:" dropdown to select the tomogram to load')
+            return
         else:
-            colors = 'dodgerblue'
-        quiverplot.color = colors
+            with output:
+                print(f'Loading tomogram slices from {selected_tomogram} ...')
+        tomogram = mrc.parse_mrc(selected_tomogram)[0]
 
-        # update the subset selection slider values
-        if show_selection_checkbox.value:
-            old_min = subset_value_range.min
-            old_max = subset_value_range.max
-            new_min = df[column_selection.value].min()
-            new_max = df[column_selection.value].max()
+        # prepare bounds / meshes for tomogram rendering
+        tomo_z_vx, tomo_y_vx, tomo_x_vx = tomogram.shape
+        # tomo_mesh_z_vx, tomo_mesh_y_vx, tomo_mesh_x_vx = np.mgrid[0:tomo_x_vx, 0:tomo_y_vx, 0:tomo_z_vx]
+        tomodatacontainer.tomogram = tomogram
+        tomodatacontainer.tomo_x_vx = tomo_x_vx
+        tomodatacontainer.tomo_y_vx = tomo_x_vx
+        tomodatacontainer.tomo_z_vx = tomo_x_vx
 
-            if (old_min == new_min) and (old_max == new_max):
-                return
+        # graphical data
+        # tomo_volume = go.Volume(
+        #     name='tomo_volume',
+        #     x=tomo_mesh_x_vx.flatten(),
+        #     y=tomo_mesh_y_vx.flatten(),
+        #     z=tomo_mesh_z_vx.flatten(),
+        #     value=tomogram.flatten(),
+        #     isomin=np.percentile(tomogram, 90),
+        #     isomax=np.percentile(tomogram, 99),
+        #     opacity=0.5,
+        #     surface=dict(count=5),  # needs to be a large number for good volume rendering
+        #     showscale=False,  # no colorbar
+        #     # flatshading=False,
+        #     # caps= dict(x_show=False, y_show=False, z_show=False),  # no caps
+        #     visible=False,
+        # )
 
-            subset_value_range.min = min(old_min, new_min)  # update lower bound to temp value to avoid "setting max < min" error
-            subset_value_range.max = max(old_max, new_max)  # update upper bound to temp value to avoid "setting min > max" error
+        tomo_slice = go.Surface(
+            name='tomo_slice',
+            x=np.linspace(0, tomo_x_vx, tomo_x_vx),
+            y=np.linspace(0, tomo_y_vx, tomo_y_vx),
+            z=np.ones((tomo_y_vx, tomo_x_vx)) * (tomo_z_vx // 2),
+            surfacecolor=tomogram[tomo_z_vx // 2],
+            colorscale='gray',
+            opacity=1,
+            showscale=False,  # no colorbar
+        )
 
-            subset_value_range.min = new_min
-            subset_value_range.max = new_max
-            subset_value_range.value = [new_min, new_max]
+        with fig.batch_update():
+            fig.add_traces([
+                # tomo_volume,
+                tomo_slice,
+            ])
+            fig.update_layout(scene=dict(
+                xaxis=dict(range=[0, max(tomodatacontainer.tomo_x_vx, tomodatacontainer.scatter_x_vx)], ),
+                yaxis=dict(range=[0, max(tomodatacontainer.tomo_y_vx, tomodatacontainer.scatter_y_vx)], ),
+                zaxis=dict(range=[0, max(tomodatacontainer.tomo_z_vx, tomodatacontainer.scatter_z_vx)], ),
+                aspectratio=dict(x=1, y=1, z=1),
+            ))
 
-        update_subset_quiver()
+        # tomo_volume_iso_widget.min = np.min(tomogram)
+        # tomo_volume_iso_widget.value = (np.percentile(tomogram, 90), np.percentile(tomogram, 99))
+        # tomo_volume_iso_widget.max = np.max(tomogram)
 
-    # subset dataframe by selected tomo
-    df = guess_dtypes(df)
-    df_subset = subset_df(df, tomo_name_for_df)
+        tomo_slice_slider_widget.max = tomo_z_vx
+        tomo_slice_slider_widget.value = tomo_z_vx // 2
+        tomo_slice_thickness_widget.max = tomo_z_vx // 4
+        tomo_slice_thickness_widget.value = 1
 
-    # create interactive widgets for main plot
-    column_selection = widgets.Dropdown(options=df_subset,
-                                        description='Color by:',
-                                        disabled=False)
-    colormaps = [('None', None),
-                 ('viridis | Perceptually Uniform Sequential', 'viridis'),
-                 ('coolwarm | Diverging', 'coolwarm'),
-                 ('hsv | Cyclic', 'hsv'),
-                 ('tab10 | Categorical 10', 'tab10'),
-                 ('tab20 | Categorical 20', 'tab20'),
-                 ('CMRmap | Miscellaneous', 'CMRmap'),
-                 ('turbo | Miscellaneous', 'turbo')]
-    colormap_selection = widgets.Dropdown(options=colormaps,
-                                          description='Colormap:',
-                                          disabled=False)
-    size = widgets.FloatSlider(value=4, min=0, max=10, description='Marker size')
+    def ptcls_load_callback(b):
+        """
+        Load two copies of the particles into the figure as a main scatter plot and a copy scatter plot for subset indication.
+        """
+        # this function must take a parameter for the callback to function, but we do not currently use it
+        _ = b
 
-    # create interactive widgets for subset overlay plot
-    # TODO: replace FloatRangeSlider with textbox for pd.query custom selection by user
-    show_selection_checkbox = widgets.Checkbox(value=False,
-                                               description='Overlay subset plot')
-    subset_value_range = widgets.FloatRangeSlider(value=[df_subset[column_selection.value].min(),
-                                                         df_subset[column_selection.value].max()],
-                                                  description='Subset values',
-                                                  min=df_subset[column_selection.value].min(),
-                                                  max=df_subset[column_selection.value].max(),
-                                                  continuous_update=False,
-                                                  orientation='horizontal',
-                                                  readout=True,
-                                                  readout_format='.1f',
-                                                  disabled=True)
-    subset_invert_selection = widgets.Checkbox(value=False, description='Invert slider range', disabled=True)
-    subset_size = widgets.FloatSlider(value=0, min=0, max=4, description='Subset marker size', disabled=True)
-
-    #     output = widgets.Output()
-
-    def toggle_subset_overlay(*args):
-        show_selection = show_selection_checkbox.value
-        if show_selection:
-            subset_value_range.disabled = False
-            subset_invert_selection.disabled = False
-            subset_size.disabled = False
-            quiverplot_selected.size = 2
+        selected_tomogram = tomo_selection_widget.value
+        if selected_tomogram is None:
+            with output:
+                print('Use the "Tomogram:" dropdown to select the tomogram to load')
+            return
         else:
-            subset_value_range.disabled = True
-            subset_invert_selection.disabled = True
-            subset_size.disabled = True
-            quiverplot_selected.size = 0
+            with output:
+                print(f'Loading particles from {selected_tomogram} ...')
 
-    def update_subset_quiver(*args):
-        subset_min, subset_max = subset_value_range.value
-        invert_selection = subset_invert_selection.value
-        selected_col = column_selection.value
+        df_particles_sub = df_particles[df_particles['_tomoTomogram'] == selected_tomogram]
 
-        if not invert_selection:
-            selected_ptcls = df_subset[(df_subset[selected_col] >= subset_min) & (df_subset[selected_col] <= subset_max)]
-        else:
-            selected_ptcls = df_subset[(df_subset[selected_col] <= subset_min) | (df_subset[selected_col] >= subset_max)]
+        x, y, z, color = df_particles_sub[['_tomoCoordinateX',
+                                           '_tomoCoordinateY',
+                                           '_tomoCoordinateZ',
+                                           '_tomoLabel']].to_numpy().T
 
-        x_new, y_new, z_new, xv_new, yv_new, zv_new = pose_to_vector(selected_ptcls)
+        tomodatacontainer.scatter_x_vx = max(x)
+        tomodatacontainer.scatter_y_vx = max(y)
+        tomodatacontainer.scatter_z_vx = max(z)
+        tomodatacontainer.df_particles_sub = df_particles_sub
 
-        quiverplot_selected.x = x_new
-        quiverplot_selected.y = y_new
-        quiverplot_selected.z = z_new
-        quiverplot_selected.xv = xv_new
-        quiverplot_selected.yv = yv_new
-        quiverplot_selected.zv = zv_new
+        ptcls_scatter = go.Scatter3d(
+            name='ptcls_scatter',
+            x=x,
+            y=y,
+            z=z,
+            mode='markers',
+            marker=dict(
+                color=color,
+                opacity=1,
+                size=ptcl_marker_size_widget.value,
+            ),
+            showlegend=False,
+            hoverinfo='text',
+            hovertext=[f'index {index}' for index in df_particles_sub.index.to_numpy()]
+        )
 
-    # define widget behavior
-    column_selection.observe(selcolumn_dropdown_eventhandler, names='value')
-    colormap_selection.observe(selcolumn_dropdown_eventhandler, names='value')
+        ptcls_subset_scatter = go.Scatter3d(
+            name='subset_scatter',
+            x=x,
+            y=y,
+            z=z,
+            mode='markers',
+            marker=dict(
+                color='red',
+                opacity=0.5,
+                size=ptcl_subset_size_widget.value,
+            ),
+            visible=ptcl_subset_display_widget.value,
+            showlegend=False,
+            hoverinfo='text',
+            hovertext=[f'index {index}' for index in df_particles_sub.index.to_numpy()]
+        )
 
-    show_selection_checkbox.observe(toggle_subset_overlay, names='value')
-    subset_value_range.observe(update_subset_quiver, names='value')
-    subset_invert_selection.observe(update_subset_quiver, names='value')
+        with fig.batch_update():
+            fig.add_traces([
+                ptcls_scatter,
+                ptcls_subset_scatter
+            ])
+            fig.update_layout(scene=dict(
+                xaxis=dict(range=[0, max(tomodatacontainer.tomo_x_vx, tomodatacontainer.scatter_x_vx)], ),
+                yaxis=dict(range=[0, max(tomodatacontainer.tomo_y_vx, tomodatacontainer.scatter_y_vx)], ),
+                zaxis=dict(range=[0, max(tomodatacontainer.tomo_z_vx, tomodatacontainer.scatter_z_vx)], ),
+                aspectratio=dict(x=1, y=1, z=1),
+            ))
 
-    # create plot
-    # markers = ['arrow', 'box', 'diamond', 'sphere', 'point_2d', 'square_2d', 'triangle_2d']
-    x, y, z, xv, yv, zv = pose_to_vector(df_subset)
-    ipv.gcf()
-    quiverplot = ipv.quiver(x, y, z, xv, yv, zv, size=4, color='dodgerblue')
-    quiverplot_selected = ipv.quiver(x, y, z, xv, yv, zv, size=0, color='red', marker='sphere', alpha=0.5)
-    widgets.jslink((size, 'value'), (quiverplot, 'size'))
-    widgets.jslink((subset_size, 'value'), (quiverplot_selected, 'size'))
+    def continuous_update_callback(event):
+        """
+        Toggle continuous updates for all continously interactive widgets (sliders)
+        """
+        # this function must take a parameter for the callback to function, but we do not currently use it
+        _ = event
 
-    popup = ParticleLabelPopup()
-    popup.index_all_ptcls = df_subset.loc[:, 'index_all_tomos_particles'].to_list()  # get index of hovered particle relative to all particles
-    popup.sel_column = column_selection.value
-    popup.sel_column_values = df_subset.loc[:, popup.sel_column].to_list()
-    quiverplot.popup = popup
+        for widget in [
+            # tomo_volume_iso_widget,
+            # tomo_volume_opacity_widget,
+            tomo_slice_slider_widget,
+            tomo_slice_thickness_widget,
+            ptcl_marker_size_widget,
+            ptcl_subset_size_widget,
+            ptcl_subset_thresh_widget,
+        ]:
+            widget.continuous_update = continuous_update_widget.value
 
-    # define UI layout
-    quiverplot_widgets = widgets.HBox(
-        [column_selection, colormap_selection, size],
-        layout=widgets.Layout(width='100%', display='inline-flex', flex_flow='row wrap'))
-    selection_widgets = widgets.HBox(
-        [show_selection_checkbox, subset_value_range, subset_invert_selection, subset_size],
-        layout=widgets.Layout(width='100%', display='inline-flex', flex_flow='row wrap'))
-    ui = widgets.VBox([quiverplot_widgets, selection_widgets])  # , output])
-    display(ui)
+    def reset_callback(event):
+        """
+        Reset the widget state by deleting tomogram from memory and removing figure traces.
+        """
+        # this function must take a parameter for the callback to function, but we do not currently use it
+        _ = event
 
-
-### TOMOGRAM PARTICLE INTERACTIVE WIDGET ###
-
-def interactive_tomo_ptcls(df_merged, tomo_list, tomo_star_mappings):
-    def load_tomogram(*args):
-        selected_tomogram_path = tomo_selection.value
-        selected_rendering_style = rendering_selection.value
-
-        rendering_styles = {'volume': render_tomogram_volume,
-                            'xyz slices': render_tomogram_xyzslices,
-                            'isosurface': render_tomogram_isosurface}
-
-        with output:
-            print(f'Loading {selected_tomogram_path} as {selected_rendering_style}')
-            tomogram = mrc.parse_mrc(selected_tomogram_path)[0]
-            rendering_styles[selected_rendering_style](tomogram)
-
-    def load_particles(*args):
-        selected_tomogram_name = tomo_selection.value.split('/')[-1]
-        tomo_name_for_df = tomo_star_mappings[selected_tomogram_name]
-        with output:
-            subset_ptcls_and_render(df_merged, tomo_name_for_df)
-
-    def toggle_axes(*args):
-        axes_on = displayaxes_checkbox.value
-        if axes_on:
-            ipv.style.axes_on()
-        else:
-            ipv.style.axes_off()
-
-    def toggle_box(*args):
-        box_on = displaybox_checkbox.value
-        if box_on:
-            ipv.style.box_on()
-        else:
-            ipv.style.box_off()
-
-    def clear_output(*args):
+        tomodatacontainer.__init__()
+        with fig.batch_update():
+            fig.data = []
         output.clear_output()
-        with output:
-            ipv.clear()
-            fig_base = ipv.figure(width=800, height=600)
-            ipv.show()
+        import gc
+        gc.collect()
 
-    # tomogram widget initialization
-    tomo_selection = widgets.Dropdown(options=tomo_list,
-                                      description='Tomogram:',
-                                      disabled=False)
-    rendering_selection = widgets.Dropdown(options=['xyz slices', 'volume', 'isosurface'],
-                                           description='Rendering:',
-                                           disabled=False)
-    load_tomo_button = widgets.Button(description='Load tomogram',
-                                      disabled=False,
-                                      button_style='',  # 'success', 'info', 'warning', 'danger' or ''
-                                      tooltip='Load selected tomogram into memory')
-    load_particles_button = widgets.Button(description='Load particles', tooltip='Load particles into display')
+    # def tomo_volume_display_callback(event):
+    #     """
+    #     Update the figure to toggle visibility of the tomogram volume rendering
+    #     """
+    #     if tomodatacontainer.tomogram.size > 50**3:
+    #         with output:
+    #             print(f'Caution: rendering volume with > 50**3 elements can be very slow with plotly! Please wait ...')
+    #     with fig.batch_update():
+    #         fig.update_traces(visible=tomo_volume_display_widget.value, selector = ({'name':'tomo_volume'}))
 
-    # meta widget initialization
-    displayaxes_checkbox = widgets.Checkbox(value=True, description='Display axes')
-    displaybox_checkbox = widgets.Checkbox(value=True, description='Display bounding box')
-    reset_button = widgets.Button(description='Clear all output', tooltip='Clears all figures, widgets, and text')
+    # def tomo_volume_iso_callback(event):
+    #     """
+    #     Update the figure to render the tomogram volume with the selected minimum and maximum isosurface thresholds.
+    #     """
+    #     with fig.batch_update():
+    #         fig.update_traces(isomin=tomo_volume_iso_widget.value[0],
+    #                            isomax=tomo_volume_iso_widget.value[1],
+    #                           selector = ({'name':'tomo_volume'}))
 
-    # widget layout
-    tomogram_widgets = widgets.HBox([tomo_selection, rendering_selection, load_tomo_button, load_particles_button],
-                                    layout=widgets.Layout(border='2px solid'))
-    meta_widgets = widgets.HBox([displayaxes_checkbox, displaybox_checkbox, reset_button],
-                                layout=widgets.Layout(border='2px solid'))
+    # def tomo_volume_opacity_callback(event):
+    #     with fig.batch_update():
+    #         fig.update_traces(opacity=tomo_volume_opacity_widget.value, selector = ({'name':'tomo_volume'}))
+
+    def tomo_slice_display_callback(event):
+        """
+        Update the figure to toggle visibility of the tomogram slice rendering.
+        """
+        # this function must take a parameter for the callback to function, but we do not currently use it
+        _ = event
+
+        with fig.batch_update():
+            fig.update_traces(visible=tomo_slice_display_widget.value, selector=({'name': 'tomo_slice'}))
+
+    def tomo_slice_slider_callback(event):
+        """
+        Update the figure to render the selected tomogram slice based on slice position, slice thickness, and active axis.
+        """
+        # this function must take a parameter for the callback to function, but we do not currently use it
+        _ = event
+
+        # noinspection PyTypeChecker
+        axis = str(tomo_slice_axis_widget.value)
+        # noinspection PyTypeChecker
+        plane = int(tomo_slice_slider_widget.value)
+        # noinspection PyTypeChecker
+        thickness = int(tomo_slice_thickness_widget.value)
+
+        if thickness == 1:
+            plane_min = plane
+            plane_max = plane + 1
+        else:
+            plane_min = plane - thickness // 2
+            plane_max = plane + thickness // 2
+
+        if axis == 'z':
+            new_texture = np.mean(tomodatacontainer.tomogram[plane_min:plane_max, :, :], axis=0)
+            new_x = np.linspace(0, tomodatacontainer.tomo_x_vx, tomodatacontainer.tomo_x_vx, endpoint=False)
+            new_y = np.linspace(0, tomodatacontainer.tomo_y_vx, tomodatacontainer.tomo_y_vx, endpoint=False)
+            new_z = np.full((tomodatacontainer.tomo_y_vx, tomodatacontainer.tomo_x_vx), plane)
+            with fig.batch_update():
+                fig.update_traces(x=new_x,
+                                  y=new_y,
+                                  z=new_z,
+                                  surfacecolor=new_texture,
+                                  selector=({'name': 'tomo_slice'}))
+        elif axis == 'y':
+            new_texture = np.mean(tomodatacontainer.tomogram[:, plane_min:plane_max, :], axis=1)
+            new_x = np.linspace(0, tomodatacontainer.tomo_x_vx, tomodatacontainer.tomo_x_vx, endpoint=False)
+            new_y = np.full((tomodatacontainer.tomo_y_vx,), plane)
+            new_z = np.linspace(0, tomodatacontainer.tomo_z_vx, tomodatacontainer.tomo_z_vx, endpoint=False)
+            with fig.batch_update():
+                fig.update_traces(x=new_x,
+                                  y=new_y,
+                                  z=np.array([new_z] * len(new_x)).T,
+                                  surfacecolor=new_texture,
+                                  selector=({'name': 'tomo_slice'}))
+        elif axis == 'x':
+            new_texture = np.mean(tomodatacontainer.tomogram[:, :, plane_min:plane_max], axis=2).T
+            new_x = np.full(tomodatacontainer.tomo_x_vx, plane)
+            new_y = np.linspace(0, tomodatacontainer.tomo_y_vx, tomodatacontainer.tomo_y_vx, endpoint=False)
+            new_z = np.linspace(0, tomodatacontainer.tomo_z_vx, tomodatacontainer.tomo_z_vx, endpoint=False)
+            with fig.batch_update():
+                fig.update_traces(x=new_x,
+                                  y=new_y,
+                                  z=np.array([new_z] * len(new_y)),
+                                  surfacecolor=new_texture,
+                                  selector=({'name': 'tomo_slice'}))
+        else:
+            raise ValueError
+
+    def tomo_slice_thickness_callback(event):
+        """
+        Update the tomogram slice slider min and max to constrain allowable slices within tomogram volume bounds with new thickness.
+        Then update the figure via `tomo_slice_slider_callback`.
+        """
+        # this function must take a parameter for the callback to function, but we do not currently use it
+        _ = event
+
+        # noinspection PyTypeChecker
+        slice_thickness = int(tomo_slice_thickness_widget.value)
+        tomo_slice_slider_widget.min = slice_thickness // 2
+        if tomo_slice_axis_widget.value == 'x':
+            tomo_slice_slider_widget.max = tomodatacontainer.tomo_x_vx - slice_thickness // 2
+        elif tomo_slice_axis_widget.value == 'y':
+            tomo_slice_slider_widget.max = tomodatacontainer.tomo_y_vx - slice_thickness // 2
+        elif tomo_slice_axis_widget.value == 'z':
+            tomo_slice_slider_widget.max = tomodatacontainer.tomo_z_vx - slice_thickness // 2
+        else:
+            raise ValueError
+        tomo_slice_slider_callback('')
+
+    def tomo_slice_axis_callback(event):
+        """
+        Update the tomogram slice slider max to constrain allowable slices within tomogram volume bounds with new axis.
+        Update the tomogram thickness slider to constrain allowable thickness as less than the tomogram thickness along the new axis.
+        Then update the figure via `tomo_slice_thickness_callback` which will further call `tomo_slice_slider_callback`.
+        """
+        # this function must take a parameter for the callback to function, but we do not currently use it
+        _ = event
+
+        if tomo_slice_axis_widget.value == 'x':
+            tomo_slice_slider_widget.max = tomodatacontainer.tomo_x_vx
+            tomo_slice_thickness_widget.max = tomodatacontainer.tomo_x_vx // 4
+        elif tomo_slice_axis_widget.value == 'y':
+            tomo_slice_slider_widget.max = tomodatacontainer.tomo_y_vx
+            tomo_slice_thickness_widget.max = tomodatacontainer.tomo_y_vx // 4
+        elif tomo_slice_axis_widget.value == 'z':
+            tomo_slice_slider_widget.max = tomodatacontainer.tomo_z_vx
+            tomo_slice_thickness_widget.max = tomodatacontainer.tomo_y_vx // 4
+        else:
+            raise ValueError
+        tomo_slice_thickness_callback('')
+
+    def ptcl_marker_display_callback(event):
+        """
+        Update the figure to toggle visibility of the particles scatterplot rendering.
+        """
+        # this function must take a parameter for the callback to function, but we do not currently use it
+        _ = event
+
+        with fig.batch_update():
+            fig.update_traces(visible=ptcl_marker_display_widget.value, selector=({'name': 'ptcls_scatter'}))
+
+    def ptcl_marker_size_callback(event):
+        """
+        Update the particles scatter plot marker size
+        """
+        # this function must take a parameter for the callback to function, but we do not currently use it
+        _ = event
+
+        with fig.batch_update():
+            fig.update_traces(marker=dict(size=ptcl_marker_size_widget.value, ), selector=({'name': 'ptcls_scatter'}))
+
+    def ptcl_colorby_column_callback(event):
+        """
+        Update the particles scatter plot colors by passing the selected column's values to the selected colormap.
+        Also updates the hovertext of each point to report the associated column value for that particle.
+        """
+        # this function must take a parameter for the callback to function, but we do not currently use it
+        _ = event
+
+        if ptcl_colorby_column_widget.value is None:
+            fig.update_traces(marker=dict(color='mediumturquoise'),
+                              hovertext=[f'index {index}' for index in
+                                         tomodatacontainer.df_particles_sub.index.to_numpy()],
+                              selector=({'name': 'ptcls_scatter'}))
+            return
+
+        if not pd.api.types.is_numeric_dtype(tomodatacontainer.df_particles_sub[ptcl_colorby_column_widget.value]):
+            with output:
+                print('Must choose a dataframe column with a numeric dtype.')
+            return
+
+        color_mapping = tomodatacontainer.df_particles_sub[ptcl_colorby_column_widget.value].to_numpy()
+        color_map = ptcl_colorby_colormap_widget.value
+        with fig.batch_update():
+            fig.update_traces(marker=dict(color=color_mapping,
+                                          colorscale=color_map),
+                              hovertext=[f'index {index}, color by value {value:.6f}' for index, value in
+                                         zip(tomodatacontainer.df_particles_sub.index.to_numpy(),
+                                             tomodatacontainer.df_particles_sub[
+                                                 ptcl_colorby_column_widget.value].to_numpy())],
+                              selector=({'name': 'ptcls_scatter'}))
+
+    def ptcl_subset_display_callback(event):
+        """
+        Update the figure to toggle visibility of the particles scatterplot subset rendering.
+        """
+        # this function must take a parameter for the callback to function, but we do not currently use it
+        _ = event
+
+        with fig.batch_update():
+            fig.update_traces(visible=ptcl_subset_display_widget.value, selector=({'name': 'subset_scatter'}))
+
+    def ptcl_subset_size_callback(event):
+        """
+        Update the particles scatter plot subset marker size.
+        If existing subset selection (via setting marker size per-particle) is in place, ensure that it is restored.
+        """
+        # this function must take a parameter for the callback to function, but we do not currently use it
+        _ = event
+
+        with fig.batch_update():
+            fig.update_traces(marker=dict(size=ptcl_subset_size_widget.value, ), selector=({'name': 'subset_scatter'}))
+            ptcl_subset_thresh_callback('')
+
+    def ptcl_subset_column_callback(event):
+        """
+        Set the particles scatter plot subset column by which to filter the subset selection.
+        Adjust the extent of `ptcl_subset_thresh_widget` to min and max of selected column.
+        """
+        # this function must take a parameter for the callback to function, but we do not currently use it
+        _ = event
+
+        selected_column = ptcl_subset_column_widget.value
+
+        if not pd.api.types.is_numeric_dtype(tomodatacontainer.df_particles_sub[selected_column]):
+            with output:
+                print('Must choose a dataframe column with a numeric dtype.')
+            return
+
+        old_min = ptcl_subset_thresh_widget.min
+        old_max = ptcl_subset_thresh_widget.max
+        new_min = tomodatacontainer.df_particles_sub[selected_column].min()
+        new_max = tomodatacontainer.df_particles_sub[selected_column].max()
+
+        if (old_min == new_min) and (old_max == new_max):
+            return
+
+        ptcl_subset_thresh_widget.min = min(old_min,
+                                            new_min)  # update lower bound to temp value to avoid "setting max < min" error
+        ptcl_subset_thresh_widget.min = new_min
+        ptcl_subset_thresh_widget.max = max(old_max,
+                                            new_max)  # update upper bound to temp value to avoid "setting min > max" error
+        ptcl_subset_thresh_widget.max = new_max
+        ptcl_subset_thresh_widget.value = [new_min, new_max]
+
+    def ptcl_subset_thresh_callback(event):
+        """
+        Update the particles scatter plot subset markers to only show markers meeting thresholding criteria from `ptcl_subset_thresh_widget`.
+        """
+        # this function must take a parameter for the callback to function, but we do not currently use it
+        _ = event
+
+        # get mask 0,1 of particles meeting threshold, depending on toggle of invert_thresh
+        subset_mask = np.array((tomodatacontainer.df_particles_sub[ptcl_subset_column_widget.value] >=
+                                ptcl_subset_thresh_widget.value[0]) & (
+                                           tomodatacontainer.df_particles_sub[ptcl_subset_column_widget.value] <=
+                                           ptcl_subset_thresh_widget.value[1]))
+        if ptcl_subset_invert_thresh_widget.value:
+            subset_mask = np.logical_not(subset_mask)
+        with fig.batch_update():
+            fig.update_traces(marker=dict(size=ptcl_subset_size_widget.value * subset_mask * 2),
+                              selector=({'name': 'subset_scatter'}))
+
+    # TOMOGRAM / PARTICLES FIGURE LAYOUT
+    fig = go.FigureWidget(layout=go.Layout(
+        autosize=True,
+        height=600,
+        width=600,
+        scene=dict(
+            xaxis=dict(range=[0, 1], ),
+            yaxis=dict(range=[0, 1], ),
+            zaxis=dict(range=[0, 1], ),
+            aspectratio=dict(x=1, y=1, z=1),
+        ),
+        xaxis=go.layout.XAxis(linecolor="black", linewidth=1, mirror=False),
+        yaxis=go.layout.YAxis(linecolor="black", linewidth=1, mirror=False),
+        margin=go.layout.Margin(l=20, r=20, b=20, t=20),
+        dragmode='orbit',
+    ))
+
+    style = {'description_width': 'initial'}
+
+    # FIGURE INITIALIZATION CONTROLS
+    tomo_selection_widget = widgets.Dropdown(
+        options=tomogram_list,
+        value=None,
+        description='Tomogram: ',
+        style=style,
+    )
+    tomo_load_widget = widgets.Button(
+        description='Load tomogram',
+    )
+    tomo_load_widget.on_click(tomo_load_callback)
+    ptcls_load_widget = widgets.Button(
+        description='Load particles',
+    )
+    ptcls_load_widget.on_click(ptcls_load_callback)
+    continuous_update_widget = widgets.Checkbox(
+        value=False,
+        description='Continuous figure updates',
+        style=style,
+    )
+    continuous_update_widget.observe(continuous_update_callback, names=['value'])
+    reset_widget = widgets.Button(
+        description='Reset widget',
+    )
+    reset_widget.on_click(reset_callback)
+
+    # # TOMOGRAM ISOSURFACE CONTROLS
+    # tomo_volume_display_widget = widgets.Checkbox(
+    #     value=False,
+    #     style=style,
+    # )
+    # tomo_volume_display_widget.observe(tomo_volume_display_callback, names=['value'])
+    # tomo_volume_iso_widget = widgets.FloatRangeSlider(
+    #     value=[0, 1],
+    #     min=0,
+    #     max=1,
+    #     step=0.01,
+    #     continuous_update=False,
+    #     orientation='horizontal',
+    #     readout=True,
+    #     readout_format='.2f',
+    #     style=style,
+    # )
+    # tomo_volume_iso_widget.observe(tomo_volume_iso_callback, names=['value'])
+    # tomo_volume_opacity_widget = widgets.FloatSlider(
+    #     value=0.5,
+    #     min=0,
+    #     max=1,
+    #     step=0.01,
+    #     continuous_update=False,
+    #     orientation='horizontal',
+    #     readout=True,
+    #     readout_format='.2f',
+    #     style=style,
+    # )
+    # tomo_volume_opacity_widget.observe(tomo_volume_opacity_callback, names=['value'])
+
+    # TOMOGRAM SLICE CONTROLS
+    tomo_slice_display_widget = widgets.Checkbox(
+        value=True,
+        style=style,
+    )
+    tomo_slice_display_widget.observe(tomo_slice_display_callback, names=['value'])
+    tomo_slice_slider_widget = widgets.IntSlider(
+        min=0,
+        max=1,
+        value=1,
+        continuous_update=False,
+        style=style,
+    )
+    tomo_slice_slider_widget.observe(tomo_slice_slider_callback, names=['value'])
+    tomo_slice_thickness_widget = widgets.IntSlider(
+        min=1,
+        max=1,
+        value=1,
+        continuous_update=False,
+        style=style,
+    )
+    tomo_slice_thickness_widget.observe(tomo_slice_thickness_callback, names=['value'])
+    tomo_slice_axis_widget = widgets.Dropdown(
+        options=['x', 'y', 'z'],
+        value='z',
+        style=style,
+    )
+    tomo_slice_axis_widget.observe(tomo_slice_axis_callback, names=['value'])
+
+    # PARTICLE MARKER CONTROLS
+    ptcl_marker_display_widget = widgets.Checkbox(
+        value=True,
+        style=style,
+    )
+    ptcl_marker_display_widget.observe(ptcl_marker_display_callback, names=['value'])
+    ptcl_marker_size_widget = widgets.IntSlider(
+        value=7,
+        min=0,
+        max=25,
+        continuous_update=False,
+        orientation='horizontal',
+        readout=True,
+        style=style,
+    )
+    ptcl_marker_size_widget.observe(ptcl_marker_size_callback, names=['value'])
+    ptcl_colorby_column_widget = widgets.Dropdown(
+        options=[None, ] + df_particles.columns.to_list(),
+        value=None,
+        style=style,
+    )
+    ptcl_colorby_column_widget.observe(ptcl_colorby_column_callback, names=['value'])
+    ptcl_colorby_colormap_widget = widgets.Dropdown(
+        options=pl_colors.named_colorscales(),
+        value=None,
+        style=style,
+    )
+    ptcl_colorby_colormap_widget.observe(ptcl_colorby_column_callback, names=[
+        'value'])  # shares the callback with ptcl_colorby_column_widget because intertwined functionality
+    ptcl_subset_display_widget = widgets.Checkbox(
+        value=False,
+        style=style,
+    )
+    ptcl_subset_display_widget.observe(ptcl_subset_display_callback, names=['value'])
+    ptcl_subset_size_widget = widgets.IntSlider(
+        value=15,
+        min=0,
+        max=25,
+        continuous_update=False,
+        orientation='horizontal',
+        readout=True,
+        style=style,
+    )
+    ptcl_subset_size_widget.observe(ptcl_subset_size_callback, names=['value'])
+    ptcl_subset_column_widget = widgets.Dropdown(
+        options=df_particles.columns.to_list(),
+        value=None,
+        style=style,
+    )
+    ptcl_subset_column_widget.observe(ptcl_subset_column_callback, names=['value'])
+    ptcl_subset_thresh_widget = widgets.FloatRangeSlider(
+        value=[0, 1],
+        min=0,
+        max=1,
+        continuous_update=False,
+        orientation='horizontal',
+        readout=True,
+        style=style,
+    )
+    ptcl_subset_thresh_widget.observe(ptcl_subset_thresh_callback, names=['value'])
+    ptcl_subset_invert_thresh_widget = widgets.Checkbox(
+        value=False,
+        style=style,
+    )
+    ptcl_subset_invert_thresh_widget.observe(ptcl_subset_thresh_callback, names=['value'])
+
+    # LOGGED OUTPUT
     output = widgets.Output()
-    load_widget = widgets.VBox([tomogram_widgets, meta_widgets, output])
 
-    # widget interactvity
-    load_tomo_button.on_click(load_tomogram)
-    load_particles_button.on_click(load_particles)
-    displayaxes_checkbox.observe(toggle_axes, names='value')
-    displaybox_checkbox.observe(toggle_box, names='value')
-    reset_button.on_click(clear_output)
+    # WIDGET LAYOUT
+    controls_layout = widgets.Layout(justify_content='space-around')
+    initialization_controls_container = widgets.HBox(children=[tomo_selection_widget,
+                                                               tomo_load_widget,
+                                                               ptcls_load_widget,
+                                                               continuous_update_widget,
+                                                               reset_widget, ],
+                                                     layout=widgets.Layout(width='100%', display='inline-flex',
+                                                                           justify_content='space-around',
+                                                                           border='solid 1px'))
+    # tomo_volume_controls_container = widgets.VBox(children=[
+    #     widgets.HBox(children=[widgets.Label('Display tomogram volume'), tomo_volume_display_widget],
+    #                  layout=controls_layout),
+    #     widgets.HBox(children=[widgets.Label('tomo isosurface cutoffs'), tomo_volume_iso_widget],
+    #                  layout=controls_layout),
+    #     widgets.HBox(children=[widgets.Label('tomo opacity'), tomo_volume_opacity_widget], layout=controls_layout), ],
+    #                                               layout=widgets.Layout(border='solid 1px'))
+    tomo_slice_controls_container = widgets.VBox(children=[
+        widgets.HBox(children=[widgets.Label('Display tomogram slice'), tomo_slice_display_widget],
+                     layout=controls_layout),
+        widgets.HBox(children=[widgets.Label('tomo slice position'), tomo_slice_slider_widget], layout=controls_layout),
+        widgets.HBox(children=[widgets.Label('tomo slice thickness'), tomo_slice_thickness_widget],
+                     layout=controls_layout),
+        widgets.HBox(children=[widgets.Label('tomo slice axis'), tomo_slice_axis_widget], layout=controls_layout, )],
+        layout=widgets.Layout(border='solid 1px'))
+    output_container = widgets.VBox(children=[output],
+                                    layout=widgets.Layout(border='solid 1px', height='150px'))
+    ptcls_controls_container = widgets.VBox(children=[
+        widgets.HBox(children=[widgets.Label('Display particles'), ptcl_marker_display_widget], layout=controls_layout),
+        widgets.HBox(children=[widgets.Label('particle size'), ptcl_marker_size_widget], layout=controls_layout),
+        widgets.HBox(children=[widgets.Label('particle color by'), ptcl_colorby_column_widget], layout=controls_layout),
+        widgets.HBox(children=[widgets.Label('particle color map'), ptcl_colorby_colormap_widget],
+                     layout=controls_layout), ],
+        layout=widgets.Layout(border='solid 1px'))
+    subset_controls_container = widgets.VBox(children=[
+        widgets.HBox(children=[widgets.Label('Display subset'), ptcl_subset_display_widget], layout=controls_layout),
+        widgets.HBox(children=[widgets.Label('subset size'), ptcl_subset_size_widget], layout=controls_layout),
+        widgets.HBox(children=[widgets.Label('subset select by'), ptcl_subset_column_widget], layout=controls_layout),
+        widgets.HBox(children=[widgets.Label('subset select cutoffs'), ptcl_subset_thresh_widget],
+                     layout=controls_layout),
+        widgets.HBox(children=[widgets.Label('invert subset selection'), ptcl_subset_invert_thresh_widget],
+                     layout=controls_layout), ],
+        layout=widgets.Layout(border='solid 1px'))
+    runtime_controls_container = widgets.VBox(children=[  # tomo_volume_controls_container,
+        tomo_slice_controls_container,
+        ptcls_controls_container,
+        subset_controls_container,
+        output_container],
+        layout=widgets.Layout(width='500px'))
+    overall_widget = widgets.VBox(children=[initialization_controls_container,
+                                            widgets.HBox(children=[runtime_controls_container, fig],
+                                                         layout=widgets.Layout(width='100%',
+                                                                               justify_content='space-between'))])
 
-    # display and run the widget
-    display(load_widget)
-    with output:
-        ipv.clear()
-        fig_base = ipv.figure(width=800, height=600)
-        ipv.show()
+    # create holder for data
+    tomodatacontainer = TomoDataContainer()
+
+    # DISPLAY FINAL WIDGET
+    return overall_widget
