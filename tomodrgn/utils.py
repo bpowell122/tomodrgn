@@ -366,19 +366,19 @@ def calc_fsc(vol1: np.ndarray | str,
     return x, fsc
 
 
-def lowpass_filter(vol_ft: np.ndarray | torch.Tensor,
-                   angpix: float,
-                   lowpass: float) -> np.ndarray | torch.Tensor:
+def calculate_lowpass_filter_mask(boxsize: int,
+                                  angpix: float,
+                                  lowpass: float,
+                                  device: torch.device | None = None) -> np.ndarray | torch.Tensor:
     """
-    Lowpass-filters a volume in reciprocal space
-    :param vol_ft: Fourier space symmetrized (DC is box center) volume as numpy array or torch tensor, shape (boxsize, boxsize, boxsize)
+    Calculate a binary mask to later be multiplied into a fourier space volume to lowpass filter said volume.
+    Useful to pre-cache a lowpass filter mask that will be used repeatedly (e.g. evaluating many volumes with `eval_vol.py`)
+    :param boxsize: number of voxels along one side of the Fourier space symmetrized (DC is box center) volume
     :param angpix: Pixel size of the volume in Ångstroms per pixel.
     :param lowpass: Resolution to filter volume in Ångstroms.
-    :return: Lowpass filtered fourier space symmetrized volume, shape (boxsize, boxsize, boxsize).
+    :param device: device of the volume to be lowpass filtered. None corresponds to a numpy array, otherwise specify a torch.Tensor device to produce a Tensor mask on said device.
+    :return: Volume binary mask as a numpy array or torch tensor, shape (boxsize, boxsize, boxsize)
     """
-    # get real space box width (assumes non-symmetrized box, i.e. even box width)
-    boxsize = vol_ft.shape[0]
-
     # calculate frequencies along one axis in units of 1/px
     if boxsize % 2 == 0:
         # even-sized fourier space box
@@ -398,11 +398,31 @@ def lowpass_filter(vol_ft: np.ndarray | torch.Tensor,
                             True,
                             False)
 
-    # apply mask to volume to zero-weight higher frequency components
-    if torch.is_tensor(vol_ft):
-        lowpass_mask = torch.tensor(lowpass_mask).to(vol_ft.device)
-    vol_ft = vol_ft * lowpass_mask
+    # move mask to the correct device
+    if device:
+        lowpass_mask = torch.tensor(lowpass_mask).to(device)
 
+    return lowpass_mask
+
+
+def lowpass_filter(vol_ft: np.ndarray | torch.Tensor,
+                   angpix: float,
+                   lowpass: float) -> np.ndarray | torch.Tensor:
+    """
+    Lowpass-filters a volume in reciprocal space.
+    :param vol_ft: Fourier space symmetrized (DC is box center) volume as numpy array or torch tensor, shape (boxsize, boxsize, boxsize)
+    :param angpix: Pixel size of the volume in Ångstroms per pixel.
+    :param lowpass: Resolution to filter volume in Ångstroms.
+    :return: Lowpass filtered fourier space symmetrized volume, shape (boxsize, boxsize, boxsize).
+    """
+    # calculate the binary mask corresponding to the desired lowpass filter
+    device = vol_ft.device if type(vol_ft) is torch.Tensor else None
+    lowpass_mask = calculate_lowpass_filter_mask(boxsize=vol_ft.shape[0],
+                                                 angpix=angpix,
+                                                 lowpass=lowpass,
+                                                 device=device)
+    # multiply the binary mask into the volume
+    vol_ft = vol_ft * lowpass_mask
     return vol_ft
 
 

@@ -1,6 +1,6 @@
-'''
-Evaluate the decoder at specified values of z
-'''
+"""
+Evaluate a trained FTPositionalDecoder model, optionally conditioned on values of latent embedding z.
+"""
 import numpy as np
 import os
 import argparse
@@ -16,37 +16,36 @@ from torch.utils.data import DataLoader, Dataset
 from torch.cuda.amp import autocast
 
 from tomodrgn import mrc, utils, fft
-from tomodrgn.lattice import Lattice
 from tomodrgn.models import TiltSeriesHetOnlyVAE, FTPositionalDecoder
 
 log = utils.log
 vlog = utils.vlog
 
-def add_args(parser):
-    parser.add_argument('-w', '--weights', help='Model weights from train_vae')
-    parser.add_argument('-c', '--config', required=True, help='config.pkl file from train_vae')
-    parser.add_argument('-o', type=os.path.abspath, required=True, help='Output .mrc or directory')
-    parser.add_argument('--prefix', default='vol_', help='Prefix when writing out multiple .mrc files')
-    parser.add_argument('--no-amp', action='store_true', help='Disable use of mixed-precision training')
-    parser.add_argument('-b', '--batch-size', type=int, default=1, help='Batch size to parallelize volume generation (32-64 works well for box64 volumes)')
-    parser.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs. Specify GPUs i,j via `export CUDA_VISIBLE_DEVICES=i,j`')
-    parser.add_argument('-v', '--verbose', action='store_true', help='Increases verbosity')
 
-    group = parser.add_argument_group('Specify z values')
+def add_args(_parser):
+    _parser.add_argument('-w', '--weights', help='Model weights from train_vae')
+    _parser.add_argument('-c', '--config', required=True, help='config.pkl file from train_vae')
+    _parser.add_argument('-o', type=os.path.abspath, required=True, help='Output .mrc or directory')
+    _parser.add_argument('--prefix', default='vol_', help='Prefix when writing out multiple .mrc files')
+    _parser.add_argument('--no-amp', action='store_true', help='Disable use of mixed-precision training')
+    _parser.add_argument('-b', '--batch-size', type=int, default=1, help='Batch size to parallelize volume generation (32-64 works well for box64 volumes)')
+    _parser.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs. Specify GPUs i,j via `export CUDA_VISIBLE_DEVICES=i,j`')
+    _parser.add_argument('-v', '--verbose', action='store_true', help='Increases verbosity')
+
+    group = _parser.add_argument_group('Specify z values')
     group.add_argument('-z', type=np.float32, nargs='*', help='Specify one z-value')
     group.add_argument('--z-start', type=np.float32, nargs='*', help='Specify a starting z-value')
     group.add_argument('--z-end', type=np.float32, nargs='*', help='Specify an ending z-value')
     group.add_argument('-n', type=int, default=10, help='Number of structures between [z_start, z_end]')
     group.add_argument('--zfile', type=os.path.abspath, help='Text/.pkl file with z-values to evaluate')
 
-    group = parser.add_argument_group('Volume arguments')
-    group.add_argument('--Apix', type=float, default=1, help='Pixel size to add to output .mrc header. If downsampling, need to manually adjust.')
+    group = _parser.add_argument_group('Volume arguments')
     group.add_argument('--flip', action='store_true', help='Flip handedness of output volume')
     group.add_argument('--invert', action='store_true', help='Invert contrast of output volume')
-    group.add_argument('-d','--downsample', type=int, help='Downsample volumes to this box size (pixels)')
+    group.add_argument('--downsample', type=int, help='Downsample volumes to this box size (pixels)')
     group.add_argument('--lowpass', type=float, default=None, help='Lowpass filter to this resolution in Å. Requires settings --Apix.')
 
-    return parser
+    return _parser
 
 
 def check_z_inputs(args):
@@ -55,200 +54,243 @@ def check_z_inputs(args):
 
 
 class ZDataset(Dataset):
-    def __init__(self, z):
+    """
+    Dataset to allow easy pytorch batch-parallelized passing of latent embeddings to the decoder, particularly when using nn.DataParallel.
+    """
+
+    def __init__(self,
+                 z: np.ndarray):
+        """
+        Initialize the (latent embedding) Dataset.
+        :param z: array of latent embeddings to decode, shape (nptcls, zdim)
+        """
         self.z = z
-        self.N = z.shape[0]
 
-    def __len__(self):
-        return self.N
+    def __len__(self) -> int:
+        return self.z.shape[0]
 
-    def __getitem__(self, index):
+    def __getitem__(self,
+                    index: int) -> np.ndarray:
         return self.z[index]
 
 
 class DummyModel(nn.Module):
-    '''
-    wrapper for nn.DataParallel to split data across batch axis and run eval_volume_batch on all GPUs
-    '''
-    def __init__(self, model, zdim):
-        super(DummyModel, self).__init__()
-        self.model = model
-        self.zdim = zdim
+    """
+    Helper class to call the correct eval_volume_batch method regardless of what model class is being evaluated.
+    """
 
-    def forward(self, *args, **kwargs):
-        if self.zdim:
-            # multiple volumes to be evaluated
-            return self.model.decoder.eval_volume_batch(*args, **kwargs)
+    def __init__(self, model, zdim=None):
+        super().__init__()
+        if zdim:
+            # multiple volumes to be evaluated, can batch-parallelize volume decoding and writing to disk
+            self.decoder_fn = model.decoder.eval_volume_batch
         else:
             # single volume to be evaluated
-            return self.model.eval_volume(*args, **kwargs)
+            self.decoder_fn = model.eval_volume_batch
+
+    def forward(self, *args, **kwargs):
+        return self.decoder_fn(*args, **kwargs)
+
+
+def postprocess_vols(batch_vols: torch.Tensor,
+                     norm: tuple[float, float],
+                     iht_downsample_scaling_correction: float,
+                     lowpass_mask: np.ndarray | None = None,
+                     flip: bool = False,
+                     invert: bool = False) -> np.ndarray:
+    """
+    Apply post-volume-decoding processing steps: downsampling scaling correction, lowpass filtering, volume handedness flipping, volume data sign inversion.
+    :param batch_vols: batch of fourier space non-symmetrized volumes directly from eval_vol_batch, shape (nvols, boxsize, boxsize, boxsize)
+    :param norm: tuple of floats representing mean and standard deviation of preprocessed particles used during model training
+    :param iht_downsample_scaling_correction: a global scaling factor applied when forward and inverse fourier / hartley transforming.
+            This is calculated and applied internally by the fft.py module as a function of array shape.
+            Thus, when the volume is downsampled, a further correction is required.
+    :param lowpass_mask: a binary mask applied to fourier space symmetrized volumes to low pass filter the reconstructions.
+            Typically, the same mask is used for all volumes via broadcasting, thus this may be of shape (1, boxsize, boxsize, boxsize) or (nvols, boxsize, boxsize, boxsize).
+    :param flip: Whether to invert the volume chirality by flipping the data order along the z axis.
+    :param invert: Whether to invert the data light-on-dark vs dark-on-light convention, relative to the reconstruction returned by the decoder module.
+    :return: Postprocessed volume batch in real space
+    """
+    # sanit check inputs
+    assert batch_vols.ndim == 4, f'The volume batch must have four dimensions (batch size, boxsize, boxsize, boxsize). Found {batch_vols.shape}'
+    if lowpass_mask is not None:
+        assert batch_vols.shape[-3:] == lowpass_mask.shape[-3], f'The volume batch must have the same volume dimensions as the lowpass mask. Found {batch_vols.shape}, {lowpass_mask.shape.shape}'
+
+    # convert torch tensory to numpy array for future operations
+    batch_vols = batch_vols.cpu().numpy()
+
+    # normalize the volume (mean and standard deviation) by normalization used when training the model
+    batch_vols = batch_vols * norm[1] + norm[0]
+
+    # lowpass filter with fourier space mask
+    if lowpass_mask is not None:
+        batch_vols = batch_vols * lowpass_mask
+
+    # transform to real space and scale values if downsampling was applied
+    batch_vols = fft.iht3_center(batch_vols)
+    batch_vols *= iht_downsample_scaling_correction
+
+    if flip:
+        batch_vols = np.flip(batch_vols, 1)
+
+    if invert:
+        batch_vols *= -1
+
+    return batch_vols
 
 
 def main(args):
-    check_z_inputs(args)
+    # check inputs
     t1 = dt.now()
+    check_z_inputs(args)
 
-    ## set the device
+    # set the device
     device = utils.get_default_device()
     if device == torch.device('cpu'):
         args.no_amp = True
         log('Warning: pytorch AMP does not support non-CUDA (e.g. cpu) devices. Automatically disabling AMP and continuing')
         # https://github.com/pytorch/pytorch/issues/55374
-    torch.set_grad_enabled(False)
 
+    # load the model configuration
     log(args)
     cfg = utils.load_pkl(args.config)
     log('Loaded configuration:')
     pprint.pprint(cfg)
 
-    D = cfg['lattice_args']['D'] # image size + 1
+    # set parameters for volume generation
+    boxsize_ht = cfg['lattice_args']['boxsize']  # image size + 1
     zdim = cfg['model_args']['zdim'] if 'zdim' in cfg['model_args'].keys() else None
     norm = cfg['dataset_args']['norm']
-
+    angpix = cfg['angpix']
     if args.downsample:
         assert args.downsample % 2 == 0, "Boxsize must be even"
-        assert args.downsample <= D - 1, "Must be smaller than original box size"
+        assert args.downsample <= boxsize_ht - 1, "Must be smaller than original box size"
+        angpix = angpix * (boxsize_ht - 1) / args.downsample
 
+    # load the model
     if zdim:
-        model, lattice = TiltSeriesHetOnlyVAE.load(cfg, args.weights)
+        # load a VAE model
+        model, lattice = TiltSeriesHetOnlyVAE.load(config=cfg,
+                                                   weights=args.weights,
+                                                   device=device)
     else:
-        activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[cfg['model_args']['activation']]
-        model = FTPositionalDecoder(3, D, cfg['model_args']['layers'], cfg['model_args']['dim'], activation,
-                                    enc_type=cfg['model_args']['pe_type'], enc_dim=cfg['model_args']['pe_dim'],
-                                    feat_sigma=cfg['model_args']['feat_sigma'])
-        ckpt = torch.load(args.weights)
-        model.load_state_dict(ckpt['model_state_dict'])
-        model = model.to(device)
-        lattice = Lattice(D, extent=cfg['lattice_args']['extent'], device=device)
+        # load a non-VAE decoder-only model
+        model, lattice = FTPositionalDecoder.load(config=cfg,
+                                                  weights=args.weights,
+                                                  device=device)
+
+    # wrap the model in a dummy class whose purpose is to call the correct volume decoding function
     model = DummyModel(model, zdim).to(device)
+
+    # precalculate shared parameters among all volumes
+    if args.downsample:
+        sym_ht_boxsize_downsampled = args.downsample + 1
+        coords = lattice.get_downsample_coords(boxsize_new=sym_ht_boxsize_downsampled).to(device)
+        extent = lattice.extent * (args.downsample / (boxsize_ht - 1))
+        iht_downsample_scaling_correction = args.downsample ** 3 / (boxsize_ht - 1) ** 3
+    else:
+        coords = lattice.coords.to(device)
+        extent = lattice.extent
+        iht_downsample_scaling_correction = 1.
+    if args.lowpass is not None:
+        lowpass_mask = utils.calculate_lowpass_filter_mask(boxsize=boxsize_ht,
+                                                           angpix=angpix,
+                                                           lowpass=args.lowpass,
+                                                           device=None)
+        lowpass_mask = lowpass_mask[np.newaxis, ...]
+    else:
+        lowpass_mask = None
+
+    # set context managers and flags for inference mode
     model.eval()
+    with torch.inference_mode():
+        use_amp = not args.no_amp
+        with autocast(enabled=use_amp):
 
-    use_amp = not args.no_amp
-    with autocast(enabled=use_amp):
+            # prepare z when decoding multiple volumes (at varying z values)
+            if args.z_start or args.zfile:
 
-        if args.downsample:
-            fft_boxsize = args.downsample + 1
-            coords = lattice.get_downsample_coords(fft_boxsize)
-            extent = lattice.extent * (args.downsample / (D - 1))
-            iht_downsample_scaling_correction = args.downsample ** 3 / (D - 1) ** 3
-        else:
-            fft_boxsize = lattice.D
-            coords = lattice.coords
-            extent = lattice.extent
-            iht_downsample_scaling_correction = 1.
+                # can try to parallelize
+                if args.multigpu and torch.cuda.device_count() > 1:
+                    raise NotImplementedError
+                    # TODO implement DistributedDataParallel
+                    #  DataParallel requires that all tensors to model forward are split in dim 0 as batch, but eval_volume_batch assumes coords and extent do not have batch dim
+                    # log(f'Using {torch.cuda.device_count()} GPUs!')
+                    # args.batch_size *= torch.cuda.device_count()
+                    # log(f'Increasing batch size to {args.batch_size}')
+                    # model = nn.DataParallel(model)
+                elif args.multigpu:
+                    log(f'WARNING: --multigpu selected, but {torch.cuda.device_count()} GPUs detected')
 
-        ### Multiple z ###
-        if args.z_start or args.zfile:
+                # Make output directory
+                if not os.path.exists(args.o):
+                    os.makedirs(args.o)
 
-            # parallelize
-            if args.multigpu and torch.cuda.device_count() > 1:
-                log(f'Using {torch.cuda.device_count()} GPUs!')
-                args.batch_size *= torch.cuda.device_count()
-                log(f'Increasing batch size to {args.batch_size}')
-                model = nn.DataParallel(model)
-            elif args.multigpu:
-                log(f'WARNING: --multigpu selected, but {torch.cuda.device_count()} GPUs detected')
-
-            # Make output directory
-            if not os.path.exists(args.o):
-                os.makedirs(args.o)
-
-            # Get z values
-            if args.z_start:
-                args.z_start = np.array(args.z_start)
-                args.z_end = np.array(args.z_end)
-                z = np.repeat(np.arange(args.n,dtype=np.float32), zdim).reshape((args.n, zdim))
-                z *= ((args.z_end - args.z_start)/(args.n-1))
-                z += args.z_start
-            else:
-                if args.zfile.endswith('.pkl'):
-                    z = utils.load_pkl(args.zfile)
+                # Get z values
+                if args.z_start:
+                    # calculate z values to sample between z_start and z_end
+                    args.z_start = np.array(args.z_start)
+                    args.z_end = np.array(args.z_end)
+                    z = np.repeat(np.arange(args.n, dtype=np.float32), zdim).reshape((args.n, zdim))
+                    z *= ((args.z_end - args.z_start) / (args.n - 1))
+                    z += args.z_start
                 else:
-                    z = np.loadtxt(args.zfile, dtype=np.float32).reshape(-1, zdim)
-            assert z.shape[1] == zdim
-            if z.shape[0] < args.batch_size:
-                log(f'Decreasing batchsize to number of volumes: {z.shape[0]}')
-                args.batch_size = z.shape[0]
+                    if args.zfile.endswith('.pkl'):
+                        z = utils.load_pkl(args.zfile)
+                    else:
+                        z = np.loadtxt(args.zfile, dtype=np.float32).reshape(-1, zdim)
+                assert z.shape[1] == zdim
+                if z.shape[0] < args.batch_size:
+                    log(f'Decreasing batchsize to number of volumes: {z.shape[0]}')
+                    args.batch_size = z.shape[0]
 
-            # preallocate concatenated coords, z, and keep(mask)
-            coords_zz = torch.zeros((args.batch_size, fft_boxsize, fft_boxsize**2, 3+zdim), dtype=coords.dtype)  # B x D(z) x D**2(xy) x 3+zdim
-            for i, dz in enumerate(torch.linspace(-extent, extent, steps=fft_boxsize)):
-                coords_zz[:, i, :, :3] = (coords + torch.tensor([0, 0, dz]).view(1, 1, -1, 3))
-            keep = (coords_zz[0, :, :, :3].pow(2).sum(dim=-1) <= extent ** 2).view(fft_boxsize, -1)
-            # keep = keep.expand(torch.cuda.device_count(), *keep.shape)
-            keep = keep.unsqueeze(0)  # create batch dimension for dataparallel to split over if --multigpu
+                # prepare threadpool for parallelized file writing
+                pool = mp.pool.ThreadPool(processes=min(os.cpu_count(), args.batch_size))
 
-            # prepare threadpool for parallelized file writing
-            pool = mp.pool.ThreadPool(processes=min(os.cpu_count(), args.batch_size))
+                # construct dataset and dataloader
+                z = ZDataset(z)
+                z_iterator = DataLoader(z, batch_size=args.batch_size, shuffle=False)
+                log(f'Generating {len(z)} volumes in batches of {args.batch_size}')
+                for (i, zz) in enumerate(z_iterator):
+                    log(f'    Generating volume batch {i}')
+                    if args.verbose:
+                        log(zz)
 
-            # send tensors to GPU
-            coords_zz = coords_zz.to(device)
-            keep = keep.to(device)
-            norm = torch.tensor(norm)
-            # norm = norm.expand(torch.cuda.device_count(), *norm.shape).to(device)
-            norm = norm.unsqueeze(0).to(device)  # create batch dimension for dataparallel to split over if --multigpu
+                    zz = zz.to(device)
+                    batch_vols = model(coords, zz, extent)
+                    batch_vols = postprocess_vols(batch_vols=batch_vols[:, :-1, :-1, :-1],  # exclude symmetrized +k frequency
+                                                  norm=norm,
+                                                  iht_downsample_scaling_correction=iht_downsample_scaling_correction,
+                                                  lowpass_mask=lowpass_mask,
+                                                  flip=args.flip,
+                                                  invert=args.invert)
 
-            # construct dataset and dataloader
-            z = ZDataset(z)
-            z_iterator = DataLoader(z, batch_size=args.batch_size, shuffle=False)
-            log(f'Generating {len(z)} volumes in batches of {args.batch_size}')
-            for i, zz in enumerate(z_iterator):
-                log(f'    Generating volume batch {i}')
-                if args.verbose:
-                    log(zz)
-                coords_zz[:len(zz), :, :, 3:] = zz.unsqueeze(1).unsqueeze(1)
-                vols_batch = model(coords_zz, keep, norm)
-                vols_batch = vols_batch.cpu().numpy()
-                vols_batch *= iht_downsample_scaling_correction
-                if args.lowpass:
-                    vols_batch = fft.ht3_center(vols_batch)
-                    vols_batch = np.array([utils.lowpass_filter(vol, angpix=args.Apix, lowpass=args.lowpass) for vol in vols_batch], dtype=np.float32)
-                    vols_batch = fft.iht3_center(vols_batch)
-                if args.flip:
-                    vols_batch = vols_batch[:, ::-1]
-                if args.invert:
-                    vols_batch *= -1
-                out_mrcs = [f'{args.o}/{args.prefix}{i*args.batch_size+j:03d}.mrc' for j in range(len(zz))]
-                pool.starmap(mrc.write, zip(out_mrcs,
-                                            vols_batch[:len(out_mrcs)].astype(np.float32),
-                                            itertools.repeat(None, len(out_mrcs)),
-                                            itertools.repeat(args.Apix, len(out_mrcs))))
-            pool.close()
+                    out_mrcs = [f'{args.o}/{args.prefix}{i * args.batch_size + j:03d}.mrc' for j in range(len(zz))]
+                    pool.starmap(func=mrc.write, iterable=zip(out_mrcs,
+                                                              batch_vols[:len(out_mrcs)],
+                                                              itertools.repeat(None, len(out_mrcs)),
+                                                              itertools.repeat(angpix, len(out_mrcs))))
+                pool.close()
 
-        ### Single z ###
-        elif args.z:
-            z = np.array(args.z)
-            log(z)
-            vol = model(coords, fft_boxsize, extent, norm, z)
-            vol = vol.cpu().numpy()
-            vol *= iht_downsample_scaling_correction
-            if args.lowpass:
-                vol = fft.iht3_center(utils.lowpass_filter(fft.ht3_center(vol), angpix=args.Apix, lowpass=args.lowpass))
-            if args.flip:
-                vol = vol[::-1]
-            if args.invert:
-                vol *= -1
-            mrc.write(args.o, vol.astype(np.float32), Apix=args.Apix)
+            # decoding a single volume
+            else:
+                # take z from args if decoding single z, if no z passed, then decode homogeneous model with z=None
+                z = np.array(args.z).reshape(1, -1) if args.z else None
+                batch_vols = model(coords, z, extent)
+                batch_vols = postprocess_vols(batch_vols=batch_vols[:, :-1, :-1, :-1],  # exclude symmetrized +k frequency
+                                              norm=norm,
+                                              iht_downsample_scaling_correction=iht_downsample_scaling_correction,
+                                              lowpass_mask=lowpass_mask,
+                                              flip=args.flip,
+                                              invert=args.invert)
+                mrc.write(fname=args.o,
+                          array=batch_vols[0],  # only one volume in the batch
+                          angpix=angpix)
 
-        ### No latent, train_nn eval ###
-        else:
-            vol = model(coords, fft_boxsize, extent, norm)
-            vol = vol.cpu().numpy()
-            vol *= iht_downsample_scaling_correction
-            if args.lowpass:
-                vol = fft.iht3_center(utils.lowpass_filter(fft.ht3_center(vol), angpix=args.Apix, lowpass=args.lowpass))
-            if args.flip:
-                vol = vol[::-1]
-            if args.invert:
-                vol *= -1
-            mrc.write(args.o, vol.astype(np.float32), Apix=args.Apix)
-
-    td = dt.now()-t1
+    td = dt.now() - t1
     log(f'Finished in {td}')
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    args = add_args(parser).parse_args()
-    utils._verbose = args.verbose
-    main(args)
-
+    main(add_args(parser).parse_args())

@@ -11,7 +11,7 @@ from einops import rearrange
 from einops.layers.torch import Reduce, Rearrange
 import torchinfo
 
-from tomodrgn import fft, utils, lattice, set_transformer
+from tomodrgn import utils, lattice, set_transformer
 
 
 class TiltSeriesHetOnlyVAE(nn.Module):
@@ -272,6 +272,47 @@ class FTPositionalDecoder(nn.Module):
         else:
             raise ValueError(f'Invalid pe_type {pe_type}')
 
+    @classmethod
+    def load(cls,
+             config: str | dict,
+             weights: str,
+             device: torch.device = torch.device('cpu')):
+        """
+        Constructor method to create an FTPositionalDecoder object from a config.pkl.
+        :param config: Path to config.pkl or loaded config.pkl
+        :param weights: Path to weights.pkl
+        :param device: `torch.device` object
+        :return: FTPositionalDecoder instance, Lattice instance
+        """
+        # load the config dict if not preloaded
+        cfg: dict = utils.load_pkl(config) if type(config) is str else config
+
+        # create the Lattice object
+        lat = lattice.Lattice(boxsize=cfg['lattice_args']['D'],
+                              extent=cfg['lattice_args']['extent'],
+                              device=device)
+
+        # create the FTPositionalDecoder object
+        activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[cfg['model_args']['activation']]
+        model = FTPositionalDecoder(boxsize_ht=cfg['lattice_args']['D'],
+                                    in_dim=3,
+                                    hidden_layers=cfg['model_args']['players'],
+                                    hidden_dim=cfg['model_args']['pdim'],
+                                    activation=activation,
+                                    pe_type=cfg['model_args']['pe_type'],
+                                    pe_dim=cfg['model_args']['pe_dim'],
+                                    feat_sigma=cfg['model_args']['feat_sigma'])
+
+        # load weights if provided
+        if weights is not None:
+            ckpt = torch.load(weights)
+            model.load_state_dict(ckpt['model_state_dict'])
+
+        # move the model to the requested device
+        model.to(device)
+
+        return model, lat
+
     def positional_encoding(self,
                             coords: torch.Tensor) -> torch.Tensor:
         """
@@ -381,92 +422,49 @@ class FTPositionalDecoder(nn.Module):
 
         return result_flipped
 
-    def eval_volume(self,
-                    coords: torch.Tensor,
-                    boxsize_ht: int,
-                    extent: float,
-                    norm: tuple[float, float],
-                    z: torch.Tensor | None = None) -> np.ndarray:
-        """
-        Evaluate the model on a DxDxD volume, optionally conditioned on a latent embedding z
-        :param coords: lattice coords on the x-y plane, shape (boxsize_ht**2, 3)
-        :param boxsize_ht:  number of grid points along each dimension. Should be odd.
-        :param extent: maximum value of the grid along each dimension, typically <= 0.5 to constrain points to range (-0.5, 0.5)
-        :param norm: tuple of floats representing mean and standard deviation of preprocessed particles used during model training
-        :param z: latent embedding associated with the volume to decode, shape (1, zdim)
-        :return: reconstructed volume, shape (boxsize, boxsize, boxsize)
-        """
-        # sanity check inputs
-        assert extent <= 0.5
-
-        # prepare for model evaluation
-        assert not self.training
-        with torch.inference_mode():
-
-            # evaluate the volume by slicing through z to avoid memory overflows
-            vol_f = torch.zeros((boxsize_ht, boxsize_ht, boxsize_ht), dtype=np.float32, device=coords.device)
-            for i, dz in enumerate(np.linspace(-extent, extent, boxsize_ht, endpoint=True, dtype=np.float32)):
-                # create the z slice to evaluate
-                xy_coords = coords + torch.tensor([0, 0, dz], device=coords.device)
-
-                # only evaluate coords within `extent` limit (if extent==0.5, nyquist limit in reciprocal space)
-                keep = xy_coords.pow(2).sum(dim=1) <= extent ** 2
-                xy_coords = xy_coords[keep]
-
-                # reconstruct the slice by passing it through the model
-                xy_slice = self.forward(coords=xy_coords, z=z)
-
-                # fill the corresponding slice in the 3-D volume with these amplitudes
-                slice_ = torch.zeros((boxsize_ht ** 2), dtype=vol_f.dtype, device=vol_f.device)
-                slice_[keep] = xy_slice.to(slice_.dtype)
-                vol_f[i] = slice_.view(boxsize_ht, boxsize_ht)
-
-            # convert the volume from tensor to ndarray
-            vol_f = vol_f.cpu().numpy()
-            # normalize the volume (mean and standard deviation) by normalization used when training the model
-            vol_f = vol_f * norm[1] + norm[0]
-            # inverse DHT,  remove last +k freq that is present due to symmetrizing of DHT
-            vol = fft.iht3_center(vol_f[:-1, :-1, :-1])
-        return vol
-
     def eval_volume_batch(self,
                           coords: torch.Tensor,
                           z: torch.Tensor,
-                          keep: torch.Tensor,
-                          norm: np.ndarray) -> np.ndarray:
+                          extent: float) -> torch.Tensor:
         """
-        Evaluate the model on a batch of DxDxD volumes sharing pre-defined masked coords, D, extent
-        :param coords: batch of lattice coords on the x-y plane, shape (batch, boxsize_ht**2, 3)
-        :param z: latent embedding associated with the volume to decode, shape (batch, zdim)
-        :param keep: mask of which coords to keep per z-plane (satisfying extent) (B=1 x D(z) x D**2(xy))
-        :param norm: mean and standard deviation of preprocessed particles used during model training, shape (batch=0, 2)
-        :return: batch of reconstructed volume, shape (batch, boxsize, boxsize, boxsize)
+        Evaluate the model on 3-D volume coordinates given an optional (batch of) latent coordinate.
+        :param coords: lattice coords on the x-y plane, shape (boxsize_ht**2, 3)
+        :param z: latent embedding associated with the volume to decode, shape (batchsize, zdim)
+        :param extent: maximum value of the grid along each dimension, typically <= 0.5 to constrain points to range (-0.5, 0.5)
+        :return: batch of decoded volumes directly output from the model (Fourier space, symmetrized) with no postprocessing applied, shape (batchsize, boxsize_ht, boxsize_ht, boxsize_ht).
         """
-        assert not self.training
-        with torch.inference_mode():
-            # TODO add amp context manager?
-            # evaluate the volume by zslice to avoid memory overflows
-            batch_size, boxsize_ht, _, _ = coords.shape
-            batch_vol_f = torch.zeros((batch_size, boxsize_ht, boxsize_ht, boxsize_ht), dtype=coords.dtype, device=coords.device)
-            for i in range(boxsize_ht):
-                # get the coords across all volumes (batchdim) of one slice `i` to evaluate, premasked by the `keep` extent
-                batch_xy_coords = coords[:, i, keep[0, i], :]
 
-                # reconstruct the slices by passing them through the model
-                batch_xy_slice = self.forward(coords=batch_xy_coords, z=z)
+        # sanity check inputs
+        assert extent <= 0.5
+        assert z.ndim == 2
 
-                # fill the corresponding slices in the batch of 3-D volumes with these amplitudes
-                batch_slice_ = torch.zeros((batch_size, boxsize_ht ** 2), dtype=batch_vol_f.dtype, device=batch_vol_f.device)
-                batch_slice_[:, keep[0, i]] = batch_xy_slice.to(batch_slice_.dtype)
-                batch_vol_f[:, i] = batch_slice_.view(batch_size, boxsize_ht, boxsize_ht)
+        # get key array sizes
+        batchsize = len(z) if z is not None else 1
+        boxsize_ht = int(coords.shape[0] ** 0.5)
 
-            # convert the volume from tensor to ndarray
-            batch_vol_f = batch_vol_f.cpu().numpy()
-            # normalize the volume (mean and standard deviation) by normalization used when training the model
-            batch_vol_f = batch_vol_f * norm[0, 1] + norm[0, 0]
-            # inverse DHT,  remove last +k freq that is present due to symmetrizing of DHT
-            batch_vol = fft.iht3_center(batch_vol_f[:, :-1, :-1, :-1])
-        return batch_vol
+        # preallocate array to store batch of decoded volumes
+        batch_vol_f = torch.zeros((batchsize, boxsize_ht, boxsize_ht, boxsize_ht), dtype=coords.dtype, device=coords.device)
+
+        # evaluate the volume slice-by-slice along z axis to avoid potential memory overflows from evaluating D**3 voxels at once
+        zslices = torch.linspace(-extent, extent, boxsize_ht, dtype=batch_vol_f.dtype)
+        for (i, zslice) in enumerate(zslices):
+            # create the z slice to evaluate
+            xy_coords = coords + torch.tensor([0, 0, zslice])
+
+            # only evaluate coords within `extent` radius (if extent==0.5, nyquist limit in reciprocal space)
+            slice_mask = xy_coords.pow(2).sum(dim=-1) <= extent ** 2
+            xy_coords = xy_coords[slice_mask]
+
+            # expand coords to batch size
+            batch_xy_coords = torch.stack(batchsize * [xy_coords])
+
+            # reconstruct the slice by passing it through the model
+            batch_xy_slice = self.forward(coords=batch_xy_coords, z=z)
+
+            # fill the corresponding slice in the 3-D volume with these amplitudes
+            batch_vol_f[:, slice_mask] = batch_xy_slice.to(batch_vol_f.dtype)
+
+        return batch_vol_f
 
 
 class TiltSeriesEncoder(nn.Module):
