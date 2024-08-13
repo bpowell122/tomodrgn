@@ -41,7 +41,7 @@ def prefix_paths(mrcs: list[str],
     raise FileNotFoundError(f'Not all files (or possibly no files) could be found using any of the filename patterns: {[filename_pattern[0] for filename_pattern in filename_patterns]}')
 
 
-def log(msg: str | Exception) -> None:
+def log(msg: Any) -> None:
     """
     Write a string to STDOUT with a standardized datetime format.
     :param msg: Text to write to STDOUT.
@@ -51,7 +51,7 @@ def log(msg: str | Exception) -> None:
     sys.stdout.flush()
 
 
-def vlog(msg: str) -> None:
+def vlog(msg: Any) -> None:
     """
     Write a string to STDOUT with a standardized datetime format only if `_verbose` is True.
     :param msg: Text to write to STDOUT.
