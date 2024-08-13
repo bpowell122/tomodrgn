@@ -24,6 +24,8 @@ from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
+# noinspection PyPackageRequirements
+import umap
 
 from tomodrgn import utils, mrc
 
@@ -139,21 +141,18 @@ def run_tsne(z: np.ndarray,
 
 def run_umap(z: np.ndarray,
              random_state: int | np.random.RandomState | None = None,
-             **kwargs: Any) -> np.ndarray:
+             **kwargs: Any) -> tuple[np.ndarray, umap.UMAP]:
     """
     Run UMAP dimensionality reduction on latent embeddings.
     :param z: array of latent embeddings, shape (nptcls, zdim)
     :param random_state: random state for reproducible runs, passed to umap.UMAP
     :param kwargs: additional key word arguments passed to umap.UMAP
-    :return: array of UMAP embeddings, shape (len(z), 2)
+    :return: array of UMAP embeddings, shape (len(z), 2), and fit reducer object
     """
-    # noinspection PyPackageRequirements
-    import umap
-
     # perform embedding
     reducer = umap.UMAP(random_state=random_state, **kwargs)
     z_embedded = reducer.fit_transform(z)
-    return z_embedded
+    return z_embedded, reducer
 
 
 #####################
@@ -438,7 +437,7 @@ def scatter_annotate_hex(x: np.ndarray,
                          centers_ind: np.ndarray | None = None,
                          annotate: bool = False,
                          labels: list | None = None,
-                         **kwargs: Any) -> matplotlib.figure.Figure:
+                         **kwargs: Any) -> sns.FacetGrid:
     """
     Create a hexbin plot with optional annotations for each cluster center and corresponding label.
     :param x: array of x coordinates to plot

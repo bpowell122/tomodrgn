@@ -1,181 +1,423 @@
-'''
+"""
 Visualize latent space and generate volumes
-'''
+"""
 
 import argparse
 import numpy as np
 import os
 import shutil
 from datetime import datetime as dt
+from importlib_resources import files
 
 import matplotlib
-matplotlib.use('Agg') # non-interactive backend
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-import tomodrgn
-from tomodrgn import analysis, utils
+from tomodrgn import analysis, utils, starfile
 
 log = utils.log
 
-def add_args(parser):
-    parser.add_argument('workdir', type=os.path.abspath, help='Directory with tomoDRGN results')
-    parser.add_argument('epoch', type=int, help='Epoch number N to analyze (0-based indexing, corresponding to z.N.pkl, weights.N.pkl)')
-    parser.add_argument('--device', type=int, help='Optionally specify CUDA device')
-    parser.add_argument('-o','--outdir', help='Output directory for analysis results (default: [workdir]/analyze.[epoch])')
-    parser.add_argument('--skip-vol', action='store_true', help='Skip generation of volumes')
-    parser.add_argument('--skip-umap', action='store_true', help='Skip running UMAP')
 
-    group = parser.add_argument_group('Extra arguments for volume generation')
-    group.add_argument('--Apix', type=float, default=1, help='Pixel size to add to .mrc header (default: %(default)s A/pix)')
-    group.add_argument('--flip', action='store_true', help='Flip handedness of output volumes')
-    group.add_argument('-d','--downsample', type=int, help='Downsample volumes to this box size (pixels)')
+def add_args(_parser):
+    _parser.add_argument('workdir', type=os.path.abspath, help='Directory with tomoDRGN results')
+    _parser.add_argument('epoch', type=int, help='Epoch number N to analyze (0-based indexing, corresponding to z.N.pkl, weights.N.pkl)')
+    _parser.add_argument('--device', type=int, help='Optionally specify CUDA device')
+    _parser.add_argument('-o', '--outdir', help='Output directory for analysis results (default: [workdir]/analyze.[epoch])')
+    _parser.add_argument('--skip-vol', action='store_true', help='Skip generation of volumes')
+    _parser.add_argument('--skip-umap', action='store_true', help='Skip running UMAP')
+
+    group = _parser.add_mutually_exclusive_group('Arguments for latent space analysis')
     group.add_argument('--pc', type=int, default=2, help='Number of principal component traversals to generate (default: %(default)s)')
     group.add_argument('--pc-ondata', action='store_true', help='Find closest on-data latent point to each PC percentile')
     group.add_argument('--ksample', type=int, default=20, help='Number of kmeans samples to generate (default: %(default)s)')
-    group.add_argument('--invert', action='store_true', help='Invert contrast of output volumes')
-    group.add_argument('--lowpass', type=float, default=None, help='Lowpass filter to this resolution in Å')
-    return parser
 
-def analyze_z1(z, outdir, vg):
-    '''Plotting and volume generation for 1D z'''
+    group = _parser.add_argument_group('Arguments for volume generation')
+    group.add_argument('--downsample', type=int, help='Downsample volumes to this box size (pixels)')
+    group.add_argument('--lowpass', type=float, default=None, help='Lowpass filter to this resolution in Å')
+    group.add_argument('--flip', action='store_true', help='Flip handedness of output volumes')
+    group.add_argument('--invert', action='store_true', help='Invert contrast of output volumes')
+
+    return _parser
+
+
+"""
+plt.scatter
+sns.distplot
+
+gen pc volumes
+
+gen kmeans volumes
+
+sns.jointplot (scatter PC1 vs PC2)
+sns.jointplot (hex PC1 vs PC2)
+analysis.scatter_annotate (PC1 vs PC2 with kmeans centers)
+analysis.scatter_annotate_hex (PC1 vs PC2 with kmeans centers)
+
+if zdim > 2 and not skip_umap:
+    sns.jointplot (scatter UMAP1 vs UMAP2)
+    sns.jointplot (hex UMAP1 vs UMAP2)
+    analysis.scatter_annotate (UMAP1 vs UMAP2 with kmeans centers)
+    analysis.scatter_annotate_hex (UMAP1 vs UMAP2 with kmeans centers)
+"""
+
+
+def analyze_z_onedimensional(z: np.ndarray,
+                             outdir: str,
+                             vg: analysis.VolumeGenerator,
+                             skip_vol: bool = False,
+                             ondata: bool = False) -> None:
+    """
+    Plotting and volume generation for 1D z
+    :param z: array of 1-D latent embeddings, shape (nptcls, 1)
+    :param outdir: directory in which to save all outputs (plots and generated volumes)
+    :param vg: VolumeGenerator instance to aid volume generation at specficied z values
+    :param skip_vol: whether to skip generation of volumes
+    :param ondata: whether to use the closest on-data latent point to each z percentile for plotting and volume generation
+    :return: None
+    """
     assert z.shape[1] == 1
     z = z.reshape(-1)
-    N = len(z)
+    nptcls = len(z)
 
-    plt.figure(1)
-    plt.scatter(np.arange(N), z, alpha=.1, s=2)
-    plt.xlabel('particle')
+    # scatter plot of particle index against latent embedding
+    plt.scatter(np.arange(nptcls), z, alpha=.1, s=2)
+    plt.xlabel('particle index')
     plt.ylabel('z')
+    plt.tight_layout()
     plt.savefig(f'{outdir}/z.png')
+    plt.close()
 
-    plt.figure(2)
-    sns.distplot(z)
+    # histogram of latent embeddings with KDE overlay
+    sns.displot(z, kde=True)
     plt.xlabel('z')
+    plt.tight_layout()
     plt.savefig(f'{outdir}/z_hist.png')
+    plt.close()
 
-    ztraj = np.linspace(*np.percentile(z,(5,95)), 10) # or np.percentile(z, np.linspace(5,95,10)) ?
-    vg.gen_volumes(outdir, ztraj)
+    if not skip_vol:
+        # sample z values at 5th, 15th, ..., 95th percentiles of the latent distribution
+        ztraj = np.percentile(z, np.linspace(start=5, stop=95, num=10))
+        if ondata:
+            ztraj = analysis.get_nearest_point(z, ztraj)
 
-def analyze_zN(z, outdir, vg, skip_umap=False, num_pcs=2, num_ksamples=20, pc_ondata=False):
+        # histogram of latent embeddings with KDE overlay
+        sns.displot(z, kde=True)
+        for percentile in ztraj:
+            plt.axvline(percentile, color='red', linestyle='-')
+        plt.xlabel('z')
+        plt.tight_layout()
+        plt.savefig(f'{outdir}/z_hist_percentile_volumes.png')
+        plt.close()
+
+        # generate corresponding volumes
+        vg.gen_volumes(z_values=ztraj,
+                       outdir=outdir, )
+
+
+def analyze_z_multidimensional(z: np.ndarray,
+                               outdir: str,
+                               vg: analysis.VolumeGenerator,
+                               starfile_path: str,
+                               datadir: str = None,
+                               skip_vol: bool = False,
+                               skip_umap: bool = False,
+                               num_pcs: int = 2,
+                               pc_ondata: int = False,
+                               num_ksamples: int = 20, ) -> None:
+    """
+    Plotting and volume generation for multidimensional z
+    :param z: array of 1-D latent embeddings, shape (nptcls, zdim)
+    :param outdir: directory in which to save all outputs (plots and generated volumes)
+    :param vg: VolumeGenerator instance to aid volume generation at specficied z values
+    :param starfile_path: path to star file used during model training through which to load images
+    :param datadir: path to particle images on disk, used when plotting images per kmeans class
+    :param skip_vol: whether to skip generation of volumes
+    :param skip_umap: whether to skip latent embeddings UMAP dimensionality reduction
+    :param num_pcs: number of principal components along which to generate volumes. If 0, then no PCA is performed
+    :param pc_ondata: whether to use the closest on-data latent point to each PCA axis trajectory for plotting and volume generation
+    :param num_ksamples: number of latent clusters to form by k-means clustering for plotting and volume generation
+    :return: None
+    """
     zdim = z.shape[1]
 
     # Principal component analysis
-    log('Perfoming principal component analysis...')
-    pc, pca = analysis.run_pca(z)  
-    log('Generating volumes...')
+    log('Perfoming principal component analysis ...')
+    pc, pca = analysis.run_pca(z)
+    z_pc_trajectories = []
     for i in range(num_pcs):
-        start, end = np.percentile(pc[:,i],(5,95))
-        z_pc = analysis.get_pc_traj(pca, z.shape[1], 10, i+1, start, end)
+        os.mkdir(f'{outdir}/pc{i + 1}')
+
+        z_trajectory = np.percentile(z[:, i], np.linspace(start=5, stop=95, num=10))
+        z_pc_trajectory = analysis.get_pc_traj(pca=pca,
+                                               dim=i + 1,
+                                               sampling_points=z_trajectory)
         if pc_ondata:
-            log('Using on-data PCA')
-            z_pc, _ = analysis.get_nearest_point(z, z_pc)
-        vg.gen_volumes(f'{outdir}/pc{i+1}', z_pc)
+            z_pc_trajectory, z_pc_ind = analysis.get_nearest_point(z, z_pc_trajectory)
+            np.savetxt(f'{outdir}/pc{i + 1}/z_percentiles_ind.txt', z_pc_ind, fmt='%d')
 
-    # kmeans clustering
-    log('K-means clustering...')
-    K = num_ksamples
-    kmeans_labels, centers = analysis.cluster_kmeans(z, K)
-    centers, centers_ind = analysis.get_nearest_point(z, centers)
-    if not os.path.exists(f'{outdir}/kmeans{K}'): 
-        os.mkdir(f'{outdir}/kmeans{K}')
-    utils.save_pkl(kmeans_labels, f'{outdir}/kmeans{K}/labels.pkl')
-    np.savetxt(f'{outdir}/kmeans{K}/centers.txt', centers)
-    np.savetxt(f'{outdir}/kmeans{K}/centers_ind.txt', centers_ind, fmt='%d')
-    log('Generating volumes...')
-    vg.gen_volumes(f'{outdir}/kmeans{K}', centers)
+        z_pc_trajectories.append(z_pc_trajectory)
+        np.savetxt(f'{outdir}/pc{i + 1}/z_percentiles.txt', z_pc_trajectory)
 
-    # UMAP -- slow step
-    if zdim > 2 and not skip_umap:
-        log('Running UMAP...')
-        umap_emb = analysis.run_umap(z)
-        utils.save_pkl(umap_emb, f'{outdir}/umap.pkl')
+        if not skip_vol:
+            vg.gen_volumes(z_values=z_pc_trajectory,
+                           outdir=f'{outdir}/pc{i + 1}')
 
-    # Make some plots
-    log('Generating plots...')
-    plt.figure(1)
-    g = sns.jointplot(x=pc[:,0], y=pc[:,1], alpha=.1, s=2)
-    g.set_axis_labels('PC1','PC2')
+    # K-means clustering
+    log('Performing K-means clustering ...')
+    kmeans_labels, kmeans_centers = analysis.cluster_kmeans(z, num_ksamples)
+    kmeans_centers, kmeans_centers_ind = analysis.get_nearest_point(z, kmeans_centers)
+    if not os.path.exists(f'{outdir}/kmeans{num_ksamples}'):
+        os.mkdir(f'{outdir}/kmeans{num_ksamples}')
+    utils.save_pkl(kmeans_labels, f'{outdir}/kmeans{num_ksamples}/labels.pkl')
+    np.savetxt(f'{outdir}/kmeans{num_ksamples}/centers.txt', kmeans_centers)
+    np.savetxt(f'{outdir}/kmeans{num_ksamples}/centers_ind.txt', kmeans_centers_ind, fmt='%d')
+    if not skip_vol:
+        vg.gen_volumes(z_values=kmeans_centers,
+                       outdir=f'{outdir}/kmeans{num_ksamples}')
+
+    # Make some plots using PCA transformation
+    log('Generating PCA plots ...')
+
+    # bar plot PCA explained variance ratio
+    plt.bar(np.arange(z.shape[1]) + 1, pca.explained_variance_ratio_)
+    plt.xticks(np.arange(z.shape[1]) + 1)
+    plt.xlabel('principal components')
+    plt.ylabel('explained variance')
+    plt.savefig(f'{outdir}/z_pca_explainedvariance.png')
+    plt.close()
+
+    # scatter plot latent PCA
+    g = sns.jointplot(x=pc[:, 0],
+                      y=pc[:, 1],
+                      alpha=.1,
+                      s=2)
+    g.set_axis_labels('l-PC1', 'l-PC2')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/z_pca.png')
-    
-    plt.figure(2)
-    g = sns.jointplot(x=pc[:,0], y=pc[:,1], kind='hex')
-    g.set_axis_labels('PC1','PC2')
+    plt.savefig(f'{outdir}/z_pca_scatter.png')
+    plt.close()
+
+    # hexbin plot latent PCA
+    g = sns.jointplot(x=pc[:, 0],
+                      y=pc[:, 1],
+                      kind='hex')
+    g.set_axis_labels('l-PC1', 'l-PC2')
     plt.tight_layout()
     plt.savefig(f'{outdir}/z_pca_hexbin.png')
+    plt.close()
 
-    if zdim > 2 and not skip_umap:
-        plt.figure(3)
-        g = sns.jointplot(x=umap_emb[:,0], y=umap_emb[:,1], alpha=.1, s=2)
-        g.set_axis_labels('UMAP1','UMAP2')
-        plt.tight_layout()
-        plt.savefig(f'{outdir}/umap.png')
+    # scatter plot latent PCA with kmeans center annotations
+    analysis.scatter_annotate(x=pc[:, 0],
+                              y=pc[:, 1],
+                              centers_ind=kmeans_centers_ind,
+                              annotate=True,
+                              labels=[f'k{i}' for i in range(num_ksamples)])
+    plt.xlabel('l-PC1')
+    plt.ylabel('l-PC2')
+    plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_pca_scatter_annotatekmeans.png')
+    plt.close()
 
-        plt.figure(4)
-        g = sns.jointplot(x=umap_emb[:,0], y=umap_emb[:,1], kind='hex')
-        g.set_axis_labels('UMAP1','UMAP2')
-        plt.tight_layout()
-        plt.savefig(f'{outdir}/umap_hexbin.png')
-
-    analysis.scatter_annotate(pc[:,0], pc[:,1], centers_ind=centers_ind, annotate=True)
-    plt.xlabel('PC1')
-    plt.ylabel('PC2')
-    plt.savefig(f'{outdir}/kmeans{K}/z_pca.png')
-
-    g = analysis.scatter_annotate_hex(pc[:,0], pc[:,1], centers_ind=centers_ind, annotate=True)
-    g.set_axis_labels('PC1','PC2')
+    # hexbin plot latent PCA with kmeans center annotations
+    g = analysis.scatter_annotate_hex(x=pc[:, 0],
+                                      y=pc[:, 1],
+                                      centers_ind=kmeans_centers_ind,
+                                      annotate=True,
+                                      labels=[f'k{i}' for i in range(num_ksamples)])
+    g.set_axis_labels('l-PC1', 'l-PC2')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/kmeans{K}/z_pca_hex.png')
+    plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_pca_hexbin_annotatekmeans.png')
+    plt.close()
 
+    # scatter plot latent PCA with PCA trajectory annotations
+    analysis.scatter_annotate(x=pc[:, 0],
+                              y=pc[:, 1],
+                              centers_xy=np.hstack([z_pc_trajectories[0][0:2],  # trajectory along pc 1, trajectory is z-dimensional so just take first two dims for plotting
+                                                    z_pc_trajectories[1][0:2]]),  # trajectory along pc 2, trajectory is z-dimensional so just take first two dims for plotting
+                              annotate=True,
+                              labels=[f'PC1_{i}' for i in range(len(z_pc_trajectories[0]))] + [f'PC2_{i}' for i in range(len(z_pc_trajectories[1]))])
+    plt.xlabel('l-PC1')
+    plt.ylabel('l-PC2')
+    plt.savefig(f'{outdir}/pc1/z_pca_scatter_annotatepca.png')
+    plt.close()
+
+    # hexbin plot latent PCA with PCA trajectory annotations
+    g = analysis.scatter_annotate_hex(x=pc[:, 0],
+                                      y=pc[:, 1],
+                                      centers_xy=np.hstack([z_pc_trajectories[0][0:2],  # trajectory along pc 1, trajectory is z-dimensional so just take first two dims for plotting
+                                                            z_pc_trajectories[1][0:2]]),  # trajectory along pc 2, trajectory is z-dimensional so just take first two dims for plotting
+                                      annotate=True,
+                                      labels=[f'PC1_{i}' for i in range(len(z_pc_trajectories[0]))] + [f'PC2_{i}' for i in range(len(z_pc_trajectories[1]))])
+    g.set_axis_labels('l-PC1', 'l-PC2')
+    plt.savefig(f'{outdir}/pc1/z_pca_hexbin_annotatepca.png')
+    plt.close()
+
+    # scatter plot latent PCA colored by k-means clusters
+    analysis.plot_by_cluster(x=pc[:, 0],
+                             y=pc[:, 1],
+                             labels=kmeans_labels,
+                             labels_sel=num_ksamples,
+                             centers_ind=kmeans_centers_ind,
+                             annotate=True)
+    plt.xlabel('l-PC1')
+    plt.ylabel('l-PC2')
+    plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_pca_scatter_colorkmeanslabel.png')
+    plt.close()
+
+    # scatter subplots latent PCA colored by k-means clusters
+    analysis.plot_by_cluster_subplot(x=pc[:, 0],
+                                     y=pc[:, 1],
+                                     labels=kmeans_labels,
+                                     labels_sel=num_ksamples)
+    plt.xlabel('l-PC1')
+    plt.ylabel('l-PC2')
+    plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_pca_scatter_subplotkmeanslabel.png')
+    plt.close()
+
+    # UMAP dimensionality reduction
     if zdim > 2 and not skip_umap:
-        analysis.scatter_annotate(umap_emb[:,0], umap_emb[:,1], centers_ind=centers_ind, annotate=True)
-        plt.xlabel('UMAP1')
-        plt.ylabel('UMAP2')
-        plt.savefig(f'{outdir}/kmeans{K}/umap.png')
+        log('Running UMAP ...')
+        umap_emb, umap_reducer = analysis.run_umap(z)
+        utils.save_pkl(umap_emb, f'{outdir}/umap.pkl')
 
-        g = analysis.scatter_annotate_hex(umap_emb[:,0], umap_emb[:,1], centers_ind=centers_ind, annotate=True)
-        g.set_axis_labels('UMAP1','UMAP2')
+        log('Generating UMAP plots ...')
+
+        # scatter plot latent UMAP
+        g = sns.jointplot(x=umap_emb[:, 0],
+                          y=umap_emb[:, 1],
+                          alpha=.1,
+                          s=2)
+        g.set_axis_labels('l-UMAP1', 'l-UMAP2')
         plt.tight_layout()
-        plt.savefig(f'{outdir}/kmeans{K}/umap_hex.png')
+        plt.savefig(f'{outdir}/z_umap_scatter.png')
+        plt.close()
 
-    for i in range(num_pcs):
-        if zdim > 2 and not skip_umap:
-            analysis.scatter_color(umap_emb[:,0], umap_emb[:,1], pc[:,i], label=f'PC{i+1}')
+        # hexbin plot latent UMAP
+        g = sns.jointplot(x=umap_emb[:, 0],
+                          y=umap_emb[:, 1],
+                          kind='hex')
+        g.set_axis_labels('l-UMAP1', 'l-UMAP2')
+        plt.tight_layout()
+        plt.savefig(f'{outdir}/z_umap_hexbin.png')
+        plt.close()
+
+        # scatter plot latent UMAP with kmeans center annotations
+        analysis.scatter_annotate(x=umap_emb[:, 0],
+                                  y=umap_emb[:, 1],
+                                  centers_ind=kmeans_centers_ind,
+                                  annotate=True,
+                                  labels=[f'k{i}' for i in range(num_ksamples)])
+        plt.xlabel('l-UMAP1')
+        plt.ylabel('l-UMAP2')
+        plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_umap_scatter_annotatekmeans.png')
+        plt.close()
+
+        # hexbin plot latent UMAP with kmeans center annotations
+        g = analysis.scatter_annotate_hex(x=umap_emb[:, 0],
+                                          y=umap_emb[:, 1],
+                                          centers_ind=kmeans_centers_ind,
+                                          annotate=True,
+                                          labels=[f'k{i}' for i in range(num_ksamples)])
+        g.set_axis_labels('l-UMAP1', 'l-UMAP2')
+        plt.tight_layout()
+        plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_umap_hexbin_annotatekmeans.png')
+        plt.close()
+
+        # scatter plot latent UMAP with PCA trajectory annotations
+        analysis.scatter_annotate(x=umap_emb[:, 0],
+                                  y=umap_emb[:, 1],
+                                  center_xy=np.hstack([umap_reducer.transform(pca.inverse_transform(z_pc_trajectories[0])),  # trajectory along pc 1, transformed from PC space to UMAP space
+                                                       umap_reducer.transform(pca.inverse_transform(z_pc_trajectories[1]))]),  # trajectory along pc 2, transformed from PC space to UMAP space
+                                  annotate=True,
+                                  labels=[f'PC1_{i}' for i in range(len(z_pc_trajectories[0]))] + [f'PC2_{i}' for i in range(len(z_pc_trajectories[1]))])
+        plt.xlabel('l-UMAP1')
+        plt.ylabel('l-UMAP2')
+        plt.savefig(f'{outdir}/pc1/z_umap_scatter_annotatepca.png')
+        plt.close()
+
+        # hexbin plot latent UMAP with PCA trajectory annotations
+        g = analysis.scatter_annotate_hex(x=umap_emb[:, 0],
+                                          y=umap_emb[:, 1],
+                                          center_xy=np.hstack([umap_reducer.transform(pca.inverse_transform(z_pc_trajectories[0])),  # trajectory along pc 1, transformed from PC space to UMAP space
+                                                               umap_reducer.transform(pca.inverse_transform(z_pc_trajectories[1]))]),  # trajectory along pc 2, transformed from PC space to UMAP space
+                                          annotate=True,
+                                          labels=[f'PC1_{i}' for i in range(len(z_pc_trajectories[0]))] + [f'PC2_{i}' for i in range(len(z_pc_trajectories[1]))])
+        g.set_axis_labels('l-UMAP1', 'l-UMAP2')
+        plt.savefig(f'{outdir}/pc1/z_umap_hexbin_annotatepca.png')
+        plt.close()
+
+        # scatter plot latent UMAP colored by k-means clusters
+        analysis.plot_by_cluster(x=umap_emb[:, 0],
+                                 y=umap_emb[:, 1],
+                                 labels=kmeans_labels,
+                                 labels_sel=num_ksamples,
+                                 centers_ind=kmeans_centers_ind,
+                                 annotate=True)
+        plt.xlabel('l-UMAP1')
+        plt.ylabel('l-UMAP2')
+        plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_umap_scatter_colorkmeanslabel.png')
+        plt.close()
+
+        # scatter subplots latent UMAP colored by k-means clusters
+        analysis.plot_by_cluster_subplot(x=umap_emb[:, 0],
+                                         y=umap_emb[:, 1],
+                                         labels=kmeans_labels,
+                                         labels_sel=num_ksamples)
+        plt.xlabel('l-UMAP1')
+        plt.ylabel('l-UMAP2')
+        plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_umap_scatter_subplotkmeanslabel.png')
+        plt.close()
+
+        for i in range(num_pcs):
+            analysis.scatter_color(x=umap_emb[:, 0],
+                                   y=umap_emb[:, 1],
+                                   c=pc[:, i],
+                                   label=f'PC{i + 1}')
             plt.xlabel('UMAP1')
             plt.ylabel('UMAP2')
             plt.tight_layout()
-            plt.savefig(f'{outdir}/pc{i+1}/umap.png')
- 
-class VolumeGenerator:
-    '''Helper class to call analysis.gen_volumes'''
-    def __init__(self, weights, config, vol_args={}, skip_vol=False):
-        self.weights = weights
-        self.config = config
-        self.vol_args = vol_args
-        self.skip_vol = skip_vol
+            plt.savefig(f'{outdir}/pc{i + 1}/z_umap_colorlatentpca.png')
 
-    def gen_volumes(self, outdir, z_values):
-        if self.skip_vol: return
-        if not os.path.exists(outdir):
-            os.makedirs(outdir)
-        zfile = f'{outdir}/z_values.txt'
-        np.savetxt(zfile, z_values)
-        analysis.gen_volumes(self.weights, self.config, zfile, outdir, **self.vol_args)
+    # make plots of first 6 images of each kmeans class
+    s = starfile.TiltSeriesStarfile(starfile=starfile_path)
+    star_df_backup = s.df.copy(deep=True)
+    for label in range(num_ksamples):
+        # get indices of particles within this kmeans class
+        ptcl_inds_this_label = np.nonzero(kmeans_labels == label)
+        # randomly select N particles in the class and sort their indices
+        ptcl_inds_random_subset = np.sort(np.random.choice(ptcl_inds_this_label, 6))
+
+        s.filter(ind_ptcls=ptcl_inds_random_subset,
+                 sort_ptcl_imgs='dose_ascending',
+                 use_first_ntilts=1)
+        imgs = s.get_particles_stack(datadir=datadir,
+                                     lazy=False)
+
+        analysis.plot_projections(images=imgs,
+                                  labels=[f'particle {ptcl_ind}' for ptcl_ind in ptcl_inds_random_subset])
+        plt.savefig(f'{outdir}/kmeans{num_ksamples}/particle_images_kmeanslabel{label}.png')
+
+        s.df = star_df_backup.copy(deep=True)
+
 
 def main(args):
+    # log arguments
     t1 = dt.now()
-    E = args.epoch
-    workdir = args.workdir
-    zfile = f'{workdir}/z.{E}.train.pkl'
-    weights = f'{workdir}/weights.{E}.pkl'
-    config = f'{workdir}/config.pkl'
-    outdir = f'{workdir}/analyze.{E}'
-    if E == -1:
-        zfile = f'{workdir}/z.train.pkl'
-        weights = f'{workdir}/weights.pkl'
-        outdir = f'{workdir}/analyze'
-    
+    log(args)
+
+    # set files to use as inputs for analysis
+    config = f'{args.workdir}/config.pkl'
+    cfg = utils.load_pkl(config)
+    star_path = cfg['starfile_args']['sourcefile_filtered']
+    datadir = cfg['dataset_args']['datadir']
+    if args.epoch == -1:
+        zfile = f'{args.workdir}/z.train.pkl'
+        weights = f'{args.workdir}/weights.pkl'
+        outdir = f'{args.workdir}/analyze'
+    else:
+        zfile = f'{args.workdir}/z.{args.epoch}.train.pkl'
+        weights = f'{args.workdir}/weights.{args.epoch}.pkl'
+        outdir = f'{args.workdir}/analyze.{args.epoch}'
+
+    # override outdir if provided as input argument
     if args.outdir:
         outdir = args.outdir
     log(f'Saving results to {outdir}')
@@ -185,30 +427,55 @@ def main(args):
     z = utils.load_pkl(zfile)
     zdim = z.shape[1]
 
-    vol_args = dict(Apix=args.Apix, downsample=args.downsample, flip=args.flip, cuda=args.device, invert=args.invert, lowpass=args.lowpass)
-    vg = VolumeGenerator(weights, config, vol_args, skip_vol=args.skip_vol)
+    vg = analysis.VolumeGenerator(weights_path=weights,
+                                  config_path=config,
+                                  downsample=args.downsample,
+                                  lowpass=args.lowpass,
+                                  flip=args.flip,
+                                  invert=args.invert,
+                                  cuda=args.device, )
+
+    # plot the loss curve
+    loss = analysis.parse_loss(f'{args.workdir}/run.log')
+    plt.plot(loss)
+    plt.xlabel('epoch')
+    plt.ylabel('total loss')
+    plt.savefig(f'{outdir}/model_loss.png')
+    plt.close()
 
     if zdim == 1:
-        analyze_z1(z, outdir, vg)
+        analyze_z_onedimensional(z=z,
+                                 outdir=outdir,
+                                 vg=vg,
+                                 skip_vol=args.skip_vol,
+                                 ondata=args.pc_ondata)
     else:
-        analyze_zN(z, outdir, vg, skip_umap=args.skip_umap, num_pcs=args.pc, num_ksamples=args.ksample, pc_ondata=args.pc_ondata)
+        analyze_z_multidimensional(z=z,
+                                   outdir=outdir,
+                                   skip_vol=args.skip_vol,
+                                   vg=vg,
+                                   num_pcs=args.pc,
+                                   pc_ondata=args.pc_ondata,
+                                   skip_umap=args.skip_umap,
+                                   num_ksamples=args.ksample,
+                                   starfile_path=star_path,
+                                   datadir=datadir)
 
     # copy over template if file doesn't exist
     out_ipynb = f'{outdir}/tomoDRGN_viz+filt.ipynb'
     if not os.path.exists(out_ipynb):
         log(f'Creating jupyter notebook...')
-        ipynb = f'{tomodrgn._ROOT}/templates/tomoDRGN_viz+filt_template.ipynb'
-        assert os.path.exists(ipynb)
+        ipynb = str(files('tomodrgn.templates').joinpath('tomoDRGN_viz+filt_template.ipynb'))
+        assert os.path.isfile(ipynb)
         shutil.copyfile(ipynb, out_ipynb)
         log(out_ipynb)
     else:
         log(f'{out_ipynb} already exists. Skipping')
 
-    log(f'Finished in {dt.now()-t1}')
-
+    log(f'Finished in {dt.now() - t1}')
 
 
 if __name__ == '__main__':
+    matplotlib.use('Agg')  # non-interactive backend
     parser = argparse.ArgumentParser(description=__doc__)
-    add_args(parser)
-    main(parser.parse_args())
+    main(add_args(parser).parse_args())
