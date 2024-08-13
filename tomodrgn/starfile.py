@@ -837,7 +837,7 @@ class TiltSeriesStarfile(GenericStarfile):
         Operations are applied in order: `ind_img -> ind_ptcl -> sort_ptcl_imgs -> use_first_ntilts -> use_first_nptcls`.
         :param ind_imgs: numpy array or path to numpy array of integer row indices to preserve, shape (N)
         :param ind_ptcls: numpy array or path to numpy array of integer particle indices to preserve, shape (N)
-        :param sort_ptcl_imgs: aort the star file images on a per-particle basis by the specified criteria
+        :param sort_ptcl_imgs: sort the star file images on a per-particle basis by the specified criteria
         :param use_first_ntilts: keep the first `use_first_ntilts` images of each particle in the sorted star file.
                 Default -1 means to use all. Will drop particles with fewer than this many tilt images.
         :param use_first_nptcls: keep the first `use_first_nptcls` particles in the sorted star file.
