@@ -21,6 +21,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
     A module to encode multiple tilt images of a particle to a learned low-dimensional latent space embedding,
     then decode spatial frequency coordinates to corresponding voxel amplitudes conditioned on the per-particle latent embedding.
     """
+
     # No pose inference
     def __init__(self,
                  in_dim: int,
@@ -71,7 +72,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
 
         # instantiate the decoder module
         self.decoder = FTPositionalDecoder(boxsize_ht=lat.boxsize,
-                                           in_dim=3+zdim,
+                                           in_dim=3 + zdim,
                                            hidden_layers=hidden_layers_decoder,
                                            hidden_dim=hidden_dim_decoder,
                                            activation=activation,
@@ -120,7 +121,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
                                      num_heads=cfg['model_args']['num_heads'],
                                      layer_norm=cfg['model_args']['layer_norm'],
                                      pe_type=cfg['model_args']['pe_type'],
-                                     pe_dim=cfg['model_args']['pe_dim'],)
+                                     pe_dim=cfg['model_args']['pe_dim'], )
 
         # load weights if provided
         if weights is not None:
@@ -189,6 +190,7 @@ class FTPositionalDecoder(nn.Module):
     A module to decode a (batch of tilts of) spatial frequency coordinates spanning (-0.5, 0.5) to the corresponding spatial frequency amplitude.
     The output may optionally be conditioned on a latent embedding `z`.
     """
+
     def __init__(self,
                  boxsize_ht: int,
                  in_dim: int = 3,
@@ -483,7 +485,7 @@ class TiltSeriesEncoder(nn.Module):
                  out_dim_a: int = 128,
                  hidden_layers_b: int = 3,
                  hidden_dim_b: int = 256,
-                 out_dim: int = 64*2,
+                 out_dim: int = 64 * 2,
                  activation: torch.nn.ReLU | torch.nn.LeakyReLU = torch.nn.ReLU,
                  ntilts: int = 41,
                  pooling_function: Literal['concatenate', 'max', 'mean', 'median', 'set_encoder'] = 'concatenate',
