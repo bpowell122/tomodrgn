@@ -343,6 +343,21 @@ class GenericStarfile:
 
         return mrcs_files, mrcs_grouped_image_inds
 
+    def identify_particles_data_block(self,
+                                      column_substring: str = 'Angle') -> str:
+        """
+        Attempt to identify the block_name of the data block within the star file for which rows refer to particle data (as opposed to optics or other data).
+        :param column_substring: Search pattern to identify as substring within column name for particles block
+        :return: the block name of the particles data block (e.g. `data` or `data_particles`)
+        """
+        block_name = None
+        for block_name in self.block_names:
+            # find the dataframe containing particle data
+            if any(self.blocks[block_name].columns.str.contains(pat=column_substring)):
+                return block_name
+        if block_name is None:
+            raise RuntimeError(f'Could not identify block containing particle data in star file (by searching for column containing text {column_substring}` in all blocks)')
+
 
 class TiltSeriesStarfile(GenericStarfile):
     """

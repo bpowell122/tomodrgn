@@ -92,15 +92,8 @@ def filter_volume_series_starfile(star_path: str,
                                   ind_action: Literal['keep', 'drop'] = 'keep') -> starfile.GenericStarfile:
     # load the star file
     star = starfile.GenericStarfile(star_path)
-    df = None
-    block_name = None
-    for block_name in star.block_names:
-        # find the dataframe containing particle data
-        if any(star.blocks[block_name].columns.str.contains(pat='Angle')):
-            df = star.blocks[block_name]
-            break
-    if df is None:
-        raise RuntimeError('Could not identify block containing per-particle data in star file (by searching for column containing text `Angle`)')
+    ptcl_block_name = star.identify_particles_data_block()
+    df = star.blocks[ptcl_block_name]
     log(f'Input star file contains {len(df)} particles.')
 
     # establish indices to drop
@@ -121,7 +114,7 @@ def filter_volume_series_starfile(star_path: str,
 
         # apply filtering
         df = df.drop(ind_ptcls).reset_index(drop=True)
-        star.blocks[block_name] = df
+        star.blocks[ptcl_block_name] = df
 
     log(f'Filtered star file contains {len(df)} particles.')
 
@@ -152,14 +145,7 @@ def main(args):
     if args.tomogram:
 
         # first find the block containing particle data and ensure the specifed column for tomogram ID is present
-        tomo_block_name = None
-        for block_name in star.block_names:
-            # find the dataframe containing particle data
-            if any(star.blocks[block_name].columns.str.contains(pat=args.tomo_id_col)):
-                tomo_block_name = block_name
-                break
-        if tomo_block_name is None:
-            raise RuntimeError(f'Could not identify block containing tomogram ID column {args.tomo_id_col} in star file')
+        tomo_block_name = star.identify_particles_data_block(column_substring=args.tomo_id_col)
 
         if args.tomogram == 'all':
             # write each tomo's starfile out separately
