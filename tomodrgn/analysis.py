@@ -337,8 +337,8 @@ def get_ind_for_cluster(labels: np.ndarray,
 ############
 
 
-def _get_colors(num_colors: int,
-                cmap: Colormap | str | None = None) -> list[tuple[float, float, float, float]]:
+def get_colors(num_colors: int,
+               cmap: Colormap | str | None = None) -> list[tuple[float, float, float, float]]:
     """
     Sample num_colors colors from the specified color map as RGBA tuples
     :param num_colors: the number of colors to sample from the color map.
@@ -560,8 +560,8 @@ def plot_by_cluster(x: np.ndarray,
     # get colors for clusters by sampling cmap
     if type(labels_sel) is int:
         labels_sel = list(range(labels_sel))
-    colors = _get_colors(num_colors=len(labels_sel),
-                         cmap=cmap)
+    colors = get_colors(num_colors=len(labels_sel),
+                        cmap=cmap)
 
     # scatter by cluster
     for i, label_sel in enumerate(labels_sel):
@@ -625,7 +625,7 @@ def plot_by_cluster_subplot(x: np.ndarray,
     # get colors for clusters by sampling cmap
     if type(labels_sel) is int:
         labels_sel = list(range(labels_sel))
-    colors = _get_colors(len(labels_sel), cmap)
+    colors = get_colors(len(labels_sel), cmap)
 
     # create base plot
     ncol = int(np.ceil(len(labels_sel) ** .5))
