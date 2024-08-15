@@ -398,6 +398,15 @@ def analyze_z_multidimensional(z: np.ndarray,
 
         s.df = star_df_backup.copy(deep=True)
 
+    # make plot of class label distribution versus tomogram / micrograph in star file order
+    analysis.plot_label_count_distribution(ptcl_star=s,
+                                           class_labels=kmeans_labels)
+    plt.tight_layout()
+    plt.savefig(f'{outdir}/kmeans{num_ksamples}/tomogram_label_distribution.png')
+    plt.close()
+
+    # TODO make plots of controls vs UMAP
+
 
 def main(args):
     # log arguments

@@ -27,7 +27,7 @@ from sklearn.mixture import GaussianMixture
 # noinspection PyPackageRequirements
 import umap
 
-from tomodrgn import utils, mrc
+from tomodrgn import utils, mrc, starfile
 
 log = utils.log
 
@@ -724,6 +724,36 @@ def plot_projections(images: np.ndarray,
         else:
             ax = fig.add_subplot(gs[i])
             ax.axis('off')
+
+
+def plot_label_count_distribution(ptcl_star: starfile.TiltSeriesStarfile,
+                                  class_labels: np.ndarray) -> None:
+    """
+    Plot the distribution of class labels per tomogram or micrograph as a heatmap.
+    :param ptcl_star: image series star file describing the same number of particles as class_labels
+    :param class_labels: array of class labels, shape (nptcls, 1)
+    :return: None
+    """
+    # get a df with one row corresponding to each particle
+    df_first_img = ptcl_star.df.groupby(ptcl_star.header_ptcl_uid, as_index=False, sort=False).first()
+    # group particles by source tomogram
+    ind_ptcls_per_tomo = [group.index.to_numpy() for group_name, group in df_first_img.groupby(ptcl_star.header_ptcl_micrograph)]
+
+    label_distribution = np.zeros((len(ind_ptcls_per_tomo), len(set(class_labels))))
+    for i, ind_one_tomo in enumerate(ind_ptcls_per_tomo):
+        # don't use np.unique directly on one tomogram in case that tomogram has zero particles in given class
+        counts_one_tomo = np.asarray([np.sum(class_labels[ind_ptcls_per_tomo[i]] == label) for label in np.unique(class_labels, return_counts=False)])
+        label_distribution[i] = counts_one_tomo
+
+    fig, ax = plt.subplots(nrows=1,
+                           ncols=1,
+                           figsize=(0.2 * len(ind_ptcls_per_tomo), 0.2 * len(set(class_labels))))
+
+    distribution_plot = ax.imshow(label_distribution.T)
+    fig.colorbar(distribution_plot, ax=ax, label='particle count per class')
+
+    ax.set_xlabel(f'unique value of {ptcl_star.header_ptcl_micrograph}')
+    ax.set_ylabel('class label')
 
 
 def ipy_plot_interactive(df: pd.DataFrame) -> widgets.Box:
