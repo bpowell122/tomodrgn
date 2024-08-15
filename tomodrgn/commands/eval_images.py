@@ -101,7 +101,7 @@ def main(args):
 
     # evaluation loop
     z_mu, z_logvar = encoder_inference(model=model,
-                                       lattice=lattice,
+                                       lat=lattice,
                                        data=data,
                                        use_amp=use_amp,
                                        batchsize=args.batch_size)

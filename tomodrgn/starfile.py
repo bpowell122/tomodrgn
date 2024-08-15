@@ -890,11 +890,11 @@ class TiltSeriesStarfile(GenericStarfile):
 
             assert len(self.df[self.header_ptcl_uid].unique().to_numpy()) == len(ind_ptcls), 'Make sure particle indices file does not contain duplicates'
 
+        # create temp mapping of input particle order in star file to preserve after sorting
+        self.df['_temp_input_ptcl_order'] = self.df.groupby(self.header_ptcl_uid, sort=False).ngroup()
         # sort the star file per-particle by the specified method
         if sort_ptcl_imgs != 'unsorted':
             utils.log(f'Sorting star file per-particle by {sort_ptcl_imgs}')
-            # create temp mapping of input particle order in star file to preserve after sorting
-            self.df['_temp_input_ptcl_order'] = self.df.groupby(self.header_ptcl_uid, sort=False).ngroup()
             if sort_ptcl_imgs == 'dose_ascending':
                 # sort by header_ptcl_uid first to keep images of the same particle together, then sort by header_ptcl_dose
                 self.df = self.df.sort_values(by=['_temp_input_ptcl_order', self.header_ptcl_dose], ascending=True).reset_index(drop=True)

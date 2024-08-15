@@ -1116,6 +1116,7 @@ def ipy_tomo_ptcl_viewer(tomogram_list: list[str], df_particles: pd.DataFrame) -
     An interactive tomogram and particle viewer using plotly and ipywidgets.
     Allows correlation of tomogram image data with particle locations with particle metadata attributes expressed in `df_particles`.
     """
+
     # TODO add tomogram_list mapping to tomogram name for df_particles selection
     class TomoDataContainer:
         def __init__(self):
@@ -1554,8 +1555,8 @@ def ipy_tomo_ptcl_viewer(tomogram_list: list[str], df_particles: pd.DataFrame) -
         # get mask 0,1 of particles meeting threshold, depending on toggle of invert_thresh
         subset_mask = np.array((tomodatacontainer.df_particles_sub[ptcl_subset_column_widget.value] >=
                                 ptcl_subset_thresh_widget.value[0]) & (
-                                           tomodatacontainer.df_particles_sub[ptcl_subset_column_widget.value] <=
-                                           ptcl_subset_thresh_widget.value[1]))
+                                       tomodatacontainer.df_particles_sub[ptcl_subset_column_widget.value] <=
+                                       ptcl_subset_thresh_widget.value[1]))
         if ptcl_subset_invert_thresh_widget.value:
             subset_mask = np.logical_not(subset_mask)
         with fig.batch_update():

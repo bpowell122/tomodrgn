@@ -26,7 +26,7 @@ def add_args(_parser):
     _parser.add_argument('--skip-vol', action='store_true', help='Skip generation of volumes')
     _parser.add_argument('--skip-umap', action='store_true', help='Skip running UMAP')
 
-    group = _parser.add_mutually_exclusive_group('Arguments for latent space analysis')
+    group = _parser.add_argument_group('Arguments for latent space analysis')
     group.add_argument('--pc', type=int, default=2, help='Number of principal component traversals to generate (default: %(default)s)')
     group.add_argument('--pc-ondata', action='store_true', help='Find closest on-data latent point to each PC percentile')
     group.add_argument('--ksample', type=int, default=20, help='Number of kmeans samples to generate (default: %(default)s)')
@@ -394,6 +394,7 @@ def analyze_z_multidimensional(z: np.ndarray,
         analysis.plot_projections(images=imgs,
                                   labels=[f'particle {ptcl_ind}' for ptcl_ind in ptcl_inds_random_subset])
         plt.savefig(f'{outdir}/kmeans{num_ksamples}/particle_images_kmeanslabel{label}.png')
+        plt.close()
 
         s.df = star_df_backup.copy(deep=True)
 

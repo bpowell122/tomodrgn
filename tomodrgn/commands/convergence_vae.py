@@ -12,6 +12,7 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 import random
 from datetime import datetime as dt
+# noinspection PyPackageRequirements
 import umap
 from tomodrgn import analysis, utils, mrc
 from scipy.spatial import distance_matrix
@@ -546,7 +547,7 @@ def generate_volumes(workdir, outdir, epochs, Apix, flip, invert, downsample, cu
         zfile = outdir + f'/repr_particles/latent_representative.{epoch}.txt'
         volsdir = outdir + f'/vols.{epoch}'
 
-        analysis.gen_volumes(weights, config, zfile, volsdir, Apix=Apix, flip=flip, invert=invert, downsample=downsample, cuda=cuda)
+        analysis.gen_volumes(weights, config, zfile, volsdir, flip=flip, invert=invert, downsample=downsample, cuda=cuda)
 
 
 def mask_volume(volpath, vol_outpath, Apix, mask_outpath=None, thresh=None, dilate=None, dist=None):
@@ -584,7 +585,7 @@ def mask_volume(volpath, vol_outpath, Apix, mask_outpath=None, thresh=None, dila
     assert np.all(z <= 1)
 
     vol *= z
-    mrc.write(vol_outpath, vol.astype(np.float32), Apix=Apix)
+    mrc.write(vol_outpath, vol.astype(np.float32), angpix=Apix)
     if mask_outpath is not None:
         mrc.write(mask_outpath, z.astype(np.float32))
 

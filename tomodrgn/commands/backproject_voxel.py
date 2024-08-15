@@ -22,7 +22,7 @@ def add_args(_parser):
     _parser.add_argument('-o', type=os.path.abspath, required=True, help='Output .mrc file')
 
     group = _parser.add_argument_group('Particle starfile loading and filtering')
-    group.add_argument('--source-software', type='str', choices=('auto', 'warp_v1', 'nextpyp', 'relion_v5', 'warp_v2'), default='auto',
+    group.add_argument('--source-software', type=str, choices=('auto', 'warp_v1', 'nextpyp', 'relion_v5', 'warp_v2'), default='auto',
                        help='Manually set the software used to extract particles. Default is to auto-detect.')
     group.add_argument('--ind-ptcls', type=os.path.abspath, metavar='PKL', help='Filter starfile by particles (unique rlnGroupName values) using np array pkl as indices')
     group.add_argument('--ind-imgs', type=os.path.abspath, help='Filter starfile by particle images (star file rows) using np array pkl as indices')
@@ -167,7 +167,7 @@ def save_map(vol: torch.tensor,
         vol = vol[::-1]
     mrc.write(vol_path,
               vol.astype('float32'),
-              Apix=angpix)
+              angpix=angpix)
     log(f'Wrote {vol_path}')
 
 

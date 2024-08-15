@@ -158,7 +158,7 @@ def main(args):
         log(f'Saving {args.o}')
         mrc.write(args.o,
                   vol_real_cropped,
-                  Apix= new_apix,
+                  angpix= new_apix,
                   is_vol=True)
 
 
@@ -179,7 +179,7 @@ def main(args):
         log('Saving {}'.format(args.o))
         mrc.write(out_mrcs,
                   new.astype(np.float32, copy=False),
-                  Apix=new_apix,
+                  angpix=new_apix,
                   is_vol=False)
 
     ### Downsample images, saving chunks of N images ###
@@ -204,7 +204,7 @@ def main(args):
             log(f'Saving {out_mrcs[i]}')
             mrc.write(out_mrcs[i],
                       new.astype(np.float32, copy=False),
-                      Apix=new_apix,
+                      angpix=new_apix,
                       is_vol=False)
 
         # Write a text file with all chunks
