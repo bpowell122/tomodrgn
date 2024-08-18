@@ -370,18 +370,13 @@ def decode_batch(*,
     # prepare lattice at rotated fourier components
     input_coords = lat.coords @ batch_rots  # shape batchsize x ntilts x boxsize_ht**2 x 3 from [boxsize_ht**2 x 3] @ [batchsize x ntilts x 3 x 3]
 
-    # concatenate with z
-    z = z.view(z.shape[0], *([1] * (input_coords.ndimension() - 2)), z.shape[-1])  # shape batchsize x 1 x 1 x zdim
-    z_percoord = z.expand(*input_coords.shape[:-1], z.shape[-1])  # shape batchsize x ntilts x boxsize_ht**2 x zdim
-    input_coords_z = torch.cat((input_coords, z_percoord), dim=-1)  # shape batchsize x ntilts x boxsize_ht**2 x 3+zdim
-
-    # filter by dec_mask
-    input_coords_z_masked = input_coords_z[batch_hartley_2d_mask.view(batchsize, ntilts, boxsize_ht * boxsize_ht), :].unsqueeze(0)
-    pseudo_batchsize = utils.first_n_factors(input_coords_z_masked.shape[-2], lower_bound=8)[0]
-    input_coords_z_masked = input_coords_z_masked.view(pseudo_batchsize, -1, input_coords_z_masked.shape[-1])
+    # filter by dec_mask to skip decoding coordinates that have low contribution to SNR
+    # note that this produces a NestedTensor and therefore has slightly different behavior than a normal Tensor
+    input_coords_masked = torch.nested.as_nested_tensor([c[m] for c, m in zip(input_coords, batch_hartley_2d_mask)]).contiguous()
 
     # pass to decoder
-    batch_images_recon = model(input_coords_z_masked).view(1, -1)
+    batch_images_recon = model.decode(input_coords_masked, z)
+
     return batch_images_recon
 
 
@@ -412,13 +407,17 @@ def loss_function(*,
     :return: total summed loss, generative loss between reconstructed slices and input images, and beta-weighted kld loss between latent embeddings and standard normal
     """
     # reconstruction error
-    batch_images = batch_images[batch_hartley_2d_mask].view(1, -1)
-    batch_recon_error_weights = batch_recon_error_weights[batch_hartley_2d_mask].view(1, -1)
+    batch_images = batch_images.flatten(start_dim=2, end_dim=3)
+    batch_images = torch.nested.as_nested_tensor([images_ptcl[mask_ptcl] for images_ptcl, mask_ptcl in zip(batch_images, batch_hartley_2d_mask)]).contiguous()
+    batch_recon_error_weights = torch.nested.as_nested_tensor([weights_ptcl[mask_ptcl] for weights_ptcl, mask_ptcl in zip(batch_recon_error_weights, batch_hartley_2d_mask)]).contiguous()
     if batch_ctf_weights is not None:
-        ctf_weights = batch_ctf_weights[batch_hartley_2d_mask].view(1, -1)
-        batch_images_recon *= ctf_weights  # apply CTF to reconstructed image
-        batch_images *= ctf_weights.sign()  # undo phase flipping in place from preprocess_batch
-    gen_loss = torch.mean(batch_recon_error_weights * ((batch_images_recon - batch_images) ** 2))
+        batch_ctf_weights = torch.nested.as_nested_tensor([ctf_weights_ptcl[mask_ptcl] for ctf_weights_ptcl, mask_ptcl in zip(batch_ctf_weights, batch_hartley_2d_mask)]).contiguous()
+        batch_images_recon = batch_images_recon * batch_ctf_weights  # apply CTF to reconstructed image
+        batch_images = batch_images * batch_ctf_weights.sgn()  # undo phase flipping in place from preprocess_batch
+    batch_weighted_error = batch_recon_error_weights * ((batch_images_recon - batch_images) * (batch_images_recon - batch_images))
+    gen_loss = torch.nanmean(batch_weighted_error.to_padded_tensor(torch.nan))
+    # gen_loss = torch.mean(torch.hstack([torch.mean(ptcl_weighted_error) for ptcl_weighted_error in batch_weighted_error.unbind()]))
+    # gen_loss = torch.mean(batch_recon_error_weights * ((batch_images_recon - batch_images) * (batch_images_recon - batch_images)))
 
     # latent loss
     kld = torch.mean(-0.5 * torch.sum(1 + z_logvar - z_mu.pow(2) - z_logvar.exp(), dim=1), dim=0)

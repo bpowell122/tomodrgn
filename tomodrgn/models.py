@@ -324,16 +324,17 @@ class FTPositionalDecoder(nn.Module):
         """
         if self.pe_type == 'gaussian':
             # expand freqs with singleton dimension along the batch dimensions, e.g. dim (1, ..., 1, n_feats, 3)
-            freqs = self.freqs.view(1, 1, -1, 3)  # 1 x 1 x 3*D2 x 3
+            freqs = torch.nested.as_nested_tensor([self.freqs.unsqueeze(0).expand(len(coords_one_ptcl), -1, -1) for coords_one_ptcl in coords.unbind()]).contiguous()
             # calculate features as torch.dot(k, freqs): compute x,y,z components of k then sum x,y,z components
             kxkykz = coords[..., None, :] * freqs  # B x N*D*D[mask] x 3*D2 x 3
             k = kxkykz.sum(-1)  # B x N*D*D[mask] x 3*D2
             k = k.reshape(coords.size(0), -1, 3, self.pe_dim)  # B x N*D*D[mask] x 3 x D2 (where .size(0) and -1 are required for NestedTensor)
         else:
             # expand freqs with singleton dimension along the batch dimensions, e.g. dim (1, ..., 1, n_feats)
-            freqs = self.freqs.view(1, 1, 1, -1)  # 1 x 1 x 1 x D2
+            freqs = torch.nested.as_nested_tensor([self.freqs.unsqueeze(0).unsqueeze(0).expand(len(coords_one_ptcl), 3, -1) for coords_one_ptcl in coords.unbind()]).contiguous()
             # calculate the features as freqs scaled by coords
-            k = coords[..., None] * freqs  # B x N*D*D[mask] x 3 x D2
+            coords = torch.nested.as_nested_tensor([coords_one_ptcl.unsqueeze(-1).expand(-1, -1, self.freqs.shape[0]) for coords_one_ptcl in coords]).contiguous()
+            k = coords * freqs  # B x N*D*D[mask] x 3 x D2
 
         s = torch.sin(k)  # B x N*D*D[mask] x 3 x D2
         c = torch.cos(k)  # B x N*D*D[mask] x 3 x D2
@@ -359,13 +360,8 @@ class FTPositionalDecoder(nn.Module):
         assert z.ndim == 2
 
         # repeat z along a new axis corresponding to spatial frequency coordinates for each particle's images
-        # z = repeat(z, 'batch zdim -> batch repeat_ntilts repeat_pixels zdim', repeat_ntilts=coords.shape[1], repeat_pixels=coords.shape[2])
-        # unbind returns a view into the coords NestedTensor; iterating over the batch dim and calling len() to get the number of pixels per particle
-        z_expanded = torch.nested.as_nested_tensor([z_ptcl.repeat(len(coords_ptcl), 1) for z_ptcl, coords_ptcl in zip(z, coords.unbind())])
-
         # concatenate coords with z along the last axis (coordinate + zdim value)
-        # coords_z, _ = pack([coords, z], 'batch ntilts coords *')
-        coords_z = torch.cat([coords, z_expanded], -1)
+        coords_z = torch.nested.as_nested_tensor([torch.cat([coords_ptcl, z_ptcl.repeat(len(coords_ptcl), 1)], dim=-1) for coords_ptcl, z_ptcl in zip(coords.unbind(), z)]).contiguous()
 
         return coords_z
 
@@ -402,27 +398,17 @@ class FTPositionalDecoder(nn.Module):
         :param z: latent embedding per-particle, shape (batch, zdim)
         :return: Decoded voxel intensities at the specified 3-D spatial frequencies.
         """
-        # sanity check inputs coordinates are within range (-0.5, 0.5)
-        assert (coords.abs() - 0.5 < 1e-4).all(), f'coords.max(): {coords.max()}; coords.min(): {coords.min()}'
-
-        # convention: only evaluate the -z points
-        zflipper = torch.where(coords[..., 2] > 0, -1, 1)
-        coords_flipped = coords * zflipper  # avoids "modifying tensor in-place" warnings+errors
-
         # positionally encode x,y,z 3-D coordinate
-        coords_pe = self.positional_encoding(coords_flipped)
+        coords_pe = self.positional_encoding(coords)
 
         # concatenate each spatial coordinate with the appropriate latent embedding to be conditioned on
-        if z:
+        if z is not None:
             coords_pe = self.cat_z(coords_pe, z)
 
         # evaluate the model
         result = self.decoder(coords_pe)
 
-        # replace with complex conjugate to get correct values for original lattice positions
-        result_flipped = torch.cat([result[..., 0], result[..., 1] * zflipper], -1)
-
-        return result_flipped
+        return result
 
     def eval_volume_batch(self,
                           coords: torch.Tensor,
