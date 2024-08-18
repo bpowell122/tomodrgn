@@ -57,15 +57,15 @@ def compute_ctf(lattice: Lattice,
 
     # calculate non-enveloped CTF
     df = 0.5 * (dfu + dfv) + 0.5 * (dfu - dfv) * torch.cos(2 * (lattice.freqs2d_angle - dfang))
-    phase_shift = phase_shift + np.arcsin(w)
-    gamma = -np.pi * df * lam * (lattice.freqs2d_s2 / angpix2) + np.pi / 2 * cs * lam ** 3 * (lattice.freqs2d_s2 / angpix2) ** 2 - phase_shift
+    phase_shift = phase_shift + torch.arcsin(w)
+    gamma = -torch.pi * df * lam * (lattice.freqs2d_s2 / angpix2) + torch.pi / 2 * cs * lam ** 3 * (lattice.freqs2d_s2 / angpix2) ** 2 - phase_shift
     ctf = torch.sin(gamma)
 
     # apply CTF envelope
     if bfactor is not None:
         ctf *= torch.exp(-bfactor * (lattice.freqs2d_s2 / angpix2) / 4)
 
-    return ctf, df, gamma
+    return ctf
 
 
 def print_ctf_params(params: np.ndarray | torch.Tensor) -> None:
