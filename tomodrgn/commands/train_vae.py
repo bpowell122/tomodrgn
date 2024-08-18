@@ -21,6 +21,7 @@ from tomodrgn.dataset import TiltSeriesMRCData
 from tomodrgn.models import TiltSeriesHetOnlyVAE, DataParallelPassthrough
 from tomodrgn.lattice import Lattice
 from tomodrgn.beta_schedule import get_beta_schedule
+from tomodrgn.analysis import VolumeGenerator
 
 log = utils.log
 vlog = utils.vlog
@@ -343,13 +344,8 @@ def encode_batch(*,
     :return: z_logvar: Direct output of encoder module parameterizing the log variance of the latent embedding for each particle, shape (batchsize, zdim)
     :return: z: Resampling of the latent embedding for each particle parameterized as a gaussian with mean `z_mu` and variance `z_logvar`, shape (batchsize, zdim)
     """
-
-    # get key dimension sizes
-    batchsize, ntilts, _, _ = batch_images.shape
-
-    # encode
-    z_mu, z_logvar = model.encode(batch_images, batchsize, ntilts)  # ouput is B x zdim, i.e. one value per ptcl (not per img)
-    z = model.reparameterize(z_mu, z_logvar)
+    z_mu, z_logvar = model.encode(batch_images)  # ouput is B x zdim, i.e. one value per ptcl (not per img)
+    z = model.encoder.reparameterize(z_mu, z_logvar)
 
     return z_mu, z_logvar, z
 
@@ -458,7 +454,7 @@ def encoder_inference(*,
     # prepare to run model inference
     model.eval()
     assert not model.training
-    with torch.no_grad():
+    with torch.inference_mode():
 
         # autocast auto-enabled and set to correct device
         with autocast(enabled=use_amp):
@@ -816,28 +812,26 @@ def main(args):
     # instantiate model
     activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]
     flog(f'Pooling function prior to encoder B: {args.pooling_function}')
-    model = TiltSeriesHetOnlyVAE(lattice,
-                                 args.qlayersA,
-                                 args.qdimA,
-                                 args.out_dim_A,
-                                 data_train.ntilts_training,
-                                 args.qlayersB,
-                                 args.qdimB,
-                                 args.players,
-                                 args.pdim,
-                                 in_dim,
-                                 args.zdim,
-                                 enc_mask=enc_mask,
-                                 enc_type=args.pe_type,
-                                 enc_dim=args.pe_dim,
-                                 domain='fourier',
+    model = TiltSeriesHetOnlyVAE(in_dim=in_dim,
+                                 hidden_layers_a=args.qlayersA,
+                                 hidden_dim_a=args.qdimA,
+                                 out_dim_a=args.out_dim_A,
+                                 ntilts=data_train.ntilts_training,
+                                 hidden_layers_b=args.qlayersB,
+                                 hidden_dim_b=args.qdimB,
+                                 zdim=args.zdim,
+                                 hidden_layers_decoder=args.players,
+                                 hidden_dim_decoder=args.pdim,
+                                 lat=lat,
                                  activation=activation,
-                                 l_dose_mask=args.l_dose_mask,
-                                 feat_sigma=args.feat_sigma,
+                                 enc_mask=enc_mask,
                                  pooling_function=args.pooling_function,
+                                 feat_sigma=args.feat_sigma,
                                  num_seeds=args.num_seeds,
                                  num_heads=args.num_heads,
-                                 layer_norm=args.layer_norm)
+                                 layer_norm=args.layer_norm,
+                                 pe_type=args.pe_type,
+                                 pe_dim=args.pe_dim,)
     # model.to(device)
     flog(model)
     flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
