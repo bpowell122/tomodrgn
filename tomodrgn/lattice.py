@@ -45,8 +45,8 @@ class Lattice:
 
         # precalculate values used each time we compute the CTF for an image
         self.freqs2d = self.coords[:, 0:2] / extent / 2  # spatial frequencies at each lattice point normalized to scale from -0.5 to 0.5 (Nyquist)
-        self.freqs2d_s2 = (self.freqs2d[:, 0] ** 2 + self.freqs2d[:, 1] ** 2).view(1, -1)  # spatial frequency magnitude at each lattice point, dim0 of length 1 for broadcasting across multiple images
-        self.freqs2d_angle = torch.atan2(self.freqs2d[:, 1], self.freqs2d[:, 0]).view(1, -1)  # spatial frequency angle from x axis at each lattice point
+        self.freqs2d_s2 = (self.freqs2d[:, 0] ** 2 + self.freqs2d[:, 1] ** 2).view(1, 1, -1)  # spatial frequency magnitude at each lattice point, dim0 and dim1 of length 1 for broadcasting
+        self.freqs2d_angle = torch.atan2(self.freqs2d[:, 1], self.freqs2d[:, 0]).view(1, 1, -1)  # spatial frequency angle from x axis at each lattice point
 
     def get_downsample_coords(self,
                               boxsize_new: int) -> torch.Tensor:
