@@ -365,8 +365,8 @@ class TiltSeriesMRCData(data.Dataset):
     def _precalculate_dose_weights_masks(self) -> tuple[dict[float, np.ndarray], dict[float, np.ndarray]]:
         """
         Precalculate the spatial frequency weights and masks based on fixed dose exposure curves.
-        :return: frequency_weights_dose: dict mapping cumulative dose to numpy array of relative weights at each spatial frequency, shape (boxsize_ht, boxsize_ht)
-        :return: frequency_masks_dose: dict mapping cumulative dose to numpy array of mask of spatial frequencies to evaluate, shape (boxsize_ht, boxsize_ht)
+        :return: frequency_weights_dose: dict mapping cumulative dose to numpy array of relative weights at each spatial frequency, shape (boxsize_ht ** 2)
+        :return: frequency_masks_dose: dict mapping cumulative dose to numpy array of mask of spatial frequencies to evaluate, shape (boxsize_ht ** 2)
         """
         # get the unique set of dose values for which to calculate 2D weights and masks
         unique_doses = np.unique(self.cumulative_doses)
@@ -380,15 +380,15 @@ class TiltSeriesMRCData(data.Dataset):
         # calculate the 2-D spatial frequency weights for each dose and cache result
         unique_dose_weights = dose.calculate_dose_weights(spatial_frequencies_critical_dose, unique_doses).astype(np.float32)
         if self.recon_dose_weight:
-            frequency_weights_dose = {cumulative_dose: frequency_weights_per_dose
+            frequency_weights_dose = {cumulative_dose: frequency_weights_per_dose.ravel()
                                       for cumulative_dose, frequency_weights_per_dose in zip(unique_doses, unique_dose_weights)}
         else:
-            frequency_weights_dose = {cumulative_dose: np.ones((self.boxsize_ht, self.boxsize_ht), dtype=np.float32)
+            frequency_weights_dose = {cumulative_dose: np.ones((self.boxsize_ht * self.boxsize_ht), dtype=np.float32)
                                       for cumulative_dose in unique_doses}
 
         # calculate the 2-D spatial frequency masks for each dose and cache result
-        hartley_2d_mask = lattice.Lattice(boxsize=self.boxsize_ht, extent=0.5, ignore_dc=True).get_circular_mask(diameter=self.boxsize_ht).numpy()
-        frequency_masks_dose = {cumulative_dose: dose.calculate_dose_mask(frequency_weights_per_dose, hartley_2d_mask)
+        hartley_2d_mask = lattice.Lattice(boxsize=self.boxsize_ht, extent=0.5, ignore_dc=True).get_circular_mask(diameter=self.boxsize_ht).numpy().reshape(self.boxsize_ht, self.boxsize_ht)
+        frequency_masks_dose = {cumulative_dose: dose.calculate_dose_mask(frequency_weights_per_dose, hartley_2d_mask).ravel()
                                 for cumulative_dose, frequency_weights_per_dose in zip(unique_doses, unique_dose_weights)}
 
         return frequency_weights_dose, frequency_masks_dose
