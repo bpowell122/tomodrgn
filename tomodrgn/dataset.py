@@ -195,10 +195,10 @@ class TiltSeriesMRCData(data.Dataset):
         ctf_params = 0 if self.ctf_params is None else self.ctf_params[ptcl_img_ind]
 
         # get weighting and masking metadata to be returned
-        tilt_weights = [self.spatial_frequency_tilt_weights.get(tilt) for tilt in self.tilts[ptcl_img_ind]]
-        dose_weights = [self.spatial_frequency_dose_weights.get(cumulative_dose) for cumulative_dose in self.cumulative_doses[ptcl_img_ind]]
-        decoder_mask = [self.spatial_frequency_dose_masks.get(cumulative_dose) for cumulative_dose in self.cumulative_doses[ptcl_img_ind]]
-        decoder_weights = dose.combine_dose_tilt_weights(dose_weights, tilt_weights)
+        tilt_weights = np.asarray([self.spatial_frequency_tilt_weights.get(tilt) for tilt in self.tilts[ptcl_img_ind]])
+        dose_weights = np.asarray([self.spatial_frequency_dose_weights.get(cumulative_dose) for cumulative_dose in self.cumulative_doses[ptcl_img_ind]])
+        decoder_mask = np.asarray([self.spatial_frequency_dose_masks.get(cumulative_dose) for cumulative_dose in self.cumulative_doses[ptcl_img_ind]])
+        decoder_weights = np.asarray(dose.combine_dose_tilt_weights(dose_weights, tilt_weights))
 
         return images, rot, trans, ctf_params, decoder_weights, decoder_mask, idx_ptcl
 
