@@ -291,7 +291,7 @@ class GenericStarfile:
             assert dtype == _h.dtype
 
         # calculate the number of bytes corresponding to one image in the mrcs files
-        stride = dtype().itemsize * boxsize * boxsize
+        stride = dtype.itemsize * boxsize * boxsize
 
         if lazy:
             lazyparticles = [mrc.LazyImage(fname=file,

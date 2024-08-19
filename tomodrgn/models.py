@@ -449,7 +449,7 @@ class FTPositionalDecoder(nn.Module):
             batch_xy_slice = self.forward(coords=batch_xy_coords, z=z)
 
             # fill the corresponding slice in the 3-D volume with these amplitudes
-            batch_vol_f[:, slice_mask] = batch_xy_slice.to(batch_vol_f.dtype)
+            batch_vol_f[:, i, slice_mask.view(boxsize_ht, boxsize_ht)] = batch_xy_slice.to(batch_vol_f.dtype)
 
         return batch_vol_f
 

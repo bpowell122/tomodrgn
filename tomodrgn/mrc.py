@@ -102,14 +102,14 @@ class MRCHeader:
 
     # define the MRC standard `mode` values and corresponding numpy dtypes
     dtype_for_mode = {
-        0: np.int8,
-        1: np.int16,
-        2: np.float32,
+        0: np.dtype(np.int8),
+        1: np.dtype(np.int16),
+        2: np.dtype(np.float32),
         3: '2h',  # complex number from 2 shorts
-        4: np.complex64,
-        6: np.uint16,
-        7: np.int32,
-        12: np.float16,  # IEEE754
+        4: np.dtype(np.complex64),
+        6: np.dtype(np.uint16),
+        7: np.dtype(np.int32),
+        12: np.dtype(np.float16),  # IEEE754
         16: '3B',  # RBG values
     }
     mode_for_dtype = {vv: kk for kk, vv in dtype_for_mode.items()}
@@ -279,7 +279,7 @@ class MRCHeader:
         :return: None
         """
         # check that the actual and declared length of the extended header are in sync
-        self.fields['nymbt'] = len(self.extended_header)
+        self.fields['nsymbt'] = len(self.extended_header)
 
         # pack the header into appropriate binary format
         buf = struct.Struct(self.struct_format_string).pack(*list(self.fields.values()))
@@ -397,7 +397,7 @@ class LazyImageStack:
         self.header_offset = self.header.total_header_bytes
         self.dtype_image = self.header.dtype
         self.shape_image = (self.header.fields['ny'], self.header.fields['nx'])
-        self.stride_image = self.dtype_image().itemsize * self.shape_image[0] * self.shape_image[1]
+        self.stride_image = self.dtype_image.itemsize * self.shape_image[0] * self.shape_image[1]
 
     def _group_contiguous_indices(self) -> list[np.ndarray[int]]:
         """

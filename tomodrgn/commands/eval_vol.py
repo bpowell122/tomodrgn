@@ -116,7 +116,7 @@ def postprocess_vols(batch_vols: torch.Tensor,
     if lowpass_mask is not None:
         assert batch_vols.shape[-3:] == lowpass_mask.shape[-3], f'The volume batch must have the same volume dimensions as the lowpass mask. Found {batch_vols.shape}, {lowpass_mask.shape.shape}'
 
-    # convert torch tensory to numpy array for future operations
+    # convert torch tensor to numpy array for future operations
     batch_vols = batch_vols.cpu().numpy()
 
     # normalize the volume (mean and standard deviation) by normalization used when training the model
