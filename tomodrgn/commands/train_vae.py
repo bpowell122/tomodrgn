@@ -18,7 +18,7 @@ import tomodrgn
 from tomodrgn import utils, ctf
 from tomodrgn.starfile import TiltSeriesStarfile
 from tomodrgn.dataset import TiltSeriesMRCData
-from tomodrgn.models import TiltSeriesHetOnlyVAE, DataParallelPassthrough
+from tomodrgn.models import TiltSeriesHetOnlyVAE, DataParallelPassthrough, print_tiltserieshetonlyvae_ascii
 from tomodrgn.lattice import Lattice
 from tomodrgn.beta_schedule import get_beta_schedule
 from tomodrgn.analysis import VolumeGenerator
@@ -826,12 +826,9 @@ def main(args):
                                  num_heads=args.num_heads,
                                  layer_norm=args.layer_norm,
                                  pe_type=args.pe_type,
-                                 pe_dim=args.pe_dim,)
-    # model.to(device)
-    flog(model)
-    flog('{} parameters in model'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
-    flog('{} parameters in encoder'.format(sum(p.numel() for p in model.encoder.parameters() if p.requires_grad)))
-    flog('{} parameters in decoder'.format(sum(p.numel() for p in model.decoder.parameters() if p.requires_grad)))
+                                 pe_dim=args.pe_dim, )
+    print_tiltserieshetonlyvae_ascii(model)
+    # model.print_model_info()
 
     # save configuration
     out_config = f'{args.outdir}/config.pkl'

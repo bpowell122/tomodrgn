@@ -737,7 +737,7 @@ class DataParallelPassthrough(torch.nn.DataParallel):
             return getattr(self.module, name)
 
 
-def print_mlp_ascii(input_dim: int, hidden_dims: list[int], output_dim: int):
+def mlp_ascii(input_dim: int, hidden_dims: list[int], output_dim: int):
     """
     Create ASCII art of a fully connected multi-layer perceptron.
     Constraints: number of digits in each dimension cannot exceed 5.
@@ -756,28 +756,54 @@ def print_mlp_ascii(input_dim: int, hidden_dims: list[int], output_dim: int):
             # draw the conneciton lines and nodes
             if i in (0, 8):
                 # top or bottom line, number of nodes = len(hidden_dims)
-                line = f'        {node_symbol} ' + ''.join([f'--- {node_symbol} ' for _ in range(len(hidden_dims) - 1)])
+                line = f'        {node_symbol} ' + ''.join([f'--- {node_symbol} ' for _ in range(len(hidden_dims) - 1)]) + '       '
             else:
                 # central two lines, number of nodes = len(hidden_dims + 2)
-                line = f'  {node_symbol} ---' + ''.join([f' {node_symbol} ---' for _ in range(len(hidden_dims))]) + f' {node_symbol} '
+                line = f'  {node_symbol} ---' + ''.join([f' {node_symbol} ---' for _ in range(len(hidden_dims))]) + f' {node_symbol}  '
         elif i in (1, 3, 5, 7):
             # draw the connection lines and colons only
             if i == 1:
                 # top line, number of connections with X = len(hidden_dims)-1
-                line = '     /     ' + ''.join([f'{node_connection_symbol}     ' for _ in range(len(hidden_dims) - 1)]) + '\\'
+                line = '     /     ' + ''.join([f'{node_connection_symbol}     ' for _ in range(len(hidden_dims) - 1)]) + '\\     '
             elif i == 3:
                 # central two lines, number of connections with X = len(hidden_dims)-1 and need to draw colons connecting nodes
-                line = '  :  \\ ' + ''.join([f' :  {node_connection_symbol} ' for _ in range(len(hidden_dims) - 1)]) + ' :  /  :'
+                line = '  :  \\ ' + ''.join([f' :  {node_connection_symbol} ' for _ in range(len(hidden_dims) - 1)]) + ' :  /  :  '
             elif i == 5:
                 # central two lines, number of connections with X = len(hidden_dims)-1 and need to draw colons connecting nodes
-                line = '  :  / ' + ''.join([f' :  {node_connection_symbol} ' for _ in range(len(hidden_dims) - 1)]) + ' :  \\  :'
+                line = '  :  / ' + ''.join([f' :  {node_connection_symbol} ' for _ in range(len(hidden_dims) - 1)]) + ' :  \\  :  '
             else:
                 # bottom line, number of connections with X = len(hidden_dims)-1
-                line = '     \\     ' + ''.join([f'{node_connection_symbol}     ' for _ in range(len(hidden_dims) - 1)]) + '/'
+                line = '     \\     ' + ''.join([f'{node_connection_symbol}     ' for _ in range(len(hidden_dims) - 1)]) + '/     '
         else:
             # draw the center padded node numbers
             # f'{input_dim:^5}'
             line = f'{input_dim:^5} ' + ''.join([f'{hidden_dim:^5} ' for hidden_dim in hidden_dims]) + f'{output_dim:^5}'
         output.append(line)
+
+    return output
+
+
+def print_tiltserieshetonlyvae_ascii(model: TiltSeriesHetOnlyVAE):
+    """
+    Print an ASCII art representation of a TiltSeriesHetOnlyVAE model
+    :param model: the model to represent
+    :return: None
+    """
+    enca = mlp_ascii(input_dim=model.encoder.in_dim,
+                     hidden_dims=[model.encoder.hidden_dim_a for _ in range(model.encoder.hidden_layers_a)],
+                     output_dim=model.encoder.out_dim_a)
+    enca.insert(0, f'{"ENCODER A - PER IMAGE":^{len(enca[-1])}}')
+
+    encb = mlp_ascii(input_dim=model.encoder.out_dim_a * model.encoder.ntilts,
+                     hidden_dims=[model.encoder.hidden_dim_b for _ in range(model.encoder.hidden_layers_b)],
+                     output_dim=model.zdim * 2)
+    encb.insert(0, f'{"ENCODER B - PER PARTICLE":^{len(encb[-1])}}')
+
+    dec = mlp_ascii(input_dim=model.decoder.in_dim,
+                    hidden_dims=[model.decoder.hidden_dim for _ in range(model.decoder.hidden_layers)],
+                    output_dim=2)
+    dec.insert(0, f'{"DECODER - PER VOXEL":^{len(dec[-1])}}')
+
+    output = [f'{enca_line} {encb_line} {dec_line}' for enca_line, encb_line, dec_line in zip(enca, encb, dec)]
     for line in output:
         print(line)
