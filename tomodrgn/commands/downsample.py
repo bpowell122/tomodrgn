@@ -108,14 +108,15 @@ def write_downsampled_starfile(input_starfile: str,
         # wrote one .mrcs, so all particles are contained within that file
         assert type(out_mrcs) is str
         new_paths = [f'{i+1:06}@{out_mrcs}' for i in range(len(star.df))]
+        out_star = f'{os.path.splitext(out_mrcs)[0]}.star'
     else:
         # wrote multiple .mrcs (containing `chunk_size` images except for the last file which contains <= `chunk_size` images)
         assert type(out_mrcs) is list
         new_paths = [f'{i+1:06}@{out_path}' for out_path in out_mrcs for i in range(chunk_size)]
+        out_star = f'{os.path.splitext(os.path.splitext(out_mrcs[0])[0])[0]}.star'  # convert FOO.0.mrcs to FOO
     star.df[star.header_ptcl_image] = new_paths[:len(star.df)]
 
     # save the star file
-    out_star = f'{os.path.splitext(out_mrcs)[0]}.star'
     star.write(out_star)
 
 
