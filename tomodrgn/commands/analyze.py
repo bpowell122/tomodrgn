@@ -143,23 +143,23 @@ def analyze_z_multidimensional(z: np.ndarray,
     # Principal component analysis
     log('Perfoming principal component analysis ...')
     pc, pca = analysis.run_pca(z)
-    z_pc_trajectories = []
+    z_trajectories = []
     for i in range(num_pcs):
         os.mkdir(f'{outdir}/pc{i + 1}')
 
-        z_trajectory = np.percentile(z[:, i], np.linspace(start=5, stop=95, num=10))
-        z_pc_trajectory = analysis.get_pc_traj(pca=pca,
-                                               dim=i + 1,
-                                               sampling_points=z_trajectory)
+        z_pc_trajectory = np.percentile(pc[:, i], np.linspace(start=5, stop=95, num=10))
+        z_trajectory = analysis.get_pc_traj(pca=pca,
+                                            dim=i + 1,
+                                            sampling_points=z_pc_trajectory)
         if pc_ondata:
-            z_pc_trajectory, z_pc_ind = analysis.get_nearest_point(z, z_pc_trajectory)
+            z_trajectory, z_pc_ind = analysis.get_nearest_point(z, z_trajectory)
             np.savetxt(f'{outdir}/pc{i + 1}/z_percentiles_ind.txt', z_pc_ind, fmt='%d')
 
-        z_pc_trajectories.append(z_pc_trajectory)
-        np.savetxt(f'{outdir}/pc{i + 1}/z_percentiles.txt', z_pc_trajectory)
+        z_trajectories.append(z_trajectory)
+        np.savetxt(f'{outdir}/pc{i + 1}/z_percentiles.txt', z_trajectory)
 
         if not skip_vol:
-            vg.gen_volumes(z_values=z_pc_trajectory,
+            vg.gen_volumes(z_values=z_trajectory,
                            outdir=f'{outdir}/pc{i + 1}')
 
     # K-means clustering
@@ -183,6 +183,7 @@ def analyze_z_multidimensional(z: np.ndarray,
     plt.xticks(np.arange(z.shape[1]) + 1)
     plt.xlabel('principal components')
     plt.ylabel('explained variance')
+    plt.tight_layout()
     plt.savefig(f'{outdir}/z_pca_explainedvariance.png')
     plt.close()
 
@@ -213,6 +214,7 @@ def analyze_z_multidimensional(z: np.ndarray,
                               labels=[f'k{i}' for i in range(num_ksamples)])
     plt.xlabel('l-PC1')
     plt.ylabel('l-PC2')
+    plt.tight_layout()
     plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_pca_scatter_annotatekmeans.png')
     plt.close()
 
@@ -230,23 +232,25 @@ def analyze_z_multidimensional(z: np.ndarray,
     # scatter plot latent PCA with PCA trajectory annotations
     analysis.scatter_annotate(x=pc[:, 0],
                               y=pc[:, 1],
-                              centers_xy=np.hstack([z_pc_trajectories[0][0:2],  # trajectory along pc 1, trajectory is z-dimensional so just take first two dims for plotting
-                                                    z_pc_trajectories[1][0:2]]),  # trajectory along pc 2, trajectory is z-dimensional so just take first two dims for plotting
+                              centers_xy=np.vstack([pca.transform(z_trajectories[0])[:, :2],  # trajectory along pc 1, trajectory is pc-dimensional so just take first two dims for plotting
+                                                    pca.transform(z_trajectories[1])[:, :2]]),  # trajectory along pc 2, trajectory is pc-dimensional so just take first two dims for plotting
                               annotate=True,
-                              labels=[f'PC1_{i}' for i in range(len(z_pc_trajectories[0]))] + [f'PC2_{i}' for i in range(len(z_pc_trajectories[1]))])
+                              labels=[f'l-PC1_{i}' for i in range(len(z_trajectories[0]))] + [f'l-PC2_{i}' for i in range(len(z_trajectories[1]))])
     plt.xlabel('l-PC1')
     plt.ylabel('l-PC2')
+    plt.tight_layout()
     plt.savefig(f'{outdir}/pc1/z_pca_scatter_annotatepca.png')
     plt.close()
 
     # hexbin plot latent PCA with PCA trajectory annotations
     g = analysis.scatter_annotate_hex(x=pc[:, 0],
                                       y=pc[:, 1],
-                                      centers_xy=np.hstack([z_pc_trajectories[0][0:2],  # trajectory along pc 1, trajectory is z-dimensional so just take first two dims for plotting
-                                                            z_pc_trajectories[1][0:2]]),  # trajectory along pc 2, trajectory is z-dimensional so just take first two dims for plotting
+                                      centers_xy=np.vstack([pca.transform(z_trajectories[0])[:, :2],  # trajectory along pc 1, trajectory is pc-dimensional so just take first two dims for plotting
+                                                            pca.transform(z_trajectories[1])[:, :2]]),  # trajectory along pc 2, trajectory is pc-dimensional so just take first two dims for plotting
                                       annotate=True,
-                                      labels=[f'PC1_{i}' for i in range(len(z_pc_trajectories[0]))] + [f'PC2_{i}' for i in range(len(z_pc_trajectories[1]))])
+                                      labels=[f'l-PC1_{i}' for i in range(len(z_trajectories[0]))] + [f'l-PC2_{i}' for i in range(len(z_trajectories[1]))])
     g.set_axis_labels('l-PC1', 'l-PC2')
+    plt.tight_layout()
     plt.savefig(f'{outdir}/pc1/z_pca_hexbin_annotatepca.png')
     plt.close()
 
@@ -259,6 +263,7 @@ def analyze_z_multidimensional(z: np.ndarray,
                              annotate=True)
     plt.xlabel('l-PC1')
     plt.ylabel('l-PC2')
+    plt.tight_layout()
     plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_pca_scatter_colorkmeanslabel.png')
     plt.close()
 
@@ -307,6 +312,7 @@ def analyze_z_multidimensional(z: np.ndarray,
                                   labels=[f'k{i}' for i in range(num_ksamples)])
         plt.xlabel('l-UMAP1')
         plt.ylabel('l-UMAP2')
+        plt.tight_layout()
         plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_umap_scatter_annotatekmeans.png')
         plt.close()
 
@@ -324,23 +330,25 @@ def analyze_z_multidimensional(z: np.ndarray,
         # scatter plot latent UMAP with PCA trajectory annotations
         analysis.scatter_annotate(x=umap_emb[:, 0],
                                   y=umap_emb[:, 1],
-                                  center_xy=np.hstack([umap_reducer.transform(pca.inverse_transform(z_pc_trajectories[0])),  # trajectory along pc 1, transformed from PC space to UMAP space
-                                                       umap_reducer.transform(pca.inverse_transform(z_pc_trajectories[1]))]),  # trajectory along pc 2, transformed from PC space to UMAP space
+                                  centers_xy=np.vstack([umap_reducer.transform(z_trajectories[0]),  # trajectory in latent space along pc 1, transformed to UMAP space
+                                                        umap_reducer.transform(z_trajectories[1])]),  # trajectory in latent space along pc 2, transformed to UMAP space
                                   annotate=True,
-                                  labels=[f'PC1_{i}' for i in range(len(z_pc_trajectories[0]))] + [f'PC2_{i}' for i in range(len(z_pc_trajectories[1]))])
+                                  labels=[f'l-PC1_{i}' for i in range(len(z_trajectories[0]))] + [f'l-PC2_{i}' for i in range(len(z_trajectories[1]))])
         plt.xlabel('l-UMAP1')
         plt.ylabel('l-UMAP2')
+        plt.tight_layout()
         plt.savefig(f'{outdir}/pc1/z_umap_scatter_annotatepca.png')
         plt.close()
 
         # hexbin plot latent UMAP with PCA trajectory annotations
         g = analysis.scatter_annotate_hex(x=umap_emb[:, 0],
                                           y=umap_emb[:, 1],
-                                          center_xy=np.hstack([umap_reducer.transform(pca.inverse_transform(z_pc_trajectories[0])),  # trajectory along pc 1, transformed from PC space to UMAP space
-                                                               umap_reducer.transform(pca.inverse_transform(z_pc_trajectories[1]))]),  # trajectory along pc 2, transformed from PC space to UMAP space
+                                          centers_xy=np.vstack([umap_reducer.transform(z_trajectories[0]),  # trajectory in latent space along pc 1, transformed to UMAP space
+                                                                umap_reducer.transform(z_trajectories[1])]),  # trajectory in latent space along pc 2, transformed to UMAP space
                                           annotate=True,
-                                          labels=[f'PC1_{i}' for i in range(len(z_pc_trajectories[0]))] + [f'PC2_{i}' for i in range(len(z_pc_trajectories[1]))])
+                                          labels=[f'l-PC1_{i}' for i in range(len(z_trajectories[0]))] + [f'l-PC2_{i}' for i in range(len(z_trajectories[1]))])
         g.set_axis_labels('l-UMAP1', 'l-UMAP2')
+        plt.tight_layout()
         plt.savefig(f'{outdir}/pc1/z_umap_hexbin_annotatepca.png')
         plt.close()
 
@@ -353,6 +361,7 @@ def analyze_z_multidimensional(z: np.ndarray,
                                  annotate=True)
         plt.xlabel('l-UMAP1')
         plt.ylabel('l-UMAP2')
+        plt.tight_layout()
         plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_umap_scatter_colorkmeanslabel.png')
         plt.close()
 
@@ -363,6 +372,7 @@ def analyze_z_multidimensional(z: np.ndarray,
                                          labels_sel=num_ksamples)
         plt.xlabel('l-UMAP1')
         plt.ylabel('l-UMAP2')
+        plt.tight_layout()
         plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_umap_scatter_subplotkmeanslabel.png')
         plt.close()
 
@@ -370,20 +380,21 @@ def analyze_z_multidimensional(z: np.ndarray,
             analysis.scatter_color(x=umap_emb[:, 0],
                                    y=umap_emb[:, 1],
                                    c=pc[:, i],
-                                   label=f'PC{i + 1}')
+                                   cbar_label=f'l-PC{i + 1}')
             plt.xlabel('UMAP1')
             plt.ylabel('UMAP2')
             plt.tight_layout()
             plt.savefig(f'{outdir}/pc{i + 1}/z_umap_colorlatentpca.png')
+            plt.close()
 
     # make plots of first 6 images of each kmeans class
     s = starfile.TiltSeriesStarfile(starfile=starfile_path)
     star_df_backup = s.df.copy(deep=True)
     for label in range(num_ksamples):
         # get indices of particles within this kmeans class
-        ptcl_inds_this_label = np.nonzero(kmeans_labels == label)
+        ptcl_inds_this_label = np.nonzero(kmeans_labels == label)[0]
         # randomly select N particles in the class and sort their indices
-        ptcl_inds_random_subset = np.sort(np.random.choice(ptcl_inds_this_label, 6))
+        ptcl_inds_random_subset = np.sort(np.random.choice(ptcl_inds_this_label, min(len(ptcl_inds_this_label), 6), replace=False))
 
         s.filter(ind_ptcls=ptcl_inds_random_subset,
                  sort_ptcl_imgs='dose_ascending',
@@ -392,7 +403,9 @@ def analyze_z_multidimensional(z: np.ndarray,
                                      lazy=False)
 
         analysis.plot_projections(images=imgs,
-                                  labels=[f'particle {ptcl_ind}' for ptcl_ind in ptcl_inds_random_subset])
+                                  labels=[f'{ptcl_ind}' for ptcl_ind in ptcl_inds_random_subset],
+                                  width_between_imgs_px=30,
+                                  height_between_imgs_px=50)
         plt.savefig(f'{outdir}/kmeans{num_ksamples}/particle_images_kmeanslabel{label}.png')
         plt.close()
 

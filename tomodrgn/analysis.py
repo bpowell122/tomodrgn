@@ -45,7 +45,7 @@ def parse_loss(run_log: str) -> np.ndarray:
     lines = [line for line in lines if '=====>' in line]
 
     # total loss is 4th-to-last word, and is ended by semicolon
-    total_loss = np.asarray([x.split()[-4][:-1] for x in lines])
+    total_loss = np.asarray([x.split()[-4][:-1] for x in lines], dtype=float)
 
     return total_loss
 
@@ -396,7 +396,7 @@ def scatter_annotate(x: np.ndarray,
     :return: matplotlib figure and axis
     """
     # create the base plot
-    fig, ax = plt.subplot()
+    fig, ax = plt.subplots()
     ax.scatter(x=x,
                y=y,
                alpha=alpha,
@@ -570,7 +570,7 @@ def plot_by_cluster(x: np.ndarray,
                    y=y[label_inds],
                    s=s,
                    alpha=alpha,
-                   label=f'cluster {label_sel}',
+                   label=f'k{label_sel}',
                    color=colors[i],
                    rasterized=True,
                    **kwargs)
@@ -630,19 +630,22 @@ def plot_by_cluster_subplot(x: np.ndarray,
     # create base plot
     ncol = int(np.ceil(len(labels_sel) ** .5))
     nrow = int(np.ceil(len(labels_sel) / ncol))
-    fig, axes = plt.subplots(nrows=nrow, ncols=ncol, sharex=True, sharey=True, figsize=(10, 10))
+    fig, axes = plt.subplots(nrows=nrow, ncols=ncol, sharex=True, sharey=True, figsize=(2*ncol, 2*nrow))
 
     # draw subplots
-    for ax, (i, label_sel) in zip(axes.ravel(), enumerate(labels_sel)):
-        label_inds = labels == label_sel
-        ax.scatter(x[label_inds],
-                   y[label_inds],
-                   s=s,
-                   alpha=alpha,
-                   rasterized=True,
-                   color=colors[i],
-                   **kwargs)
-        ax.set_title(label_sel)
+    for (i, ax) in enumerate(axes.ravel()):
+        if i >= len(labels_sel):
+            ax.axis('off')
+        else:
+            label_inds = labels == labels_sel[i]
+            ax.scatter(x[label_inds],
+                       y[label_inds],
+                       s=s,
+                       alpha=alpha,
+                       rasterized=True,
+                       color=colors[i],
+                       **kwargs)
+            ax.set_title(labels_sel[i])
 
     return fig, axes
 
@@ -737,7 +740,13 @@ def plot_label_count_distribution(ptcl_star: starfile.TiltSeriesStarfile,
     # get a df with one row corresponding to each particle
     df_first_img = ptcl_star.df.groupby(ptcl_star.header_ptcl_uid, as_index=False, sort=False).first()
     # group particles by source tomogram
-    ind_ptcls_per_tomo = [group.index.to_numpy() for group_name, group in df_first_img.groupby(ptcl_star.header_ptcl_micrograph)]
+    try:
+        ind_ptcls_per_tomo = [group.index.to_numpy() for group_name, group in df_first_img.groupby(ptcl_star.header_ptcl_micrograph)]
+    except KeyError:
+        # for some reason, header_ptcl_micrograph not found in df.columns
+        # falling back to trying to split header_ptcl_uid on `_` and taking 0th value as stand-in for tomogram ID, following Warp convention of `XXX_YYYYY`
+        df_first_img[['_tempTomogramUID', '_tempParticleUID']] = df_first_img[ptcl_star.header_ptcl_uid].str.split('_', expand=True)
+        ind_ptcls_per_tomo = [group.index.to_numpy() for group_name, group in df_first_img.groupby('_tempTomogramUID')]
 
     label_distribution = np.zeros((len(ind_ptcls_per_tomo), len(set(class_labels))))
     for i, ind_one_tomo in enumerate(ind_ptcls_per_tomo):
@@ -747,12 +756,12 @@ def plot_label_count_distribution(ptcl_star: starfile.TiltSeriesStarfile,
 
     fig, ax = plt.subplots(nrows=1,
                            ncols=1,
-                           figsize=(0.2 * len(ind_ptcls_per_tomo), 0.2 * len(set(class_labels))))
+                           figsize=(1 * len(ind_ptcls_per_tomo), 1 * len(set(class_labels))))
 
     distribution_plot = ax.imshow(label_distribution.T)
     fig.colorbar(distribution_plot, ax=ax, label='particle count per class')
 
-    ax.set_xlabel(f'unique value of {ptcl_star.header_ptcl_micrograph}')
+    ax.set_xlabel('tomogram UID')
     ax.set_ylabel('class label')
 
 
@@ -1045,7 +1054,7 @@ def load_dataframe(*,
                    z: np.ndarray | None = None,
                    pc: np.ndarray | None = None,
                    tsne: np.ndarray | None = None,
-                   umap: np.ndarray | None = None,
+                   um: np.ndarray | None = None,
                    euler: np.ndarray | None = None,
                    trans: np.ndarray | None = None,
                    labels: np.ndarray | None = None,
@@ -1058,7 +1067,7 @@ def load_dataframe(*,
     :param z: array of latent embeddings, shape (nptcls, zdim)
     :param pc: array of PCA-transformed latent embeddings, shape (nptcls, PC-dim)
     :param tsne: array of t-SNE-transformed latent embeddings, shape (nptcls, tSNE-dim)
-    :param umap: array of UMAP-transformed latent embeddings, shape (nptcls, UMAP-dim)
+    :param um: array of UMAP-transformed latent embeddings, shape (nptcls, UMAP-dim)
     :param euler: array of Euler angles, shape (nptcls, 3)
     :param trans: array of translation vectors, shape (nptcls, 2)
     :param labels: array of labels, shape (nptcls, )
@@ -1067,9 +1076,9 @@ def load_dataframe(*,
     """
     # add supplied parameter arrays to a dictionary
     data = {}
-    if umap is not None:
-        data['UMAP1'] = umap[:, 0]
-        data['UMAP2'] = umap[:, 1]
+    if um is not None:
+        data['UMAP1'] = um[:, 0]
+        data['UMAP2'] = um[:, 1]
     if tsne is not None:
         data['TSNE1'] = tsne[:, 0]
         data['TSNE2'] = tsne[:, 1]
