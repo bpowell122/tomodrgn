@@ -205,7 +205,7 @@ class Lattice:
         :param images: hartley transform of image, shape (B, boxsize_ht)
         :param trans: shift in pixels, shape (B, T, 2)
         :param mask: mask for lattice coords, shape (boxsize_ht, 1)
-        :return: translated images, shape (B, T, boxsize_ht)
+        :return: translated images, shape (B, T, boxsize_ht**2)
         """
         # if input images are masked, the same mask must be applied to associated grid coordinates
         coords = self.freqs2d if mask is None else self.freqs2d[mask]

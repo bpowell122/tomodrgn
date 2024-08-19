@@ -308,23 +308,24 @@ def preprocess_batch(*,
             May be `torch.zeros((batchsize))` instead to indicate no translations should be applied to the input images.
     :param batch_ctf_params: Batch of CTF parameters corresponding to `batch_images` known CTF parameters, shape (batchsize, ntilts, 9).
             May be `torch.zeros((batchsize))` instead to indicate no CTF corruption should be applied to the reconstructed slice.
-    :return batch_images: translationally-centered and phase-flipped batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht, boxsize_ht)
-    :return batch_ctf_weights: CTF evaluated at each spatial frequency corresponding to input images, shape (batchsize, ntilts, boxsize_ht, boxsize_ht) or None if no CTF should be applied
+    :return batch_images: translationally-centered and phase-flipped batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht**2)
+    :return batch_ctf_weights: CTF evaluated at each spatial frequency corresponding to input images, shape (batchsize, ntilts, boxsize_ht**2) or None if no CTF should be applied
     """
 
     # get key dimension sizes
     batchsize, ntilts, boxsize_ht, boxsize_ht = batch_images.shape
 
     # translate the image
-    if not torch.all(batch_trans == torch.zeros(batchsize, device=batch_trans.device)):
+    if not torch.all(batch_trans == torch.zeros(*batch_trans.shape, device=batch_trans.device)):
         batch_images = lat.translate_ht(batch_images.view(batchsize * ntilts, -1), batch_trans.view(batchsize * ntilts, 1, 2))
 
-    batch_images = batch_images.view(batchsize, ntilts, boxsize_ht, boxsize_ht)
+    # restore separation of batch dim and tilt dim (merged into batch dim during translation)
+    batch_images = batch_images.view(batchsize, ntilts, boxsize_ht * boxsize_ht)
 
     # phase flip the input CTF-corrupted image and calculate CTF weights to apply later
-    if not torch.all(batch_ctf_params == torch.zeros(batchsize, device=batch_ctf_params.device)):
+    if not torch.all(batch_ctf_params == torch.zeros(*batch_ctf_params.shape, device=batch_ctf_params.device)):
         batch_ctf_weights = ctf.compute_ctf(lat, *torch.split(batch_ctf_params[:, :, 1:], 1, 2))
-        batch_images *= batch_ctf_weights.view(*batch_images.shape).sign()  # phase flip by CTF to be all positive amplitudes
+        batch_images = batch_images * batch_ctf_weights.sign()  # phase flip by CTF to be all positive amplitudes
     else:
         batch_ctf_weights = None
 
@@ -339,7 +340,7 @@ def encode_batch(*,
     """
     Encode a batch of particles represented by multiple images to per-particle latent embeddings
     :param model: TiltSeriesHetOnlyVAE object to be trained
-    :param batch_images: Batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht, boxsize_ht)
+    :param batch_images: Batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht*2)
     :return: z_mu: Direct output of encoder module parameterizing the mean of the latent embedding for each particle, shape (batchsize, zdim)
     :return: z_logvar: Direct output of encoder module parameterizing the log variance of the latent embedding for each particle, shape (batchsize, zdim)
     :return: z: Resampling of the latent embedding for each particle parameterized as a gaussian with mean `z_mu` and variance `z_logvar`, shape (batchsize, zdim)
@@ -361,21 +362,21 @@ def decode_batch(*,
     :param model: TiltSeriesHetOnlyVAE object to be trained
     :param lat: Hartley-transform lattice of points for voxel grid operations
     :param batch_rots: Batch of 3-D rotation matrices corresponding to `batch_images` known poses, shape (batchsize, ntilts, 3, 3)
-    :param batch_hartley_2d_mask: Batch of 2-D masks to be applied per-spatial-frequency.
+    :param batch_hartley_2d_mask: Batch of 2-D masks to be applied per-spatial-frequency, shape (batchsize, ntilts, boxsize_ht**2)
             Calculated as the intersection of critical dose exposure curves and a Nyquist-limited circular mask in reciprocal space, including masking the DC component.
-    :param z: Resampled latent embedding for each particle
-    :return: Reconstructed central slices of Fourier space volumes corresponding to each particle in the batch, shape (batchsize * ntilts * boxsize_ht**2 [`batch_hartley_2d_mask`])
+    :param z: Resampled latent embedding for each particle, shape (batchsize, zdim)
+    :return: Reconstructed central slices of Fourier space volumes corresponding to each particle in the batch, shape (batchsize * ntilts * boxsize_ht**2 [`batch_hartley_2d_mask`]).
+            Note that the returned array is completely flattened (including along batch dimension) due to potential for uneven/ragged reconstructed image tensors per-particle after masking
     """
 
     # prepare lattice at rotated fourier components
     input_coords = lat.coords @ batch_rots  # shape batchsize x ntilts x boxsize_ht**2 x 3 from [boxsize_ht**2 x 3] @ [batchsize x ntilts x 3 x 3]
 
     # filter by dec_mask to skip decoding coordinates that have low contribution to SNR
-    # note that this produces a NestedTensor and therefore has slightly different behavior than a normal Tensor
-    input_coords_masked = torch.nested.as_nested_tensor([c[m] for c, m in zip(input_coords, batch_hartley_2d_mask)]).contiguous()
-
-    # pass to decoder
-    batch_images_recon = model.decode(input_coords_masked, z)
+    # decode each particle one at a time due to variable # pixels in batch_hartley_2d_mask per particle producing ragged tensor
+    # this will eventually be replaceable with pytorch NestedTensor, but as of torch v2.4 this still does not work at backprop (and does not support many common operations we need prior to that)
+    batch_images_recon = torch.cat([model.decode(coords=coords_ptcl[mask_ptcl].unsqueeze(0), z=z_ptcl.unsqueeze(0)).squeeze(0)
+                                    for coords_ptcl, mask_ptcl, z_ptcl in zip(input_coords, batch_hartley_2d_mask, z, strict=True)], dim=0)
 
     return batch_images_recon
 
@@ -394,12 +395,11 @@ def loss_function(*,
     Calculate generative loss between reconstructed and input images, and beta-weighted KLD between latent embeddings and standard normal
     :param z_mu: Direct output of encoder module parameterizing the mean of the latent embedding for each particle, shape (batchsize, zdim)
     :param z_logvar: Direct output of encoder module parameterizing the log variance of the latent embedding for each particle, shape (batchsize, zdim)
-    :param batch_images: Batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht, boxsize_ht)
+    :param batch_images: Batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht**2)
     :param batch_images_recon: Reconstructed central slices of Fourier space volumes corresponding to each particle in the batch, shape (batchsize * ntilts * boxsize_ht**2 [`batch_hartley_2d_mask`])
-    :param batch_ctf_weights: CTF evaluated at each spatial frequency corresponding to input images, shape (batchsize, ntilts, boxsize_ht, boxsize_ht) or None if no CTF should be applied
-    :param batch_recon_error_weights: Batch of 2-D weights to be applied to the per-spatial-frequency error between the reconstructed slice and the input image.
+    :param batch_ctf_weights: CTF evaluated at each spatial frequency corresponding to input images, shape (batchsize, ntilts, boxsize_ht**2) or None if no CTF should be applied
+    :param batch_recon_error_weights: Batch of 2-D weights to be applied to the per-spatial-frequency error between each reconstructed slice and input image, shape (batchsize, ntilts, boxsize_ht**2).
             Calculated from critical dose exposure curves and electron beam vs sample tilt geometry.
-            May be `torch.zeros((batchsize))` instead to indicate no weighting should be applied to the reconstructed slice error.
     :param batch_hartley_2d_mask: Batch of 2-D masks to be applied per-spatial-frequency.
             Calculated as the intersection of critical dose exposure curves and a Nyquist-limited circular mask in reciprocal space, including masking the DC component.
     :param beta: scaling factor to apply to KLD during loss calculation.
@@ -407,17 +407,13 @@ def loss_function(*,
     :return: total summed loss, generative loss between reconstructed slices and input images, and beta-weighted kld loss between latent embeddings and standard normal
     """
     # reconstruction error
-    batch_images = batch_images.flatten(start_dim=2, end_dim=3)
-    batch_images = torch.nested.as_nested_tensor([images_ptcl[mask_ptcl] for images_ptcl, mask_ptcl in zip(batch_images, batch_hartley_2d_mask)]).contiguous()
-    batch_recon_error_weights = torch.nested.as_nested_tensor([weights_ptcl[mask_ptcl] for weights_ptcl, mask_ptcl in zip(batch_recon_error_weights, batch_hartley_2d_mask)]).contiguous()
+    batch_images = batch_images[batch_hartley_2d_mask].view(-1)
+    batch_recon_error_weights = batch_recon_error_weights[batch_hartley_2d_mask].view(-1)
     if batch_ctf_weights is not None:
-        batch_ctf_weights = torch.nested.as_nested_tensor([ctf_weights_ptcl[mask_ptcl] for ctf_weights_ptcl, mask_ptcl in zip(batch_ctf_weights, batch_hartley_2d_mask)]).contiguous()
+        batch_ctf_weights = batch_ctf_weights[batch_hartley_2d_mask].view(-1)
         batch_images_recon = batch_images_recon * batch_ctf_weights  # apply CTF to reconstructed image
-        batch_images = batch_images * batch_ctf_weights.sgn()  # undo phase flipping in place from preprocess_batch
-    batch_weighted_error = batch_recon_error_weights * ((batch_images_recon - batch_images) * (batch_images_recon - batch_images))
-    gen_loss = torch.nanmean(batch_weighted_error.to_padded_tensor(torch.nan))
-    # gen_loss = torch.mean(torch.hstack([torch.mean(ptcl_weighted_error) for ptcl_weighted_error in batch_weighted_error.unbind()]))
-    # gen_loss = torch.mean(batch_recon_error_weights * ((batch_images_recon - batch_images) * (batch_images_recon - batch_images)))
+        batch_images = batch_images * batch_ctf_weights.sign()  # undo phase flipping in place from preprocess_batch
+    gen_loss = torch.mean(batch_recon_error_weights * ((batch_images_recon - batch_images) ** 2))
 
     # latent loss
     kld = torch.mean(-0.5 * torch.sum(1 + z_logvar - z_mu.pow(2) - z_logvar.exp(), dim=1), dim=0)

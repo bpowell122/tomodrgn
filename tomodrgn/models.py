@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from torch.cuda.amp import autocast
 from typing import Literal
-from einops import rearrange
+from einops import repeat, pack
 from einops.layers.torch import Reduce, Rearrange
 import torchinfo
 
@@ -138,12 +138,10 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         """
         Encode the input batch of particle's tilt images to a corresponding batch of latent embeddings.
         Input images are masked by `self.enc_mask` if provided.
-        :param batch: batch of particle tilt images to encode, shape (batch, ntilts, boxsize, boxsize)
+        :param batch: batch of particle tilt images to encode, shape (batch, ntilts, boxsize*boxsize)
         :return: `mu`: batch of mean values parameterizing latent embedding as Gaussian, shape (batch, zdim).
                 `logvar`: batch of log variance values parameterizing latent embedding as Gaussian, shape (batch, zdim).
         """
-        # input batch is of shape B x ntilts x D x D, need to flatten last two dimensions to apply flat encoder mask and to pass into flat model input layer
-        batch = rearrange(batch, 'batch tilts boxsize_y boxsize_x -> batch tilts (boxsize_y boxsize_x)')  # B x ntilts x D*D
         if self.enc_mask is not None:
             batch = batch[:, :, self.enc_mask]  # B x ntilts x D*D[mask]
         z = self.encoder(batch)  # B x zdim*2
@@ -157,8 +155,6 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         Decode a batch of lattice coordinates concatenated with the corresponding latent embedding to infer the associated voxel intensities.
         :param coords: 3-D spatial frequency coordinates (e.g. from Lattice.coords) concatenated with the
                 shape (batch, ntilts * boxsize_ht * boxsize_ht [mask], 3).
-                Coords may be a NestedTensor (along the batch dimension, ragged along the ntilts dimension)
-                due to typically unequal numbers of coordinates retained per-particle or per-tilt-image after upstream masking.
         :param z: latent embedding per-particle, shape (batch, zdim)
         :return: Decoded voxel intensities at the specified 3-D spatial frequencies.
         """
@@ -324,22 +320,22 @@ class FTPositionalDecoder(nn.Module):
         """
         if self.pe_type == 'gaussian':
             # expand freqs with singleton dimension along the batch dimensions, e.g. dim (1, ..., 1, n_feats, 3)
-            freqs = torch.nested.as_nested_tensor([self.freqs.unsqueeze(0).expand(len(coords_one_ptcl), -1, -1) for coords_one_ptcl in coords.unbind()]).contiguous()
+            freqs = self.freqs.view(1, 1, -1, 3)  # 1 x 1 x 3*D2 x 3
             # calculate features as torch.dot(k, freqs): compute x,y,z components of k then sum x,y,z components
             kxkykz = coords[..., None, :] * freqs  # B x N*D*D[mask] x 3*D2 x 3
             k = kxkykz.sum(-1)  # B x N*D*D[mask] x 3*D2
-            k = k.reshape(coords.size(0), -1, 3, self.pe_dim)  # B x N*D*D[mask] x 3 x D2 (where .size(0) and -1 are required for NestedTensor)
+            s = torch.sin(k)   # B x N*D*D[mask] x 3*D2
+            c = torch.cos(k)  # B x N*D*D[mask] x 3*D2
+            x = torch.cat([s, c], dim=-1)  # B x N*D*D[mask] x 3*D == B x N*D*D[mask] x in_dim - zdim
         else:
             # expand freqs with singleton dimension along the batch dimensions, e.g. dim (1, ..., 1, n_feats)
-            freqs = torch.nested.as_nested_tensor([self.freqs.unsqueeze(0).unsqueeze(0).expand(len(coords_one_ptcl), 3, -1) for coords_one_ptcl in coords.unbind()]).contiguous()
+            freqs = self.freqs.view(1, 1, 1, -1)  # 1 x 1 x 1 x D2
             # calculate the features as freqs scaled by coords
-            coords = torch.nested.as_nested_tensor([coords_one_ptcl.unsqueeze(-1).expand(-1, -1, self.freqs.shape[0]) for coords_one_ptcl in coords]).contiguous()
-            k = coords * freqs  # B x N*D*D[mask] x 3 x D2
-
-        s = torch.sin(k)  # B x N*D*D[mask] x 3 x D2
-        c = torch.cos(k)  # B x N*D*D[mask] x 3 x D2
-        x = torch.cat([s, c], -1)  # B x N*D*D[mask] x 3 x D
-        x = x.view(coords.size(0), -1, self.in_dim - self.zdim)  # B x N*D*D[mask] x in_dim-zdim
+            k = coords[..., None] * freqs  # B x N*D*D[mask] x 3 x D2
+            s = torch.sin(k)  # B x N*D*D[mask] x 3 x D2
+            c = torch.cos(k)  # B x N*D*D[mask] x 3 x D2
+            x = torch.cat([s, c], -1)  # B x N*D*D[mask] x 3 x D
+            x = x.view(coords.size(0), -1, self.in_dim - self.zdim)  # B x N*D*D[mask] x in_dim-zdim
 
         return x
 
@@ -360,8 +356,10 @@ class FTPositionalDecoder(nn.Module):
         assert z.ndim == 2
 
         # repeat z along a new axis corresponding to spatial frequency coordinates for each particle's images
+        z = repeat(z, 'batch zdim -> batch repeat_ntilts_npixels zdim', repeat_ntilts_npixels=coords.shape[1])
+
         # concatenate coords with z along the last axis (coordinate + zdim value)
-        coords_z = torch.nested.as_nested_tensor([torch.cat([coords_ptcl, z_ptcl.repeat(len(coords_ptcl), 1)], dim=-1) for coords_ptcl, z_ptcl in zip(coords.unbind(), z)]).contiguous()
+        coords_z, _ = pack([coords, z], 'batch ntilts_npixels *')
 
         return coords_z
 
@@ -391,13 +389,15 @@ class FTPositionalDecoder(nn.Module):
                z: torch.Tensor | None = None) -> torch.Tensor:
         """
         Decode a batch of lattice coordinates concatenated with the corresponding latent embedding to Fourier Transform spatial frequency amplitudes.
-        :param coords: 3-D spatial frequency coordinates (e.g. from Lattice.coords) concatenated with the
-                shape (batch, ntilts * boxsize_ht * boxsize_ht [mask], 3).
-                Coords may be a NestedTensor (along the batch dimension, ragged along the ntilts dimension)
-                due to typically unequal numbers of coordinates retained per-particle or per-tilt-image after upstream masking.
+        :param coords: 3-D spatial frequency coordinates (e.g. from Lattice.coords) concatenated with the shape (batch, ntilts * boxsize_ht * boxsize_ht [mask], 3).
         :param z: latent embedding per-particle, shape (batch, zdim)
         :return: Decoded voxel intensities at the specified 3-D spatial frequencies.
         """
+        # sanity check inputs coordinates are within range (-0.5, 0.5)
+        assert (coords.abs() - 0.5 < 1e-4).all(), f'coords.max(): {coords.max()}; coords.min(): {coords.min()}'
+
+        # TODO reimplement hermetian symmetry to evaluate +z coords only?
+
         # positionally encode x,y,z 3-D coordinate
         coords_pe = self.positional_encoding(coords)
 
