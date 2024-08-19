@@ -95,7 +95,7 @@ def ht2_center(possibly_batched_imgs: np.ndarray) -> np.ndarray:
     :return: np.ndarray of images DFT, shape ([N], D, D)
     """
     f = fft2_center(possibly_batched_imgs)
-    return f.real - f.imag
+    return np.asarray(f.real - f.imag, dtype=possibly_batched_imgs.dtype)
 
 
 def ht2_center_torch(possibly_batched_imgs: torch.Tensor) -> torch.Tensor:
@@ -107,7 +107,7 @@ def ht2_center_torch(possibly_batched_imgs: torch.Tensor) -> torch.Tensor:
     :return: torch.tensor of images DFT, shape ([N], D, D)
     """
     f = fft2_center_torch(possibly_batched_imgs)
-    return f.real - f.imag
+    return torch.as_tensor(f.real - f.imag, dtype=possibly_batched_imgs.dtype, device=possibly_batched_imgs.device)
 
 
 def iht2_center(possibly_batched_imgs: np.ndarray) -> np.ndarray:
@@ -120,7 +120,7 @@ def iht2_center(possibly_batched_imgs: np.ndarray) -> np.ndarray:
     """
     f = fft2_center(possibly_batched_imgs)
     f /= (f.shape[-1] * f.shape[-2])
-    return f.real - f.imag
+    return np.asarray(f.real - f.imag, dtype=possibly_batched_imgs.dtype)
 
 
 def iht2_center_torch(possibly_batched_imgs: torch.Tensor) -> torch.Tensor:
@@ -133,7 +133,7 @@ def iht2_center_torch(possibly_batched_imgs: torch.Tensor) -> torch.Tensor:
     """
     f = fft2_center_torch(possibly_batched_imgs)
     f /= (f.shape[-1] * f.shape[-2])
-    return f.real - f.imag
+    return torch.as_tensor(f.real - f.imag, dtype=possibly_batched_imgs.dtype, device=possibly_batched_imgs.device)
 
 
 def ht3_center(possibly_batched_vols: np.ndarray) -> np.ndarray:
@@ -145,7 +145,7 @@ def ht3_center(possibly_batched_vols: np.ndarray) -> np.ndarray:
     :return: np.ndarray of volumes DFT, shape ([N], D, D, D)
     """
     f = fft3_center(possibly_batched_vols)
-    return f.real - f.imag
+    return np.asarray(f.real - f.imag, dtype=possibly_batched_vols.dtype)
 
 
 def ht3_center_torch(possibly_batched_vols: torch.Tensor) -> torch.Tensor:
@@ -157,7 +157,7 @@ def ht3_center_torch(possibly_batched_vols: torch.Tensor) -> torch.Tensor:
     :return: torch.tensor of volumes DFT, shape ([N], D, D, D)
     """
     f = fft3_center_torch(possibly_batched_vols)
-    return f.real - f.imag
+    return torch.as_tensor(f.real - f.imag, dtype=possibly_batched_vols.dtype, device=possibly_batched_vols.device)
 
 
 def iht3_center(possibly_batched_vols: np.ndarray) -> np.ndarray:
@@ -169,7 +169,7 @@ def iht3_center(possibly_batched_vols: np.ndarray) -> np.ndarray:
     """
     f = fft3_center(possibly_batched_vols)
     f /= (f.shape[-1] * f.shape[-2] * f.shape[-3])
-    return f.real - f.imag
+    return np.asarray(f.real - f.imag, dtype=possibly_batched_vols.dtype)
 
 
 def iht3_center_torch(possibly_batched_vols: torch.Tensor) -> torch.Tensor:
@@ -181,7 +181,7 @@ def iht3_center_torch(possibly_batched_vols: torch.Tensor) -> torch.Tensor:
     """
     f = fft3_center_torch(possibly_batched_vols)
     f /= (f.shape[-1] * f.shape[-2] * f.shape[-3])
-    return f.real - f.imag
+    return torch.as_tensor(f.real - f.imag, dtype=possibly_batched_vols.dtype, device=possibly_batched_vols.device)
 
 
 def symmetrize_ht(batched_ht_imgs: np.ndarray,
