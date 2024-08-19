@@ -388,8 +388,11 @@ class TiltSeriesMRCData(data.Dataset):
 
         # calculate the 2-D spatial frequency masks for each dose and cache result
         hartley_2d_mask = lattice.Lattice(boxsize=self.boxsize_ht, extent=0.5, ignore_dc=True).get_circular_mask(diameter=self.boxsize_ht).numpy().reshape(self.boxsize_ht, self.boxsize_ht)
-        frequency_masks_dose = {cumulative_dose: dose.calculate_dose_mask(frequency_weights_per_dose, hartley_2d_mask).ravel()
-                                for cumulative_dose, frequency_weights_per_dose in zip(unique_doses, unique_dose_weights)}
+        if self.l_dose_mask:
+            frequency_masks_dose = {cumulative_dose: dose.calculate_dose_mask(frequency_weights_per_dose, hartley_2d_mask).ravel()
+                                    for cumulative_dose, frequency_weights_per_dose in zip(unique_doses, unique_dose_weights)}
+        else:
+            frequency_masks_dose = {cumulative_dose: hartley_2d_mask.ravel() for cumulative_dose in unique_doses}
 
         return frequency_weights_dose, frequency_masks_dose
 
