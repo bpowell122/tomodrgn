@@ -96,7 +96,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         cfg: dict = utils.load_pkl(config) if type(config) is str else config
 
         # create the Lattice object
-        lat = lattice.Lattice(boxsize=cfg['lattice_args']['D'],
+        lat = lattice.Lattice(boxsize=cfg['lattice_args']['boxsize'],
                               extent=cfg['lattice_args']['extent'],
                               device=device)
 
@@ -167,18 +167,18 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         :return: None
         """
         # print the encoder module which we know input size exactly due to fixed ntilt sampling
-        print(torchinfo.summary(self.encoder,
-                                input_size=(self.ntilts, self.in_dim),
-                                batch_dim=0,
-                                col_names=('input_size', 'output_size', 'num_params'),
-                                depth=5))
+        torchinfo.summary(self.encoder,
+                          input_size=(self.ntilts, self.in_dim),
+                          batch_dim=0,
+                          col_names=('input_size', 'output_size', 'num_params'),
+                          depth=3)
         # print the decoder module which will be a conservative overestimate of input size without lattice masking
         # this is because each particle has a potentially unique lattice mask and therefore this is an upper bound on model size
-        print(torchinfo.summary(self.decoder,
-                                input_data=torch.rand(self.ntilts * self.boxsize_ht * self.boxsize_ht, 3 + self.zdim) - 0.5,
-                                batch_dim=0,
-                                col_names=('input_size', 'output_size', 'num_params'),
-                                depth=5))
+        torchinfo.summary(self.decoder,
+                          input_data=[torch.rand(self.ntilts * self.lat.boxsize * self.lat.boxsize, 3) - 0.5, torch.rand(self.zdim)],
+                          batch_dim=0,
+                          col_names=('input_size', 'output_size', 'num_params'),
+                          depth=3)
 
 
 class FTPositionalDecoder(nn.Module):
@@ -230,6 +230,8 @@ class FTPositionalDecoder(nn.Module):
         # the final number of features the decoder network receives as input per 3-D coordinate to evaluate
         # each of the 3 spatial frequency axes will have pe_dim features expressed as both sin and cos, finally concatenated with latent embedding
         self.in_dim = 3 * self.pe_dim * 2 + self.zdim
+        self.hidden_layers = hidden_layers
+        self.hidden_dim = hidden_dim
 
         # construct the decoder ResidLinearMLP module
         self.decoder = ResidLinearMLP(in_dim=self.in_dim,
@@ -286,13 +288,13 @@ class FTPositionalDecoder(nn.Module):
         cfg: dict = utils.load_pkl(config) if type(config) is str else config
 
         # create the Lattice object
-        lat = lattice.Lattice(boxsize=cfg['lattice_args']['D'],
+        lat = lattice.Lattice(boxsize=cfg['lattice_args']['boxsize'],
                               extent=cfg['lattice_args']['extent'],
                               device=device)
 
         # create the FTPositionalDecoder object
         activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[cfg['model_args']['activation']]
-        model = FTPositionalDecoder(boxsize_ht=cfg['lattice_args']['D'],
+        model = FTPositionalDecoder(boxsize_ht=cfg['lattice_args']['boxsize'],
                                     in_dim=3,
                                     hidden_layers=cfg['model_args']['players'],
                                     hidden_dim=cfg['model_args']['pdim'],
@@ -324,7 +326,7 @@ class FTPositionalDecoder(nn.Module):
             # calculate features as torch.dot(k, freqs): compute x,y,z components of k then sum x,y,z components
             kxkykz = coords[..., None, :] * freqs  # B x N*D*D[mask] x 3*D2 x 3
             k = kxkykz.sum(-1)  # B x N*D*D[mask] x 3*D2
-            s = torch.sin(k)   # B x N*D*D[mask] x 3*D2
+            s = torch.sin(k)  # B x N*D*D[mask] x 3*D2
             c = torch.cos(k)  # B x N*D*D[mask] x 3*D2
             x = torch.cat([s, c], dim=-1)  # B x N*D*D[mask] x 3*D == B x N*D*D[mask] x in_dim - zdim
         else:
@@ -368,10 +370,7 @@ class FTPositionalDecoder(nn.Module):
                 z: torch.Tensor = None) -> torch.Tensor:
         """
         Decode a batch of lattice coordinates concatenated with the corresponding latent embedding to Hartley Transform spatial frequency amplitudes.
-        :param coords: 3-D spatial frequency coordinates (e.g. from Lattice.coords) concatenated with the
-                shape (batch, ntilts * boxsize_ht * boxsize_ht [mask], 3).
-                Coords may be a NestedTensor (along the batch dimension, ragged along the ntilts dimension)
-                due to typically unequal numbers of coordinates retained per-particle or per-tilt-image after upstream masking.
+        :param coords: masked 3-D spatial frequency coordinates (e.g. from Lattice.coords), shape (batch, ntilts * boxsize_ht * boxsize_ht [mask], 3)
         :param z: latent embedding per-particle, shape (batch, zdim)
         :return: Decoded voxel intensities at the specified 3-D spatial frequencies.
         """
@@ -433,7 +432,7 @@ class FTPositionalDecoder(nn.Module):
         # preallocate array to store batch of decoded volumes
         batch_vol_f = torch.zeros((batchsize, boxsize_ht, boxsize_ht, boxsize_ht), dtype=coords.dtype, device=coords.device)
 
-        # evaluate the volume slice-by-slice along z axis to avoid potential memory overflows from evaluating D**3 voxels at once
+        # evaluate the batch of volumes slice-by-slice along z axis to avoid potential memory overflows from evaluating D**3 voxels at once
         zslices = torch.linspace(-extent, extent, boxsize_ht, dtype=batch_vol_f.dtype)
         for (i, zslice) in enumerate(zslices):
             # create the z slice to evaluate
