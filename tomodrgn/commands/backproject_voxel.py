@@ -19,7 +19,7 @@ log = utils.log
 
 def add_args(_parser):
     _parser.add_argument('particles', type=os.path.abspath, help='Input particles_imageseries.star')
-    _parser.add_argument('-o', type=os.path.abspath, required=True, help='Output .mrc file')
+    _parser.add_argument('--output', type=os.path.abspath, required=True, help='Output .mrc file')
 
     group = _parser.add_argument_group('Particle starfile loading and filtering')
     group.add_argument('--source-software', type=str, choices=('auto', 'warp_v1', 'nextpyp', 'relion_v5', 'warp_v2'), default='auto',
@@ -87,13 +87,16 @@ def backproject_dataset(data: TiltSeriesMRCData,
         if not torch.all(batch_trans == torch.zeros(batchsize, device=batch_trans.device)):
             batch_images = lattice.translate_ht(batch_images.view(batchsize * ntilts, -1), batch_trans.view(batchsize * ntilts, 1, 2))
 
+        # restore separation of batch dim and tilt dim (merged into batch dim during translation)
+        batch_images = batch_images.view(batchsize, ntilts, boxsize_ht * boxsize_ht)
+
         # correct CTF by phase flipping images
         if not torch.all(batch_ctf_params == torch.zeros(batchsize, device=batch_ctf_params.device)):
             batch_ctf_weights = ctf.compute_ctf(lattice, *torch.split(batch_ctf_params.view(batchsize * ntilts, 9)[:, 1:], 1, 1))
-            batch_images *= batch_ctf_weights.view(*batch_images.shape).sign()  # phase flip by CTF to be all positive amplitudes
+            batch_images *= batch_ctf_weights.sign()  # phase flip by CTF to be all positive amplitudes
 
         # weight by dose and tilt
-        batch_images = batch_images * batch_frequency_weights.view(batchsize, ntilts, boxsize_ht * boxsize_ht)
+        batch_images = batch_images * batch_frequency_weights
 
         # mask out frequencies greater than nyquist
         batch_images = batch_images.view(batchsize, ntilts, boxsize_ht * boxsize_ht)[:, :, mask]
@@ -172,11 +175,11 @@ def save_map(vol: torch.tensor,
 
 
 def main(args):
-    assert args.o.endswith('.mrc')
+    assert args.output.endswith('.mrc')
 
     log(args)
-    if not os.path.exists(os.path.dirname(args.o)):
-        os.makedirs(os.path.dirname(args.o))
+    if not os.path.exists(os.path.dirname(args.output)):
+        os.makedirs(os.path.dirname(args.output))
 
     # set the device
     device = utils.get_default_device()
@@ -184,7 +187,7 @@ def main(args):
     # load the star file
     ptcls_star = TiltSeriesStarfile(args.particles,
                                     source_software=args.source_software)
-    ptcls_star.plot_particle_uid_ntilt_distribution(outpath=f'{os.path.dirname(args.o)}/{os.path.basename(ptcls_star.sourcefile)}_particle_uid_ntilt_distribution.png')
+    ptcls_star.plot_particle_uid_ntilt_distribution(outpath=f'{os.path.dirname(args.output)}/{os.path.basename(ptcls_star.sourcefile)}_particle_uid_ntilt_distribution.png')
 
     # filter star file
     ptcls_star.filter(ind_imgs=args.ind_imgs,
@@ -198,7 +201,7 @@ def main(args):
                                      show_summary_stats=False)
 
     # save filtered star file for future convenience (aligning latent embeddings with particles, re-extracting particles, mapbacks, etc.)
-    outstar = f'{os.path.dirname(args.o)}/{os.path.splitext(os.path.basename(ptcls_star.sourcefile))[0]}_tomodrgn_preprocessed.star'
+    outstar = f'{os.path.dirname(args.output)}/{os.path.splitext(os.path.basename(ptcls_star.sourcefile))[0]}_tomodrgn_preprocessed.star'
     ptcls_star.sourcefile_filtered = outstar
     ptcls_star.write(outstar)
 
@@ -262,14 +265,14 @@ def main(args):
                             mask='soft')
     threshold_resolution = x[-1] if np.all(fsc >= threshold_correlation) else x[np.argmax(fsc < threshold_correlation)]
     log(f'Map-map FSC falls below correlation {threshold_correlation} at resolution {angpix / threshold_resolution} Å ({threshold_resolution} 1/px)')
-    utils.save_pkl((x, fsc), f'{args.o.split(".mrc")[0]}_FSC.pkl')
+    utils.save_pkl((x, fsc), f'{args.output.split(".mrc")[0]}_FSC.pkl')
 
     # plot FSC
     plt.plot(x / angpix, fsc)
     plt.xlabel('Spatial frequency (1/Å)')
     plt.ylabel('Half-map FSC')
     plt.tight_layout()
-    plt.savefig(f'{args.o.split(".mrc")[0]}_FSC.png')
+    plt.savefig(f'{args.output.split(".mrc")[0]}_FSC.png')
 
     # apply lowpass filter
     lowpass_target = angpix / threshold_resolution if args.lowpass is None else args.lowpass
@@ -277,10 +280,10 @@ def main(args):
     vol_ht_filt = utils.lowpass_filter(vol_ht, angpix=angpix, lowpass=lowpass_target)
 
     # save volumes
-    save_map(vol_ht, args.o, angpix, flip=args.flip)
-    save_map(vol_ht_filt, f'{args.o.split(".mrc")[0]}_filt.mrc', angpix, flip=args.flip)
-    save_map(vol_ht_half1, f'{args.o.split(".mrc")[0]}_half1.mrc', angpix, flip=args.flip)
-    save_map(vol_ht_half2, f'{args.o.split(".mrc")[0]}_half2.mrc', angpix, flip=args.flip)
+    save_map(vol_ht, args.output, angpix, flip=args.flip)
+    save_map(vol_ht_filt, f'{args.output.split(".mrc")[0]}_filt.mrc', angpix, flip=args.flip)
+    save_map(vol_ht_half1, f'{args.output.split(".mrc")[0]}_half1.mrc', angpix, flip=args.flip)
+    save_map(vol_ht_half2, f'{args.output.split(".mrc")[0]}_half2.mrc', angpix, flip=args.flip)
     log('Done!')
 
 
