@@ -367,7 +367,7 @@ class FTPositionalDecoder(nn.Module):
 
     def forward(self,
                 coords: torch.Tensor,
-                z: torch.Tensor = None) -> torch.Tensor:
+                z: torch.Tensor | None = None) -> torch.Tensor:
         """
         Decode a batch of lattice coordinates concatenated with the corresponding latent embedding to Hartley Transform spatial frequency amplitudes.
         :param coords: masked 3-D spatial frequency coordinates (e.g. from Lattice.coords), shape (batch, ntilts * boxsize_ht * boxsize_ht [mask], 3)
@@ -411,7 +411,7 @@ class FTPositionalDecoder(nn.Module):
 
     def eval_volume_batch(self,
                           coords: torch.Tensor,
-                          z: torch.Tensor,
+                          z: torch.Tensor | None,
                           extent: float) -> torch.Tensor:
         """
         Evaluate the model on 3-D volume coordinates given an optional (batch of) latent coordinate.
@@ -423,7 +423,8 @@ class FTPositionalDecoder(nn.Module):
 
         # sanity check inputs
         assert extent <= 0.5
-        assert z.ndim == 2
+        if z is not None:
+            assert z.ndim == 2
 
         # get key array sizes
         batchsize = len(z) if z is not None else 1

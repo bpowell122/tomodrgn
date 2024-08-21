@@ -332,7 +332,7 @@ def calc_fsc(vol1: np.ndarray | str,
     bin_labels = np.searchsorted(bins, r, side='left')  # bin_label=0 is DC, bin_label=r_max+r_step is highest included freq, bin_label=r_max+2*r_step is frequencies excluded by D//2 spherical mask
 
     # prepare mask
-    if mask is None:
+    if mask is None or mask == 'none':
         mask = np.ones_like(vol1)
     elif mask == 'sphere':
         mask = np.where(r <= boxsize // 2, True, False)

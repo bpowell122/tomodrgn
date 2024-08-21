@@ -99,7 +99,7 @@ def postprocess_vols(batch_vols: torch.Tensor,
                      flip: bool = False,
                      invert: bool = False) -> np.ndarray:
     """
-    Apply post-volume-decoding processing steps: downsampling scaling correction, lowpass filtering, volume handedness flipping, volume data sign inversion.
+    Apply post-volume-decoding processing steps: downsampling scaling correction, lowpass filtering, inverse fourier transform, volume handedness flipping, volume data sign inversion.
     :param batch_vols: batch of fourier space non-symmetrized volumes directly from eval_vol_batch, shape (nvols, boxsize, boxsize, boxsize)
     :param norm: tuple of floats representing mean and standard deviation of preprocessed particles used during model training
     :param iht_downsample_scaling_correction: a global scaling factor applied when forward and inverse fourier / hartley transforming.
