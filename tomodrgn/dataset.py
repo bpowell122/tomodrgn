@@ -135,8 +135,8 @@ class TiltSeriesMRCData(data.Dataset):
         # load the particle images
         particles, norm, real_space_2d_mask = self._load_particles()
         self.ptcls = particles
-        self.norm = norm if norm is not None else self.lazy_particles_estimate_normalization()
         self.real_space_2d_mask = real_space_2d_mask
+        self.norm = norm if norm is not None else self.lazy_particles_estimate_normalization()
 
         # load the poses
         rot, trans = self._load_pose_params()

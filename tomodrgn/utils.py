@@ -1,19 +1,22 @@
 """
 Common utility functions pertaining to both data processing and script execution
 """
-from datetime import datetime as dt
-import os
-import sys
-import numpy as np
-import pickle
+import argparse
 import collections
 import functools
+import os
+import pickle
+import subprocess
+import sys
+from datetime import datetime as dt
 from typing import Any
-from tomodrgn import mrc, fft
+
+import numpy as np
+import torch
 from scipy import ndimage
 from scipy.spatial.transform import Rotation
-import subprocess
-import torch
+
+from tomodrgn import mrc, fft
 
 _verbose = False
 
@@ -462,6 +465,21 @@ def get_default_device() -> torch.device:
     if not use_cuda:
         log('WARNING: No GPUs detected')
     return device
+
+
+def get_latest(args: argparse.Namespace) -> argparse.Namespace:
+    """
+    Detect the latest completed epoch of model training and update args to load that epoch's model weights.
+    :param args: argparse namespace from parse_args. Requires `num_epochs`, `outdir`, and `load` parameters
+    :return: updated argparse namespace
+    """
+    # assumes args.num_epochs > latest checkpoint
+    log('Detecting latest checkpoint...')
+    weights = [f'{args.outdir}/weights.{i}.pkl' for i in range(args.num_epochs)]
+    weights = [f for f in weights if os.path.exists(f)]
+    args.load = weights[-1]
+    log(f'Loading {args.load}')
+    return args
 
 
 def print_progress_bar(curr_iteration: int,
