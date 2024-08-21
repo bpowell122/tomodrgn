@@ -433,8 +433,8 @@ class TiltSeriesMRCData(data.Dataset):
                                  window=config['dataset_args']['window'],
                                  window_r=config['dataset_args']['window_r'],
                                  window_r_outer=config['dataset_args']['window_r_outer'],
-                                 recon_dose_weight=config['training_args']['recon_dose_weight'],
-                                 recon_tilt_weight=config['training_args']['recon_tilt_weight'],
-                                 l_dose_mask=config['model_args']['l_dose_mask'],
+                                 recon_dose_weight=config['dataset_args']['recon_dose_weight'],
+                                 recon_tilt_weight=config['dataset_args']['recon_tilt_weight'],
+                                 l_dose_mask=config['dataset_args']['l_dose_mask'],
                                  constant_mintilt_sampling=config['dataset_args']['constant_mintilt_sampling'],
                                  sequential_tilt_sampling=config['dataset_args']['sequential_tilt_sampling'])
