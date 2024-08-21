@@ -14,8 +14,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.cuda.amp import GradScaler, autocast
 
-import tomodrgn
-from tomodrgn import utils, ctf
+from tomodrgn import utils, ctf, config
 from tomodrgn.starfile import TiltSeriesStarfile
 from tomodrgn.dataset import TiltSeriesMRCData
 from tomodrgn.models import TiltSeriesHetOnlyVAE, DataParallelPassthrough, print_tiltserieshetonlyvae_ascii
@@ -28,7 +27,7 @@ vlog = utils.vlog
 
 
 def add_args(_parser):
-    _parser.add_argument('particles', type=os.path.abspath, help='Input particles (.mrcs, .star, .cs, or .txt)')
+    _parser.add_argument('particles', type=os.path.abspath, help='Input particles (.mrcs, .star, or .txt)')
     _parser.add_argument('-o', '--outdir', type=os.path.abspath, required=True, help='Output directory to save model')
     _parser.add_argument('--zdim', type=int, required=True, default=128, help='Dimension of latent variable')
     _parser.add_argument('--load', metavar='WEIGHTS.PKL', help='Initialize training from a checkpoint')
@@ -58,7 +57,6 @@ def add_args(_parser):
     group.add_argument('--window-r-outer', type=float, default=.9, help='Real space outer windowing radius for cosine falloff to radius 1')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
-    group.add_argument('--Apix', type=float, default=1.0, help='Override A/px from input starfile; useful if starfile does not have _rlnDetectorPixelSize col')
     group.add_argument('--sequential-tilt-sampling', action='store_true', help='Supply particle images of one particle to encoder in filtered starfile order')
 
     group = _parser.add_argument_group('Weighting and masking')
@@ -105,119 +103,6 @@ def add_args(_parser):
     group.add_argument('--persistent-workers', action='store_true', help='Whether to persist workers after dataset has been fully consumed. Has minimal impact on run time')
     group.add_argument('--pin-memory', action='store_true', help='Whether to use pinned memory for dataloader. Has large impact on epoch time. Recommended.')
     return _parser
-
-
-def get_latest(args: argparse.Namespace,
-               flog) -> argparse.Namespace:
-    """
-    Detect the latest completed epoch of model training and update args to load that epoch's model weights.
-    :param args: argparse namespace from parse_args. Requires `num_epochs`, `outdir`, and `load` parameters
-    :param flog: file to log output to disk
-    :return: updated argparse namespace
-    """
-    # assumes args.num_epochs > latest checkpoint
-    flog('Detecting latest checkpoint...')
-    weights = [f'{args.outdir}/weights.{i}.pkl' for i in range(args.num_epochs)]
-    weights = [f for f in weights if os.path.exists(f)]
-    args.load = weights[-1]
-    flog(f'Loading {args.load}')
-    return args
-
-
-def save_config(args: argparse.Namespace,
-                star: TiltSeriesStarfile,
-                data: TiltSeriesMRCData,
-                lat: Lattice,
-                model: TiltSeriesHetOnlyVAE | DataParallelPassthrough,
-                out_config: str) -> None:
-    """
-    Save input arguments and precalculated data, lattice, and model metadata.
-    :param args: argparse namespace from parse_args
-    :param star: TiltSeriesStarfile object describing input data
-    :param data: TiltSeriesMRCData object containing input data
-    :param lat: Lattice object created using input data
-    :param model: TiltSeriesHetOnlyVAE object created using input data (no weights included)
-    :param out_config: name of output `.pkl` file in whcih to save configuration
-    :return: None
-    """
-    starfile_args = dict(sourcefile=star.sourcefile,
-                         source_software=star.source_software,
-                         ind_imgs=star.ind_imgs,
-                         ind_ptcls=star.ind_ptcls,
-                         sort_ptcl_imgs=star.sort_ptcl_imgs,
-                         use_first_ntilts=star.use_first_ntilts,
-                         use_first_nptcls=star.use_first_nptcls,
-                         sourcefile_filtered=star.sourcefile_filtered)
-
-    dataset_args = dict(star_random_subset=data.star_random_subset,
-                        datadir=data.datadir,
-                        lazy=data.lazy,
-                        norm=data.norm,
-                        invert_data=data.invert_data,
-                        window=data.window,
-                        window_r=data.window_r,
-                        window_r_outer=data.window_r_outer,
-                        recon_dose_weight=data.recon_dose_weight,
-                        recon_tilt_weight=data.recon_tilt_weight,
-                        l_dose_mask=data.l_dose_mask,
-                        constant_mintilt_sampling=data.constant_mintilt_sampling,
-                        sequential_tilt_sampling=data.sequential_tilt_sampling)
-
-    lattice_args = dict(boxsize=lat.boxsize,
-                        extent=lat.extent,
-                        ignore_DC=lat.ignore_dc)
-
-    model_args = dict(in_dim=model.encoder.in_dim,
-                      qlayersA=args.qlayersA,
-                      qdimA=args.qdimA,
-                      out_dimA=args.out_dim_A,
-                      ntilts=data.ntilts_training,
-                      qlayersB=args.qlayersB,
-                      qdimB=args.qdimB,
-                      players=args.players,
-                      pdim=args.pdim,
-                      zdim=args.zdim,
-                      enc_mask=model.enc_mask,
-                      enc_dim=model.decoder.pe_dim,
-                      pe_type=args.pe_type,
-                      feat_sigma=args.feat_sigma,
-                      pe_dim=args.pe_dim,
-                      domain='fourier',
-                      activation=args.activation,
-                      l_dose_mask=args.l_dose_mask,
-                      pooling_function=args.pooling_function,
-                      num_seeds=args.num_seeds,
-                      num_heads=args.num_heads,
-                      layer_norm=args.layer_norm)
-
-    training_args = dict(n=args.num_epochs,
-                         B=args.batch_size,
-                         wd=args.wd,
-                         lr=args.lr,
-                         beta=args.beta,
-                         beta_control=args.beta_control,
-                         amp=not args.no_amp,
-                         multigpu=args.multigpu,
-                         lazy=args.lazy,
-                         recon_dose_weight=args.recon_dose_weight,
-                         recon_tilt_weight=args.recon_tilt_weight,
-                         verbose=args.verbose,
-                         log_interval=args.log_interval,
-                         checkpoint=args.checkpoint,
-                         outdir=args.outdir)
-    config = dict(starfile_args=starfile_args,
-                  dataset_args=dataset_args,
-                  lattice_args=lattice_args,
-                  model_args=model_args,
-                  training_args=training_args)
-    config['seed'] = args.seed
-    config['angpix'] = star.get_tiltseries_pixelsize()
-    with open(out_config, 'wb') as f:
-        pickle.dump(config, f)
-        meta = dict(time=dt.now(),
-                    cmd=sys.argv,
-                    version=tomodrgn.__version__)
-        pickle.dump(meta, f)
 
 
 def train_batch(*,
@@ -676,7 +561,7 @@ def main(args):
         return utils.flog(msg, logfile)
 
     if args.load == 'latest':
-        args = get_latest(args, flog)
+        args = utils.get_latest(args=args)
     flog(' '.join(sys.argv))
     flog(args)
 
@@ -832,7 +717,12 @@ def main(args):
 
     # save configuration
     out_config = f'{args.outdir}/config.pkl'
-    save_config(args, ptcls_star, data_train, lat, model, out_config)
+    config.save_config(args=args,
+                       star=ptcls_star,
+                       data=data_train,
+                       lat=lat,
+                       model=model,
+                       out_config=out_config)
 
     # set beta schedule
     if args.beta is None:
