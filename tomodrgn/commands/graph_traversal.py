@@ -133,9 +133,37 @@ class LatentGraph(object):
         # couldn't find a path
         return None, None
 
-    def plot_graph(self):
-        # TODO method to plot graph in UMAP if zdim > 2 (RASTERIZE or else will explode from all graph edges)
-        raise NotImplementedError
+    def plot_graph(self,
+                   data: np.ndarray) -> tuple[plt.Figure, plt.Axes]:
+        fig, ax = plt.subplots(figsize=(8, 8))
+
+        # plot the latent embeddings as scatter points
+        ax.scatter(data[:, 0], data[:, 1], s=1, rasterized=True)
+
+        # plot the graph as lines connecting latent embeddings
+        for src, dest in self.edge_length.keys():
+            ax.plot(data[[src, dest], 0], data[[src, dest], 1], linewidth=0.5, alpha=0.1, color='black', rasterized=True)
+
+        edges_to_plot = [data[[src, dest]] for src, dest in self.edge_length.keys()]
+        line_collection = LineCollection(edges_to_plot, linewidths=0.5, alpha=0.1, color='black', rasterized=True)
+        ax.add_collection(line_collection)
+
+        ax.set_xlabel('z1')
+        ax.set_ylabel('z2')
+        ax.set_aspect('equal')
+        plt.tight_layout()
+        return fig, ax
+
+    def plot_path(self,
+                  data: np.ndarray,
+                  anchor_inds: list[int],
+                  path_inds: list[int]) -> tuple[plt.Figure, plt.Axes]:
+
+        # create a base plot of the graph
+        fig, ax = self.plot_graph(data=data)
+
+        # plot the path
+        ax.plot(data[path_inds, 0], data[path_inds, 1], linewidth=1, alpha=1, color='red', marker='.', linestyle=':')
 
     def plot_path(self, full_path, anchors):
         # TODO method to plot path in UMAP if zdim > 2
@@ -191,6 +219,26 @@ def main(args):
     # save outputs
     np.savetxt(fname=os.path.join(args.outdir, 'path_particle_indices.txt'), X=full_path)
     utils.save_pkl(data=data[full_path], out_pkl=os.path.join(args.outdir, 'path_particle_embeddings.pkl'), )
+
+    # make some plots
+    log('Plotting graph and path')
+    _ = graph.plot_graph(data=data)
+    plt.savefig(os.path.join(args.outdir, 'latent_graph.png'), dpi=300)
+    plt.close()
+    _ = graph.plot_path(data=data, anchor_inds=args.anchors, path_inds=full_path)
+    plt.savefig(os.path.join(args.outdir, 'latent_graph_path.png'), dpi=300)
+    plt.close()
+
+    potential_umap_path = f'{os.path.dirname(args.z)}/analyze.{os.path.basename(args.z).split(".")[1]}/umap.pkl'
+    if os.path.isfile(potential_umap_path):
+        log('Found umap.pkl, creating additional plots with UMAP embeddings of latent graph for visualization')
+        umap = utils.load_pkl(potential_umap_path)
+        _ = graph.plot_graph(data=umap)
+        plt.savefig(os.path.join(args.outdir, 'umap_graph.png'), dpi=300)
+        plt.close()
+        _ = graph.plot_path(data=umap, anchor_inds=args.anchors, path_inds=full_path)
+        plt.savefig(os.path.join(args.outdir, 'umap_graph_path.png'), dpi=300)
+        plt.close()
 
 
 if __name__ == '__main__':
