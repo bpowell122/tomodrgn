@@ -7,7 +7,7 @@ from heapq import heappush, heappop
 from itertools import pairwise
 
 import numpy as np
-import torch
+from scipy.spatial import KDTree
 import networkx as nx
 
 from tomodrgn import utils
@@ -26,8 +26,6 @@ def add_args(parser):
                         help='The maximum number of neighbors to initially calculate distances for from each latent embedding')
     parser.add_argument('--avg-neighbors', type=float, default=5,
                         help='Used to set a cutoff distance defining connected neighbors such that each embedding will have this many connected neighbors on average')
-    parser.add_argument('--batch-size', type=int, default=1000,
-                        help='Number of particles to calculate distances for at a time')
 
     return parser
 
@@ -53,51 +51,39 @@ class LatentGraph(object):
 
     @classmethod
     def construct_from_array(cls,
-                             data: torch.Tensor,
-                             batchsize: int,
+                             data: np.ndarray,
                              max_neighbors: int,
                              avg_neighbors: int, ):
         """
         Constructor method to create a graph of connected latent embeddings from an array of all latent embeddings.
         :param data: array of latent embeddings, shape (nptcls, zdim)
-        :param batchsize: number of particles to calculate distances for at a time
         :param max_neighbors: maximum number of neighbors to initially calculate distances for from each latent embedding
         :param avg_neighbors: used to set a cutoff distance defining connected neighbors such that each embedding will have this many connected neighbors on average
         :return: LatentGraph instance
         """
         nptcls, zdim = data.shape
-        # calculate the closest `args.max_neighbors` particles' latent embeddings to each latent embedding
-        log('Calculating distances to particles nearest neighbor in latent space')
-        n2 = (data * data).sum(-1, keepdim=True)
-        ndist = torch.empty(nptcls, max_neighbors, device=data.device)  # squared distance from each latent to `args.max_neighbors` nearest
-        neighbors = torch.empty(nptcls, max_neighbors, dtype=torch.long, device=data.device)  # indices of `args.max_neighbors` nearest latents
-        for i in range(0, nptcls, batchsize):
-            idx_start = i
-            idx_stop = i + batchsize
-            # (a-b)^2 = a^2 + b^2 - 2ab
-            print(f"Working on particles {idx_start}-{idx_stop}")
-            batch_dist = n2[idx_start:idx_stop] + n2.t() - 2 * torch.mm(data[idx_start:idx_stop], data.t())
-            ndist[idx_start:idx_stop], neighbors[idx_start:idx_stop] = batch_dist.topk(max_neighbors, dim=-1, largest=False)
-        # convert d^2 to d
-        ndist = ndist.clamp(min=0).pow(0.5)
 
+        # construct the distance tree
+        tree = KDTree(data)
+        # query the tree for the max_neighbors nearest points (+1 because query will return self as the closest point in this context)
+        dists, neighbors = tree.query(x=data, k=max_neighbors + 1)
+        # exclude self from the neighbor results
+        dists = dists[:, 1:]
+        neighbors = neighbors[:, 1:]
         # calculate the maximum allowable distance to enforce an average of args.avg_neighbors neighbors per particle
         if avg_neighbors:
             total_neighbors = int(nptcls * avg_neighbors)
-            max_dist = ndist.view(-1).topk(total_neighbors, largest=False)[0][-1]
+            max_dist = np.sort(dists.flatten())[total_neighbors]
         else:
             max_dist = None
 
         log(f'Constructing graph of neighbor particles within distance {max_dist} (to enforce average of {avg_neighbors} neighbors)')
-        max_dist = max_dist.to("cpu")
-        neighbors = neighbors.to("cpu")
-        ndist = ndist.to("cpu")
         edges = []
         for i in range(nptcls):
             for j in range(max_neighbors):
-                if max_dist is None or ndist[i, j] < max_dist:
+                if max_dist is None or dists[i, j] < max_dist:
                     # edges are defined as (idx_particle, idx_neighbor, dist_to_neighbor)
-                    edges.append((int(i), int(neighbors[i, j]), float(ndist[i, j])))
+                    edges.append((int(i), int(neighbors[i, j]), float(dists[i, j])))
 
         return LatentGraph(edges)
 
@@ -163,8 +149,7 @@ def main(args):
         os.makedirs(args.outdir)
 
     # load the latent embeddings array
-    data_np = utils.load_pkl(args.z)
-    data = torch.from_numpy(data_np)
+    data = utils.load_pkl(args.z)
 
     # sanity check inputs
     nptcls, zdim = data.shape
@@ -172,14 +157,8 @@ def main(args):
         assert i < nptcls, f'A particle index in --anchors exceeds the number of particles found in {args.z}: {nptcls}'
     assert len(args.anchors) >= 2, 'At least 2 anchors required to initialize path search'
 
-    # set the device
-    device = utils.get_default_device()
-    torch.set_grad_enabled(False)
-    data = data.to(device)
-
     # construct the graph of connected neighbors in latent space (connected meaning Euclidean nearest within a threshold)
     graph = LatentGraph.construct_from_array(data=data,
-                                             batchsize=args.batch_size,
                                              max_neighbors=args.max_neighbors,
                                              avg_neighbors=args.avg_neighbors)
 
@@ -211,7 +190,7 @@ def main(args):
 
     # save outputs
     np.savetxt(fname=os.path.join(args.outdir, 'path_particle_indices.txt'), X=full_path)
-    utils.save_pkl(data=data_np[full_path], out_pkl=os.path.join(args.outdir, 'path_particle_embeddings.pkl'), )
+    utils.save_pkl(data=data[full_path], out_pkl=os.path.join(args.outdir, 'path_particle_embeddings.pkl'), )
 
 
 if __name__ == '__main__':
