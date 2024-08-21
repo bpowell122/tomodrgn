@@ -6,9 +6,11 @@ import os
 from heapq import heappush, heappop
 from itertools import pairwise
 
+import matplotlib.pyplot as plt
 import numpy as np
+from adjustText import adjust_text
+from matplotlib.collections import LineCollection
 from scipy.spatial import KDTree
-import networkx as nx
 
 from tomodrgn import utils
 
@@ -24,7 +26,7 @@ def add_args(parser):
                         help='Directory in which to store output .txt/.pkl files of path indices and latent embeddings')
     parser.add_argument('--max-neighbors', type=int, default=10,
                         help='The maximum number of neighbors to initially calculate distances for from each latent embedding')
-    parser.add_argument('--avg-neighbors', type=float, default=5,
+    parser.add_argument('--avg-neighbors', type=float, default=None,
                         help='Used to set a cutoff distance defining connected neighbors such that each embedding will have this many connected neighbors on average')
 
     return parser
@@ -73,7 +75,7 @@ class LatentGraph(object):
         # calculate the maximum allowable distance to enforce an average of args.avg_neighbors neighbors per particle
         if avg_neighbors:
             total_neighbors = int(nptcls * avg_neighbors)
-            max_dist = np.sort(dists.flatten())[total_neighbors]
+            max_dist = np.sort(dists.flatten())[total_neighbors-1]
         else:
             max_dist = None
 
@@ -165,9 +167,27 @@ class LatentGraph(object):
         # plot the path
         ax.plot(data[path_inds, 0], data[path_inds, 1], linewidth=1, alpha=1, color='red', marker='.', linestyle=':')
 
-    def plot_path(self, full_path, anchors):
-        # TODO method to plot path in UMAP if zdim > 2
-        raise NotImplementedError
+        # plot the anchor points and points along the path
+        annotations = []
+        for path_ind in path_inds:
+            if path_ind in anchor_inds:
+                annotations.append(plt.text(x=float(data[path_ind, 0]),
+                                            y=float(data[path_ind, 1]),
+                                            s=str(path_ind),
+                                            ha='center',
+                                            va='center',
+                                            weight='bold'))
+            else:
+                annotations.append(plt.text(x=float(data[path_ind, 0]),
+                                            y=float(data[path_ind, 1]),
+                                            s=str(path_ind),
+                                            ha='center',
+                                            va='center'))
+        adjust_text(texts=annotations,
+                    expand=(1.5, 1.5),
+                    arrowprops=dict(arrowstyle='->', color='black'))
+
+        return fig, ax
 
 
 def main(args):
@@ -196,7 +216,7 @@ def main(args):
         # find the shortest path connecting each sequential pair of anchors
         log(f'Searching for shortest path between anchor points {src} and {dest}')
         path, path_distance = graph.find_path_dijkstra(src, dest)
-        dd = data[path].cpu().numpy()  # shape (num_ptcls_path, zdim)
+        dd = data[path]
         dists = ((dd[1:, :] - dd[0:-1, :]) ** 2).sum(axis=1) ** .5
 
         # report details about the found path
@@ -218,6 +238,7 @@ def main(args):
 
     # save outputs
     np.savetxt(fname=os.path.join(args.outdir, 'path_particle_indices.txt'), X=full_path)
+    utils.save_pkl(data=full_path, out_pkl=os.path.join(args.outdir, 'path_particle_indices.pkl'), )
     utils.save_pkl(data=data[full_path], out_pkl=os.path.join(args.outdir, 'path_particle_embeddings.pkl'), )
 
     # make some plots
