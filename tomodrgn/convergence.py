@@ -92,7 +92,9 @@ def plot_loss(runlog: str,
     losses = analysis.parse_all_losses(runlog)
     labels = ['reconstruction loss', 'latent loss', 'total loss']
 
-    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(6, 2), sharex='all')
+    n_rows = 1
+    n_cols = 3
+    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(3 * n_cols, 3 * n_rows), sharex='all')
 
     for (i, ax) in enumerate(axes.ravel()):
         ax.plot(losses[i])
@@ -130,15 +132,20 @@ def plot_latent_pca(workdir: str,
     epoch_pcs = np.array(epoch_pcs)
     n_cols = int(np.ceil(len(epochs) ** 0.5))
     n_rows = int(np.ceil(len(epochs) / n_cols))
-    vmin = np.min(epoch_pcs)
-    vmax = np.max(epoch_pcs)
-    fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(2 * n_cols, 2 * n_rows), sharex='all', sharey='all')
+    fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex='all', sharey='all')
 
     for (i, ax) in enumerate(axes.ravel()):
         try:
             # there is an epoch to plot on this axis
             pc = epoch_pcs[i]
-            toplot = ax.hexbin(pc[:, 0], pc[:, 1], bins='log', mincnt=1, vmin=vmin, vmax=vmax)
+            toplot = ax.hexbin(pc[:, 0],
+                               pc[:, 1],
+                               bins='log',
+                               mincnt=1,
+                               extent=(np.min(epoch_pcs[:, :, 0]),
+                                       np.max(epoch_pcs[:, :, 0]),
+                                       np.min(epoch_pcs[:, :, 1]),
+                                       np.max(epoch_pcs[:, :, 1])))
             ax.set_title(f'epoch {epochs[i]}')
             if i % n_cols == 0:
                 # set y axis label only for the left column of subplots
@@ -148,15 +155,14 @@ def plot_latent_pca(workdir: str,
                 ax.set_xlabel('l-PC2')
             if i == len(epochs) - 1:
                 # add a colorbar of particle density
-                fig.subplots_adjust(right=0.96)
-                cbar_ax = fig.add_axes((0.98, 0.15, 0.02, 0.7))
+                fig.subplots_adjust(left=0.15, right=0.8, top=0.85, bottom=0.15)
+                cbar_ax = fig.add_axes((0.82, 0.15, 0.02, 0.7))
                 cbar = fig.colorbar(toplot, cax=cbar_ax)
                 cbar.ax.set_ylabel('particle density', rotation=90)
         except IndexError:
             # this is an extra axis for which we do not have data to plot, hide it
             ax.axis('off')
 
-    fig.tight_layout()
     plt.savefig(f'{outdir}/plots/01_encoder_pcs.png', dpi=300)
     log(f'Saved PCA plots to {outdir}/plots/01_encoder_pcs.png', )
     plt.close()
@@ -166,7 +172,7 @@ def plot_latent_umap(workdir: str,
                      outdir: str,
                      epochs: np.ndarray,
                      nptcls: int,
-                     subset: int | None = None,
+                     subset: int | None = 50000,
                      random_seed: int | np.random.RandomState | None = 42,
                      random_state: int | None = 42) -> None:
     """
@@ -191,6 +197,7 @@ def plot_latent_umap(workdir: str,
         nptcls_subset = min(nptcls, subset)
         log(f'Randomly selecting {nptcls_subset} particle subset on which to run UMAP (with random seed {random_seed})')
         ind_subset = np.sort(np.random.choice(a=nptcls, size=nptcls_subset, replace=False))
+    utils.save_pkl(data=ind_subset, out_pkl=f'{outdir}/umaps/ind_subset.pkl')
 
     # calculate UMAP embeddings
     epoch_umaps = []
@@ -198,7 +205,7 @@ def plot_latent_umap(workdir: str,
         log(f'Now calculating UMAP for epoch {epoch}')
         z = utils.load_pkl(f'{workdir}/z.{epoch}.train.pkl')
         z = z[ind_subset]
-        umap_emb, _ = analysis.run_umap(z=z, random_state=random_state)
+        umap_emb, _ = analysis.run_umap(z=z, random_state=random_state, n_jobs=1)
         epoch_umaps.append(umap_emb)
         utils.save_pkl(data=umap_emb,
                        out_pkl=f'{outdir}/umaps/umap.{epoch}.pkl')
@@ -207,15 +214,20 @@ def plot_latent_umap(workdir: str,
     epoch_umaps = np.array(epoch_umaps)
     n_cols = int(np.ceil(len(epochs) ** 0.5))
     n_rows = int(np.ceil(len(epochs) / n_cols))
-    vmin = np.min(epoch_umaps)
-    vmax = np.max(epoch_umaps)
-    fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(2 * n_cols, 2 * n_rows), sharex='all', sharey='all')
+    fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex='all', sharey='all')
 
     for (i, ax) in enumerate(axes.ravel()):
         try:
             # there is an epoch to plot on this axis
             umap_emb = epoch_umaps[i]
-            toplot = ax.hexbin(umap_emb[:, 0], umap_emb[:, 1], bins='log', mincnt=1, vmin=vmin, vmax=vmax)
+            toplot = ax.hexbin(umap_emb[:, 0],
+                               umap_emb[:, 1],
+                               bins='log',
+                               mincnt=1,
+                               extent=(np.min(epoch_umaps[:, :, 0]),
+                                       np.max(epoch_umaps[:, :, 0]),
+                                       np.min(epoch_umaps[:, :, 1]),
+                                       np.max(epoch_umaps[:, :, 1])))
             ax.set_title(f'epoch {epochs[i]}')
             if i % n_cols == 0:
                 # set y axis label only for the left column of subplots
@@ -225,16 +237,15 @@ def plot_latent_umap(workdir: str,
                 ax.set_xlabel('l-UMAP2')
             if i == len(epochs) - 1:
                 # add a colorbar of particle density
-                fig.subplots_adjust(right=0.96)
-                cbar_ax = fig.add_axes((0.98, 0.15, 0.02, 0.7))
+                fig.subplots_adjust(left=0.15, right=0.8, top=0.85, bottom=0.15)
+                cbar_ax = fig.add_axes((0.82, 0.15, 0.02, 0.7))
                 cbar = fig.colorbar(toplot, cax=cbar_ax)
                 cbar.ax.set_ylabel('particle density', rotation=90)
         except IndexError:
             # this is an extra axis for which we do not have data to plot, hide it
             ax.axis('off')
 
-    fig.tight_layout()
-    plt.savefig(f'{outdir}/plots/02_encoder_umaps.png', dpi=300, format='png', transparent=True, bbox_inches='tight')
+    plt.savefig(f'{outdir}/plots/02_encoder_umaps.png', dpi=300)
     log(f'Saved UMAP distribution plot to {outdir}/plots/02_encoder_umaps.png')
     plt.close()
 
@@ -274,8 +285,8 @@ def encoder_latent_shifts(workdir: str,
     utils.save_pkl(vector_metrics, outdir + '/vector_metrics.pkl')
 
     # plot vector metrics
-    fig, axes = plt.subplots(nrows=1, ncol=len(metrics), figsize=(10, 3))
-    for i, ax in enumerate(axes.ravel()):
+    fig, axes = plt.subplots(nrows=1, ncols=len(metrics), figsize=(10, 3))
+    for (i, ax) in enumerate(axes.ravel()):
         ax.plot(np.arange(2, final_epoch + 1), vector_metrics[:, i])
         ax.set_xlabel('epoch')
         ax.set_ylabel(metrics[i])
@@ -432,7 +443,7 @@ def sketch_via_umap_local_maxima(outdir: str,
 
     # prune local maxima that are densely packed and low in value
     coords, values = prune_local_maxima(coords, values, pruned_maxima, radius)
-    log(f'Pruned to {len(values)} local maxima')
+    log(f'Pruned to {len(values)} local maxima based on local maxima being closer than {radius} units in UMAP-bin-space')
 
     # find subset of n_peaks highest local maxima
     indices = (-values).argsort()[:final_maxima]
@@ -440,7 +451,7 @@ def sketch_via_umap_local_maxima(outdir: str,
     peaks_img_top = gen_peaks_img(coords, values, edges)
     to_plot.append('peaks_img_top')
     to_plot.append('sketched_umap')
-    log(f'Filtered to top {len(values)} local maxima')
+    log(f'Filtered to top {len(values)} local maxima based on highest local maxima.')
 
     # write list of lists containing indices of all particles within maxima bins + all 8 neighboring bins (assumes footprint = (3,3))
     binned_ptcls_mask = np.zeros((nptcls, len(values)), dtype=bool)
@@ -490,6 +501,7 @@ def sketch_via_umap_local_maxima(outdir: str,
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
 
+    plt.tight_layout()
     plt.savefig(f'{outdir}/plots/04_decoder_UMAP-sketching.png', dpi=300)
     log(f'Saved latent sketching plot to {outdir}/plots/04_decoder_UMAP-sketching.png')
     plt.close()
@@ -517,10 +529,9 @@ def follow_candidate_particles(workdir: str,
     n_cols = int(np.ceil(len(epochs) ** 0.5))
     n_rows = int(np.ceil(len(epochs) / n_cols))
 
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(2 * n_cols, 2 * n_rows), sharex='all', sharey='all')
-    fig.tight_layout()
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex='all', sharey='all')
 
-    ind_subset = utils.load_pkl(outdir + '/ind_subset.pkl')
+    ind_subset = utils.load_pkl(f'{outdir}/umaps/ind_subset.pkl')
     for (i, ax) in enumerate(axes.ravel()):
         try:
             umap = utils.load_pkl(outdir + f'/umaps/umap.{epochs[i]}.pkl')
@@ -558,15 +569,14 @@ def follow_candidate_particles(workdir: str,
 
             if i == len(epochs) - 1:
                 # add a colorbar of particle density
-                fig.subplots_adjust(right=0.96)
-                cbar_ax = fig.add_axes((0.98, 0.15, 0.02, 0.7))
+                fig.subplots_adjust(left=0.15, right=0.8, top=0.85, bottom=0.15)
+                cbar_ax = fig.add_axes((0.82, 0.15, 0.02, 0.7))
                 cbar = fig.colorbar(toplot, cax=cbar_ax)
                 cbar.ax.set_ylabel('particle density', rotation=90)
         except IndexError:
             # this is an extra axis for which we do not have data to plot, hide it
             ax.axis('off')
 
-    plt.tight_layout()
     plt.savefig(f'{outdir}/plots/05_decoder_maxima-sketch-consistency.png', dpi=300)
     log(f'Saved plot tracking representative latent encodings through epochs {epochs} to {outdir}/plots/05_decoder_maxima-sketch-consistency.png')
     plt.close()
@@ -610,10 +620,12 @@ def calc_ccs_pairwise_epochs(outdir: str,
     utils.save_pkl(cc_masked, f'{outdir}/cc_masked.pkl')
 
     # plot the successive pairs of epochs' CCs
-    fig, ax = plt.subplots(1, 1)
+    n_cols = 1
+    n_rows = 1
+    fig, ax = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows))
     colors = analysis.get_colors_chimerax(len(labels))
     for i in range(len(labels)):
-        ax.plot(epochs[1:], cc_masked[i, :], c=colors[i])
+        ax.plot(epochs[1:], cc_masked[i, :], c=colors[i], marker='.', )
     ax.legend(labels, ncol=3, fontsize='x-small')
     ax.set_xlabel('epoch')
     ax.set_ylabel('correlation coefficient')
@@ -669,7 +681,7 @@ def calc_fscs_pairwise_epochs(outdir: str,
     n_rows = int(np.ceil(len(labels) / n_cols))
     fig, axes = plt.subplots(nrows=n_rows,
                              ncols=n_cols,
-                             figsize=(2 * n_cols, 2 * n_rows),
+                             figsize=(3 * n_cols, 3 * n_rows),
                              sharex='all',
                              sharey='all')
     for (i, ax) in enumerate(axes.ravel()):
@@ -698,7 +710,9 @@ def calc_fscs_pairwise_epochs(outdir: str,
     plt.close()
 
     # plot all FSCs at Nyquist only
-    fig, ax = plt.subplots(nrows=1, ncols=1)
+    n_cols = 1
+    n_rows = 1
+    fig, ax = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows))
     colors = analysis.get_colors_chimerax(len(labels))
     for i in range(len(labels)):
         ax.plot(epochs[1:], fsc_masked[i, :, -1], c=colors[i])
@@ -762,7 +776,7 @@ def calc_ccs_alltoall_intraepoch(outdir: str,
     # plot all CC clustermaps
     n_cols = int(np.ceil(len(epochs) ** 0.5))
     n_rows = int(np.ceil(len(epochs) / n_cols))
-    fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(2 * n_cols, 2 * n_rows), sharex='all', sharey='all')
+    fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex='all', sharey='all')
     fig.tight_layout()
     for (i, ax) in enumerate(axes.ravel()):
         path = f'{outdir}/plots/temp_{i}.png'
@@ -823,7 +837,7 @@ def calc_ccs_alltogroundtruth(outdir: str,
 
         # visualize and save as a heatmap
         df = pd.DataFrame(cc_voltogt[i], index=[label for label in gt_labels], columns=[label for label in labels])
-        sns.clustermap(df, annot=True, fmt='0.2f', figsize=(len(tomodrgn_vols), len(gt_vols)), vmin=np.min(cc_voltogt), vmax=1.0, row_cluster=False)
+        sns.clustermap(df, annot=True, fmt='0.2f', figsize=(len(tomodrgn_vols), len(gt_vols)), vmin=0, vmax=1.0, row_cluster=False)
         plt.tight_layout()
         plt.savefig(f'{outdir}/plots/temp_{i}.png', dpi=300)
         plt.close()
@@ -833,7 +847,7 @@ def calc_ccs_alltogroundtruth(outdir: str,
     # plot all CC clustermaps
     n_cols = int(np.ceil(len(epochs) ** 0.5))
     n_rows = int(np.ceil(len(epochs) / n_cols))
-    fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(2 * n_cols, 2 * n_rows), sharex='all', sharey='all')
+    fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex='all', sharey='all')
     fig.tight_layout()
     for (i, ax) in enumerate(axes.ravel()):
         path = f'{outdir}/plots/temp_{i}.png'

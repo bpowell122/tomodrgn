@@ -18,7 +18,7 @@ log = utils.log
 
 def add_args(_parser):
     _parser.add_argument('workdir', type=os.path.abspath, help='Directory with tomoDRGN results')
-    _parser.add_argument('epoch', type=str, help='Latest epoch number N to analyze convergence (0-based indexing, corresponding to z.N.pkl, weights.N.pkl), "latest" for last detected epoch')
+    _parser.add_argument('epoch', type=str, default='latest', help='Latest epoch number N to analyze convergence (0-based indexing, corresponding to weights.N.pkl), "latest" for last detected epoch')
     _parser.add_argument('-o', '--outdir', type=os.path.abspath, help='Output directory for convergence analysis results (default: [workdir]/convergence.[epoch])')
     _parser.add_argument('--epoch-interval', type=int, default=5, help='Interval of epochs between calculating most convergence heuristics')
 
@@ -42,15 +42,15 @@ def add_args(_parser):
     group.add_argument('--lowpass', type=float, default=None, help='Lowpass filter to this resolution in Å')
     group.add_argument('--flip', action='store_true', help='Flip handedness of output volumes')
     group.add_argument('--invert', action='store_true', help='Invert contrast of output volumes')
-    group.add_argument('--cuda', type=int, default=None, help='Specify cuda device for volume generation')
+    group.add_argument('--device', type=int, help='Optionally specify CUDA device')
     group.add_argument('--skip-volgen', action='store_true', help='Skip volume generation. Requires that volumes already exist for downstream CC + FSC calculations')
     group.add_argument('--ground-truth', type=os.path.abspath, nargs='+', default=None, help='Relative path containing wildcards to ground_truth_vols*.mrc for map-map CC calcs')
 
     group = _parser.add_argument_group('Mask generation arguments')
-    group.add_argument('--mask', type='str', choices=['none', 'sphere', 'tight', 'soft'], help='Type of mask to generate for each generated volume when calculating volume-based metrics.')
-    group.add_argument('--thresh', type=float, default=None, help='Isosurface percentile at which to threshold volume; default is to use 99th percentile.')
-    group.add_argument('--dilate', type=int, default=None, help='Number of voxels to dilate thresholded isosurface outwards from mask boundary; default is to use 1/30th of box size (px).')
-    group.add_argument('--dist', type=int, default=None, help='Number of voxels over which to apply a soft cosine falling edge from dilated mask boundary; default is to use 1/30th of box size (px)')
+    group.add_argument('--mask', type=str, choices=['none', 'sphere', 'tight', 'soft'], default='soft', help='Type of mask to generate for each volume when calculating volume-based metrics.')
+    group.add_argument('--thresh', type=float, help='Isosurface percentile at which to threshold volume; default is to use 99th percentile.')
+    group.add_argument('--dilate', type=int, help='Number of voxels to dilate thresholded isosurface outwards from mask boundary; default is to use 1/30th of box size (px).')
+    group.add_argument('--dist', type=int, help='Number of voxels over which to apply a soft cosine falling edge from dilated mask boundary; default is to use 1/30th of box size (px)')
 
     return _parser
 
@@ -59,7 +59,7 @@ def get_latest(workdir: str) -> int:
     # assumes args.num_epochs > latest checkpoint
     log('Detecting latest checkpoint...')
     files = glob.glob(f'{workdir}/z.*.train.pkl')
-    epochs = [int(file.split('.')[-2]) for file in files]
+    epochs = [int(file.split('.')[-3]) for file in files]
     epoch = max(epochs)
     return epoch
 
@@ -76,7 +76,7 @@ def main(args):
 
     # get the array of epochs at which to calculate convergence metrics
     final_epoch = get_latest(args.workdir) if args.epoch == 'latest' else int(args.epoch)
-    epochs = np.arange(4, final_epoch + 1, args.epoch_interval)
+    epochs = np.arange(4, final_epoch, args.epoch_interval)
     if epochs[-1] != final_epoch:
         epochs = np.append(epochs, final_epoch)
     log(f'Will analyze epochs: {epochs}')

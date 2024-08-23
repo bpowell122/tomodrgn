@@ -302,7 +302,7 @@ def zero_sphere(vol: np.ndarray) -> np.ndarray:
 def calc_real_space_mask(vol1: np.ndarray,
                          vol2: np.ndarray | None = None,
                          mask: str | None = None,
-                         thresh: int = 99,
+                         thresh: int | None = None,
                          dilate: int | None = None,
                          dist: int | None = None) -> np.ndarray:
     """
@@ -319,7 +319,6 @@ def calc_real_space_mask(vol1: np.ndarray,
     if vol2 is None:
         vol2 = vol1
     boxsize = vol1.shape[0]
-
     if mask is None or mask == 'none':
         mask = np.ones_like(vol1)
     elif mask == 'sphere':
@@ -328,8 +327,10 @@ def calc_real_space_mask(vol1: np.ndarray,
         r = np.sqrt(x0 ** 2 + x1 ** 2 + x2 ** 2)
         mask = np.where(r <= boxsize // 2, True, False)
     elif mask == 'tight':
+        thresh = 99 if thresh is None else thresh
         mask = np.where(vol1 >= np.percentile(vol1, thresh), True, False) | np.where(vol2 >= np.percentile(vol2, thresh), True, False)
     elif mask == 'soft':
+        thresh = 99 if thresh is None else thresh
         dilate = int(np.ceil(boxsize / 30)) if dilate is None else dilate
         dist = int(np.ceil(boxsize / 30)) if dist is None else dist
         mask = np.where(vol1 >= np.percentile(vol1, thresh), True, False) | np.where(vol2 >= np.percentile(vol2, thresh), True, False)
@@ -438,7 +439,7 @@ def calc_cc(vol1: np.ndarray | str,
     assert vol1.shape == vol2.shape
 
     # prepare mask
-    if mask.endswith('.mrc'):
+    if type(mask) is str and mask.endswith('.mrc'):
         assert os.path.exists(os.path.abspath(mask))
         mask, _ = mrc.parse_mrc(mask)
     else:
