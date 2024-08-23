@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 
+import os
+import sys
+
 from setuptools import setup, find_namespace_packages
-import os,sys
+
 sys.path.insert(0, f'{os.path.dirname(__file__)}/tomodrgn')
 import tomodrgn
+
 version = tomodrgn.__version__
 
 setup(name='tomodrgn',
@@ -27,29 +31,28 @@ setup(name='tomodrgn',
       package_data={"tomodrgn.templates": ["*.ipynb"]},
       entry_points={
           "console_scripts": [
-            "tomodrgn = tomodrgn.__main__:main",
-            ],
+              "tomodrgn = tomodrgn.__main__:main",
+          ],
       },
       # include_package_data=True,
-      python_requires='>=3.7',
+      python_requires='>=3.10',
       install_requires=[
-        'torch>=1.11.0',
-        'pandas',
-        'numpy',
-        'matplotlib',
-        'scipy>=1.3.1',
-        'scikit-learn',
-        'seaborn',
-        'cufflinks',
-        'umap-learn',
-        'notebook',
-        'ipywidgets',
-        'ipyvolume>=0.6.0',
-        'pythreejs>=2.4.2',
-        'plotly',
-        'pillow',
-        'healpy',
-        'typing_extensions>=3.7.4',
-        'traitlets'
-        ]
-     )
+          'numpy<=2.0',  # not sure if v2's breaking changes affect tomodrgn
+          'pandas',
+          'torch>=1.13.0',  # nested tensor requires >=1.13 for autograd, if using torch.compile then need >=2.0
+          'torchinfo',  # used for visualizing the torch model as torchinfo.summary(model)
+          'einops',
+          'healpy',
+          'matplotlib>=3.5',  # draw_without_rendering
+          'seaborn',
+          'scipy>=1.3.1',
+          'scikit-learn',
+          'umap-learn',
+          'notebook',
+          'ipython',
+          'ipywidgets',
+          'plotly',
+          'typing_extensions>=3.7.4',
+          'adjustText',
+      ]
+      )
