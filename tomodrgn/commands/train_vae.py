@@ -14,13 +14,12 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.cuda.amp import GradScaler, autocast
 
-from tomodrgn import utils, ctf, config
+from tomodrgn import utils, ctf, config, convergence
 from tomodrgn.starfile import TiltSeriesStarfile
 from tomodrgn.dataset import TiltSeriesMRCData
 from tomodrgn.models import TiltSeriesHetOnlyVAE, DataParallelPassthrough, print_tiltserieshetonlyvae_ascii
 from tomodrgn.lattice import Lattice
 from tomodrgn.beta_schedule import get_beta_schedule
-from tomodrgn.analysis import VolumeGenerator
 
 log = utils.log
 vlog = utils.vlog
@@ -432,125 +431,6 @@ def save_checkpoint(*,
             pickle.dump(z_logvar_test.astype(np.float32), f)
 
 
-def convergence_latent(z_mu_train, z_logvar_train, z_mu_test, z_logvar_test, workdir, epoch, significance_threshold=0.05):
-    '''
-    Calculates the fraction of particles whose latent embeddings overlap between train and test
-    with significant p value relative to reparamaterization epsilon
-
-    Currently evaluating as two-sample z-test (train and test) with sample size 1 (per particle)
-    Multiplying results along latent dim (treated as indendependent) and updating p_value according to bonferroni correction
-        (Or could generalize to mahalanobis distance which allows non-diagonal multivariate gaussians)
-
-    https://www.statology.org/p-value-from-z-score-python/
-    https://www.probabilitycourse.com/chapter4/4_2_3_normal.php
-    https://www.analyticsvidhya.com/blog/2020/06/statistics-analytics-hypothesis-testing-z-test-t-test/#Deciding_Between_Z-Test_and_T-Test
-    http://homework.uoregon.edu/pub/class/es202/ztest.html
-
-    :param epoch:
-    :param workdir:
-    :param z_mu_train: np array (n_particles, zdim) of predicted latent means for each particle's train images
-    :param z_logvar_train: np array (n_particles, zdim) of predicted latent log variance for each particle's train images
-    :param z_mu_test: np array (n_particles, zdim) of predicted latent means for each particle's test images
-    :param z_logvar_test: np array (n_particles, zdim) of predicted latent log variance for each particle's test images
-    :param significance_threshold: float, significance level aka p value for single axis
-    :return: fraction_particles_different: float, fraction of particles significantly different in latent embedding between train and test
-    '''
-
-    # TODO What is the right null/alternate hypothesis to test?
-    # run the two-sample z-test
-    z_scores = (z_mu_train - z_mu_test) / (np.sqrt(np.exp(z_logvar_train) ** 2 + np.exp(z_logvar_test) ** 2))
-
-    # convert z-scores to p-values given two-tailed z-score
-    p_values = norm.sf(abs(z_scores)) * 2
-
-    # multiply p values along zdim axis given independent latent dimensions aka independent tests
-    p_values = np.prod(p_values, axis=1)
-
-    # apply significace test with bonferroni-corrected p-value
-    bonferroni = z_mu_train.shape[1]
-    significance_threshold = significance_threshold / bonferroni
-
-    # save data and log summary value
-    utils.save_pkl(p_values, f'{workdir}/convergence_latent_pvalues.{epoch}.pkl')
-    log(f'Convergence epoch {epoch}: fraction of particles with significantly similar latent: {np.sum(p_values < significance_threshold) / p_values.shape[0]}')
-
-
-def convergence_volumes_generate(z_train, z_test, epoch, workdir, weights_path, config_path, volume_count=100):
-    """
-    Select indices and generate corresponding test/train volumes for convergence metrics
-    :param z_train: numpy array of shape (n_particles, zdim) of latent values deriving from train particle images
-    :param z_test: numpy array of shape (n_particles) zdim) of latent values deriving from test particle images
-    :param epoch:
-    :param workdir: str, absolute path to model workdir to store generated volumes
-    :param weights_path:
-    :param config_path:
-    :param volume_count: int, number of volumes to generate for each of train/test
-    """
-    # sample volume_count particles
-    n_particles = z_train.shape[0]
-    ind_sel = np.sort(np.random.choice(n_particles, size=volume_count))
-
-    # generate the train and test volumes for corresponding particles
-    vg = VolumeGenerator(weights_path=weights_path, config_path=config_path)
-    os.mkdir(f'{workdir}/scratch.{epoch}.train')
-    os.mkdir(f'{workdir}/scratch.{epoch}.test')
-    vg.gen_volumes(z_values=z_train[ind_sel], outdir=f'{workdir}/scratch.{epoch}.train', )
-    vg.gen_volumes(z_values=z_test[ind_sel], outdir=f'{workdir}/scratch.{epoch}.test', )
-
-    # save data
-    utils.save_pkl(ind_sel, f'{workdir}/convergence_volumes_sel.{epoch}.pkl')
-
-
-def convergence_volumes_testtrain_correlation(workdir, epoch, volume_count=100):
-    """
-    Calculate the correlation between volumes generated from test and train latent embeddings of the same particles in the same epoch
-    :param workdir: str, absolute path to model workdir
-    :param epoch: int, current epoch being evaluated
-    :param volume_count: int, number of volumes to generate for each of train/test
-    """
-    # calculate pairwise FSC and return resolution of FSC=0.5
-    resolutions_point5 = np.zeros(volume_count)
-    fscs = []
-    for i in range(volume_count):
-        vol_train = f'{workdir}/scratch.{epoch}.train/vol_{i:03d}.mrc'
-        vol_test = f'{workdir}/scratch.{epoch}.test/vol_{i:03d}.mrc'
-        x, fsc = utils.calc_fsc(vol_train, vol_test, mask='soft')
-        resolutions_point5[i] = x[-1] if np.all(fsc >= 0.5) else x[np.argmax(fsc < 0.5)]
-        fscs.append(fsc)
-
-    # save data and log summary value
-    utils.save_pkl(np.asarray(fscs), f'{workdir}/convergence_volumes_testtrain_correlation.{epoch}.pkl')
-    log(f'Convergence epoch {epoch}: 90th percentile of test/train map-map FSC 0.5 resolutions (units: 1/px): {np.percentile(resolutions_point5, 90)}')
-
-
-def convergence_volumes_testtest_scale(workdir, epoch, volume_count=100):
-    """
-    Calculate the scale of heterogeneity among all volumes generated from test latent embeddings of the same particles in the same epoch
-    :param workdir: str, absolute path to model workdir
-    :param epoch: int, current epoch being evaluated
-    :param volume_count: int, number of volumes to generate for each of train/test
-    """
-    # initialize empty pairwise distance matrix for CCs and corresponding upper triangle (non-redundant) pairwise indices
-    pairwise_ccs = np.zeros((volume_count, volume_count))
-    ind_triu = np.triu_indices(n=volume_count, k=1, m=volume_count)
-    row_ind, col_ind = ind_triu
-
-    # iterate through zipped indices, loading volumes and calculating CC
-    from tomodrgn.mrc import parse_mrc
-    from tomodrgn.utils import calc_cc
-    for i, j in zip(row_ind, col_ind):
-        vol_train, vol_train_header = parse_mrc(f'{workdir}/scratch.{epoch}.train/vol_{i:03d}.mrc')
-        vol_test, vol_test_header = parse_mrc(f'{workdir}/scratch.{epoch}.test/vol_{j:03d}.mrc')
-        pairwise_ccs[i, j] = calc_cc(vol_train, vol_test)
-
-    # calculate pairwise volume distances as 1 - CC
-    pairwise_cc_dist = np.ones_like(pairwise_ccs) - pairwise_ccs
-
-    # save data and log summary value
-    utils.save_pkl(pairwise_cc_dist, f'{workdir}/convergence_volumes_testtest_scale.{epoch}.pkl')
-    log(f'Convergence epoch {epoch}: sum of complement-CC distances for all pairwise test/test volumes: {np.sum(pairwise_cc_dist[ind_triu])}')
-
-
 def main(args):
     t1 = dt.now()
     if args.outdir is not None and not os.path.exists(args.outdir):
@@ -859,10 +739,21 @@ def main(args):
                             out_z_test=out_z_test)
             if data_test:
                 flog('Calculating convergence metrics using test/train split...')
-                convergence_latent(z_mu_train, z_logvar_train, z_mu_test, z_logvar_test, args.outdir, epoch)
-                convergence_volumes_generate(z_mu_train, z_mu_test, epoch, args.outdir, f'{args.outdir}/weights.{epoch}.pkl', f'{args.outdir}/config.pkl', volume_count=100)
-                convergence_volumes_testtrain_correlation(args.outdir, epoch, volume_count=100)
-                convergence_volumes_testtest_scale(args.outdir, epoch, volume_count=100)
+                convergence.calc_kld_two_gaussians(z_mu_train=z_mu_train,
+                                                   z_logvar_train=z_logvar_train,
+                                                   z_mu_test=z_mu_test,
+                                                   z_logvar_test=z_logvar_test,
+                                                   workdir=args.outdir,
+                                                   epoch=epoch)
+                convergence.generate_test_train_pair_volumes(z_train=z_mu_train,
+                                                             z_test=z_mu_test,
+                                                             epoch=epoch,
+                                                             workdir=args.outdir,
+                                                             volume_count=100)
+                convergence.calc_test_train_pair_volumes_fscs(workdir=args.outdir,
+                                                              epoch=epoch)
+                convergence.calc_test_train_pair_volumes_cc_complement(workdir=args.outdir,
+                                                                       epoch=epoch)
 
     # save model weights, latent encoding, and evaluate the model on 3D lattice
     out_weights = f'{args.outdir}/weights.pkl'

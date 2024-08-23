@@ -1,6 +1,7 @@
 """
 Functions to aid estimation of model training convergence.
 """
+import glob
 import os
 from string import ascii_uppercase
 from typing import Literal
@@ -8,8 +9,7 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from matplotlib import pyplot as plt
-from matplotlib import image
+from matplotlib import pyplot as plt, image
 from scipy import stats
 from scipy.ndimage.filters import maximum_filter, gaussian_filter
 from scipy.spatial import distance_matrix
@@ -863,3 +863,153 @@ def calc_ccs_alltogroundtruth(outdir: str,
     plt.savefig(f'{outdir}/plots/10_groundtruth_CC_matrix_epoch.png', dpi=300 * n_cols)
     log(f'Saved ground truth map-map CC clustermap to {outdir}/plots/10_groundtruth_CC_matrix_epoch.png')
     plt.close()
+
+
+def calc_kld_two_gaussians(z_mu_train: np.ndarray,
+                           z_logvar_train: np.ndarray,
+                           z_mu_test: np.ndarray,
+                           z_logvar_test: np.ndarray,
+                           workdir: str,
+                           epoch: int) -> None:
+    """
+    Compute the KLD between two gaussians with diagomal covariance.
+    Used to test convergence via difference between each particle's train and test embedding for selected epoch.
+    :param z_mu_train: numpy array of shape (n_particles, zdim), latent embedding means deriving from particle train images
+    :param z_logvar_train: numpy array of shape (n_particles, zdim), latent embedding log variance deriving from particle train images
+    :param z_mu_test: numpy array of shape (n_particles, zdim), latent embedding means deriving from particle test images
+    :param z_logvar_test: numpy array of shape (n_particles, zdim), latent embedding log variance deriving from particle test images
+    :param workdir:str, absolute path to model workdir
+    :param epoch: int, current epoch number
+    :return: None
+    """
+
+    def kld_twodiagonalgaussians(mu1: np.ndarray,
+                                 var1: np.ndarray,
+                                 mu2: np.ndarray,
+                                 var2: np.ndarray) -> np.ndarray:
+        """
+        Calculate the KLD between two multidimensional gaussians with diagonal covariance matrices
+        Adapted from https://stackoverflow.com/a/55688087
+
+        KL( (mu1, var1) || (mu2, var2))
+             = 0.5 * ( tr(var2^{-1} var1) + log |var2|/|var1| + (mu2 - mu1)^T var2^{-1} (mu2 - mu1) - N )  (general)
+             = 0.5 * ( sum(var1 / var2) + log( prod(var2) / prod(var1)) + (mu2 - mu1)**2 / var2) - N )     (diagonal covariance)
+        """
+        zdim = mu1.shape[-1]
+
+        trace_term = np.sum(var1 / var2, axis=-1)
+        determinant_term = np.log(np.prod(var2, axis=-1) / np.prod(var1, axis=-1))
+        quad_term = np.sum((mu2 - mu1) ** 2 / var2, axis=-1)
+
+        _kld = 0.5 * (trace_term + determinant_term + quad_term - zdim)
+        return _kld
+
+    # calculate klds
+    kld = kld_twodiagonalgaussians(z_mu_train, np.exp(z_logvar_train), z_mu_test, np.exp(z_logvar_test))
+    utils.save_pkl(kld, f'{workdir}/convergence_latent_kld.{epoch}.pkl')
+    log(f'Convergence epoch {epoch}: latent: 90th percentile of KLD: {np.percentile(kld, 90)}')
+
+    try:
+        kld_previous = utils.load_pkl(f'{workdir}/convergence_latent_kld.{epoch - 1}.pkl')
+        dist_from_previous = np.mean(kld - kld_previous)
+        log(f'Convergence epoch {epoch}: latent: average change from previous epoch KLD: {dist_from_previous}')
+    except FileNotFoundError:
+        pass
+
+
+def generate_test_train_pair_volumes(z_train: np.ndarray,
+                                     z_test: np.ndarray,
+                                     epoch: int,
+                                     workdir: str,
+                                     volume_count=100) -> None:
+    """
+    Select random particle indices and generate corresponding volumes using train-split images' latent embeddings and test-split latent embeddings.
+    :param z_train: numpy array of shape (n_particles, zdim) of latent values deriving from train particle images
+    :param z_test: numpy array of shape (n_particles) zdim) of latent values deriving from test particle images
+    :param epoch: epoch being analyzed
+    :param workdir: str, absolute path to model workdir to store generated volumes
+    :param volume_count: int, number of volumes to generate for each of train/test
+    :return: None
+    """
+    # sample volume_count particles
+    n_particles = z_train.shape[0]
+    ind_sel = np.sort(np.random.choice(n_particles, size=volume_count))
+
+    # generate the train and test volumes for corresponding particles
+    vg = analysis.VolumeGenerator(weights_path=f'{workdir}/weights.{epoch}.pkl',
+                                  config_path=f'{workdir}/config.pkl')
+    os.mkdir(f'{workdir}/scratch.{epoch}.train')
+    os.mkdir(f'{workdir}/scratch.{epoch}.test')
+    vg.gen_volumes(z_values=z_train[ind_sel],
+                   outdir=f'{workdir}/scratch.{epoch}.train', )
+    vg.gen_volumes(z_values=z_test[ind_sel],
+                   outdir=f'{workdir}/scratch.{epoch}.test', )
+
+    # save data
+    utils.save_pkl(data=ind_sel,
+                   out_pkl=f'{workdir}/convergence_volumes_sel.{epoch}.pkl')
+
+
+def calc_test_train_pair_volumes_fscs(workdir: str,
+                                      epoch: int) -> None:
+    """
+    Calculate the FSC between volumes generated from test and train latent embeddings of the same particles in the same epoch.
+    Assumes volumes are previously generated and stored in `workdir/scratch.epoch.train/` and `workdir/scratch.epoch.test/`
+    :param workdir: str, absolute path to model workdir
+    :param epoch: int, current epoch being evaluated
+    :return: None
+    """
+    # calculate pairwise FSC and return resolution of FSC=0.5
+    volume_count = len(glob.glob(f'{workdir}/scratch.{epoch}.train/vol_*.mrc'))
+    resolutions_point5 = np.zeros(volume_count)
+    fscs = []
+    for i in range(volume_count):
+        vol_train = f'{workdir}/scratch.{epoch}.train/vol_{i:03d}.mrc'
+        vol_test = f'{workdir}/scratch.{epoch}.test/vol_{i:03d}.mrc'
+        x, fsc = utils.calc_fsc(vol_train, vol_test, mask='soft')
+        resolutions_point5[i] = x[-1] if np.all(fsc >= 0.5) else x[np.argmax(fsc < 0.5)]
+        fscs.append(fsc)
+
+    # save data and log summary value
+    utils.save_pkl(np.asarray(fscs), f'{workdir}/convergence_volumes_testtrain_correlation.{epoch}.pkl')
+    log(f'Convergence epoch {epoch}: volume correlation: 90th percentile of test/train map-map FSC 0.5 resolutions (units: 1/px): {np.percentile(resolutions_point5, 90)}')
+
+    try:
+        # fscs_previous = utils.load_pkl(f'{workdir}/convergence_volumes_testtrain_correlation.{epoch - 1}.pkl')
+        # resolutions_point5_previous = [x[-1] if np.all(fsc >= 0.5) else x[np.argmax(fsc < 0.5)] for fsc in fscs_previous]
+        dist_from_previous = None  # TODO KLD between two distributinons (or wasserstein?)
+        log(f'Convergence epoch {epoch}: volume correlation: average change from previous epoch KLD: {dist_from_previous}')
+    except FileNotFoundError:
+        pass
+
+
+def calc_test_train_pair_volumes_cc_complement(workdir: str,
+                                               epoch: int) -> None:
+    """
+    Calculate the scale of heterogeneity among all volumes generated from test latent embeddings of the same particles in the same epoch
+    :param workdir: str, absolute path to model workdir
+    :param epoch: int, current epoch being evaluated
+    :return: None
+    """
+    volume_count = len(glob.glob(f'{workdir}/scratch.{epoch}.train/vol_*.mrc'))
+
+    # initialize empty pairwise distance matrix for CCs and corresponding upper triangle (non-redundant) pairwise indices
+    pairwise_ccs = np.zeros((volume_count, volume_count))
+    ind_triu = np.triu_indices(n=volume_count, k=1, m=volume_count)
+    row_ind, col_ind = ind_triu
+
+    # iterate through zipped indices, loading volumes and calculating CC
+    from tomodrgn.mrc import parse_mrc
+    from tomodrgn.utils import calc_cc
+    for i, j in zip(row_ind, col_ind):
+        vol_train, vol_train_header = parse_mrc(f'{workdir}/scratch.{epoch}.train/vol_{i:03d}.mrc')
+        vol_test, vol_test_header = parse_mrc(f'{workdir}/scratch.{epoch}.test/vol_{j:03d}.mrc')
+        pairwise_ccs[i, j] = calc_cc(vol_train, vol_test)
+
+    # calculate pairwise volume distances as 1 - CC
+    pairwise_cc_dist = np.ones_like(pairwise_ccs) - pairwise_ccs
+
+    # save data and log summary value
+    utils.save_pkl(pairwise_cc_dist, f'{workdir}/convergence_volumes_testtest_scale.{epoch}.pkl')
+    log(f'Convergence epoch {epoch}: sum of complement-CC distances for all pairwise test/test volumes: {np.sum(pairwise_cc_dist[ind_triu])}')
+    # TODO test train/test convergence metrics and determine if useful or if need further changes
