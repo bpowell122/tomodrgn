@@ -247,8 +247,8 @@ def generate_color_per_particle(ptcl_star: starfile.GenericStarfile,
             labels_rgba[labels == label] = chimerax_colors[i % len(chimerax_colors)]
     else:
         log(f'Using matplotlib color scheme {colormap}')
-        cmap = analysis.get_colors(num_colors=len(labels_set),
-                                   cmap=colormap)
+        cmap = analysis.get_colors_matplotlib(num_colors=len(labels_set),
+                                              cmap=colormap)
         labels_rgba = np.array([cmap[label] for label in labels])
         labels_rgba[:, :-1] *= 100  # normalize 0-100 for chimerax
         labels_rgba = np.around(labels_rgba).astype(int)  # convert to int for chimerax

@@ -299,16 +299,66 @@ def zero_sphere(vol: np.ndarray) -> np.ndarray:
     return vol
 
 
+def calc_real_space_mask(vol1: np.ndarray,
+                         vol2: np.ndarray | None = None,
+                         mask: str | None = None,
+                         thresh: int = 99,
+                         dilate: int | None = None,
+                         dist: int | None = None) -> np.ndarray:
+    """
+    Generate a real space mask generated from up to two volumes
+    :param vol1: array of volume 1, shape (boxsize, boxsize, boxsize)
+    :param vol2: array of volume 2, shape (boxsize, boxsize, boxsize)
+    :param mask: mask to calculate from volumes, one of [None, 'sphere', 'tight', 'soft']
+    :param thresh: data percentile threshold at which to binarize mask when calculating 'tight' or initializing 'soft' masks
+    :param dilate: for soft mask, number of pixels to expand auto-determined tight mask
+    :param dist: for soft mask, number of pixels over which to apply soft edge
+    :return: array of mask, values in interval [0,1], shape (boxsize, boxsize, boxsize)
+    """
+    # copy volume1 as volume2 if volume2 not provided
+    if vol2 is None:
+        vol2 = vol1
+    boxsize = vol1.shape[0]
+
+    if mask is None or mask == 'none':
+        mask = np.ones_like(vol1)
+    elif mask == 'sphere':
+        x = np.arange(-boxsize // 2, boxsize // 2)
+        x0, x1, x2 = np.meshgrid(x, x, x, indexing='ij')
+        r = np.sqrt(x0 ** 2 + x1 ** 2 + x2 ** 2)
+        mask = np.where(r <= boxsize // 2, True, False)
+    elif mask == 'tight':
+        mask = np.where(vol1 >= np.percentile(vol1, thresh), True, False) | np.where(vol2 >= np.percentile(vol2, thresh), True, False)
+    elif mask == 'soft':
+        dilate = int(np.ceil(boxsize / 30)) if dilate is None else dilate
+        dist = int(np.ceil(boxsize / 30)) if dist is None else dist
+        mask = np.where(vol1 >= np.percentile(vol1, thresh), True, False) | np.where(vol2 >= np.percentile(vol2, thresh), True, False)
+        mask = ndimage.morphology.binary_dilation(mask, iterations=dilate)
+        distance_to_mask = ndimage.morphology.distance_transform_edt(~mask)
+        distance_to_mask = np.where(distance_to_mask > dist, dist, distance_to_mask) / dist
+        mask = np.cos((np.pi / 2) * distance_to_mask)
+    else:
+        raise ValueError(f'mask must be one of [None, "sphere", "tight", "soft"], got {mask}')
+
+    # check that mask is in range [0,1]
+    assert np.all(mask >= 0)
+    assert np.all(mask <= 1)
+
+    return mask
+
+
 def calc_fsc(vol1: np.ndarray | str,
              vol2: np.ndarray | str,
              mask: str | None = None,
-             dilate: int = 3,
-             dist: int = 10) -> tuple[np.ndarray, np.ndarray]:
+             thresh: int = 99,
+             dilate: int | None = None,
+             dist: int | None = None) -> tuple[np.ndarray, np.ndarray]:
     """
     Calculate the FSC between two volumes with optional masking.
     :param vol1: path to volume1.mrc, boxsize D,D,D, or ndarray of vol1 voxels
     :param vol2: path to volume2.mrc, boxsize D,D,D, or ndarray of vol2 voxels
-    :param mask: mask to apply to volumes, one of [None, 'sphere', 'tight', 'soft', path to mask.mrc with boxsize D,D,D]
+    :param mask: mask to calculate from volumes, one of [None, 'sphere', 'tight', 'soft']
+    :param thresh: data percentile threshold at which to binarize mask when calculating 'tight' or initializing 'soft' masks
     :param dilate: for soft mask, number of pixels to expand auto-determined tight mask
     :param dist: for soft mask, number of pixels over which to apply soft edge
     :return: x: spatial resolution in units of (1/px). fsc: the Fourier Shell Correlation at each resolution shell specified by `x`.
@@ -332,23 +382,16 @@ def calc_fsc(vol1: np.ndarray | str,
     bin_labels = np.searchsorted(bins, r, side='left')  # bin_label=0 is DC, bin_label=r_max+r_step is highest included freq, bin_label=r_max+2*r_step is frequencies excluded by D//2 spherical mask
 
     # prepare mask
-    if mask is None or mask == 'none':
-        mask = np.ones_like(vol1)
-    elif mask == 'sphere':
-        mask = np.where(r <= boxsize // 2, True, False)
-    elif mask == 'tight':
-        mask = np.where(vol1 >= np.percentile(vol1, 99.99) / 2, True, False)
-    elif mask == 'soft':
-        mask = np.where(vol1 >= np.percentile(vol1, 99.99) / 2, True, False)
-        mask = ndimage.morphology.binary_dilation(mask, iterations=dilate)
-        distance_to_mask = ndimage.morphology.distance_transform_edt(~mask)
-        distance_to_mask = np.where(distance_to_mask > dist, dist, distance_to_mask) / dist
-        mask = np.cos((np.pi / 2) * distance_to_mask)
-    elif mask.endswith('.mrc'):
+    if mask.endswith('.mrc'):
         assert os.path.exists(os.path.abspath(mask))
         mask, _ = mrc.parse_mrc(mask)
     else:
-        raise ValueError
+        mask = calc_real_space_mask(vol1=vol1,
+                                    vol2=vol2,
+                                    mask=mask,
+                                    thresh=thresh,
+                                    dilate=dilate,
+                                    dist=dist)
 
     # apply mask in real space
     assert mask.shape == vol1.shape, f'Mask shape {mask.shape} does not match volume shape {vol1.shape}'
@@ -369,10 +412,58 @@ def calc_fsc(vol1: np.ndarray | str,
     return x, fsc
 
 
-def calculate_lowpass_filter_mask(boxsize: int,
-                                  angpix: float,
-                                  lowpass: float,
-                                  device: torch.device | None = None) -> np.ndarray | torch.Tensor:
+def calc_cc(vol1: np.ndarray | str,
+            vol2: np.ndarray | str,
+            mask: str | None = None,
+            thresh: int = 99,
+            dilate: int | None = None,
+            dist: int | None = None) -> float:
+    """
+    Helper function to calculate the zero-mean correlation coefficient as defined in eq 2 in https://journals.iucr.org/d/issues/2018/09/00/kw5139/index.html
+    vol1 and vol2 should be maps of the same box size, shape (boxsize, boxsize, boxsize)
+    :param vol1: path to volume1.mrc, boxsize D,D,D, or ndarray of vol1 voxels
+    :param vol2: path to volume2.mrc, boxsize D,D,D, or ndarray of vol2 voxels
+    :param mask: mask to calculate from volumes, one of [None, 'sphere', 'tight', 'soft']
+    :param thresh: data percentile threshold at which to binarize mask when calculating 'tight' or initializing 'soft' masks
+    :param dilate: for soft mask, number of pixels to expand auto-determined tight mask
+    :param dist: for soft mask, number of pixels over which to apply soft edge
+    :return correlation coefficient
+    """
+    # load masked volumes in real space
+    if isinstance(vol1, np.ndarray):
+        pass
+    else:
+        vol1, _ = mrc.parse_mrc(vol1)
+        vol2, _ = mrc.parse_mrc(vol2)
+    assert vol1.shape == vol2.shape
+
+    # prepare mask
+    if mask.endswith('.mrc'):
+        assert os.path.exists(os.path.abspath(mask))
+        mask, _ = mrc.parse_mrc(mask)
+    else:
+        mask = calc_real_space_mask(vol1=vol1,
+                                    vol2=vol2,
+                                    mask=mask,
+                                    thresh=thresh,
+                                    dilate=dilate,
+                                    dist=dist)
+
+    # apply mask in real space
+    assert mask.shape == vol1.shape, f'Mask shape {mask.shape} does not match volume shape {vol1.shape}'
+    vol1 *= mask
+    vol2 *= mask
+
+    zmean1 = (vol1 - np.mean(vol1))
+    zmean2 = (vol2 - np.mean(vol2))
+    cc = (np.sum(zmean1 ** 2) ** -0.5) * (np.sum(zmean2 ** 2) ** -0.5) * np.sum(zmean1 * zmean2)
+    return cc
+
+
+def calc_lowpass_filter_mask(boxsize: int,
+                             angpix: float,
+                             lowpass: float,
+                             device: torch.device | None = None) -> np.ndarray | torch.Tensor:
     """
     Calculate a binary mask to later be multiplied into a fourier space volume to lowpass filter said volume.
     Useful to pre-cache a lowpass filter mask that will be used repeatedly (e.g. evaluating many volumes with `eval_vol.py`)
@@ -420,10 +511,10 @@ def lowpass_filter(vol_ft: np.ndarray | torch.Tensor,
     """
     # calculate the binary mask corresponding to the desired lowpass filter
     device = vol_ft.device if type(vol_ft) is torch.Tensor else None
-    lowpass_mask = calculate_lowpass_filter_mask(boxsize=vol_ft.shape[0],
-                                                 angpix=angpix,
-                                                 lowpass=lowpass,
-                                                 device=device)
+    lowpass_mask = calc_lowpass_filter_mask(boxsize=vol_ft.shape[0],
+                                            angpix=angpix,
+                                            lowpass=lowpass,
+                                            device=device)
     # multiply the binary mask into the volume
     vol_ft = vol_ft * lowpass_mask
     return vol_ft

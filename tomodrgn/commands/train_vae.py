@@ -537,7 +537,7 @@ def convergence_volumes_testtest_scale(workdir, epoch, volume_count=100):
 
     # iterate through zipped indices, loading volumes and calculating CC
     from tomodrgn.mrc import parse_mrc
-    from tomodrgn.commands.convergence_vae import calc_cc
+    from tomodrgn.utils import calc_cc
     for i, j in zip(row_ind, col_ind):
         vol_train, vol_train_header = parse_mrc(f'{workdir}/scratch.{epoch}.train/vol_{i:03d}.mrc')
         vol_test, vol_test_header = parse_mrc(f'{workdir}/scratch.{epoch}.test/vol_{j:03d}.mrc')

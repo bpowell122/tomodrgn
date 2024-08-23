@@ -78,7 +78,7 @@ def make_plots(resolution: np.ndarray,
                   outpath=f'{outdir}/convergence_nn_fsc0.143integral.png',
                   linestyle='-', marker='.', mfc='red', mec='red', markersize=2)
     plt.close()
-    epoch_colors = analysis.get_colors(len(epochs), 'coolwarm')
+    epoch_colors = analysis.get_colors_matplotlib(len(epochs), 'coolwarm')
     for epoch in epochs:
         plot_and_save(x_values=resolution,
                       y_values=fscs.T[:, epoch],

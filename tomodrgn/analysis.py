@@ -60,9 +60,9 @@ def parse_all_losses(run_log: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         lines = f.readlines()
     lines = [x for x in lines if '====>' in x]
 
-    loss_mse = np.asarray([x.split()[10][:-1] for x in lines])
-    loss_kld = np.asarray([x.split()[13][:-1] for x in lines])
-    loss_total = np.asarray([x.split()[17][:-1] for x in lines])
+    loss_mse = np.asarray([x.split()[10][:-1] for x in lines], dtype=float)
+    loss_kld = np.asarray([x.split()[13][:-1] for x in lines], dtype=float)
+    loss_total = np.asarray([x.split()[17][:-1] for x in lines], dtype=float)
 
     return loss_mse, loss_kld, loss_total
 
@@ -337,8 +337,8 @@ def get_ind_for_cluster(labels: np.ndarray,
 ############
 
 
-def get_colors(num_colors: int,
-               cmap: Colormap | str | None = None) -> list[tuple[float, float, float, float]]:
+def get_colors_matplotlib(num_colors: int,
+                          cmap: Colormap | str | None = None) -> list[tuple[float, float, float, float]]:
     """
     Sample num_colors colors from the specified color map as RGBA tuples
     :param num_colors: the number of colors to sample from the color map.
@@ -370,6 +370,29 @@ def get_colors(num_colors: int,
     else:
         colors = [cm(i / num_colors) for i in range(num_colors)]
 
+    return colors
+
+
+def get_colors_chimerax(num_colors: int) -> list[tuple[float, float, float, float]]:
+    """
+    Sample num_colors from the ChimeraX color scheme as RGBA tuples normalized [0,1].
+    :param num_colors: the number of colors to sample from the color map.
+            The first num_colors colors are sampled sequentially.
+            If more colors are requested than exist in the ChimeraX color scheme, colors are repeated in order.
+    :return: list of RGBA tuples for each color sampled from the color map.
+    """
+    chimerax_colors = np.divide(((192, 192, 192, 255),
+                                 (255, 255, 178, 255),
+                                 (178, 255, 255, 255),
+                                 (178, 178, 255, 255),
+                                 (255, 178, 255, 255),
+                                 (255, 178, 178, 255),
+                                 (178, 255, 178, 255),
+                                 (229, 191, 153, 255),
+                                 (153, 191, 229, 255),
+                                 (204, 204, 153, 255)), 255)
+
+    colors = [chimerax_colors[i % len(chimerax_colors)] for i in range(num_colors)]
     return colors
 
 
@@ -560,8 +583,8 @@ def plot_by_cluster(x: np.ndarray,
     # get colors for clusters by sampling cmap
     if type(labels_sel) is int:
         labels_sel = list(range(labels_sel))
-    colors = get_colors(num_colors=len(labels_sel),
-                        cmap=cmap)
+    colors = get_colors_matplotlib(num_colors=len(labels_sel),
+                                   cmap=cmap)
 
     # scatter by cluster
     for i, label_sel in enumerate(labels_sel):
@@ -625,7 +648,7 @@ def plot_by_cluster_subplot(x: np.ndarray,
     # get colors for clusters by sampling cmap
     if type(labels_sel) is int:
         labels_sel = list(range(labels_sel))
-    colors = get_colors(len(labels_sel), cmap)
+    colors = get_colors_matplotlib(len(labels_sel), cmap)
 
     # create base plot
     ncol = int(np.ceil(len(labels_sel) ** .5))

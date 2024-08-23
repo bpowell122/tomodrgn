@@ -193,10 +193,10 @@ def main(args):
         extent = lattice.extent
         iht_downsample_scaling_correction = 1.
     if args.lowpass is not None:
-        lowpass_mask = utils.calculate_lowpass_filter_mask(boxsize=boxsize_ht,
-                                                           angpix=angpix,
-                                                           lowpass=args.lowpass,
-                                                           device=None)
+        lowpass_mask = utils.calc_lowpass_filter_mask(boxsize=boxsize_ht,
+                                                      angpix=angpix,
+                                                      lowpass=args.lowpass,
+                                                      device=None)
         lowpass_mask = lowpass_mask[np.newaxis, ...]
     else:
         lowpass_mask = None
