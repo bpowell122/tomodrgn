@@ -514,7 +514,9 @@ class TiltSeriesEncoder(nn.Module):
 
         assert hidden_layers_a >= 0  # possible to have no hidden layers, just a direct mapping from input to output
         assert hidden_layers_b >= 0  # possible to have no hidden layers, just a direct mapping from input to output
-        assert ntilts > 1  # having ntilts == 1 is very likely to cause problems with squeezing and broadcasting tensors
+        if pooling_function in ['concatenate', 'set_encoder']:
+            # other pooling functions do not use ntilts so not relevant
+            assert ntilts > 1  # having ntilts == 1 is very likely to cause problems with squeezing and broadcasting tensors
 
         # encoder1 encodes each identically-masked tilt image, independently
         self.encoder_a = ResidLinearMLP(in_dim, hidden_layers_a, hidden_dim_a, out_dim_a, activation)

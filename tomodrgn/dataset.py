@@ -167,11 +167,20 @@ class TiltSeriesMRCData(data.Dataset):
 
         # determine the order in which to return the images and related parameters
         if self.constant_mintilt_sampling:
+            # always return ntilts_training number of images from each particle
+            # loading different particles will always return the same number of tilt images
             if self.sequential_tilt_sampling:
                 zero_indexed_ind = np.arange(self.ntilts_training)  # take first ntilts_training images for deterministic loading/debugging
             else:
                 zero_indexed_ind = np.asarray(np.random.choice(len(ptcl_img_ind), size=self.ntilts_training, replace=False))
             ptcl_img_ind = ptcl_img_ind[zero_indexed_ind]
+        else:
+            # always return all images associated with each image
+            # loading different particles can return different numbers of tilt images
+            if self.sequential_tilt_sampling:
+                pass
+            else:
+                np.random.shuffle(ptcl_img_ind)
 
         # load and preprocess the images to be returned
         if self.lazy:

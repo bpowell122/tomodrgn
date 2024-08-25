@@ -547,15 +547,21 @@ def main(args):
                 can have any number of tilts per particle
         '''
         if args.batch_size == 1 and not args.multigpu:
-            # can sample all images specified by inds_train and inds_test for each particle in each batch
-            data_train.ntilts_training = None
-            flog(f'Will sample {data_train.ntilts_training} tilts per particle for train split, to pass to encoder, due to model requirements of --pooling-function {args.pooling_function}')
+            # can sample all images specified by inds_train and inds_test for each particle in each batch.
+            # this works even if different particles have different numbers of tilts because we have batch size 1,
+            # so we do not need to worry about dataloader collating ragged tensors in the ntilts dimension
+            data_train.constant_mintilt_sampling = False
+            flog(f'Will sample all train tilts of each particle for train split, to pass to encoder, due to model requirements of --pooling-function {args.pooling_function}')
             if args.fraction_train < 1:
-                data_test.ntilts_training = None
-                flog(f'Will sample {data_test.ntilts_training} tilts per particle for test split, to pass to encoder, due to model requirements of --pooling-function {args.pooling_function}')
+                data_test.constant_mintilt_sampling = False
+                flog(f'Will sample all test tilts of each particle for test split, to pass to encoder, due to model requirements of --pooling-function {args.pooling_function}')
         else:
             # TODO implement ntilt_training calculation for set-style encoder with batchsize > 1
-            raise NotImplementedError
+            if data_train.ntilts_range[0] == data_train.ntilts_range[1]:
+                data_train.ntilts_training = data_train.ntilts_range[0]
+                flog(f'Will sample {data_train.ntilts_training} tilts per particle for train split, to pass to encoder, due to model requirements of --pooling-function {args.pooling_function}')
+            else:
+                raise NotImplementedError
     elif args.pooling_function in ['concatenate', 'set_encoder']:
         # requires same number of tilts for both test and train for every particle
         # therefore add further subset train/test to sample same number of tilts from each for each particle
