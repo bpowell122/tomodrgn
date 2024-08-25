@@ -127,6 +127,11 @@ def main(args):
                                                weights=args.weights,
                                                device=device)
 
+    # check that ntilts of new input images is compatible with ntilts of trained model encoder b
+    if model.encoder.pooling_function in ['concatenate', 'set_encoder']:
+        assert model.encoder.ntilts <= data.ntilts_range[0], \
+            f'The loaded model requires a minimum of {model.encoder.ntilts} tilt images per particle, but some input particles contain as few as {data.ntilts_range[0]} tilt images'
+
     # evaluation loop
     log('Embedding particle images in latent space ...')
     z_mu, z_logvar = encoder_inference(model=model,
