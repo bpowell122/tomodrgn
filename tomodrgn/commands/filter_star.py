@@ -126,15 +126,15 @@ def main(args):
     log(args)
 
     # filter using the appropriate type of star file
-    if args.starfile_type == 'image_series':
+    if args.starfile_type == 'imageseries':
         star = filter_image_series_starfile(star_path=args.input,
                                             ind_path=args.ind,
                                             ind_type=args.ind_type,
-                                            ind_action=args.ind_action, )
-    elif args.starfile_type == 'volume_series':
+                                            ind_action=args.action, )
+    elif args.starfile_type == 'volumeseries':
         star = filter_volume_series_starfile(star_path=args.input,
                                              ind_path=args.ind,
-                                             ind_action=args.ind_action, )
+                                             ind_action=args.action, )
     else:
         raise ValueError('Unknown starfile type')
 
