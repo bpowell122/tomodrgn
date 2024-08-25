@@ -137,6 +137,12 @@ class LatentGraph(object):
 
     def plot_graph(self,
                    data: np.ndarray) -> tuple[plt.Figure, plt.Axes]:
+        """
+        Plot a 2-D graph of the data underlying the LatentGraph object.
+        Scatter plot all points; draw line segments between connected graph components.
+        :param data: data array from which this graph object was created, shape (nptcls, zdim)
+        :return: the created graph figure and its contained axis
+        """
         fig, ax = plt.subplots(figsize=(8, 8))
 
         # plot the latent embeddings as scatter points
@@ -146,7 +152,7 @@ class LatentGraph(object):
         for src, dest in self.edge_length.keys():
             ax.plot(data[[src, dest], 0], data[[src, dest], 1], linewidth=0.5, alpha=0.1, color='black', rasterized=True)
 
-        edges_to_plot = [data[[src, dest]] for src, dest in self.edge_length.keys()]
+        edges_to_plot = [data[[src, dest], :2] for src, dest in self.edge_length.keys()]
         line_collection = LineCollection(edges_to_plot, linewidths=0.5, alpha=0.1, color='black', rasterized=True)
         ax.add_collection(line_collection)
 
@@ -160,6 +166,15 @@ class LatentGraph(object):
                   data: np.ndarray,
                   anchor_inds: list[int],
                   path_inds: list[int]) -> tuple[plt.Figure, plt.Axes]:
+        """
+        Plot a 2-D graph of the data underlying the LatentGraph object, superimposed by a series of connected paths.
+        The connected paths are drawn as red line segments.
+        Data (particle) indices along path are annotated, with anchor points defining path search input marked in bold.
+        :param data: data array from which this graph object was created, shape (nptcls, zdim)
+        :param anchor_inds: list of node indices used as anchors to define start and end of each searched path segment
+        :param path_inds: list of node indices defining each minimum-distance path, in order of input anchor indices
+        :return: the created graph figure and its contained axis
+        """
 
         # create a base plot of the graph
         fig, ax = self.plot_graph(data=data)
@@ -176,13 +191,15 @@ class LatentGraph(object):
                                             s=str(path_ind),
                                             ha='center',
                                             va='center',
+                                            color='red',
                                             weight='bold'))
             else:
                 annotations.append(plt.text(x=float(data[path_ind, 0]),
                                             y=float(data[path_ind, 1]),
                                             s=str(path_ind),
                                             ha='center',
-                                            va='center'))
+                                            va='center',
+                                            color='red'))
         adjust_text(texts=annotations,
                     expand=(1.5, 1.5),
                     arrowprops=dict(arrowstyle='->', color='black'))
@@ -203,7 +220,7 @@ def main(args):
     nptcls, zdim = data.shape
     for i in args.anchors:
         assert i < nptcls, f'A particle index in --anchors exceeds the number of particles found in {args.z}: {nptcls}'
-    assert len(args.anchors) >= 2, 'At least 2 anchors required to initialize path search'
+    assert len(args.anchors) >= 2, 'At least 2 anchors (beginning and ending particles) required to initialize path search'
 
     # construct the graph of connected neighbors in latent space (connected meaning Euclidean nearest within a threshold)
     graph = LatentGraph.construct_from_array(data=data,
