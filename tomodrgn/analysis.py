@@ -788,6 +788,36 @@ def plot_label_count_distribution(ptcl_star: starfile.TiltSeriesStarfile,
     ax.set_ylabel('class label')
 
 
+def plot_three_column_correlation(reference_array: np.ndarray,
+                                  query_array: np.ndarray,
+                                  reference_names: list[str],
+                                  query_name: str) -> None:
+    """
+    Plot two reference vectors (e.g. l-UMAP1 and l-UMAP2) for potential correlation with a third query vector (e.g. CoordinateX, DefocusU, etc).
+    Produces a figure with 1 row and 3 columns of subplots: (1) hexbin of reference vector 1 vs query vector;
+    (2) hexbin of reference vector 2 vs query vector; (3) scatter of reference vector 1 vs reference vector 2 colored by query vector.
+    :param reference_array: array of reference vector values, shape (nptcls, 2)
+    :param query_array: array of query vector values, shape (nptcls, 1)
+    :param reference_names: list naming each reference vector
+    :param query_name: name of query vector
+    :return: None
+    """
+    fig, (ax0, ax1, ax2) = plt.subplots(nrows=1, ncols=3, figsize=(8, 2.5))
+
+    ax0.hexbin(reference_array[:, 0], query_array)
+    ax0.set_xlabel(reference_names[0])
+    ax0.set_ylabel(query_name)
+
+    ax1.hexbin(reference_array[:, 1], query_array)
+    ax1.set_xlabel(reference_names[1])
+    ax1.set_ylabel(query_name)
+
+    scatter1 = ax2.scatter(reference_array[:, 0], reference_array[:, 1], c=query_array, cmap='viridis', s=0.5)
+    fig.colorbar(scatter1, ax=ax2, label=query_name)
+    ax2.set_xlabel(reference_names[0])
+    ax2.set_ylabel(reference_names[1])
+
+
 def ipy_plot_interactive(df: pd.DataFrame) -> widgets.Box:
     """
     Create and display an interactive plotly scatter plot and associated ipywidgets custom widgets, allowing exploration of numeric columns of a pandas dataframe.

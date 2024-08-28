@@ -417,7 +417,23 @@ def analyze_z_multidimensional(z: np.ndarray,
     plt.savefig(f'{outdir}/kmeans{num_ksamples}/tomogram_label_distribution.png')
     plt.close()
 
-    # TODO make plots of controls vs UMAP
+    # make plots of numeric columns in star file (e.g. pose, coordinate, ctf) for correlations with UMAP
+    os.mkdir(f'{outdir}/controls')
+    if zdim > 2 and not skip_umap:
+        ref_array = utils.load_pkl(f'{outdir}/umap.pkl')
+        ref_names = ['l-UMAP1', 'l-UMAP2']
+    else:
+        ref_array = pc
+        ref_names = ['l-PC1', 'l-PC2']
+    s.filter(sort_ptcl_imgs='dose_ascending', use_first_ntilts=1)  # only want one value per particle
+    for numeric_column in s.df.select_dtypes(include=[np.number]).columns:
+        analysis.plot_three_column_correlation(reference_array=ref_array,
+                                               query_array=s.df[numeric_column].to_numpy(),
+                                               reference_names=ref_names,
+                                               query_name=numeric_column)
+        plt.tight_layout()
+        plt.savefig(f'{outdir}/controls/{numeric_column}.png')
+        plt.close()
 
 
 def main(args):
