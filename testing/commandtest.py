@@ -434,6 +434,26 @@ def add_tests_eval_vol(tester: CommandTester) -> CommandTester:
     return tester
 
 
+def add_tests_analyze_volumes(tester: CommandTester) -> CommandTester:
+    # baseline
+    tester.commands.append('tomodrgn '
+                           'analyze_volumes '
+                           '--voldir output/vae_both_sim_zdim2/eval_vol_allz '
+                           '--config output/vae_both_sim_zdim2/config.pkl '
+                           '--outdir output/vae_both_sim_zdim2/eval_vol_allz_analyze_volumes_mask_sphere '
+                           '--ksample 20 '
+                           '--mask sphere ')
+    # soft mask (unique per vol)
+    tester.commands.append('tomodrgn '
+                           'analyze_volumes '
+                           '--voldir output/vae_both_sim_zdim2/eval_vol_allz '
+                           '--config output/vae_both_sim_zdim2/config.pkl '
+                           '--outdir output/vae_both_sim_zdim2/eval_vol_allz_analyze_volumes_mask_soft '
+                           '--ksample 20 '
+                           '--mask soft ')
+    return tester
+
+
 def add_tests_subtomo2chimerax(tester: CommandTester) -> CommandTester:
     # mode markers
     tester.commands.append('tomodrgn '
@@ -561,6 +581,33 @@ def add_tests_pc_traversal(tester: CommandTester) -> CommandTester:
     return tester
 
 
+def add_tests_view_config(tester: CommandTester) -> CommandTester:
+    # baseline
+    tester.commands.append('tomodrgn '
+                           'view_config '
+                           'output/vae_both_sim_zdim2 ')
+    return tester
+
+
+def add_tests_cleanup(tester: CommandTester) -> CommandTester:
+    # baseline
+    tester.commands.append('cp -R output/vae_both_sim_zdim2 output/vae_both_sim_zdim2_copy_cleaned; '
+                           'tomodrgn '
+                           'cleanup '
+                           'output/vae_both_sim_zdim2_copy_cleaned '
+                           '--weights '
+                           '--zfiles '
+                           '--volumes '
+                           '--test ')
+    tester.commands.append('tomodrgn '
+                           'cleanup '
+                           'output/vae_both_sim_zdim2_copy_cleaned '
+                           '--weights '
+                           '--zfiles '
+                           '--volumes ')
+    return tester
+
+
 def main():
 
     # remove pre-existing output and create new output folder
@@ -581,11 +628,14 @@ def main():
     add_tests_convergence_vae(tester)
     add_tests_analyze(tester)
     add_tests_eval_vol(tester)
+    add_tests_analyze_volumes(tester)
     add_tests_subtomo2chimerax(tester)
     add_tests_filter_star(tester)
     add_tests_eval_images(tester)
     add_tests_graph_traversal(tester)
     add_tests_pc_traversal(tester)
+    add_tests_view_config(tester)
+    add_tests_cleanup(tester)
 
     # run the tests
     tester.run()
