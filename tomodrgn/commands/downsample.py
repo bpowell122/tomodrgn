@@ -31,6 +31,7 @@ def add_args(_parser):
 def mkbasedir(out: str) -> None:
     """
     Create specified output directory, and all required intermediate directories, that do not yet exist.
+
     :param out: path to output directory or file within desired output directory to create
     :return: None
     """
@@ -41,6 +42,7 @@ def mkbasedir(out: str) -> None:
 def warnexists(out: str) -> None:
     """
     Warn if a directory exists.
+
     :param out: directory to check existence.
     :return: None
     """
@@ -53,6 +55,7 @@ def downsample_images(batch_original: torch.Tensor,
                       stop: int) -> torch.Tensor:
     """
     Downsample a batch of real space images by Fourier cropping.
+
     :param batch_original: tensor of real space images, shape (batchsize, boxsize_old, boxsize_old)
     :param start: image pixel index at which to begin including Fourier frequencies in Fourier cropped output
     :param stop:  image pixel index at which to stop including Fourier frequencies in Fourier cropped output
@@ -81,6 +84,7 @@ def write_downsampled_starfile(input_starfile: str,
                                chunk_size: int | None = None) -> None:
     """
     Write a TiltSeriesStarfile describing a downsampled particle stack (optionally chunked into multiple .mrcs files) to disk.
+
     :param input_starfile: path to the star file used to reference original (non-downsampled) images
     :param boxsize_old: the original box size (units: px)
     :param boxsize_new: the new box size after Fourier cropping (units: px)

@@ -120,6 +120,7 @@ def train_batch(*,
                 use_amp: bool = False) -> np.ndarray:
     """
     Train a TiltSeriesHetOnlyVAE model on a batch of tilt series particle images.
+
     :param model: TiltSeriesHetOnlyVAE object to be trained
     :param scaler: GradScaler object to be used for scaling loss involving fp16 tensors to avoid over/underflow
     :param optim: torch.optim.Optimizer object to be used for optimizing the model
@@ -186,6 +187,7 @@ def preprocess_batch(*,
                      batch_ctf_params: torch.Tensor) -> tuple[torch.Tensor, Union[torch.Tensor, None]]:
     """
     Center images via translation and phase flip for partial CTF correction, as needed
+
     :param lat: Hartley-transform lattice of points for voxel grid operations
     :param batch_images: Batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht, boxsize_ht)
     :param batch_trans: Batch of 2-D translation matrices corresponding to `batch_images` known poses, shape (batchsize, ntilts, 2).
@@ -223,6 +225,7 @@ def encode_batch(*,
                  batch_images: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Encode a batch of particles represented by multiple images to per-particle latent embeddings
+
     :param model: TiltSeriesHetOnlyVAE object to be trained
     :param batch_images: Batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht*2)
     :return: z_mu: Direct output of encoder module parameterizing the mean of the latent embedding for each particle, shape (batchsize, zdim)
@@ -243,6 +246,7 @@ def decode_batch(*,
                  z: torch.Tensor) -> torch.Tensor:
     """
     Decode a batch of particles represented by multiple images from per-particle latent embeddings and corresponding lattice positions to evaluate
+
     :param model: TiltSeriesHetOnlyVAE object to be trained
     :param lat: Hartley-transform lattice of points for voxel grid operations
     :param batch_rots: Batch of 3-D rotation matrices corresponding to `batch_images` known poses, shape (batchsize, ntilts, 3, 3)
@@ -277,6 +281,7 @@ def loss_function(*,
                   beta_control: float | None = None) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Calculate generative loss between reconstructed and input images, and beta-weighted KLD between latent embeddings and standard normal
+
     :param z_mu: Direct output of encoder module parameterizing the mean of the latent embedding for each particle, shape (batchsize, zdim)
     :param z_logvar: Direct output of encoder module parameterizing the log variance of the latent embedding for each particle, shape (batchsize, zdim)
     :param batch_images: Batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht**2)
@@ -320,6 +325,7 @@ def encoder_inference(*,
                       **kwargs) -> tuple[np.ndarray, np.ndarray]:
     """
     Run inference on the encoder module using the specified data as input to be embedded in latent space.
+
     :param model: TiltSeriesHetOnlyVAE object to be used for encoder module inference. Informs device on which to run inference.
     :param lat: Hartley-transform lattice of points for voxel grid operations
     :param data: TiltSeriesMRCData object for accessing tilt images with known CTF and pose parameters, to be embedded in latent space
@@ -397,6 +403,7 @@ def save_checkpoint(*,
                     out_z_test: str = None) -> None:
     """
     Save model weights and latent encoding z
+
     :param model: TiltSeriesHetOnlyVAE object used for model training and evaluation
     :param scaler: GradScaler object used for scaling loss involving fp16 tensors to avoid over/underflow
     :param optim: torch.optim.Optimizer object used for optimizing the model

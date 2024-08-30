@@ -30,6 +30,7 @@ class EquivarianceLoss(nn.Module):
                 batch_encoding: torch.Tensor) -> torch.Tensor:
         """
         Rotate each image by a random theta, encode the rotated image, and compute difference in latent encoding versus unrotated image.
+
         :param batch_images: batch of images to be rotated and encoded, shape (batchsize, ntilts, boxsize_ht, boxsize_ht)
         :param batch_encoding: encodings from corresponding non-rotated images, shape (batchsize, zdim)
         :return: MSE difference in latent encodings, shape (1)
@@ -56,6 +57,7 @@ class EquivarianceLoss(nn.Module):
                batch_thetas: torch.Tensor) -> torch.Tensor:
         """
         Rotate each image by theta radians counterclockwise.
+
         :param batch_images: batch of images to be rotated, shape (B, 1, X, Y)
         :param batch_thetas: batch of theta angles corresponding to each image, shape (B)
         :return: batch of rotated images, shape (B, 1, X, Y)

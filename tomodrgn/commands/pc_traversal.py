@@ -28,6 +28,7 @@ def analyze_data_support(z: np.ndarray,
                          cutoff: int = 3) -> np.ndarray:
     """
     Count the number of neighbors in reference array `z` within Euclidean distance `cutoff` of query points `traj`.
+
     :param z: array of latent embeddings, shape (nptcls, zdim)
     :param traj: trajectory of points through latent embedding space, shape (args.n, zdim)
     :param cutoff: Euclidean distance within which to consider points in `z` as neighbors of points in `traj`

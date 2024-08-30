@@ -12,6 +12,7 @@ from torch.distributions import Normal
 def map_to_lie_algebra(v: torch.Tensor) -> torch.Tensor:
     """
     Map a point in R^N to the tangent space at the identity, i.e. to the Lie Algebra
+
     :param v: vector in R^N, (..., 3) in our case
     :return: v converted to Lie Algebra element, (3,3) in our case
     """
@@ -72,6 +73,7 @@ def s2s2_to_SO3(v1: torch.Tensor,
     Project second to orthogonal component.
     Take cross product for third.
     Stack to form SO matrix.
+
     :param v1:
     :param v2:
     :return:
@@ -91,6 +93,7 @@ def s2s2_to_SO3(v1: torch.Tensor,
 def SO3_to_s2s2(r: torch.Tensor) -> torch.Tensor:
     """
     Map batch of SO(3) matrices to s2s2 representation as first two basis vectors, concatenated as Bx6
+
     :param r: SO3 rotation matrices
     :return:
     """
@@ -100,6 +103,7 @@ def SO3_to_s2s2(r: torch.Tensor) -> torch.Tensor:
 def SO3_to_quaternions(r: torch.Tensor) -> torch.Tensor:
     """
     Map batch of SO(3) matrices to quaternions.
+
     :param r: SO3 rotation matrices
     :return: equivalent quaternions
     """
@@ -151,6 +155,7 @@ def SO3_to_quaternions(r: torch.Tensor) -> torch.Tensor:
 def quaternions_to_SO3(q: torch.Tensor) -> torch.Tensor:
     """
     Normalizes q and maps to group matrix.
+
     :param q: input quaternion
     :return: equivalent SO3 rotation matrix
     """
@@ -169,6 +174,7 @@ def random_quaternions(n: int,
                        device: torch.device | None = None) -> torch.Tensor:
     """
     Generate random rotations as quaternions
+
     :param n: number of rotations to generate
     :param dtype: dtype of output tensor
     :param device: device for output tensor
@@ -188,6 +194,7 @@ def random_SO3(n: int,
                device: torch.device | None = None) -> torch.Tensor:
     """
     Generate random rotations as SO3 matrices
+
     :param n: number of rotations to generate
     :param dtype: dtype of output tensor
     :param device: device for output tensor
@@ -202,6 +209,7 @@ def logsumexp(inputs: torch.Tensor,
     """
     Numerically stable logsumexp.
     https://github.com/pytorch/pytorch/issues/2591
+
     :param inputs: A Variable with any shape.
     :param dim: An integer.
     :param keepdim: A boolean.

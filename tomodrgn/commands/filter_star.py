@@ -31,6 +31,7 @@ def filter_image_series_starfile(star_path: str,
                                  ind_action: Literal['keep', 'drop'] = 'keep') -> starfile.TiltSeriesStarfile:
     """
     Filter an imageseries star file by specified indices in-place.
+
     :param star_path: path to image series star file on disk
     :param ind_path: path to indices pkl file on disk
     :param ind_type: should indices be interpreted per particle (multiple images, i.e. multiple rows of df) or per image (individual images, i.e. individual row of df)

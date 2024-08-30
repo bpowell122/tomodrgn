@@ -40,27 +40,6 @@ def add_args(_parser):
     return _parser
 
 
-"""
-plt.scatter
-sns.distplot
-
-gen pc volumes
-
-gen kmeans volumes
-
-sns.jointplot (scatter PC1 vs PC2)
-sns.jointplot (hex PC1 vs PC2)
-analysis.scatter_annotate (PC1 vs PC2 with kmeans centers)
-analysis.scatter_annotate_hex (PC1 vs PC2 with kmeans centers)
-
-if zdim > 2 and not skip_umap:
-    sns.jointplot (scatter UMAP1 vs UMAP2)
-    sns.jointplot (hex UMAP1 vs UMAP2)
-    analysis.scatter_annotate (UMAP1 vs UMAP2 with kmeans centers)
-    analysis.scatter_annotate_hex (UMAP1 vs UMAP2 with kmeans centers)
-"""
-
-
 def analyze_z_onedimensional(z: np.ndarray,
                              outdir: str,
                              vg: analysis.VolumeGenerator,
@@ -68,6 +47,7 @@ def analyze_z_onedimensional(z: np.ndarray,
                              ondata: bool = False) -> None:
     """
     Plotting and volume generation for 1D z
+
     :param z: array of 1-D latent embeddings, shape (nptcls, 1)
     :param outdir: directory in which to save all outputs (plots and generated volumes)
     :param vg: VolumeGenerator instance to aid volume generation at specficied z values
@@ -126,6 +106,7 @@ def analyze_z_multidimensional(z: np.ndarray,
                                num_ksamples: int = 20, ) -> None:
     """
     Plotting and volume generation for multidimensional z
+
     :param z: array of 1-D latent embeddings, shape (nptcls, zdim)
     :param outdir: directory in which to save all outputs (plots and generated volumes)
     :param vg: VolumeGenerator instance to aid volume generation at specficied z values

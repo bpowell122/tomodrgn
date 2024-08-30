@@ -11,6 +11,7 @@ def grid_s1(resol: int) -> np.ndarray:
     """
     Sample S1 at a given resolution (uses uniform sampling).
     The base resolution has 6 samples.
+
     :param resol: resolution at which to sample S1
     :return: array of sampled points
     """
@@ -24,6 +25,7 @@ def grid_s2(resol: int) -> tuple[np.ndarray, np.ndarray]:
     """
     Sample S2 at a given resolution (uses HEALPix sampling).
     The base resolution has 12 samples.
+
     :param resol: resolution at which to sample S2
     :return: array of sampled points
     """
@@ -38,6 +40,7 @@ def hopf_to_quat(theta: np.ndarray,
                  psi: np.ndarray) -> np.ndarray:
     """
     Transform Hopf coordinates to quaternions
+
     :param theta: [0, pi), parameterizes spherical coordinates on S2 together with phi
     :param phi: [0, 2pi), parameterizes spherical coordinates on S2 together with theta
     :param psi: [0, 2pi), parameterizes circle S1
@@ -55,6 +58,7 @@ def hopf_to_quat(theta: np.ndarray,
 def grid_SO3(resol: int) -> np.ndarray:
     """
     Sample points on SO(3) at the specified resolution. Relies on sampling S1 and coset space S2.
+
     :param resol: resolution at which to sample SO(3)
     :return: array of sampled points as quaternions
     """
@@ -69,6 +73,7 @@ def grid_SO3(resol: int) -> np.ndarray:
 def base_SO3_grid() -> np.ndarray:
     """
     Return the base resolution SO(3) grid
+
     :return: array of sampled points
     """
     return grid_SO3(resol=1)
@@ -83,6 +88,7 @@ def get_s1_neighbor(mini: int,
                     curr_res: int) -> tuple[np.ndarray, np.ndarray]:
     """
     Return the 2 nearest neighbors on S1 at the next resolution level
+
     :param mini:
     :param curr_res: current grid resolution
     :return: psi of nearest neighbors on S1, indices of nearest neighbors on S1
@@ -104,6 +110,7 @@ def get_s2_neighbor(mini: int,
                     curr_res: int) -> tuple[np.ndarray, np.ndarray]:
     """
     Return the 4 nearest neighbors on S2 at the next resolution level
+
     :param mini:
     :param curr_res: current grid resolution
     :return: theta and phi of nearest neighbors on S2, indices of nearest neighbors on S2
@@ -116,6 +123,7 @@ def get_s2_neighbor(mini: int,
 def get_base_ind(ind: int) -> tuple[int, int]:
     """
     Return the corresponding S2 and S1 grid index for an index on the base SO3 grid
+
     :param ind: number of points on the SO3 grid
     :return: corresponding S2 and S1 grid indices
     """
@@ -130,6 +138,7 @@ def get_neighbor(quat: np.ndarray,
                  curr_res: int) -> tuple[np.ndarray, np.ndarray]:
     """
     Return the 8 nearest neighbors on SO3 at the next resolution level
+
     :param quat: rotation quaternions
     :param s2i: index of the current resolution level of S2
     :param s1i: index of the current resolution level of S1

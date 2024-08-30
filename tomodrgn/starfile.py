@@ -15,23 +15,11 @@ from tomodrgn import mrc, utils
 class GenericStarfile:
     """
     Class to parse any star file with any number of blocks on disk, or a pre-existing pandas dataframe, to a (dictionary of) pandas dataframes.
-    Input
-        starfile     : path to star file on disk, mutually exclusive with setting `dataframe`
-        dataframe    : pre-existing pandas dataframe, mutually exclusive with setting `starfile`
-    Attributes:
-        sourcefile   : absolute path to source data star file
-        preambles    : list of lists containing text preceeding each block in starfile
-        block_names  : list of names for each data block
-        blocks       : dictionary of {block_name: data_block_as_pandas_df}
-    Methods:
-        _skeletonize : automatically called by __init__ to identify data blocks, column headers, and line numbers to load later
-        _load        : automatically called by __init__ to read all data from .star into pandas dataframes
-        write        : writes all object data to `outstar` optionally with timestamp
-        get_particles_stack : loads all particle images specified by the star file into a numpy array
+
     Notes:
-        Stores data blocks not initiated with `loop_` keyword as a list in the `preambles` attribute
-        Will ignore comments between `loop_` and beginning of data block; will not be preserved if using .write()
-        Will raise a RuntimeError if a comment is found within a data block initiated with `loop`
+       * Stores data blocks not initiated with `loop_` keyword as a list in the `preambles` attribute
+       * Will ignore comments between `loop_` and beginning of data block; will not be preserved if using .write()
+       * Will raise a RuntimeError if a comment is found within a data block initiated with `loop`
     """
 
     def __init__(self,
@@ -40,6 +28,7 @@ class GenericStarfile:
                  dataframe: pd.DataFrame = None):
         """
         Create the GenericStarfile object either by reading a star file on disk, or by passing in a pre-existing pandas dataframe.
+
         :param starfile: path to star file on disk, mutually exclusive with setting `dataframe`
         :param dataframe: pre-existing pandas dataframe, mutually exclusive with setting `starfile`
         """
@@ -65,6 +54,7 @@ class GenericStarfile:
     def _skeletonize(self) -> tuple[list[list[str]], dict[str, [list[str], int, int]]]:
         """
         Parse star file for key data including preamble lines, header lines, and first and last row numbers associated with each data block. Does not load the entire file.
+
         :return: preambles: list (for each data block) of lists (each line preceeding column header lines and following data rows, as relevant)
         :return: blocks: dict mapping block names (e.g. `data_particles`) to a list of constituent column headers (e.g. `_rlnImageName),
             the first file line containing the data values of that block, and the last file line containing data values of that block
@@ -74,6 +64,7 @@ class GenericStarfile:
                            _line_count: int) -> tuple[list[str], str | None, int]:
             """
             Parse a star file preamble (the lines preceeding column header lines and following data rows, as relevant)
+
             :param filehandle: pre-existing file handle from which to read the star file
             :param _line_count: the currently active line number in the star file
             :return: _preamble: list of lines comprising the preamble section
@@ -98,6 +89,7 @@ class GenericStarfile:
                                _line_count: int) -> tuple[list[str], int, int, bool]:
             """
             Parse a single data block of a star file
+
             :param _f: pre-existing file handle from which to read the star file
             :param _line_count: the currently active line number in the star file
             :return: _header: list of lines comprising the column headers of the data block
@@ -162,6 +154,7 @@ class GenericStarfile:
               blocks: dict[str, [list[str], int, int]]) -> dict[str, pd.DataFrame]:
         """
         Load each data block of a pre-skeletonized star file into a pandas dataframe
+
         :param blocks: dict mapping block names (e.g. `data_particles`) to a list of constituent column headers (e.g. `_rlnImageName),
             the first file line containing the data values of that block, and the last file line containing data values of that block
         :return: dict mapping block names (e.g. `data_particles`) to the corresponding data as a pandas dataframe
@@ -172,6 +165,7 @@ class GenericStarfile:
                               _block_end_line: int) -> pd.DataFrame:
             """
             Load a single data block of a pre-skeletonized star file into a pandas dataframe
+
             :param _header: list of column headers (e.g. `_rlnImageName) of the data block
             :param _block_start_line: the first file line containing the data values of the data block
             :param _block_end_line: the last file line containing data values of the data block
@@ -221,6 +215,7 @@ class GenericStarfile:
               timestamp: bool = False) -> None:
         """
         Write out the starfile dataframe(s) as a new file
+
         :param outstar: name of the output star file, optionally as absolute or relative path
         :param timestamp: whether to include the timestamp of file creation as a comment in the first line of the file
         :return: None
@@ -230,6 +225,7 @@ class GenericStarfile:
                                _block_name: str) -> None:
             """
             Write a single star file block to a pre-existing file handle
+
             :param _f: pre-existing file handle to which to write this block's contents
             :param _block_name: name of star file block to write (e.g. `data_`, `data_particles`)
             :return: None
@@ -260,6 +256,7 @@ class GenericStarfile:
                             lazy: bool = False) -> np.ndarray | list[mrc.LazyImage]:
         """
         Load particle images referenced by starfile
+
         :param particles_block_name: name of star file block containing particle path column (e.g. `data_`, `data_particles`)
         :param particles_path_column: name of star file column containing path to particle images .mrcs (e.g. `_rlnImageName`)
         :param datadir: absolute path to particle images .mrcs to override particles_path_column
@@ -319,6 +316,7 @@ class GenericStarfile:
                                   particles_path_column: str = None) -> tuple[list[str], list[np.ndarray]]:
         """
         Group the starfile `particles_path_column` by its referenced mrcs files, then by the indices of images referenced within those mrcs files, respecting star file row order.
+
         :param particles_block_name: name of star file block containing particle path column (e.g. `data_`, `data_particles`)
         :param particles_path_column: name of star file column containing path to particle images .mrcs (e.g. `_rlnImageName`)
         :return: mrcs_files: list of each mrcs path found in the star file that is unique from the preceeding row.
@@ -349,6 +347,7 @@ class GenericStarfile:
                                       column_substring: str = 'Angle') -> str:
         """
         Attempt to identify the block_name of the data block within the star file for which rows refer to particle data (as opposed to optics or other data).
+
         :param column_substring: Search pattern to identify as substring within column name for particles block
         :return: the block name of the particles data block (e.g. `data` or `data_particles`)
         """
@@ -364,41 +363,6 @@ class GenericStarfile:
 class TiltSeriesStarfile(GenericStarfile):
     """
     Class to parse a particle image-series star file from multiple upstream STA software into a consistent format
-    Input            : path to star file
-    Attributes:
-        df                     : alias to the particles dataframe
-        header_pose_phi        : particles dataframe column header for pose angle phi in degrees following RELION conventions
-        header_pose_theta      : particles dataframe column header for pose angle theta in degrees following RELION conventions
-        header_pose_psi        : particles dataframe column header for pose angle psi in degrees following RELION conventions
-        header_pose_tx         : particles dataframe column header for pose shift in x in pixels
-        header_pose_tx_angst   : particles dataframe column header for pose shift in x in Ångstroms
-        header_pose_ty         : particles dataframe column header for pose shift in y in pixels
-        header_pose_ty_angst   : particles dataframe column header for pose shift in y in Ångstroms
-        header_ctf_angpix      : particles dataframe column header for extracted particle pixel size in Ångstroms per pixel
-        header_ctf_defocus_u   : particles dataframe column header for particle defocus U in Ångstroms
-        header_ctf_defocus_v   : particles dataframe column header for particle defocus V in Ångstroms
-        header_ctf_defocus_ang : particles dataframe column header for particle defocus angle in degrees
-        header_ctf_voltage     : particles dataframe column header for microscope voltage in kV
-        header_ctf_cs          : particles dataframe column header for microscope spherical aberration in millimeters
-        header_ctf_w           : particles dataframe column header for microscope amplitude contrast
-        header_ctf_ps          : particles dataframe column header for particle phase shift in degrees
-        header_ptcl_uid        : particles dataframe column header for unique identifier shared among all images of a particle
-        header_ptcl_dose       : particles dataframe column header for cumulative electron dose applied to each image in electrons per square Ångstrom
-        header_ptcl_tilt       : particles dataframe column header for stage tilt relative to electron beam in degrees
-        header_ptcl_image      : particles dataframe column header for index and path of extracted particle image
-        header_ptcl_micrograph : particles dataframe column header for source particle image micrograph or tomogram
-        image_ctf_corrected    : whether extracted particle images are CTF corrected
-        image_dose_weighted    : whether extracted particle images are dose weighted
-        image_tilt_weighted    : whether extracted particle iamges are tilt weighted
-    Methods:
-        _infer_metadata_mapping  : automatically called by __init__ to infer key column names and upstream particle image preprocessing
-        get_tiltseries_pixelsize : returns the extracted particle pixel size in Ångstroms per pixel
-        get_tiltseries_voltage   : returns the microscope acceleration voltage in kV
-        get_ptcl_img_indices     : returns the indices of each tilt image in the particles dataframe grouped by particle ID.
-        get_image_size : returns the image size in pixels by loading the first image's header.
-        make_test_train_split  : creates indices for tilt images assigned to train vs test split
-        plot_particle_uid_ntilt_distribution: plots the distribution of the number of tilt images per particle as a line plot (against star file particle index) and as a histogram.
-        get_particles_stack  :  loads all particle images specified by the star file into a numpy array using partially predefined parent class get_particles_stack
     """
 
     def __init__(self,
@@ -595,6 +559,7 @@ class TiltSeriesStarfile(GenericStarfile):
     def _infer_metadata_mapping(self) -> None:
         """
         Infer particle source software and version for key metadata and extraction-time processing corrections
+
         :return: None
         """
         known_star_headers = {
@@ -737,6 +702,7 @@ class TiltSeriesStarfile(GenericStarfile):
     def headers_rot(self) -> list[str]:
         """
         Shortcut to return headers associated with rotation parameters.
+
         :return: list of particles dataframe header names for rotations
         """
         return [self.header_pose_phi,
@@ -747,6 +713,7 @@ class TiltSeriesStarfile(GenericStarfile):
     def headers_trans(self) -> list[str]:
         """
         Shortcut to return headers associated with translation parameters.
+
         :return: list of particles dataframe header names for translations
         """
         return [self.header_pose_tx,
@@ -756,6 +723,7 @@ class TiltSeriesStarfile(GenericStarfile):
     def headers_ctf(self) -> list[str]:
         """
         Shortcut to return headers associated with CTF parameters.
+
         :return: list of particles dataframe header names for CTF parameters
         """
         return [self.header_ctf_angpix,
@@ -771,6 +739,7 @@ class TiltSeriesStarfile(GenericStarfile):
     def df(self) -> pd.DataFrame:
         """
         Shortcut to access the particles dataframe associated with the TiltSeriesStarfile object.
+
         :return: pandas dataframe of particles metadata
         """
         return self.blocks[self.block_particles]
@@ -780,6 +749,7 @@ class TiltSeriesStarfile(GenericStarfile):
            value: pd.DataFrame) -> None:
         """
         Shortcut to update the particles dataframe associated with the TiltSeriesStarfile object
+
         :param value: modified particles dataframe
         :return: None
         """
@@ -788,6 +758,7 @@ class TiltSeriesStarfile(GenericStarfile):
     def __len__(self) -> int:
         """
         Return the number of rows (images) in the particles dataframe associated with the TiltSeriesStarfile object.
+
         :return: the number of rows in the dataframe
         """
         return len(self.df)
@@ -796,6 +767,7 @@ class TiltSeriesStarfile(GenericStarfile):
         """
         Returns the pixel size of the extracted particles in Ångstroms.
         Assumes all particles have the same pixel size.
+
         :return: pixel size in Ångstroms/pixel
         """
         pixel_sizes = self.df[self.header_ctf_angpix].value_counts().index.to_numpy()
@@ -808,6 +780,7 @@ class TiltSeriesStarfile(GenericStarfile):
     def get_tiltseries_voltage(self) -> float | int:
         """
         Returns the voltage of the microscope used to image the particles in kV.
+
         :return: voltage in kV
         """
         voltages = self.df[self.header_ctf_voltage].value_counts().index.to_numpy()
@@ -821,6 +794,7 @@ class TiltSeriesStarfile(GenericStarfile):
         """
         Returns the indices of each tilt image in the particles dataframe grouped by particle ID.
         The number of tilt images per particle may vary across the STAR file, so a list (or object-type numpy array or ragged torch tensor) is required
+
         :return: indices of each tilt image in the particles dataframe grouped by particle ID
         """
         df_grouped = self.df.groupby(self.header_ptcl_uid, sort=False)
@@ -831,6 +805,7 @@ class TiltSeriesStarfile(GenericStarfile):
         """
         Returns the image size in pixels by loading the first image's header.
         Assumes images are square.
+
         :param datadir: Relative or absolute path to overwrite path to particle image .mrcs specified in the STAR file
         :return: image size in pixels
         """
@@ -852,6 +827,7 @@ class TiltSeriesStarfile(GenericStarfile):
         """
         Filter the TiltSeriesStarfile in-place by image indices (rows) and particle indices (groups of rows corresponding to the same particle).
         Operations are applied in order: `ind_img -> ind_ptcl -> sort_ptcl_imgs -> use_first_ntilts -> use_first_nptcls`.
+
         :param ind_imgs: numpy array or path to numpy array of integer row indices to preserve, shape (N)
         :param ind_ptcls: numpy array or path to numpy array of integer particle indices to preserve, shape (N)
         :param sort_ptcl_imgs: sort the star file images on a per-particle basis by the specified criteria
@@ -957,6 +933,7 @@ class TiltSeriesStarfile(GenericStarfile):
         Create indices for tilt images assigned to train vs test split.
         Images are randomly assigned to one set or the other by respecting `fraction_train` on a per-particle basis.
         Random split is stored in `self.df` under the `self.header_image_random_split` column.
+
         :param fraction_split1: fraction of each particle's tilt images to label split1. All others will be labeled split2.
         :param show_summary_stats: log distribution statistics of particle sampling for test/train splits
         :return: None
@@ -1015,6 +992,7 @@ class TiltSeriesStarfile(GenericStarfile):
         """
         Plot the distribution of the number of tilt images per particle as a line plot (against star file particle index) and as a histogram.
         Defaults to saving plot in the same location as the input star file.
+
         :param outpath: file name to save the plot
         :return: None
         """
@@ -1045,6 +1023,7 @@ class TiltSeriesStarfile(GenericStarfile):
         """
         Calls parent GenericStarfile get_particles_stack.
         Parent method parameters `particles_block_name` and `particles_path_column` are presupplied due to identification of these values during TiltSeriesStarfile instance creation.
+
         :param datadir: absolute path to particle images .mrcs to override particles_path_column
         :param lazy: whether to load particle images now in memory (False) or later on-the-fly (True)
         :return: np.ndarray of shape (n_ptcls * n_tilts, D, D) or list of LazyImage objects of length (n_ptcls * n_tilts)
@@ -1059,6 +1038,7 @@ class TiltSeriesStarfile(GenericStarfile):
               **kwargs) -> None:
         """
         Temporarily removes columns in data_particles dataframe that are present in data_optics dataframe (to restore expected input star file format), then calls parent GenericStarfile write.
+
         :param args: Passed to parent GenericStarfile write
         :param kwargs: Passed to parent GenericStarfile write
         :return: None

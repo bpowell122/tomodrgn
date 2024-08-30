@@ -17,6 +17,7 @@ class Lattice:
         Class for handling a 2-D voxel grid with an odd number of points along each dimension.
         Grid is centered at `(0,0)` and runs from `-extent` to `+extent` with `boxsize` points.
         Frequently used to in the context of a symmetrized Hartley transform in units of 1/px where DC is at the center of the lattice.
+
         :param boxsize: number of grid points along each dimension. Should be odd.
         :param extent: maximum value of the grid along each dimension, typically <= 0.5
         :param ignore_dc: whether to exclude the DC component (0, 0) when generating masks via methods of this class.
@@ -52,6 +53,7 @@ class Lattice:
                               boxsize_new: int) -> torch.Tensor:
         """
         Return a 2-D lattice of coordinates representing a downsampled (fourier-cropped) copy of the original lattice.
+
         :param boxsize_new: number of grid points along each dimension in the downsampled lattice. Should be odd.
         :return: coordinates of the downsampled lattice, shape (boxsize_new ** 2, 3)
         """
@@ -72,6 +74,7 @@ class Lattice:
                         sidelength: int) -> torch.Tensor:
         """
         Return a binary mask for self.coords which restricts coordinates to a centered square lattice
+
         :param sidelength: number of grid points to include in the mask along each dimension
         :return: binary mask, shape (lattice.boxsize ** 2)
         """
@@ -110,6 +113,7 @@ class Lattice:
                           diameter: int) -> torch.Tensor:
         """
         Return a binary mask for self.coords which restricts coordinates to a centered circular lattice
+
         :param diameter: number of grid points to include in the mask along each dimension
         :return: binary mask, shape (lattice.boxsize ** 2)
         """
@@ -142,6 +146,7 @@ class Lattice:
                theta: torch.Tensor) -> torch.Tensor:
         """
         Resample a stack of images on the lattice grid rotated in-plane counterclockwise by a batch of theta angles.
+
         :param images: stack of images to rotate, shape (B,Y,X)
         :param theta: batch of angles in radians, shape (Q)
         :return: rotated images, shape (B,Q,Y,X)
@@ -173,7 +178,8 @@ class Lattice:
         """
         Translate an image by phase shifting its Fourier transform.
         `F'(k) = exp(-2*pi*k*x0)*F(k)`
-        Note that shape img_dims below can either be 2D or 1D (unraveled image)
+        Note: shape img_dims below can either be 2D or 1D (unraveled image)
+
         :param images: fourier transform of image, shape (B, img_dims, 2)
         :param trans: shift in pixels, shape (B, T, 2)
         :param mask: optional mask for lattice coords (img_dims, 1)
@@ -202,6 +208,7 @@ class Lattice:
         Translate an image by phase shifting its Hartley transform
         `H'(k) = cos(2*pi*k*t0)H(k) + sin(2*pi*k*t0)H(-k)`
         img must be 1D unraveled image, symmetric around DC component
+
         :param images: hartley transform of image, shape (B, boxsize_ht)
         :param trans: shift in pixels, shape (B, T, 2)
         :param mask: mask for lattice coords, shape (boxsize_ht, 1)
@@ -232,6 +239,7 @@ class EvenLattice:
         """
         Class for handling a 2-D voxel grid with an even number of points along each dimension.
         Grid is centered at `(0,0)` and runs from `-extent` (inclusive) to `+extent` (exclusive) with `boxsize` points.
+
         :param boxsize: number of grid points along each dimension. Should be even.
         :param extent: maximum value of the grid along each dimension, typically <= 0.5
         :param ignore_dc: whether to exclude the DC component (0, 0) when generating masks via methods of this class.

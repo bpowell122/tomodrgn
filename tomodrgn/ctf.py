@@ -26,11 +26,23 @@ def compute_ctf(lattice: Lattice,
     """
     Calculates the 2-D CTF given spatial frequencies per image and a batch of CTF parameters.
     Implementation of eq. 7 of https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8412055/ with additional reference to https://github.com/jianglab/ctfsimulation/blob/master/ctf_simulation.py
-        `CTF = sin( -π * z * λ * |k|**2 + (π/2) * Cs * λ**3 * |k|**4 - ps )`
 
-        `z = 1/2 * (𝑧1 + 𝑧2) + 1/2 * (𝑧1 − 𝑧2) * cos( 2 * ( 𝛼𝑘 − 𝛼𝑧 ) )`
+    .. math::
 
-        `ps = phase_shift + arcsin(w)`
+        CTF = sin( -\pi * z * \lambda * |k|^2 + (π/2) * Cs * \lambda^3 * |k|^4 - ps )
+
+    where
+
+    .. math::
+
+        z = 1/2 * (𝑧_1 + 𝑧_2) + 1/2 * (𝑧_1 − 𝑧_2) * cos( 2 * ( 𝛼_k − 𝛼_z ) )
+
+    and
+
+    .. math::
+
+        ps = phase shift + arcsin(w)
+
     :param lattice: Lattice object for accessing pre-calculated spatial frequency magnitude and angle from x-axis
     :param angpix: pixel size in angstroms for each image, shape (nimgs, 1)
     :param dfu: defocus U in angstroms for each image, shape (nimgs, 1)
@@ -69,6 +81,26 @@ def compute_ctf(lattice: Lattice,
 
 
 def print_ctf_params(params: np.ndarray | torch.Tensor) -> None:
+    """
+    Print a formatted table of CTF parameters.
+    Assumes that the parameters are ordered as
+       1. image size (px)
+       2. pixel size (Å/px)
+       3. defocus U (Å)
+       4. defocus V (Å)
+       5. defocus angle (Å)
+       6. voltage (kV)
+       7. spherical aberration (mm)
+       8. amplitude contrast ratio
+       9. phase shift (degrees)
+
+    :param params: array of CTF parameters, shape (nimgs, 9) or (9)
+    :return: None
+    """
+    assert params.ndim <= 2
+    if params.ndim == 2:
+        utils.log('Printing CTF parameters for first image only')
+        params = params[0]
     assert len(params) == 9
     utils.log('Image size (pix)  : {}'.format(params[0]))
     utils.log('Å/pix             : {}'.format(params[1]))

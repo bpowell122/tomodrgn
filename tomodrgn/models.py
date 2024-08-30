@@ -87,6 +87,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
              device: torch.device = torch.device('cpu')):
         """
         Constructor method to create an TiltSeriesHetOnlyVAE object from a config.pkl.
+
         :param config: Path to config.pkl or loaded config.pkl
         :param weights: Path to weights.pkl
         :param device: `torch.device` object
@@ -138,6 +139,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         """
         Encode the input batch of particle's tilt images to a corresponding batch of latent embeddings.
         Input images are masked by `self.enc_mask` if provided.
+
         :param batch: batch of particle tilt images to encode, shape (batch, ntilts, boxsize*boxsize)
         :return: `mu`: batch of mean values parameterizing latent embedding as Gaussian, shape (batch, zdim).
                 `logvar`: batch of log variance values parameterizing latent embedding as Gaussian, shape (batch, zdim).
@@ -153,6 +155,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
                z: torch.Tensor) -> torch.Tensor:
         """
         Decode a batch of lattice coordinates concatenated with the corresponding latent embedding to infer the associated voxel intensities.
+
         :param coords: 3-D spatial frequency coordinates (e.g. from Lattice.coords) concatenated with the
                 shape (batch, ntilts * boxsize_ht * boxsize_ht [mask], 3).
         :param z: latent embedding per-particle, shape (batch, zdim)
@@ -164,6 +167,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         """
         Wrapper around torchinfo to display summary of model layers, input and output tensor shapes, and number of trainable parameters.
         Note that the predicted model size assumes float32 input tensors and model weights, which is an overestimate by ~2x if AMP is enabled.
+
         :return: None
         """
         # print the encoder module which we know input size exactly due to fixed ntilt sampling
@@ -198,6 +202,7 @@ class FTPositionalDecoder(nn.Module):
                  feat_sigma: float = 0.5):
         """
         Create the FTPositionalDecoder module.
+
         :param boxsize_ht: fourier-symmetrized box width in pixels (typically odd, 1px larger than input image)
         :param in_dim: number of dimensions of input coordinate lattice, typically 3 (x,y,z) + zdim
         :param hidden_layers: number of intermediate hidden layers in the decoder module
@@ -279,6 +284,7 @@ class FTPositionalDecoder(nn.Module):
              device: torch.device = torch.device('cpu')):
         """
         Constructor method to create an FTPositionalDecoder object from a config.pkl.
+
         :param config: Path to config.pkl or loaded config.pkl
         :param weights: Path to weights.pkl
         :param device: `torch.device` object
@@ -317,6 +323,7 @@ class FTPositionalDecoder(nn.Module):
                             coords: torch.Tensor) -> torch.Tensor:
         """
         Expand coordinates in the Fourier basis with variably spaced wavelengths
+
         :param coords: Tensor or NestedTensor shape (batch, ntilts * boxsize_ht * boxsize_ht [mask], 3).
         :return: Positionally encoded spatial coordinates
         """
@@ -346,6 +353,7 @@ class FTPositionalDecoder(nn.Module):
               z: torch.Tensor) -> torch.Tensor:
         """
         Concatenate each 3-D spatial coordinate (from a particular particle's particular tilt image) with the latent embedding assigned to that particle.
+
         :param coords: 3-D spatial frequency coordinates at which to decode corresponding voxel intensity, possibly NestedTensor, shape (batch, ntilts * boxsize**2 [mask], self.in_dim - zdim)
         :param z: latent embedding for each particle, shape (batch, zdim)
         :return: concatenated coordinates and latent embedding tensors, possibly NestedTensor, shape (batch, ntilts * boxsize**2 [mask], self.in_dim)
@@ -370,6 +378,7 @@ class FTPositionalDecoder(nn.Module):
                 z: torch.Tensor | None = None) -> torch.Tensor:
         """
         Decode a batch of lattice coordinates concatenated with the corresponding latent embedding to Hartley Transform spatial frequency amplitudes.
+
         :param coords: masked 3-D spatial frequency coordinates (e.g. from Lattice.coords), shape (batch, ntilts * boxsize_ht * boxsize_ht [mask], 3)
         :param z: latent embedding per-particle, shape (batch, zdim)
         :return: Decoded voxel intensities at the specified 3-D spatial frequencies.
@@ -388,6 +397,7 @@ class FTPositionalDecoder(nn.Module):
                z: torch.Tensor | None = None) -> torch.Tensor:
         """
         Decode a batch of lattice coordinates concatenated with the corresponding latent embedding to Fourier Transform spatial frequency amplitudes.
+
         :param coords: 3-D spatial frequency coordinates (e.g. from Lattice.coords) concatenated with the shape (batch, ntilts * boxsize_ht * boxsize_ht [mask], 3).
         :param z: latent embedding per-particle, shape (batch, zdim)
         :return: Decoded voxel intensities at the specified 3-D spatial frequencies.
@@ -415,6 +425,7 @@ class FTPositionalDecoder(nn.Module):
                           extent: float) -> torch.Tensor:
         """
         Evaluate the model on 3-D volume coordinates given an optional (batch of) latent coordinate.
+
         :param coords: lattice coords on the x-y plane, shape (boxsize_ht**2, 3)
         :param z: latent embedding associated with the volume to decode, shape (batchsize, zdim)
         :param extent: maximum value of the grid along each dimension, typically <= 0.5 to constrain points to range (-0.5, 0.5)
@@ -480,6 +491,7 @@ class TiltSeriesEncoder(nn.Module):
                  layer_norm: bool = False):
         """
         Create the TiltSeriesEncoder module.
+
         :param in_dim: number of input features to the module (typically the number of pixels in a masked image)
         :param hidden_layers_a: number of intermediate hidden layers in the encoder_a submodule
         :param hidden_dim_a: number of features in each hidden layer in the encoder_a submodule
@@ -575,6 +587,7 @@ class TiltSeriesEncoder(nn.Module):
     def forward(self, batch):
         """
         Pass data forward through the module.
+
         :param batch: Input data tensor, shape (batch, ntilts, boxsize*boxsize[enc_mask])
         :return: Output data tensor, shape (batch, zdim*2)
         """
@@ -595,6 +608,7 @@ class TiltSeriesEncoder(nn.Module):
         Sampling a latent embedding from a gaussian parameterized by mu and logvar is an operation without an associated gradient with respect to inputs, and therefore breaks training.
         We reparamaterize such that the latent embedding is deterministically calculated as `z = epsilon * standard_deviation + mean`.
         This representation "outsources" the randomness from `z` itself to `epsilon`, and allows gradient calculation through `z` to `standard_deviation` and `mean`, and onward to earlier layers.
+
         :param mu: mean parameterizing latent embeddings `z`, shape (batch, zdim)
         :param logvar: log(variance) parameterizing latent embeddings `z`, shape (batch, zdim)
         :return: reparameterized latent embeddings `z`, shape (batch, zdim)
@@ -622,6 +636,7 @@ class ResidLinearMLP(nn.Module):
                  activation: torch.nn.ReLU | torch.nn.LeakyReLU):
         """
         Create the ResidLinearMLP module.
+
         :param in_dim: number of input features to the module
         :param nlayers: number of intermediate hidden layers in the module
         :param hidden_dim: number of features in each hidden layer
@@ -658,6 +673,7 @@ class ResidLinearMLP(nn.Module):
                 x: torch.Tensor) -> torch.Tensor:
         """
         Pass data forward through the module.
+
         :param x: Input data tensor.
         :return: Output data tensor.
         """
@@ -676,6 +692,7 @@ class ResidLinear(nn.Module):
                  nout: int):
         """
         Create the ResidLinear layer.
+
         :param nin: number of input features to the linear layer
         :param nout: number of output features to the linear layer
         """
@@ -686,6 +703,7 @@ class ResidLinear(nn.Module):
                 x: torch.Tensor) -> torch.Tensor:
         """
         Pass data forward through the layer.
+
         :param x: Input data tensor.
         :return: Output data tensor.
         """
@@ -705,6 +723,7 @@ class MedianPool1d(nn.Module):
     def __init__(self, pooling_axis=-2):
         """
         Create the MedianPool1d layer.
+
         :param pooling_axis: the tensor axis over which to take the median
         """
         super().__init__()
@@ -713,6 +732,7 @@ class MedianPool1d(nn.Module):
     def forward(self, x):
         """
         Pass data forward through the layer.
+
         :param x: Input data tensor.
         :return: Output data tensor.
         """
@@ -731,6 +751,7 @@ class DataParallelPassthrough(torch.nn.DataParallel):
                     name: str):
         """
         Get the requested attribute or method from the parent DataParallel module if it exists, otherwise from the wrapped module.
+
         :param name: name of the attribute or method to request
         :return: the requested attribute or method
         """
@@ -745,6 +766,7 @@ def mlp_ascii(input_dim: int, hidden_dims: list[int], output_dim: int):
     Create ASCII art of a fully connected multi-layer perceptron.
     Constraints: number of digits in each dimension cannot exceed 5.
     Sample usage: ``print_mlp_ascii(input_dim=12345, hidden_dims=[128, 128, 128], output_dim=2)``
+
     :param input_dim: dimensionality of input layer
     :param hidden_dims: list of dimensionalities of hidden layers
     :param output_dim: dimensionality of output layer
@@ -789,6 +811,7 @@ def mlp_ascii(input_dim: int, hidden_dims: list[int], output_dim: int):
 def print_tiltserieshetonlyvae_ascii(model: TiltSeriesHetOnlyVAE):
     """
     Print an ASCII art representation of a TiltSeriesHetOnlyVAE model
+
     :param model: the model to represent
     :return: None
     """

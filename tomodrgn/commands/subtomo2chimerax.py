@@ -4,33 +4,34 @@ Particles may be rendered as ChimeraX spherical markers, as a consensus .mrc vol
 Particles may be colored by an array of numeric values per particle, colormapped by a Matplotlib colormap.
 Script adapted from relionsubtomo2ChimeraX.py, written by Huy Bui, McGill University, doi: https://doi.org/10.5281/zenodo.6820119.
 
-Example usage
-    marker mode (places chimerax markers only)
-        ```
-        python tomodrgn/commands/subtomo2chimerax.py \
-            ../m_output_starfiles/10499_22k_box64_angpix6_volumeseries.star \
-            --output test_subtomo2chimerax \
-            --ind ../27_vae_box96_256x3_128_256x3_128_256x3_b1_gaussian/ind_keep.20981_particles.pkl \
-            --mode markers \
-            --marker-radius-angstrom 150 \
-            --coloring-labels analyze.49/kmeans20/labels.pkl
-        ```
+Example usage: marker mode (places chimerax markers only)
 
-    volumes mode (places unique tomoDRGN volumes per particle)
-        ```
-        python tomodrgn/commands/subtomo2chimerax.py \
-            ../m_output_starfiles/10499_22k_box64_angpix6_volumeseries.star \
-            -output test_subtomo2chimerax_volumes \
-            --ind ../27_vae_box96_256x3_128_256x3_128_256x3_b1_gaussian/ind_keep.20981_particles.pkl \
-            --mode volumes \
-            --weights weights.49.pkl \
-            --config config.pkl \
-            --zfile z.49.pkl \
-            --downsample 64 \
-            --vols-apix 11.5625 \
-            --vols-render-level 0.008 \
-            --coloring-labels analyze.49/kmeans20/labels.pkl
-        ```
+.. code-block:: bash
+
+    python tomodrgn/commands/subtomo2chimerax.py \
+        ../m_output_starfiles/10499_22k_box64_angpix6_volumeseries.star \
+        --output test_subtomo2chimerax \
+        --ind ../27_vae_box96_256x3_128_256x3_128_256x3_b1_gaussian/ind_keep.20981_particles.pkl \
+        --mode markers \
+        --marker-radius-angstrom 150 \
+        --coloring-labels analyze.49/kmeans20/labels.pkl
+
+Example usage: volumes mode (places unique tomoDRGN volumes per particle)
+
+.. code-block:: bash
+
+    python tomodrgn/commands/subtomo2chimerax.py \
+        ../m_output_starfiles/10499_22k_box64_angpix6_volumeseries.star \
+        -output test_subtomo2chimerax_volumes \
+        --ind ../27_vae_box96_256x3_128_256x3_128_256x3_b1_gaussian/ind_keep.20981_particles.pkl \
+        --mode volumes \
+        --weights weights.49.pkl \
+        --config config.pkl \
+        --zfile z.49.pkl \
+        --downsample 64 \
+        --vols-apix 11.5625 \
+        --vols-render-level 0.008 \
+        --coloring-labels analyze.49/kmeans20/labels.pkl
 """
 
 import argparse
@@ -128,6 +129,7 @@ def add_args(_parser):
 def validate_volume_mode_arguments(args: argparse.Namespace) -> None:
     """
     Check that required inputs are present depending on the volume rendering mode selected.
+
     :param args: argparse namespace
     :return: None
     """
@@ -150,6 +152,7 @@ def validate_starfile(ptcl_star: starfile.GenericStarfile,
                       tomo_id_col_override: str | None = None) -> tuple[list[str], list[str], float, str]:
     """
     Identify the star file particles data block and relevant columns within it which specify particle coordinates, angle, pixel size, and tomogram name.
+
     :param ptcl_star: volume-series star file (each row refers to a unique particle)
     :param ptcl_block_name: name of the star file data block containing per-particle data (e.g. `data_particles`)
     :param star_angpix_override: optional override to pixel size detected in star file (default identified as first column containing `Pixel` substring)
@@ -208,6 +211,7 @@ def generate_color_per_particle(ptcl_star: starfile.GenericStarfile,
                                 colormap: str | None = None):
     """
     Calculate an RGBA color for each particle's unique label and store both labels and RGBA tuples in the particles star dataframe.
+
     :param ptcl_star: volume-series star file (each row refers to a unique particle)
     :param ptcl_block_name: name of the star file data block containing per-particle data (e.g. `data_particles`)
     :param labels_path: path to array of coloring labels from which to derive each particle's color, shape (nptcls, 1)
@@ -261,6 +265,7 @@ def validate_particles_for_rendering(mode: Literal['volumes', 'volume', 'markers
     """
     Validate that particle volumes can be found for volume-based rendering modes.
     Also sets box size and pixel size of particles for mapback.
+
     :param mode: particle rendering mode for mapback
     :param vols_dir: if mode == 'volumes', should point to directory containing pre-generated volumes for only one tomogram's particles
     :param vol_path: if mode == 'volume', should point to pre-generated single consensus volume
@@ -299,6 +304,7 @@ def write_labels_rgba_by_model(df_one_tomo: pd.DataFrame,
                                outdir_one_tomo: str) -> None:
     """
     Write a text file specifying the mapping between label value - RGBA color - ChimeraX models associated with this label, for the current tomogram'
+
     :param df_one_tomo: volumeseries star file particles dataframe containing label value and label color metadata for only one tomogram's particles
     :param outdir_one_tomo: output directory to save text file
     :return: None
@@ -333,6 +339,7 @@ def write_mapback_script(df_one_tomo: pd.DataFrame,
                          star_angpix: float) -> None:
     """
     Write a .cxc ChimeraX command file to map back all particles specified in df_one_tomo to source tomogram positions using the specified rendering mode and coloring scheme.
+
     :param df_one_tomo: volumeseries star file particles dataframe containing metadata for only one tomogram's particles
     :param outdir_one_tomo: output directory to save .cxc file
     :param vol_paths: list of paths to particle volumes to be loaded and mapped back to tomogram positions

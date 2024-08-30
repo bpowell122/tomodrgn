@@ -24,6 +24,7 @@ class MAB(nn.Module):
                  ln: bool = False):
         """
         Initialize a MAB instance.
+
         :param dim_q: dimensionality of input set
         :param dim_k: dimensionality of "key" matrix, should be the same as dim_q
         :param dim_v: dimensionality of "value" matrix

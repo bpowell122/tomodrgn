@@ -93,6 +93,7 @@ def save_checkpoint(model: FTPositionalDecoder | DataParallelPassthrough,
                     out_weights: str) -> None:
     """
     Evaluate the model with the currently loaded weights; save the resulting consensus volume and model.
+
     :param model: FTPositionalDecoder model to be evaluated
     :param lat: lattice object specifying coordinates to evaluate
     :param optim: optimizer object, to be saved into model pkl
@@ -138,6 +139,7 @@ def train_batch(model: FTPositionalDecoder | DataParallelPassthrough,
                 use_amp: bool = False) -> float:
     """
     Train a FTPositionalDecoder model on a batch of tilt series particle images.
+
     :param model: FTPositionalDecoder object to be trained
     :param scaler: GradScaler object to be used for scaling loss involving fp16 tensors to avoid over/underflow
     :param optim: torch.optim.Optimizer object to be used for optimizing the model
@@ -194,6 +196,7 @@ def preprocess_batch(*,
                      batch_ctf_params: torch.Tensor) -> tuple[torch.Tensor, Union[torch.Tensor, None]]:
     """
     Center images via translation and phase flip for partial CTF correction, as needed
+
     :param lat: Hartley-transform lattice of points for voxel grid operations
     :param batch_images: Batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht, boxsize_ht)
     :param batch_trans: Batch of 2-D translation matrices corresponding to `batch_images` known poses, shape (batchsize, ntilts, 2).
@@ -230,6 +233,7 @@ def decode_batch(*,
                  batch_hartley_2d_mask: torch.Tensor) -> torch.Tensor:
     """
     Decode a batch of particles represented by multiple images from per-particle latent embeddings and corresponding lattice positions to evaluate
+
     :param model: FTPositionalDecoder object to be trained
     :param lat: Hartley-transform lattice of points for voxel grid operations
     :param batch_rots: Batch of 3-D rotation matrices corresponding to `batch_images` known poses, shape (batchsize, ntilts, 3, 3)
@@ -262,6 +266,7 @@ def loss_function(*,
                   batch_hartley_2d_mask: torch.Tensor) -> torch.Tensor:
     """
     Calculate generative loss between reconstructed and input images
+
     :param batch_images: Batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht**2)
     :param batch_images_recon: Reconstructed central slices of Fourier space volumes corresponding to each particle in the batch, shape (batchsize * ntilts * boxsize_ht**2 [`batch_hartley_2d_mask`])
     :param batch_ctf_weights: CTF evaluated at each spatial frequency corresponding to input images, shape (batchsize, ntilts, boxsize_ht**2) or None if no CTF should be applied

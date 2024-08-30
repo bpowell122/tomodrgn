@@ -36,6 +36,7 @@ log = utils.log
 def parse_loss(run_log: str) -> np.ndarray:
     """
     Parse total loss at each epoch from run.log output.
+
     :param run_log: Path to run.log output file.
     :return: array of total loss at each epoch.
     """
@@ -54,6 +55,7 @@ def parse_loss(run_log: str) -> np.ndarray:
 def parse_all_losses(run_log: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Parse MSE, KLD, and total loss at each epoch from run.log output.
+
     :param run_log: Path to run.log output file.
     :return: tuple of arrays for MSE loss, KLD loss, and total loss, at each epoch.
     """
@@ -77,6 +79,7 @@ def run_pca(z: np.ndarray,
             verbose: bool = True) -> tuple[np.ndarray, PCA]:
     """
     Run principal component analysis on the latent embeddings.
+
     :param z: array of latent embeddings, shape (nptcls, zdim)
     :param verbose: if True, log additional information to STDOUT
     :return: tuple of principal-component-transformed latent embeddings and the fit sklearn PCA object
@@ -97,6 +100,7 @@ def get_pc_traj(pca: PCA,
     """
     Sample latent embeddings along specified principal component `dim` at coordininates in PC-space specified by `sampling_points`.
     Note that sampled points are precisely on-pc-axis and are therefore off-data.
+
     :param pca: pre-fit sklearn PCA object from `analysis.run_pca`
     :param dim: PC dimension for the trajectory (1-based index)
     :param sampling_points: array of points to sample along specified principal component.
@@ -123,6 +127,7 @@ def run_tsne(z: np.ndarray,
              **kwargs: Any) -> np.ndarray:
     """
     Run t-SNE dimensionality reduction on latent embeddings.
+
     :param z: array of latent embeddings, shape (nptcls, zdim)
     :param n_components: number of dimensions in the embedded t-SNE space, passed to sklearn.manifold.TSNE
     :param perplexity: related to the number of nearest neighbors that is used in other manifold learning algorithms, passed to sklearn.manifold.TSNE
@@ -145,6 +150,7 @@ def run_umap(z: np.ndarray,
              **kwargs: Any) -> tuple[np.ndarray, umap.UMAP]:
     """
     Run UMAP dimensionality reduction on latent embeddings.
+
     :param z: array of latent embeddings, shape (nptcls, zdim)
     :param random_state: random state for reproducible runs, passed to umap.UMAP
     :param kwargs: additional key word arguments passed to umap.UMAP
@@ -170,6 +176,7 @@ def cluster_kmeans(z: np.ndarray,
     """
     Cluster latent embeddings using k-means clustering.
     If reorder=True, reorders clusters according to agglomerative clustering of cluster centers
+
     :param z: array of latent embeddings, shape (nptcls, zdim)
     :param n_clusters: number of clusters to form, passed to sklearn.cluster.KMeans
     :param random_state: random state for reproducible runs, passed to sklearn.cluster.KMeans
@@ -220,6 +227,7 @@ def cluster_gmm(z: np.ndarray,
                 **kwargs: Any) -> tuple[np.ndarray, np.ndarray]:
     """
     Cluster latent embeddings using a K-component full covariance Gaussian mixture model.
+
     :param z: array of latent embeddings, shape (nptcls, zdim)
     :param n_components: number of components to use in GMM, passed to sklearn.mixture.GaussianMixture
     :param random_state: random state for reproducible runs, passed to sklearn.cluster.KMeans
@@ -246,6 +254,7 @@ def get_nearest_point(data: np.ndarray,
                       query: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """
     Find the closest point in `data` to `query`.
+
     :param data: reference array to locate "on-data" points within, shape (n_ref_points, d_dimensions)
     :param query: query array of "off-data" points, shape (n_query_points, d_dimensions)
     :return: array of the nearest point within `data` to each point in `query` shape (len(query), d_dimensions),
@@ -270,6 +279,7 @@ def convert_original_indices(ind_sel: np.ndarray,
     """
     Convert selected indices relative to a filtered particle stack into indices relative to the unfiltered particle stack.
     Often useful when selecting a subset of indices when analyzing a model itself trained using `--ind` to filter the referenced particle stack.
+
     :param ind_sel: indices to keep from filtered particle stack
     :param n_original: the number of particles in the original unfiltered particle stack
     :param ind_original_sel: indices used to generate the filtered particle stack from the unfiltered particle stack
@@ -296,6 +306,7 @@ def combine_ind(selections_list: list[np.ndarray],
                 kind: Literal['intersection', 'union'] = 'union') -> tuple[np.ndarray, np.ndarray]:
     """
     Combine multiple indices selections by either intersection or union.
+
     :param selections_list: list of arrays of indices to combine
     :param n_ind_total: number of total indices (both selected and not selected)
     :param kind: type of combination selection to perform, one of 'intersection', 'union'
@@ -321,6 +332,7 @@ def get_ind_for_cluster(labels: np.ndarray,
                         selected_clusters: list[int]) -> np.ndarray:
     """
     Get the indices of particles belonging to the selected clusters.
+
     :param labels: array of cluster labels for each particle, shape (nptcls)
     :param selected_clusters: list of selected cluster labels
     :return: array of indices of particles belonging to the selected clusters
@@ -342,6 +354,7 @@ def get_colors_matplotlib(num_colors: int,
                           cmap: Colormap | str | None = None) -> list[tuple[float, float, float, float]]:
     """
     Sample num_colors colors from the specified color map as RGBA tuples
+
     :param num_colors: the number of colors to sample from the color map.
             If using a qualitative colormap such as `tab10`, the first `num_colors` are sampled sequentially.
             Otherwise, colors are sampled uniformly and sequentially from one pass over the entire colormap.
@@ -377,6 +390,7 @@ def get_colors_matplotlib(num_colors: int,
 def get_colors_chimerax(num_colors: int) -> list[tuple[float, float, float, float]]:
     """
     Sample num_colors from the ChimeraX color scheme as RGBA tuples normalized [0,1].
+
     :param num_colors: the number of colors to sample from the color map.
             The first num_colors colors are sampled sequentially.
             If more colors are requested than exist in the ChimeraX color scheme, colors are repeated in order.
@@ -408,6 +422,7 @@ def scatter_annotate(x: np.ndarray,
                      **kwargs: Any) -> Tuple[matplotlib.figure.Figure, plt.Axes]:
     """
     Create a scatter plot with optional annotations for each cluster center and corresponding label.
+
     :param x: array of x coordinates to plot
     :param y: array of y coordinates to plot
     :param centers_xy: optionally an array of x,y coordinates of cluster centers to superimpose, shape (nclusters, 2). Mutually exclusive with specifying `centers_ind`.
@@ -464,6 +479,7 @@ def scatter_annotate_hex(x: np.ndarray,
                          **kwargs: Any) -> sns.FacetGrid:
     """
     Create a hexbin plot with optional annotations for each cluster center and corresponding label.
+
     :param x: array of x coordinates to plot
     :param y: array of y coordinates to plot
     :param centers_xy: optionally an array of x,y coordinates of cluster centers to superimpose, shape (nclusters, 2). Mutually exclusive with specifying `centers_ind`.
@@ -516,6 +532,7 @@ def scatter_color(x: np.ndarray,
                   **kwargs: Any) -> Tuple[matplotlib.figure.Figure, plt.Axes]:
     """
     Create a scatter plot colored by auto-mapped values of `c` according to specified `cmap`, and plot a corresponding colorbar.
+
     :param x: array of x coordinates to plot
     :param y: array of y coordinates to plot
     :param c: array of values by which to map color of each xy point
@@ -563,6 +580,7 @@ def plot_by_cluster(x: np.ndarray,
                     **kwargs) -> Tuple[matplotlib.figure.Figure, plt.Axes]:
     """
     Plot all points `x,y` with colors per class `labels`, with optional annotations for each cluster center and corresponding label.
+
     :param x: array of x coordinates to plot, shape (nptcls)
     :param y: array of y coordinates to plot, shape (nptcls)
     :param labels: array of cluster labels for each particle, shape (nptcls)
@@ -634,6 +652,7 @@ def plot_by_cluster_subplot(x: np.ndarray,
                             **kwargs) -> Tuple[matplotlib.figure.Figure, plt.Axes]:
     """
     Plot all points `x,y` with colors per class `labels` on individual subplots for each of `labels_sel`.
+
     :param x: array of x coordinates to plot, shape (nptcls)
     :param y: array of y coordinates to plot, shape (nptcls)
     :param labels: array of cluster labels for each particle, shape (nptcls)
@@ -679,6 +698,7 @@ def plot_euler(theta: np.ndarray,
                psi: np.ndarray) -> tuple[matplotlib.figure.Figure, matplotlib.figure.Figure, plt.Axes]:
     """
     Plot the distribution of Euler angles as a hexbin of `theta` and `phi`, and a histogram of `psi`.
+
     :param theta: array of euler angles `theta`, shape (nimgs)
     :param phi: array of euler angles `phi`, shape (nimgs)
     :param psi: array of euler angles `psi`, shape (nimgs)
@@ -704,6 +724,7 @@ def plot_euler(theta: np.ndarray,
 def plot_translations(trans) -> matplotlib.figure.Figure:
     """
     Plot the distribution of shifts in x-axis vs shifts in y-axis (units: px)
+
     :param trans: translations in x and y, shape (nimgs, 2)
     :return: matplotlib hexbin figure of tx vs ty, axes of hexbin
     """
@@ -720,6 +741,7 @@ def plot_translations(trans) -> matplotlib.figure.Figure:
 def plot_losses(runlog: str) -> tuple[matplotlib.figure.Figure, plt.Axes]:
     """
     Plot the total loss, reconstruction loss, and KLD divergence per epoch.
+
     :param runlog: the run.log auto-generated by tomodrgn train_vae
     :return: matplotlib figure and axes of line plots for each loss
     """
@@ -748,6 +770,7 @@ def plot_projections(images: np.ndarray,
     """
     Plot a stack of grayscale images.
     The rendered figure has precisely the correct number of pixels for each image, avoiding the default resampling behavior of `plt.imshow`.
+
     :param images: array of images to plot, shape (nimgs, boxsize, boxsize)
     :param labels: list of text labels to annotate the title of each image, len(nimgs)
     :param width_between_imgs_px:
@@ -797,6 +820,7 @@ def plot_label_count_distribution(ptcl_star: starfile.TiltSeriesStarfile,
                                   class_labels: np.ndarray) -> None:
     """
     Plot the distribution of class labels per tomogram or micrograph as a heatmap.
+
     :param ptcl_star: image series star file describing the same number of particles as class_labels
     :param class_labels: array of class labels, shape (nptcls, 1)
     :return: None
@@ -835,8 +859,11 @@ def plot_three_column_correlation(reference_array: np.ndarray,
                                   query_name: str) -> None:
     """
     Plot two reference vectors (e.g. l-UMAP1 and l-UMAP2) for potential correlation with a third query vector (e.g. CoordinateX, DefocusU, etc).
-    Produces a figure with 1 row and 3 columns of subplots: (1) hexbin of reference vector 1 vs query vector;
-    (2) hexbin of reference vector 2 vs query vector; (3) scatter of reference vector 1 vs reference vector 2 colored by query vector.
+    Produces a figure with 1 row and 3 columns of subplots:
+       #. hexbin of reference vector 1 vs query vector;
+       #. hexbin of reference vector 2 vs query vector;
+       #. scatter of reference vector 1 vs reference vector 2 colored by query vector.
+
     :param reference_array: array of reference vector values, shape (nptcls, 2)
     :param query_array: array of query vector values, shape (nptcls, 1)
     :param reference_names: list naming each reference vector
@@ -862,13 +889,14 @@ def plot_three_column_correlation(reference_array: np.ndarray,
 def ipy_plot_interactive(df: pd.DataFrame) -> widgets.Box:
     """
     Create and display an interactive plotly scatter plot and associated ipywidgets custom widgets, allowing exploration of numeric columns of a pandas dataframe.
-     * The scatter plot plots the selected dataframe columns with optional colormapping based on a third dataframe column. Hovertext indicates the hovered particle's row index in the input dataframe.
-     * The widget at bottom left allows control of the scatter plot: column selections for x, y, and colormap; which plotly colormap to use; marker size and opacity.
-     * A custom selection can be made through a lasso selection tool on the scatter plot. The row index of selected points in the input dataframe is displayed in the table at bottom center.
-     * The widget at bottom right allows lasso-selected points to be saved as a numpy array of df row indices stored in a timestamped `pkl` file.
+    * The scatter plot plots the selected dataframe columns with optional colormapping based on a third dataframe column. Hovertext indicates the hovered particle's row index in the input dataframe.
+    * The widget at bottom left allows control of the scatter plot: column selections for x, y, and colormap; which plotly colormap to use; marker size and opacity.
+    * A custom selection can be made through a lasso selection tool on the scatter plot. The row index of selected points in the input dataframe is displayed in the table at bottom center.
+    * The widget at bottom right allows lasso-selected points to be saved as a numpy array of df row indices stored in a timestamped `pkl` file.
 
     Sample usage:
         `ipy_plot_interactive(df)`
+
     :param df: pandas dataframe to interactively plot, colormap, and select points from.
     :return: ipywidgets.Box containing the interactive figure and widgets
     """
@@ -876,6 +904,7 @@ def ipy_plot_interactive(df: pd.DataFrame) -> widgets.Box:
     def initialize_scatterplot(_df: pd.DataFrame) -> go.FigureWidget:
         """
         Initialize the plotly FigureWidget containing the scatter plot drawn with OpenGL backend for performance > 10k points.
+
         :param _df: pandas dataframe to interactively plot
         :return: plotly FigureWidget containing scatter plot (lacking controls for interactive plotting)
         """
@@ -895,6 +924,7 @@ def ipy_plot_interactive(df: pd.DataFrame) -> widgets.Box:
     def initialize_table(_df: pd.DataFrame) -> go.FigureWidget:
         """
         Initialize the plotly FigureWidget containing the Table of scatter point row indices from the input dataframe.
+
         :param _df: pandas dataframe to draw scatter point row indices from.
         :return: plotly FigureWidget containing table (lacking controls for saving indices)
         """
@@ -912,6 +942,7 @@ def ipy_plot_interactive(df: pd.DataFrame) -> widgets.Box:
                            opacity: float) -> None:
         """
         Callback to update the `fig1` scatter plot.
+
         :param xaxis: the column from the dataframe to plot as x-axis values
         :param yaxis: the column from the dataframe to plot as y-axis values
         :param color_by: the column from the dataframe to use for color mapping
@@ -939,6 +970,7 @@ def ipy_plot_interactive(df: pd.DataFrame) -> widgets.Box:
                      selector: plotly.callbacks.LassoSelector | plotly.callbacks.BoxSelector) -> None:
         """
         Callback to update the `fig2` table of selected indices based on the current Lasso or Box selection of points in `fig1` scatter plot.
+
         :param trace: the plotly trace that this callback is called from, mandatory parameter in signature but not explicitly used
         :param points: the selected points associated with the active selection
         :param selector: the selector associated with the trace that this callback is called from, mandatory parameter in signature but not explicitly used
@@ -959,6 +991,7 @@ def ipy_plot_interactive(df: pd.DataFrame) -> widgets.Box:
     def save_indices_pkl_callback(b: widgets.Button) -> None:
         """
         Callback to save the currently selected indices in `fig2` table as a sorted and non-redundant numpy array to a pickle file.
+
         :param b: the clicked button widget calling this callback
         :return: None
         """
@@ -982,6 +1015,7 @@ def ipy_plot_interactive(df: pd.DataFrame) -> widgets.Box:
     def clear_output_callback(b: widgets.Button) -> None:
         """
         Callback to clear text output in the Output widget.
+
         :param b: the clicked button widget calling this callback
         :return: None
         """
@@ -1055,6 +1089,7 @@ class VolumeGenerator:
                  cuda: int | None = None):
         """
         Instantiate a `VolumeGenerator` object.
+
         :param weights_path: path to trained model `weights.*.pkl` from `train_vae.py`
         :param config_path: path to trained model `config.pkl` from `train_vae.py`
         :param downsample: downsample reconstructed volumes to this box size (units: px) by Fourier cropping, None means to skip downsampling
@@ -1077,6 +1112,7 @@ class VolumeGenerator:
         """
         Generate volumes at specified latent embeddings and save to specified output directory.
         Calls `analysis.gen_volumes` which launches a subprocess call to `eval_vol.py`.
+
         :param z_values: array of latent embeddings at which to generate volumes, shape (nptcls, zdim)
         :param outdir: path to output directory in which to save volumes
         :return: None
@@ -1113,6 +1149,7 @@ def gen_volumes(weights_path: str,
     """
     Generate volumes from a trained model.
     Launches a subprocess call to `eval_vol.py`.
+
     :param weights_path: path to trained model `weights.*.pkl` from `train_vae.py`
     :param config_path: path to trained model `config.pkl` from `train_vae.py`
     :param z_path: path to a .txt or .pkl file containing latent embeddings to evaluate, shape (nptcls, zdim)
@@ -1154,10 +1191,9 @@ def load_dataframe(*,
                    labels: np.ndarray | None = None,
                    **kwargs) -> pd.DataFrame:
     """
-    # TODO make a version of this function that auto-scans an analysis.EPOCH dir and loads all standard detected files
-       as part of simplifying the jupyter analysis / visualization notebook.
     Merge known types of numpy arrays into a single pandas dataframe for downstream analysis.
     Only supplied key word arguments will be added as columns to the dataframe.
+
     :param z: array of latent embeddings, shape (nptcls, zdim)
     :param pc: array of PCA-transformed latent embeddings, shape (nptcls, PC-dim)
     :param tsne_emb: array of t-SNE-transformed latent embeddings, shape (nptcls, tSNE-dim)
@@ -1211,10 +1247,11 @@ def recursive_load_dataframe(volumeseries_star_path: str,
                              tomo_id_column: str) -> pd.DataFrame:
     """
     Create merged dataframe containing:
-        (1) imageseries star file used to train model (referenced in train_vae config.pkl)
-        (2) volumeseries star file specified here
-        (3) any *.pkl file found recursively within this notebook's directory which contains a numpy array with first axis shape matching the number of particles in the imageseries star file.
+       #. imageseries star file used to train model (referenced in train_vae ``config.pkl``)
+       #. volumeseries star file specified here
+       #. any ``*.pkl`` file found recursively within this notebook's directory which contains a numpy array with first axis shape matching the number of particles in the imageseries star file.
     Data are added assuming all indexing matches imageseries star file particle order.
+
     :param volumeseries_star_path: absolute path to volume series star file, must reference the same set of particles referenced by the starfile used for tomodrgn train_vae
     :param tomo_id_column: full string name of column containing unique values per tomogram in volseries star file
     :return: pandas dataframe containing all described data
@@ -1322,6 +1359,7 @@ def convert_angstroms_to_voxels(df: pd.DataFrame,
     A starfile (loaded as a dataframe) expresses the 3-D coordinate of each particle typically in either Ångstroms or in pixels (with a pixel size set at particle extraction time).
     In subsequent operations we will wish to plot particle locations superimposed on tomogram voxel data.
     This requires rescaling the particle coordinates from units of Ångstroms or extraction-sized-pixels to tomogram-sized-voxels.
+
     :param df: dataframe containing particle coordinates to rescale
     :param tomogram_array_shape: shape of reconstructed tomogram in voxels
     :param tomo_pixelsize: pixel size of reconstructed tomogram in Å/px
@@ -1351,7 +1389,8 @@ def ipy_tomo_ptcl_viewer(path_to_tomograms: str,
                          df_particles: pd.DataFrame) -> widgets.Box:
     """
     An interactive tomogram and particle viewer using plotly and ipywidgets.
-    Allows correlation of tomogram image data with particle locations with particle metadata attributes expressed in `df_particles`.
+    Allows correlation of tomogram image data with particle locations with particle metadata attributes expressed in ``df_particles``.
+
     :param path_to_tomograms: path to directory containing tomogram volumes
     :param tomo_star_mapping: dictionary mapping tomogram filenames to the corresponding string identifying each tomogram in the volumeseries star file `tomo_id_column` column
     :param tomo_id_column: name of the column within the volumeseries star file that contains unique values for each tomogram

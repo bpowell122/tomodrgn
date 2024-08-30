@@ -12,6 +12,7 @@ def plot_weight_distribution(cumulative_weights: np.ndarray,
                              weight_distribution_index: int = None) -> None:
     """
     Plot distribution of dose weights across tilts in the spirit of https://doi.org/10.1038/s41467-021-22251-8
+
     :param cumulative_weights: array of weights applied per spatial frequency per tilt, shape (ntilts, D, D)
     :param spatial_frequencies: numpy array of spatial frequency at each pixel (units 1/Å), shape (D, D), dtype float
     :param outdir: directory in which to save plot(s)
@@ -53,6 +54,7 @@ def calculate_spatial_frequencies(angpix: float,
                                   boxsize_ht: int) -> np.ndarray:
     """
     Calculate spatial frequencies for image of width D-1 pixels with sampling of angpix Å/px
+
     :param angpix: scalar of pixel size in Å/px, dtype float
     :param boxsize_ht: scalar of fourier-symmetrized box width in pixels (typically odd, 1px larger than input image)
     :return: numpy array of spatial frequency at each pixel (units 1/Å), shape (D, D), dtype float
@@ -69,6 +71,7 @@ def calculate_critical_dose_per_frequency(spatial_frequencies: np.ndarray,
                                           voltage: int) -> np.ndarray:
     """
     Calculate critical dose for spatial frequencies following Grant and Grigorieff 2015
+
     :param spatial_frequencies: numpy array of spatial frequency at each pixel (units 1/Å), shape (D, D), dtype float
     :param voltage: scalar of voltage of electron source in kv, dtype int
     :return: numpy array of critical dose for each spatial frequency, shape (D, D), dtype float
@@ -87,6 +90,7 @@ def calculate_dose_weights(spatial_frequencies_critical_dose: np.ndarray,
                            cumulative_doses: np.ndarray) -> np.ndarray:
     """
     Calculate weight associated with spatial frequencies given cumulative dose and critical dose
+
     :param spatial_frequencies_critical_dose: numpy array of critical dose for each spatial frequency, shape (D, D), dtype float
     :param cumulative_doses: numpy array of cumulative dose in e-/A2 at each tilt, shape (ntilts), dtype float
     :return: numpy array of weight for each spatial frequency at each cumulative dose, shape (ntilts, D, D), dtype float
@@ -114,6 +118,7 @@ def calculate_dose_weights(spatial_frequencies_critical_dose: np.ndarray,
 def calculate_tilt_weights(tilts: np.ndarray) -> np.ndarray:
     """
     Calculate weight per tilt image associated with higher tilt increasing optical path length and decreasing SNR
+
     :param tilts: numpy array of tilt angles in degrees, shape (ntilts,), dtype float
     :return: numpy array of weight per tilt image, shape (ntilts,) dtype float
     """
@@ -125,6 +130,7 @@ def combine_dose_tilt_weights(dose_weights: np.ndarray,
                               tilt_weights: np.ndarray) -> list[np.ndarray]:
     """
     Merge dose weights (per frequency and per tilt) with tilt weights (per tilt) for single output array
+
     :param dose_weights: list of 2-D numpy arrays of weight for each spatial frequency at each cumulative dose, shape (D**2), dtype float
     :param tilt_weights: list of scalar weights per tilt image, shape (1), dtype float
     :return: merged weights per frequency and per tilt, shape (D, D), dtype float
@@ -137,6 +143,7 @@ def calculate_dose_mask(dose_weights: np.ndarray,
                         circular_mask: np.ndarray) -> np.ndarray:
     """
     Create mask as intersection of non-zero dose weights and circular mask
+
     :param dose_weights: numpy array of weight for each spatial frequency at each cumulative dose, shape (ntilts, D, D), dtype float
     :param circular_mask: numpy array of circle inscribed in image box, shape (D, D), dtype bool
     :return: numpy array of pixels contributing positively to SNR, shape (ntilts, nx, nx), dtype bool

@@ -10,6 +10,7 @@ def fft2_center(possibly_batched_imgs: np.ndarray) -> np.ndarray:
     """
     Batch-vectorized 2-D DFT of an even-box sized image(s) as numpy array
     Note: numpy promotes default input dtype np.float32 to output dtype np.complex128
+
     :param possibly_batched_imgs: np.ndarray of images, shape ([N], D, D)
     :return: np.ndarray of images DFT, shape ([N], D, D)
     """
@@ -20,6 +21,7 @@ def fft2_center_torch(possibly_batched_imgs: torch.Tensor) -> torch.Tensor:
     """
     Batch-vectorized 2-D DFT of an even-box sized image(s) as torch tensor
     Note: torch maintains default input dtype torch.float32 to output dtype torch.float32
+
     :param possibly_batched_imgs: torch.tensor of images DFT, shape ([N], D, D)
     :return: torch.tensor of images, shape ([N], D, D)
     """
@@ -30,6 +32,7 @@ def ifft2_center(possibly_batched_imgs: np.ndarray) -> np.ndarray:
     """
     Batch-vectorized 2-D inverse DFT of an even-box sized image(s) as numpy array
     Note: numpy promotes default input dtype np.float32 to output dtype np.complex128
+
     :param possibly_batched_imgs: np.ndarray of images DFT, shape ([N], D, D)
     :return: np.ndarray of images, shape ([N], D, D)
     """
@@ -40,6 +43,7 @@ def ifft2_center_torch(possibly_batched_imgs: torch.Tensor) -> torch.Tensor:
     """
     Batch-vectorized 2-D inverse DFT of an even-box sized image(s) as torch tensor
     Note: torch maintains default input dtype torch.float32 to output dtype torch.float32
+
     :param possibly_batched_imgs: torch.tensor of images DFT, shape ([N], D, D)
     :return: torch.tensor of images, shape ([N], D, D)
     """
@@ -50,6 +54,7 @@ def fft3_center(possibly_batched_vols: np.ndarray) -> np.ndarray:
     """
     Batch-vectorized 3-D DFT of even-box sized volume(s) as numpy array
     Note: numpy promotes default input dtype np.float32 to output dtype np.complex128
+
     :param possibly_batched_vols: np.ndarray of volumes, shape ([N], D, D, D)
     :return: np.ndarray of volumes DFT, shape ([N], D, D, D)
     """
@@ -60,6 +65,7 @@ def fft3_center_torch(possibly_batched_vols: torch.Tensor) -> torch.Tensor:
     """
     Batch-vectorized 3-D DFT of even-box sized volume(s) as torch tensor
     Note: torch maintains default input dtype torch.float32 to output dtype torch.float32
+
     :param possibly_batched_vols: torch.tensor of volumes, shape ([N], D, D, D)
     :return: torch.tensor of volumes DFT, shape ([N], D, D, D)
     """
@@ -70,6 +76,7 @@ def ifft3_center(possibly_batched_vols: np.ndarray) -> np.ndarray:
     """
     Batch-vectorized 3-D inverse DFT of even-sized volume(s) as numpy array
     Note: numpy promotes input dtype np.float32 to output dtype np.complex128
+
     :param possibly_batched_vols: np.ndarray of volumes DFT, shape ([N], D, D, D)
     :return: np.ndarray of volumes, shape ([N], D, D, D)
     """
@@ -80,6 +87,7 @@ def ifft3_center_torch(possibly_batched_vols: torch.Tensor) -> torch.Tensor:
     """
     Batch-vectorized 3-D inverse DFT of even-sized volume(s) as torch tensor
     Note: torch maintains default input dtype torch.float32 to output dtype torch.float32
+
     :param possibly_batched_vols: torch.tensor of volumes DFT, shape ([N], D, D, D)
     :return: torch.tensor of volumes, shape ([N], D, D, D)
     """
@@ -91,6 +99,7 @@ def ht2_center(possibly_batched_imgs: np.ndarray) -> np.ndarray:
     Batch-vectorized 2-D DHT of an even-box sized image(s) as numpy array
     Uses relationship DHT(x) == DFT(x).real - DFT(x).imag == (DFT(x) * (1 + i)).real
     Note: numpy promotes default input dtype np.float32 to output dtype np.float64
+
     :param possibly_batched_imgs: np.ndarray of images, shape ([N], D, D)
     :return: np.ndarray of images DFT, shape ([N], D, D)
     """
@@ -103,6 +112,7 @@ def ht2_center_torch(possibly_batched_imgs: torch.Tensor) -> torch.Tensor:
     Batch-vectorized 2-D DHT of an even-box sized image(s) as torch tensor
     Uses relationship DHT(x) == DFT(x).real - DFT(x).imag == (DFT(x) * (1 + i)).real
     Note: torch maintains default input dtype torch.float32 to output dtype torch.float32
+
     :param possibly_batched_imgs: torch.tensor of images, shape ([N], D, D)
     :return: torch.tensor of images DFT, shape ([N], D, D)
     """
@@ -115,6 +125,7 @@ def iht2_center(possibly_batched_imgs: np.ndarray) -> np.ndarray:
     Batch-vectorized 2-D inverse DHT of an even-box sized image(s) as numpy array
     By definition, is equivalent to forward DHT up to normalization scale factor (of N samples, typically D*D here)
     Note: numpy promotes default input dtype np.float32 to output dtype np.float64
+
     :param possibly_batched_imgs: np.ndarray of images, shape ([N], D, D)
     :return: np.ndarray of images DFT, shape ([N], D, D)
     """
@@ -128,6 +139,7 @@ def iht2_center_torch(possibly_batched_imgs: torch.Tensor) -> torch.Tensor:
     Batch-vectorized 2-D inverse DHT of an even-box sized image(s) as torch tensor
     By definition, is equivalent to forward DHT up to normalization scale factor (of N samples, typically D*D here)
     Note: torch maintains default input dtype torch.float32 to output dtype torch.float32
+
     :param possibly_batched_imgs: torch.tensor of images, shape ([N], D, D)
     :return: torch.tensor of images DFT, shape ([N], D, D)
     """
@@ -141,6 +153,7 @@ def ht3_center(possibly_batched_vols: np.ndarray) -> np.ndarray:
     Batch-vectorized 3-D DHT of even-box sized volume(s) as numpy array
     Uses relationship DHT(x) == DFT(x).real - DFT(x).imag == (DFT(x) * (1 + i)).real
     Note: numpy promotes default input dtype np.float32 to output dtype np.float64
+
     :param possibly_batched_vols: np.ndarray of volumes, shape ([N], D, D, D)
     :return: np.ndarray of volumes DFT, shape ([N], D, D, D)
     """
@@ -153,6 +166,7 @@ def ht3_center_torch(possibly_batched_vols: torch.Tensor) -> torch.Tensor:
     Batch-vectorized 3-D DHT of even-box sized volume(s) as torch tensor
     Uses relationship DHT(x) == DFT(x).real - DFT(x).imag == (DFT(x) * (1 + i)).real
     Note: torch maintains default input dtype torch.float32 to output dtype torch.float32
+
     :param possibly_batched_vols: torch.tensor of volumes, shape ([N], D, D, D)
     :return: torch.tensor of volumes DFT, shape ([N], D, D, D)
     """
@@ -164,6 +178,7 @@ def iht3_center(possibly_batched_vols: np.ndarray) -> np.ndarray:
     """
     Batch-vectorized 3-D inverse DHT of even-sized volume(s) as numpy array
     Note: numpy promotes input dtype np.float32 to output dtype np.complex128
+
     :param possibly_batched_vols: np.ndarray of volumes DHT, shape ([N], D, D, D)
     :return: np.ndarray of volumes, shape ([N], D, D, D)
     """
@@ -176,6 +191,7 @@ def iht3_center_torch(possibly_batched_vols: torch.Tensor) -> torch.Tensor:
     """
     Batch-vectorized 3-D inverse DHT of even-sized volume(s) as torch tensor
     Note: torch maintains default input dtype torch.float32 to output dtype torch.float32
+
     :param possibly_batched_vols: torch.tensor of volumes DHT, shape ([N], D, D, D)
     :return: torch.tensor of volumes, shape ([N], D, D, D)
     """
@@ -188,6 +204,7 @@ def symmetrize_ht(batched_ht_imgs: np.ndarray,
                   preallocated: bool = False) -> np.ndarray:
     """
     Mirror-pads an even-box DHT image (stack) such that DC is at D//2,D//2 and highest frequency is at both D//2,0 and D//2,D
+
     :param batched_ht_imgs: DHT-transformed image stack (such as from `fft.ht3_center`), shape ([N], D, D) or ([N], D+1, D+1)
     :param preallocated: whether the input `batched_ht_imgs` last two dimensions are each padded one pixel larger than the input image to accomodate mirroring.
             Symmetrizing the centered DHT involves mirroring the left-most column and top-most row of each image to the right-most column and bottom-most row.

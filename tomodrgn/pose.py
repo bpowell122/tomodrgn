@@ -65,6 +65,7 @@ class PoseTracker(nn.Module):
              emb_type: Literal['s2s2', 'quat'] | None = None):
         """
         Return a PoseTracker instance given a particle imageseries star file.
+
         :param star: loaded and pre-filtered imageseries star file
         :param boxsize: box size of input images in pixels
         :param emb_type: type of embedding for SO(3) rotation matrices if refining poses
@@ -91,6 +92,7 @@ class PoseTracker(nn.Module):
         Write poses to a pickle file.
         Particularly useful if learning poses (i.e., emb_type is not None).
         Writes poses as tuple of arrays: (euler1, euler2, euler3) in units of degrees, and (shift_x, shift_y) in units of box size fraction
+
         :param out_pkl: path of output pkl file to write
         :return: None
         """
@@ -117,6 +119,7 @@ class PoseTracker(nn.Module):
                  ind: int | np.ndarray | torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Get the (optionally embedded) rotations and translations of the images at specified indices
+
         :param ind: index or indices (numpy array or torch tensor) of images for which to return rotations and translations
         :return: rotations as 3x3 rotation matrices shape(len(ind), 3, 3); rotations as 1x2 translation matrices (shape len(ind), 2) or None
         """

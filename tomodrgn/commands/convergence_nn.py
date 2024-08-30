@@ -28,6 +28,7 @@ def make_plots(resolution: np.ndarray,
                outdir: str) -> None:
     """
     Save an array of standard plots characterizing homogeneous volume model training convergence.
+
     :param resolution: array of resolution values in units 1/px and shape (boxsize // 2)
     :param fscs: array of FSC curves with shape (len(vol_paths), boxsize // 2)
     :param fsc_metrics: array of FSC metrics with shape (3, len(vol_paths)): resolution crossing FSC 0.143, resolution crossing FSC 0.5, integral under FSC before 0.143 crossing
@@ -43,6 +44,7 @@ def make_plots(resolution: np.ndarray,
                       **kwargs) -> None:
         """
         Helper function to produce a line plot and save it as an image to the specified path.
+
         :param x_values: list or array of values to plot along x axis
         :param y_values: list or array of values to plot along y axis
         :param x_label: label for x axis

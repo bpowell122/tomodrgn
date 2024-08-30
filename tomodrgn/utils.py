@@ -26,6 +26,7 @@ def prefix_paths(mrcs: list[str],
     """
     Test which of various modifications to the image .mrcs files correctly locates the files on disk.
     Tries no modification; prepending `datadir` to the basename of each image; prepending `datadir` to the full path of each image.
+
     :param mrcs: list of strings corresponding to the path to each image file specified in the star file (expected format: the `path_to_mrc` part of `index@path_to_mrc`)
     :param datadir: str corresponding to absolute or relative path to prepend to `mrcs`
     :return: list of strings corresponding to the confirmed path to each image file
@@ -47,6 +48,7 @@ def prefix_paths(mrcs: list[str],
 def log(msg: Any) -> None:
     """
     Write a string to STDOUT with a standardized datetime format.
+
     :param msg: Text to write to STDOUT.
     :return: None
     """
@@ -57,6 +59,7 @@ def log(msg: Any) -> None:
 def vlog(msg: Any) -> None:
     """
     Write a string to STDOUT with a standardized datetime format only if `_verbose` is True.
+
     :param msg: Text to write to STDOUT.
     :return: None
     """
@@ -69,6 +72,7 @@ def flog(msg: str,
          outfile: str) -> None:
     """
     Write a string to `outfile` with a standardized datetime format.
+
     :param msg: Text to write to `outfile`.
     :param outfile: Name of log file to write.
     :return: None
@@ -119,6 +123,7 @@ def load_pkl(pkl: str) -> Any:
     """
     Convenience function to read a binary pickle file.
     Only performs one read of the pickle file (so will not return multiple values if the file was created with repeated calls to `pickle.dump`)
+
     :param pkl: Path to file to load from disk.
     :return: Unpickled object.
     """
@@ -131,6 +136,7 @@ def save_pkl(data: Any,
              out_pkl: str) -> None:
     """
     Convenience function to write `data` to a binary pickle file.
+
     :param data: Data to be written to disk.
     :param out_pkl: Path to file to write to disk.
     :return: None
@@ -146,6 +152,7 @@ def rot_3d_from_eman(a: float,
                      y: float) -> np.ndarray:
     """
     Convert Euler angles from EMAN to a 3-D rotation matrix.
+
     :param a: Rotation angle A in degrees.
     :param b: Rotation angle B in degrees.
     :param y: Rotation angle Y in degrees.
@@ -174,6 +181,7 @@ def rot_3d_from_relion(a: float,
                        y: float) -> np.ndarray:
     """
     Convert Euler angles from RELION to a 3-D rotation matrix.
+
     :param a: Rotation angle A in degrees (typically _rlnAngleRot).
     :param b: Rotation angle B in degrees (typically _rlnAngleTilt).
     :param y: Rotation angle Y in degrees (typically _rlnAnglePsi).
@@ -200,6 +208,7 @@ def rot_3d_from_relion_scipy(euler_: np.ndarray,
                              degrees: bool = True) -> np.ndarray:
     """
     Convert a Nx3 array of RELION euler angles to rotation matrices using Scipy Rotations class.
+
     :param euler_: Array of Euler angles to convert to rotation matrices.
     :param degrees: Whether angles in `euler_` are expressed in degrees.
     :return: Nx3x3 array of rotation matrices.
@@ -222,6 +231,7 @@ def rot_3d_to_relion_scipy(rot: np.ndarray,
                            degrees: bool = True) -> np.ndarray:
     """
     Convert an array of Nx3x3 rotation matrices to RELION euler angles using Scipy Rotations class.
+
     :param rot: Nx3x3 array of rotation matrices.
     :param degrees: Whether to express the output Euler angles in degrees
     :return: Nx3 array of RELION euler angles
@@ -248,6 +258,7 @@ def rot_3d_to_relion_scipy(rot: np.ndarray,
 def xrot(tilt_deg: float) -> np.ndarray:
     """
     Return rotation matrix associated with rotation over the x-axis.
+
     :param tilt_deg: Rotation angle in degrees.
     :return: 3x3 rotation matrix.
     """
@@ -261,6 +272,7 @@ def xrot(tilt_deg: float) -> np.ndarray:
 def yrot(tilt_deg: float) -> np.ndarray:
     """
     Return rotation matrix associated with rotation over the y-axis
+
     :param tilt_deg: Rotation angle in degrees.
     :return: 3x3 rotation matrix.
     """
@@ -275,6 +287,7 @@ def yrot(tilt_deg: float) -> np.ndarray:
 def _zero_sphere_helper(boxsize: int) -> np.ndarray:
     """
     Calculate a mask of coordinates corresponding to a sphere inscribed within a cube.
+
     :param boxsize: The number of discrete points along each cube edge
     :return: mask array corresponding to values within the sphere, shape (boxsize, boxsize, boxsize)
     """
@@ -288,6 +301,7 @@ def _zero_sphere_helper(boxsize: int) -> np.ndarray:
 def zero_sphere(vol: np.ndarray) -> np.ndarray:
     """
     Set volume values outside of a sphere inscribed within a cube to zero.
+
     :param vol: Volume array to be modified, shape (boxsize, boxsize, boxsize).
     :return: Volume array after setting corner values to zero, shape (boxsize, boxsize, boxsize).
     """
@@ -307,6 +321,7 @@ def calc_real_space_mask(vol1: np.ndarray,
                          dist: int | None = None) -> np.ndarray:
     """
     Generate a real space mask generated from up to two volumes
+
     :param vol1: array of volume 1, shape (boxsize, boxsize, boxsize)
     :param vol2: array of volume 2, shape (boxsize, boxsize, boxsize)
     :param mask: mask to calculate from volumes, one of [None, 'sphere', 'tight', 'soft']
@@ -356,6 +371,7 @@ def calc_fsc(vol1: np.ndarray | str,
              dist: int | None = None) -> tuple[np.ndarray, np.ndarray]:
     """
     Calculate the FSC between two volumes with optional masking.
+
     :param vol1: path to volume1.mrc, boxsize D,D,D, or ndarray of vol1 voxels
     :param vol2: path to volume2.mrc, boxsize D,D,D, or ndarray of vol2 voxels
     :param mask: mask to calculate from volumes, one of [None, 'sphere', 'tight', 'soft']
@@ -422,6 +438,7 @@ def calc_cc(vol1: np.ndarray | str,
     """
     Helper function to calculate the zero-mean correlation coefficient as defined in eq 2 in https://journals.iucr.org/d/issues/2018/09/00/kw5139/index.html
     vol1 and vol2 should be maps of the same box size, shape (boxsize, boxsize, boxsize)
+
     :param vol1: path to volume1.mrc, boxsize D,D,D, or ndarray of vol1 voxels
     :param vol2: path to volume2.mrc, boxsize D,D,D, or ndarray of vol2 voxels
     :param mask: mask to calculate from volumes, one of [None, 'sphere', 'tight', 'soft']
@@ -468,6 +485,7 @@ def calc_lowpass_filter_mask(boxsize: int,
     """
     Calculate a binary mask to later be multiplied into a fourier space volume to lowpass filter said volume.
     Useful to pre-cache a lowpass filter mask that will be used repeatedly (e.g. evaluating many volumes with `eval_vol.py`)
+
     :param boxsize: number of voxels along one side of the Fourier space symmetrized (DC is box center) volume
     :param angpix: Pixel size of the volume in Ångstroms per pixel.
     :param lowpass: Resolution to filter volume in Ångstroms.
@@ -505,6 +523,7 @@ def lowpass_filter(vol_ft: np.ndarray | torch.Tensor,
                    lowpass: float) -> np.ndarray | torch.Tensor:
     """
     Lowpass-filters a volume in reciprocal space.
+
     :param vol_ft: Fourier space symmetrized (DC is box center) volume as numpy array or torch tensor, shape (boxsize, boxsize, boxsize)
     :param angpix: Pixel size of the volume in Ångstroms per pixel.
     :param lowpass: Resolution to filter volume in Ångstroms.
@@ -526,6 +545,7 @@ def check_memory_usage() -> list[str]:
     Get the current VRAM memory usage of each visible GPU.
     Tries using torch functionality to get memory usage.
     If installed torch does not have this method available, then uses subprocess call to nvidia-smi and parses output.
+
     :return: VRAM usage of each visible GPU as a pre-formatted string.
     """
     try:
@@ -540,6 +560,7 @@ def check_git_revision_hash(repo_path: str) -> str:
     """
     Get the git revision hash of a git repository.
     Uses subprocess call to git and parses output.
+
     :param repo_path: Path to repository for which to check revision hash.
     :return: Git revision hash of HEAD in `repo_path`.
     """
@@ -549,6 +570,7 @@ def check_git_revision_hash(repo_path: str) -> str:
 def get_default_device() -> torch.device:
     """
     Determine whether a CUDA-capable GPU is availble or not for torch operations.
+
     :return: `torch.device('cuda')` if CUDA-capable GPU is available, else `torch.device('cpu')`.
     """
     use_cuda = torch.cuda.is_available()
@@ -562,6 +584,7 @@ def get_default_device() -> torch.device:
 def get_latest(args: argparse.Namespace) -> argparse.Namespace:
     """
     Detect the latest completed epoch of model training and update args to load that epoch's model weights.
+
     :param args: argparse namespace from parse_args. Requires `num_epochs`, `outdir`, and `load` parameters
     :return: updated argparse namespace
     """
@@ -587,6 +610,7 @@ def print_progress_bar(curr_iteration: int,
     Display format is: `PREFIX |*****-----| 50.0% SUFFIX`, updated in-place at STDOUT.
     Intended method of use is calling this function repeatedly within a loop with updated `curr_iteration`.
     The final call in which `curr_iteration == num_iterations` updates the progress bar (in place) and adds a newline for subsequent output.
+
     :param curr_iteration: the current step number through the process being monitored.
     :param num_iterations: the total number of steps in the process being monitored.
     :param prefix: text to be prepended before the progress bar.
@@ -624,6 +648,7 @@ def first_n_factors(target: int,
     Return a list of the first `n` multiplicative factors of a number `target` where no factor is smaller than `lower_bound`.
     Useful to reshape arrays or tensors.
     For example, enables splitting a tensor with batch_dim == 1 to produce batch_dim > 1, as required for multi-gpu DataParallel.
+
     :param target: The number for which to calculate multiplicative factors.
     :param n: The number of multiplicative factors to return.
     :param lower_bound: The minimum multiplicative factor to return.

@@ -50,6 +50,7 @@ def backproject_dataset(data: TiltSeriesMRCData,
                         device: torch.device = torch.device('cpu')) -> tuple[torch.tensor, torch.tensor]:
     """
     Backproject a dataset of 2-D tilt series images to a 3-D Hartley-transformed volume
+
     :param data: TiltSeriesMRCData object for accessing tilt images with known CTF and pose parameters
     :param lattice: Hartley-transform lattice of points for voxel grid operations
     :param device: torch device on which to perform backprojection
@@ -116,6 +117,7 @@ def add_slice(vol_ht: torch.tensor,
               ff: torch.tensor) -> None:
     """
     Add one 2-D Hartley-transformed projection image as central slice to 3-D Hartley-transformed volume, modified in-place
+
     :param vol_ht: torch tensor of 3-D Hartley-transformed volume without count scaling (modified in-place)
     :param counts: torch tensor tracking weighting to be applied to each 3-D spatial frequency of vol_ht (modified in-place)
     :param ff_coord: 3-D lattice coordinates at which to add Hartley-transformed image data for one image, centered at 0
@@ -133,6 +135,7 @@ def add_slice(vol_ht: torch.tensor,
                        _d2: int) -> None:
         """
         Add one 2-D Hartley-transformed projection image to one of 8 integer-valued corners relative to the input interpolated lattice of the 3-D Hartley-transformed voxel lattice, modified in-place
+
         :param _xi: Integer lattice coordinates along x-axis, centered at 0
         :param _yi: Integer lattice coordinates along y-axis, centered at 0
         :param _zi: Integer lattice coordinates along z-axis, centered at 0
@@ -160,6 +163,7 @@ def save_map(vol: torch.tensor,
              flip: bool = False) -> None:
     """
     Inverse Hartley transform and save an input map as a .mrc file
+
     :param vol: torch tensor of 3-D Hartley-transformed volume
     :param vol_path: name of output .mrc file
     :param angpix: pixel size in angstroms per pixel of output .mrc file

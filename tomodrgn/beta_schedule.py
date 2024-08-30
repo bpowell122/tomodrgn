@@ -33,6 +33,7 @@ class LinearSchedule:
                  end_x: float):
         """
         Instantiate a LinearSchedule.
+
         :param start_y: the value of beta to start at iteration 0
         :param end_y: the value of beta to end at end_x iterations. Calling after end_x iterations will return a value clipped by min_y and max_y.
         :param start_x: the iteration associated with start_y for defining the linear fit
@@ -64,6 +65,7 @@ class CyclicalSchedule:
                  increase_function: Literal['linear'] = 'linear'):
         """
         Instantiate a CyclicalSchedule.
+
         :param n_iterations: the total number of iterations over which the CyclicalSchedule is defined.
         :param start_value: the initial value of beta to start at the beginning of each cycle
         :param end_value: the final value of beta at the end of each cycle
@@ -93,6 +95,7 @@ def get_beta_schedule(schedule: float | Literal['a', 'b', 'c', 'd', 'e'],
     """
     Return one of several types of beta schedules: Constant, Linear, or Cyclical.
     Each schedule, when called, returns the beta value from a constant function, linear function, or cyclical function.
+
     :param schedule: if type float, the value of the beta to always return via a Constant Schedule; otherwise, return a pre-configured Linear or Cyclical schedule based on the supplied letter.
     :param n_iterations: If using a CyclicalSchedule, define the total number of batches during training (used to set the period of cycles together with n_cycles).
     :return: a ConstantSchedule, LinearSchedule, or CyclicalSchedule object which may be called to return the next beta value according to the type of schedule.

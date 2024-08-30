@@ -41,6 +41,7 @@ class LatentGraph(object):
                  edges: list[tuple[int, int, float]]):
         """
         Initialize a LatentGraph object from a list of connected edges.
+
         :param edges: list of tuples (src, dest, distance)
         """
         self.nodes = set([x[0] for x in edges] + [x[1] for x in edges])
@@ -58,6 +59,7 @@ class LatentGraph(object):
                              avg_neighbors: int, ):
         """
         Constructor method to create a graph of connected latent embeddings from an array of all latent embeddings.
+
         :param data: array of latent embeddings, shape (nptcls, zdim)
         :param max_neighbors: maximum number of neighbors to initially calculate distances for from each latent embedding
         :param avg_neighbors: used to set a cutoff distance defining connected neighbors such that each embedding will have this many connected neighbors on average
@@ -95,6 +97,7 @@ class LatentGraph(object):
         """
         Standard implementation of Dijkstra's algorithm to find the shortest path through a weighted graph.
         Earliest reference I can find for this code is: https://github.com/theannielin/drkung143/blob/master/q9/dijkstra.py
+
         :param src: index of starting node
         :param dest: index of ending node
         :return: list of node indices connecting src and dest nodes and total distance of that path, or (None, None) if no path can be found
@@ -140,6 +143,7 @@ class LatentGraph(object):
         """
         Plot a 2-D graph of the data underlying the LatentGraph object.
         Scatter plot all points; draw line segments between connected graph components.
+
         :param data: data array from which this graph object was created, shape (nptcls, zdim)
         :return: the created graph figure and its contained axis
         """
@@ -170,6 +174,7 @@ class LatentGraph(object):
         Plot a 2-D graph of the data underlying the LatentGraph object, superimposed by a series of connected paths.
         The connected paths are drawn as red line segments.
         Data (particle) indices along path are annotated, with anchor points defining path search input marked in bold.
+
         :param data: data array from which this graph object was created, shape (nptcls, zdim)
         :param anchor_inds: list of node indices used as anchors to define start and end of each searched path segment
         :param path_inds: list of node indices defining each minimum-distance path, in order of input anchor indices

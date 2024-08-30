@@ -34,15 +34,6 @@ from tomodrgn import utils
 class MRCHeader:
     """
     Class to parse the header of an MRC file and to write a new MRC header to disk.
-
-    Methods:
-        parse : Constructor method to create an MRCHeader object from an MRC file name.
-        make_default_header : Constructor method to create an MRCHeader object describing a 3-D data array.
-        write : Write an MRC file header to the specified file handle.
-        get_apix : Get the pixel size in angstroms per pixel based on header `cella_xlen` and `nx` ratio
-        update_apix : Update the pixel size in angstrom by adjusting the header `cella_xlen`, `cella_ylen`, and `cella_zlen`
-        get_origin : Get the origin of the data coordinate system.
-        update_origin : Update the origin of the data coordinate system.
     """
     # define 1024-byte header fields and associated data types to use when decoding bytes
     fieldnames_structformats = (
@@ -119,6 +110,7 @@ class MRCHeader:
                  extended_header: bytes = b''):
         """
         Directly initialize a MRCHeader object with pre-parsed header values.
+
         :param header_values: tuple of values in correct order to be assigned to `MRCHeader.field_names`, derived from standard 1024-byte header of MRC file
         :param extended_header: byte string of data in extended header of MRC file. Read in but not used.
         """
@@ -135,6 +127,7 @@ class MRCHeader:
               fname: str):
         """
         Constructor method to create an MRCHeader object from an MRC file name.
+
         :param fname: path to MRC file on disk
         :return: MRCHeader object
         """
@@ -196,7 +189,6 @@ class MRCHeader:
             `rms := -1`
             `nlabl := 0`
             `labels := b'\x00' * 84`
-
 
         :param data: array of data to be described by this header
         :param is_vol: whether the data array is a 3-D volume instead of a stack of 2-D images
@@ -275,6 +267,7 @@ class MRCHeader:
               fh: BinaryIO) -> None:
         """
         Write an MRC file header to the specified file handle.
+
         :param fh: filehandle to file on disk opened in binary mode
         :return: None
         """
@@ -291,6 +284,7 @@ class MRCHeader:
     def get_apix(self) -> float:
         """
         Get the pixel size in angstroms per pixel based on header `cella_xlen` and `nx` ratio
+
         :return: pixel size in angstroms
         """
         return self.fields['cella_xlen'] / self.fields['nx']
@@ -299,6 +293,7 @@ class MRCHeader:
                     angpix: float) -> None:
         """
         Update the pixel size in angstrom by adjusting the header `cella_xlen`, `cella_ylen`, and `cella_zlen`
+
         :param angpix:
         :return: None
         """
@@ -309,6 +304,7 @@ class MRCHeader:
     def get_origin(self) -> tuple[float, float, float]:
         """
         Get the origin of the data coordinate system.
+
         :return: origin in (x, y, z)
         """
         return self.fields['origin_x'], self.fields['origin_y'], self.fields['origin_z']
@@ -319,6 +315,7 @@ class MRCHeader:
                       origin_z: float) -> None:
         """
         Update the origin of the data coordinate system.
+
         :param origin_x: new origin along x axis
         :param origin_y: new origin along y axis
         :param origin_z: new origin along z axis
@@ -332,7 +329,8 @@ class MRCHeader:
     def total_header_bytes(self) -> int:
         """
         Calculate the total header length as standard header (1024 bytes) + optional extended header (>= 0)
-        :return:
+
+        :return: total number of bytes in header and extended header
         """
         return 1024 + len(self.extended_header)
 
@@ -349,6 +347,7 @@ class LazyImage:
                  offset: int):
         """
         Initialize a LazyImage object. No disk access required or performed by creating the object.
+
         :param fname: path to the .mrc file on disk
         :param shape: shape of the section of data to be lazily loaded from the .mrc file, e.g. `(128,128)` for a single box128 image
         :param dtype: the data type of the .mrc file contents, as described by the .mrc file header `mode` key
@@ -363,6 +362,7 @@ class LazyImage:
     def get(self) -> np.ndarray:
         """
         Load the data from disk to a numpy array
+
         :return: numpy array of data loaded from disk
         """
         # create a file handle to open the file
@@ -403,6 +403,7 @@ class LazyImageStack:
         """
         Groups a flat array of input indices by which indices are immediately contiguous.
         For example, input of [0, 1, 2, 4, 5] would return [[0, 1, 2], [4, 5]].
+
         :return: list of arrays of contiguous indices
         """
         # create list to store contiguous indices
@@ -421,6 +422,7 @@ class LazyImageStack:
     def get(self) -> np.ndarray:
         """
         Load the image data from disk to a numpy array
+
         :return: the numpy array of data
         """
 
@@ -460,6 +462,7 @@ class LazyImageStack:
 def parse_header(fname: str) -> MRCHeader:
     """
     Convenience function to create an MRCHeader object given an MRC file name
+
     :param fname: path to MRC file on disk
     :return: MRCHeader object
     """
@@ -470,6 +473,7 @@ def parse_mrc_list(txtfile: str,
                    lazy: bool = False) -> np.ndarray | list[LazyImage]:
     """
     Load the MRC file(s) specified in a text file into memory as either a numpy array or a list of LazyImages.
+
     :param txtfile: path to newline-delimited text file listing the absolute path to the MRC file(s) to be loaded, or the path to the MRC file(s) relative to `txtfile`.
     :param lazy: whether to load particle images now in memory (False) or later on-the-fly (True)
     :return: numpy array or list of LazyImages of all images in all MRC files
@@ -495,6 +499,7 @@ def parse_mrc(fname: str,
               lazy: bool = False) -> tuple[np.ndarray | list[LazyImage], MRCHeader]:
     """
     Load an entire MRC file into memory as either a numpy array or a list of LazyImages
+
     :param fname: path to MRC file on disk
     :param lazy: whether to load particle images now in memory (False) or later on-the-fly (True)
     :return: array: numpy array of MRC data in header-specified dtype and shape, or list of a LazyImage for each section along the nz axis in the MRC file
@@ -539,6 +544,7 @@ def write(fname: str,
           is_vol: bool | None = None) -> None:
     """
     Write a data array to disk in MRC format.
+
     :param fname: Name of the MRC file to write
     :param array: Array of data to write as data block of MRC file
     :param header: MRCFile header object to be written as the header of the new MRC file. `None` means that a default header will be created using the following parameters:
