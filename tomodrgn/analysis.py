@@ -804,12 +804,12 @@ def plot_label_count_distribution(ptcl_star: starfile.TiltSeriesStarfile,
     df_first_img = ptcl_star.df.groupby(ptcl_star.header_ptcl_uid, as_index=False, sort=False).first()
     # group particles by source tomogram
     try:
-        ind_ptcls_per_tomo = [group.index.to_numpy() for group_name, group in df_first_img.groupby(ptcl_star.header_ptcl_micrograph)]
+        ind_ptcls_per_tomo = [group.index.to_numpy() for group_name, group in df_first_img.groupby(ptcl_star.header_ptcl_micrograph, sort=False)]
     except KeyError:
         # for some reason, header_ptcl_micrograph not found in df.columns
         # falling back to trying to split header_ptcl_uid on `_` and taking 0th value as stand-in for tomogram ID, following Warp convention of `XXX_YYYYY`
         df_first_img[['_tempTomogramUID', '_tempParticleUID']] = df_first_img[ptcl_star.header_ptcl_uid].str.split('_', expand=True)
-        ind_ptcls_per_tomo = [group.index.to_numpy() for group_name, group in df_first_img.groupby('_tempTomogramUID')]
+        ind_ptcls_per_tomo = [group.index.to_numpy() for group_name, group in df_first_img.groupby('_tempTomogramUID', sort=False)]
 
     label_distribution = np.zeros((len(ind_ptcls_per_tomo), len(set(class_labels))))
     for i, ind_one_tomo in enumerate(ind_ptcls_per_tomo):
