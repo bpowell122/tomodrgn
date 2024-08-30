@@ -89,20 +89,7 @@ def plot_loss(runlog: str,
     :return: None
     """
 
-    losses = analysis.parse_all_losses(runlog)
-    labels = ['reconstruction loss', 'latent loss', 'total loss']
-
-    n_rows = 1
-    n_cols = 3
-    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(3 * n_cols, 3 * n_rows), sharex='all')
-
-    for (i, ax) in enumerate(axes.ravel()):
-        ax.plot(losses[i])
-        ax.set_ylabel(labels[i])
-        if i == 1:
-            ax.set_xlabel('epoch')
-
-    plt.tight_layout()
+    fig, axes = analysis.plot_losses(runlog)
     outpath = f'{outdir}/plots/00_total_loss.png'
     plt.savefig(outpath, dpi=300)
     log(f'Saved total loss plot to {outdir}/plots/00_total_loss.png')

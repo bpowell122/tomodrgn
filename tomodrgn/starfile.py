@@ -276,8 +276,10 @@ class GenericStarfile:
                                                                              particles_path_column=particles_path_column)
 
         # confirm where to load MRC file(s) from disk
-        if datadir is not None:
-            mrcs_files = utils.prefix_paths(mrcs_files, datadir)
+        if datadir is None:
+            # if star file contains relative paths to images, and star file is being loaded from other directory, try setting datadir to starfile abspath
+            datadir = os.path.dirname(self.sourcefile)
+        mrcs_files = utils.prefix_paths(mrcs_files, datadir)
 
         # identify key parameters for creating image data array using the first mrcs file
         header = mrc.parse_header(mrcs_files[0])
@@ -871,6 +873,9 @@ class TiltSeriesStarfile(GenericStarfile):
         ptcls_unique_list = self.df[self.header_ptcl_uid].unique().to_numpy()
         utils.log(f'Found {len(ptcls_unique_list)} particles in input star file')
 
+        # assign unfiltered indices as column to allow easy downstream identification of preserved particle indices
+        self.df['_UnfilteredParticleInds'] = self.df.groupby(self.header_ptcl_uid, sort=False).ngroup()
+
         # filter by image (row of dataframe) by presupplied indices
         if ind_imgs is not None:
             utils.log('Filtering particle images by supplied indices')
@@ -922,10 +927,10 @@ class TiltSeriesStarfile(GenericStarfile):
         # keep the first ntilts images of each particle
         if use_first_ntilts != -1:
             utils.log(f'Keeping first {use_first_ntilts} images of each particle. Excluding particles with fewer than this many images.')
-            self.df = self.df.groupby(self.header_ptcl_uid).head(use_first_ntilts).reset_index(drop=True)
+            self.df = self.df.groupby(self.header_ptcl_uid, sort=False).head(use_first_ntilts).reset_index(drop=True)
 
             # if a particledoes not have ntilts images, drop it
-            rows_to_drop = self.df.loc[self.df.groupby(self.header_ptcl_uid)[self.header_ptcl_uid].transform('count') < use_first_ntilts].index
+            rows_to_drop = self.df.loc[self.df.groupby(self.header_ptcl_uid, sort=False)[self.header_ptcl_uid].transform('count') < use_first_ntilts].index
             num_ptcls_to_drop = len(self.df.loc[rows_to_drop, self.header_ptcl_uid].unique())
             if num_ptcls_to_drop > 0:
                 utils.log(f'Dropping {num_ptcls_to_drop} from star file due to having fewer than {use_first_ntilts=} tilt images per particle')

@@ -54,7 +54,7 @@ def add_args(_parser):
     group.add_argument('--no-window', dest='window', action='store_false', help='Turn off real space windowing of dataset')
     group.add_argument('--window-r', type=float, default=.8, help='Real space inner windowing radius for cosine falloff to radius 1')
     group.add_argument('--window-r-outer', type=float, default=.9, help='Real space outer windowing radius for cosine falloff to radius 1')
-    group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
+    group.add_argument('--datadir', type=os.path.abspath, default=None, help='Path prefix to particle stack if loading relative paths from a .star file')
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
     group.add_argument('--sequential-tilt-sampling', action='store_true', help='Supply particle images of one particle to encoder in filtered starfile order')
 
@@ -479,9 +479,10 @@ def main(args):
 
     # load the particles + poses + ctf from input starfile
     flog(f'Loading dataset from {args.particles}')
+    datadir = args.datadir if args.datadir is not None else os.path.dirname(ptcls_star.sourcefile)
     data_train = TiltSeriesMRCData(ptcls_star=ptcls_star,
                                    star_random_subset=1,
-                                   datadir=args.datadir,
+                                   datadir=datadir,
                                    lazy=args.lazy,
                                    norm=args.norm,
                                    invert_data=args.invert_data,
@@ -496,7 +497,7 @@ def main(args):
     if args.fraction_train < 1:
         data_test = TiltSeriesMRCData(ptcls_star,
                                       star_random_subset=2,
-                                      datadir=args.datadir,
+                                      datadir=datadir,
                                       lazy=args.lazy,
                                       norm=data_train.norm,
                                       invert_data=args.invert_data,
