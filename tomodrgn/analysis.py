@@ -1,6 +1,7 @@
 """
 Functions for analysis of particle metadata: index, pose, ctf, latent embedding, label, tomogram spatial context, etc.
 """
+import glob
 import os
 from datetime import datetime as dt
 import numpy as np
@@ -1204,6 +1205,107 @@ def load_dataframe(*,
     df['index'] = df.index
 
     return df
+
+
+def recursive_load_dataframe(volumeseries_star_path: str,
+                             tomo_id_column: str) -> pd.DataFrame:
+    """
+    Create merged dataframe containing:
+        (1) imageseries star file used to train model (referenced in train_vae config.pkl)
+        (2) volumeseries star file specified here
+        (3) any *.pkl file found recursively within this notebook's directory which contains a numpy array with first axis shape matching the number of particles in the imageseries star file.
+    Data are added assuming all indexing matches imageseries star file particle order.
+    :param volumeseries_star_path: absolute path to volume series star file, must reference the same set of particles referenced by the starfile used for tomodrgn train_vae
+    :param tomo_id_column: full string name of column containing unique values per tomogram in volseries star file
+    :return: pandas dataframe containing all described data
+    """
+    # get the epoch being analyzed from cwd (assumed format: analyze.N)
+    cwd = os.getcwd()
+    epoch = int(os.path.basename(cwd).split('.')[-1])
+
+    # load the config of train_vae assumed to be 1 directory above
+    cfg = utils.load_pkl(f'{cwd}/../config.pkl')
+
+    # load the imageseries filtered star file referenced in config from training, keeping 1st image dose-ascending per particle
+    ptcls_star = starfile.TiltSeriesStarfile(cfg['starfile_args']['sourcefile_filtered'])
+    ptcls_star.filter(sort_ptcl_imgs='dose_ascending', use_first_ntilts=1)
+
+    # create standalone dataframe for all data to be added
+    df_merged = ptcls_star.df.copy(deep=True)
+
+    # calculate the number of particles referenced in imageseries star file
+    ptcl_img_inds = ptcls_star.get_ptcl_img_indices()
+    n_ptcls = len(ptcl_img_inds)
+
+    # load volumeseries star
+    vols_star = starfile.GenericStarfile(volumeseries_star_path)
+
+    # filter volumeseries star by imageseries star filtered particle indices
+    vols_star_ptcls_block = vols_star.identify_particles_data_block(column_substring=tomo_id_column)
+    df_vols = vols_star.blocks[vols_star_ptcls_block].copy(deep=True)
+    df_vols['_UnfilteredParticleInds'] = np.arange(len(df_vols))
+    df_vols = df_vols.iloc[df_merged['_UnfilteredParticleInds']]  # internally map particle filtering applied at training time
+
+    # filter out irrelevant columns from volumeseries star
+    cols_to_keep = []
+    for col in df_vols.columns:
+        if any(col_substring in col for col_substring in ['Coordinate', 'Angle', tomo_id_column, '_UnfilteredParticleInds']) and 'Defocus' not in col:
+            cols_to_keep.append(col)
+    cols_to_drop = list(set(df_vols.columns) - set(cols_to_keep))
+    df_vols.drop(cols_to_drop, axis=1, inplace=True)
+
+    # merge into df_merged
+    df_merged = df_merged.merge(df_vols, how='right', on='_UnfilteredParticleInds', suffixes=('_img', ''))
+
+    # generate recursive list of *.pkl files within cwd
+    paths_to_add = glob.glob(f'{cwd}/**/*.pkl', recursive=True)
+    paths_to_add.insert(0, f'{os.path.dirname(cwd)}/z.{epoch}.train.pkl')
+    known_column_names = dict()
+    data_pkl = dict()
+    print()  # newline for visual separation of star file loading output from column name specification output
+    for path in paths_to_add:
+
+        # load pkl
+        f = utils.load_pkl(path)
+
+        # check if numpy array, skip if not
+        if type(f) is not np.ndarray:
+            continue
+
+        # check if shape[0] matches length of star file, skip if not
+        if len(f) != n_ptcls:
+            continue
+
+        # check that number of dimensions is at most 2 (not sure how to deal with ndarrays with 3+ axes), skip if so
+        if f.ndim > 2:
+            continue
+
+        # log that this pkl file is being added to df_merged and log name format of added columns
+        column_name = os.path.splitext(os.path.basename(path))[0]
+        if f.ndim == 1:
+            column_names = [f'{column_name}']
+            f = f.reshape(-1, 1)
+        else:
+            column_names = [f'{column_name}-{i}' for i in range(f.shape[1])]
+        log(f'Mapping {path} to dataframe columns {column_names}')
+
+        # sanity check that the proposed column name has not yet been created (which would cause naming conflict)
+        for column_name in column_names:
+            if column_name in known_column_names.keys():
+                log(f'WARNING: found duplicate column name {column_name} which is caused by two files sharing the same base filename: {path} and {known_column_names[column_name]}. '
+                    f'Skipping values at {path}.')
+            else:
+                known_column_names[column_name] = path
+
+        # add new cols to df_merged corresponding to each column along dim[1] of array (e.g. z dimension 0, 1, 2, ...)
+        for i, column_name in enumerate(column_names):
+            data_pkl[column_name] = f[:, i]
+
+    # merge with df_merged
+    df_pkl = pd.DataFrame.from_dict(data=data_pkl)
+    df_merged = pd.concat([df_merged, df_pkl], axis=1)
+
+    return df_merged
 
 
 ##################################################

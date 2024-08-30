@@ -500,15 +500,18 @@ def main(args):
                                    datadir=datadir)
 
     # copy over template if file doesn't exist
-    out_ipynb = f'{outdir}/tomoDRGN_viz+filt.ipynb'
-    if not os.path.exists(out_ipynb):
-        log(f'Creating jupyter notebook...')
-        ipynb = str(files('tomodrgn.templates').joinpath('tomoDRGN_viz+filt_template.ipynb'))
-        assert os.path.isfile(ipynb)
-        shutil.copyfile(ipynb, out_ipynb)
-        log(out_ipynb)
-    else:
-        log(f'{out_ipynb} already exists. Skipping')
+    ipynbs = [['tomoDRGN_viz+filt_template_legacy.ipynb', 'tomoDRGN_viz+filt_legacy.ipynb'],
+              ['tomoDRGN_interactive_viz_template.ipynb', 'tomoDRGN_interactive_viz.ipynb']]
+    for template_ipynb, out_ipynb in ipynbs:
+        template_path = str(files('tomodrgn.templates').joinpath(template_ipynb))
+        out_path = f'{outdir}/{out_ipynb}'
+        if not os.path.exists(out_path):
+            log(f'Creating jupyter notebook...')
+            assert os.path.isfile(template_path)
+            shutil.copyfile(template_path, out_path)
+            log(out_path)
+        else:
+            log(f'{out_path} already exists. Skipping')
 
     log(f'Finished in {dt.now() - t1}')
 
