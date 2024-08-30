@@ -88,3 +88,41 @@
 2022-08-27 15:37:39     Wrote: data/10076_classD_32_sim.star
 
 
+
+# simulating tomogram_001.mrc
+import numpy as np
+from tomodrgn import mrc, starfile
+
+# choose a small box size in voxels, and choose a pixel size that ensures the range of particle coordinates is fully enclosed
+boxsize = 96
+angpix = 12000 / boxsize
+
+# instantiate a blank tomogram volume
+tomo_vol = np.zeros((boxsize, boxsize, boxsize), dtype=np.float32)
+
+# instantiate zyx coordinates with spacing of angpix covering range boxsize
+z, y, x = np.meshgrid(np.arange(boxsize), np.arange(boxsize), np.arange(boxsize), indexing='ij')
+x = (x * angpix).astype(tomo_vol.dtype)
+y = (y * angpix).astype(tomo_vol.dtype)
+z = (z * angpix).astype(tomo_vol.dtype)
+
+s = starfile.GenericStarfile('/Users/barrettpowell/Documents/MIT/scripts/tomodrgn/testing/data/10076_both_32_sim_vols.star')
+for center_x, center_y, center_z in s.blocks['data_'][['_rlnCoordinateX', '_rlnCoordinateY', '_rlnCoordinateZ']].to_numpy(dtype=tomo_vol.dtype):
+    # get each particle location in starfile coordinates and rescale to angstroms
+    center_x = center_x * s.blocks['data_'].loc[0, '_rlnDetectorPixelSize']
+    center_y = center_y * s.blocks['data_'].loc[0, '_rlnDetectorPixelSize']
+    center_z = center_z * s.blocks['data_'].loc[0, '_rlnDetectorPixelSize']
+    d = np.sqrt((x-center_x)**2 + (y-center_y)**2 + (z-center_z)**2)
+
+    # simulate each particle as a gaussian with stdev of 1/50th of box size
+    sigma = boxsize * angpix / 50
+    mu = 0.0
+    g = np.exp(-((d - mu)**2 / (2.0 * sigma**2)))
+
+    tomo_vol = tomo_vol + g
+
+# save the volume
+mrc.write(fname='/Users/barrettpowell/Documents/MIT/scripts/tomodrgn/testing/data/tomogram_001.mrc',
+          array=tomo_vol,
+          angpix=angpix,
+          is_vol=True)
