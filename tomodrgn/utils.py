@@ -445,7 +445,7 @@ def calc_cc(vol1: np.ndarray | str,
     :param thresh: data percentile threshold at which to binarize mask when calculating 'tight' or initializing 'soft' masks
     :param dilate: for soft mask, number of pixels to expand auto-determined tight mask
     :param dist: for soft mask, number of pixels over which to apply soft edge
-    :return correlation coefficient
+    :return: correlation coefficient
     """
     # load masked volumes in real space
     if isinstance(vol1, np.ndarray):

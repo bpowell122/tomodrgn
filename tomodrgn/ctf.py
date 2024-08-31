@@ -84,15 +84,16 @@ def print_ctf_params(params: np.ndarray | torch.Tensor) -> None:
     """
     Print a formatted table of CTF parameters.
     Assumes that the parameters are ordered as
-       1. image size (px)
-       2. pixel size (Å/px)
-       3. defocus U (Å)
-       4. defocus V (Å)
-       5. defocus angle (Å)
-       6. voltage (kV)
-       7. spherical aberration (mm)
-       8. amplitude contrast ratio
-       9. phase shift (degrees)
+
+    1. image size (px)
+    2. pixel size (Å/px)
+    3. defocus U (Å)
+    4. defocus V (Å)
+    5. defocus angle (Å)
+    6. voltage (kV)
+    7. spherical aberration (mm)
+    8. amplitude contrast ratio
+    9. phase shift (degrees)
 
     :param params: array of CTF parameters, shape (nimgs, 9) or (9)
     :return: None

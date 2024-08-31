@@ -859,10 +859,12 @@ def plot_three_column_correlation(reference_array: np.ndarray,
                                   query_name: str) -> None:
     """
     Plot two reference vectors (e.g. l-UMAP1 and l-UMAP2) for potential correlation with a third query vector (e.g. CoordinateX, DefocusU, etc).
+
     Produces a figure with 1 row and 3 columns of subplots:
-       #. hexbin of reference vector 1 vs query vector;
-       #. hexbin of reference vector 2 vs query vector;
-       #. scatter of reference vector 1 vs reference vector 2 colored by query vector.
+
+    #. hexbin of reference vector 1 vs query vector.
+    #. hexbin of reference vector 2 vs query vector.
+    #. scatter of reference vector 1 vs reference vector 2 colored by query vector.
 
     :param reference_array: array of reference vector values, shape (nptcls, 2)
     :param query_array: array of query vector values, shape (nptcls, 1)
@@ -1247,9 +1249,11 @@ def recursive_load_dataframe(volumeseries_star_path: str,
                              tomo_id_column: str) -> pd.DataFrame:
     """
     Create merged dataframe containing:
-       #. imageseries star file used to train model (referenced in train_vae ``config.pkl``)
-       #. volumeseries star file specified here
-       #. any ``*.pkl`` file found recursively within this notebook's directory which contains a numpy array with first axis shape matching the number of particles in the imageseries star file.
+
+    #. imageseries star file used to train model (referenced in train_vae ``config.pkl``)
+    #. volumeseries star file specified here
+    #. any ``*.pkl`` file found recursively within this notebook's directory which contains a numpy array with first axis shape matching the number of particles in the imageseries star file.
+
     Data are added assuming all indexing matches imageseries star file particle order.
 
     :param volumeseries_star_path: absolute path to volume series star file, must reference the same set of particles referenced by the starfile used for tomodrgn train_vae

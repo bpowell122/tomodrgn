@@ -882,7 +882,7 @@ def calc_kld_two_gaussians(z_mu_train: np.ndarray,
     :param z_logvar_train: numpy array of shape (n_particles, zdim), latent embedding log variance deriving from particle train images
     :param z_mu_test: numpy array of shape (n_particles, zdim), latent embedding means deriving from particle test images
     :param z_logvar_test: numpy array of shape (n_particles, zdim), latent embedding log variance deriving from particle test images
-    :param workdir:str, absolute path to model workdir
+    :param workdir: str, absolute path to model workdir
     :param epoch: int, current epoch number
     :return: None
     """
