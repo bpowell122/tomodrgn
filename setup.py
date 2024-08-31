@@ -54,5 +54,12 @@ setup(name='tomodrgn',
           'plotly',
           'typing_extensions>=3.7.4',
           'adjustText',
+          'fastcluster',  # added due to warning in analyze_volumes sns.clustermap of large array (n_vols x boxsize**3)
+          'sphinx',
+          'pydata_sphinx_theme',
+          'sphinx_design',
+          'sphinx-copybutton',
+          'sphinx-simplepdf',
+          'importlib_resources',
       ]
       )
