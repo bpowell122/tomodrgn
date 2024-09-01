@@ -12,25 +12,21 @@ TomoDRGN extends the cryoDRGN framework to cryo-ET by learning heterogeneity fro
 Setting up a new tomoDRGN environment:
 
     # Create conda environment
-    conda create --name tomodrgn "python>=3.7"
+    conda create --name tomodrgn "python>=3.10"
     conda activate tomodrgn
-      
-    # Install dependencies
-    conda install "pytorch-gpu>=1.11.0" "cudatoolkit>=11.0" -c pytorch
-    conda install pandas seaborn scikit-learn
-    conda install umap-learn notebook -c conda-forge
-    pip install "ipyvolume>=0.6.0" "pythreejs>=2.4.2"
 
     # Clone source code and install
     git clone https://github.com/bpowell122/tomodrgn.git
     cd tomodrgn
-    pip install .
+    python -m pip install .
 
 Optional: verify code+dependency functionality on your system
     
     cd tomodrgn/testing
-    python ./quicktest.py  # ~1 minute, tests train_vae and analyze
-    python ./unittest.py  # ~30 minutes, tests all commands with multiple options (except jupyter notebooks)
+    # ~1 minute, tests train_vae and analyze
+    python ./quicktest.py
+    # ~50 minutes, tests all commands with multiple options (except jupyter notebooks)
+    python ./commandtest.py
 
 ## Example usage
 Below are minimal examples of various common tomoDRGN commands. By design, syntax parallels cryoDRGN's syntax where possible. All commands require initialization of the conda environment: `conda activate tomodrgn`
