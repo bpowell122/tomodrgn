@@ -32,7 +32,7 @@ def add_args(parser):
     return parser
 
 
-class LatentGraph(object):
+class LatentGraph:
     """
     Class for describing connected latent embeddings as a graph based on proximity in latent space.
     """

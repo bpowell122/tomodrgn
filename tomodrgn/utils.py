@@ -87,7 +87,7 @@ def flog(msg: str,
         log(e)
 
 
-class Memoized(object):
+class Memoized:
     """
     Decorator. Caches a function's return value each time it is called.
     If called later with the same arguments, the cached value is returned
