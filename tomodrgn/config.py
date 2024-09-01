@@ -5,8 +5,8 @@ import argparse
 import sys
 from datetime import datetime as dt
 from pprint import pprint
+from importlib import metadata
 
-import tomodrgn
 from tomodrgn import utils
 from tomodrgn.dataset import TiltSeriesMRCData
 from tomodrgn.lattice import Lattice
@@ -121,7 +121,7 @@ def save_config(args: argparse.Namespace,
 
     meta = dict(time=dt.now(),
                 cmd=' '.join(sys.argv),
-                version=tomodrgn.__version__)  # TODO replace with something like https://discuss.python.org/t/usual-pythonic-way-to-add-inject-the-git-hash-to-the-version-string/45169/10
+                version=metadata.version('tomodrgn'))
 
     config = dict(starfile_args=starfile_args,
                   dataset_args=dataset_args,

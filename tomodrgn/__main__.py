@@ -6,9 +6,9 @@ TomoDRGN neural network reconstruction
 def main():
     import argparse
     import os
+    from importlib import metadata
     parser = argparse.ArgumentParser(description=__doc__)
-    import tomodrgn
-    parser.add_argument('--version', action='version', version='tomoDRGN ' + tomodrgn.__version__)
+    parser.add_argument('--version', action='version', version=f'tomoDRGN {metadata.version("tomodrgn")}')
 
     import tomodrgn.commands.analyze
     import tomodrgn.commands.analyze_volumes
