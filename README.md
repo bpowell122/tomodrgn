@@ -27,6 +27,15 @@ Potential errors during installation
     sudo apt install build-essential
     sudo apt install cmake
 
+    # tomoDRGN requires pytorch>=2.3, but pytorch does not distribute prebuilt pip packages for x86 Macs starting with pytorch 2.3 (https://github.com/pytorch/pytorch/issues/114602)
+    # therefore pytorch must be built from source for x86 Macs (https://github.com/pytorch/pytorch#from-source)
+    pip install mkl-static mkl-include
+    git clone --recursive https://github.com/pytorch/pytorch
+    cd pytorch
+    conda install cmake ninja
+    pip install -r requirements.txt
+    python3 setup.py develop
+
 Optional: verify code+dependency functionality on your system
     
     cd tomodrgn/testing
