@@ -1,4 +1,4 @@
-tomodrgn.set\_transformer.SetTransformer
+﻿tomodrgn.set\_transformer.SetTransformer
 ========================================
 
 .. currentmodule:: tomodrgn.set_transformer
@@ -37,6 +37,7 @@ tomodrgn.set\_transformer.SetTransformer
       ~SetTransformer.ipu
       ~SetTransformer.load_state_dict
       ~SetTransformer.modules
+      ~SetTransformer.mtia
       ~SetTransformer.named_buffers
       ~SetTransformer.named_children
       ~SetTransformer.named_modules
@@ -49,11 +50,14 @@ tomodrgn.set\_transformer.SetTransformer
       ~SetTransformer.register_full_backward_hook
       ~SetTransformer.register_full_backward_pre_hook
       ~SetTransformer.register_load_state_dict_post_hook
+      ~SetTransformer.register_load_state_dict_pre_hook
       ~SetTransformer.register_module
       ~SetTransformer.register_parameter
+      ~SetTransformer.register_state_dict_post_hook
       ~SetTransformer.register_state_dict_pre_hook
       ~SetTransformer.requires_grad_
       ~SetTransformer.set_extra_state
+      ~SetTransformer.set_submodule
       ~SetTransformer.share_memory
       ~SetTransformer.state_dict
       ~SetTransformer.to

@@ -1,4 +1,4 @@
-tomodrgn.set\_transformer.SAB
+﻿tomodrgn.set\_transformer.SAB
 =============================
 
 .. currentmodule:: tomodrgn.set_transformer
@@ -37,6 +37,7 @@ tomodrgn.set\_transformer.SAB
       ~SAB.ipu
       ~SAB.load_state_dict
       ~SAB.modules
+      ~SAB.mtia
       ~SAB.named_buffers
       ~SAB.named_children
       ~SAB.named_modules
@@ -49,11 +50,14 @@ tomodrgn.set\_transformer.SAB
       ~SAB.register_full_backward_hook
       ~SAB.register_full_backward_pre_hook
       ~SAB.register_load_state_dict_post_hook
+      ~SAB.register_load_state_dict_pre_hook
       ~SAB.register_module
       ~SAB.register_parameter
+      ~SAB.register_state_dict_post_hook
       ~SAB.register_state_dict_pre_hook
       ~SAB.requires_grad_
       ~SAB.set_extra_state
+      ~SAB.set_submodule
       ~SAB.share_memory
       ~SAB.state_dict
       ~SAB.to

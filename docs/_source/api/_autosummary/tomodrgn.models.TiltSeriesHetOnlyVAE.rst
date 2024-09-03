@@ -1,4 +1,4 @@
-tomodrgn.models.TiltSeriesHetOnlyVAE
+﻿tomodrgn.models.TiltSeriesHetOnlyVAE
 ====================================
 
 .. currentmodule:: tomodrgn.models
@@ -40,6 +40,7 @@ tomodrgn.models.TiltSeriesHetOnlyVAE
       ~TiltSeriesHetOnlyVAE.load
       ~TiltSeriesHetOnlyVAE.load_state_dict
       ~TiltSeriesHetOnlyVAE.modules
+      ~TiltSeriesHetOnlyVAE.mtia
       ~TiltSeriesHetOnlyVAE.named_buffers
       ~TiltSeriesHetOnlyVAE.named_children
       ~TiltSeriesHetOnlyVAE.named_modules
@@ -53,11 +54,14 @@ tomodrgn.models.TiltSeriesHetOnlyVAE
       ~TiltSeriesHetOnlyVAE.register_full_backward_hook
       ~TiltSeriesHetOnlyVAE.register_full_backward_pre_hook
       ~TiltSeriesHetOnlyVAE.register_load_state_dict_post_hook
+      ~TiltSeriesHetOnlyVAE.register_load_state_dict_pre_hook
       ~TiltSeriesHetOnlyVAE.register_module
       ~TiltSeriesHetOnlyVAE.register_parameter
+      ~TiltSeriesHetOnlyVAE.register_state_dict_post_hook
       ~TiltSeriesHetOnlyVAE.register_state_dict_pre_hook
       ~TiltSeriesHetOnlyVAE.requires_grad_
       ~TiltSeriesHetOnlyVAE.set_extra_state
+      ~TiltSeriesHetOnlyVAE.set_submodule
       ~TiltSeriesHetOnlyVAE.share_memory
       ~TiltSeriesHetOnlyVAE.state_dict
       ~TiltSeriesHetOnlyVAE.to

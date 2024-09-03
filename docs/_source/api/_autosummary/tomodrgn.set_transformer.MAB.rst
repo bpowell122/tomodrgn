@@ -1,4 +1,4 @@
-tomodrgn.set\_transformer.MAB
+﻿tomodrgn.set\_transformer.MAB
 =============================
 
 .. currentmodule:: tomodrgn.set_transformer
@@ -37,6 +37,7 @@ tomodrgn.set\_transformer.MAB
       ~MAB.ipu
       ~MAB.load_state_dict
       ~MAB.modules
+      ~MAB.mtia
       ~MAB.named_buffers
       ~MAB.named_children
       ~MAB.named_modules
@@ -49,11 +50,14 @@ tomodrgn.set\_transformer.MAB
       ~MAB.register_full_backward_hook
       ~MAB.register_full_backward_pre_hook
       ~MAB.register_load_state_dict_post_hook
+      ~MAB.register_load_state_dict_pre_hook
       ~MAB.register_module
       ~MAB.register_parameter
+      ~MAB.register_state_dict_post_hook
       ~MAB.register_state_dict_pre_hook
       ~MAB.requires_grad_
       ~MAB.set_extra_state
+      ~MAB.set_submodule
       ~MAB.share_memory
       ~MAB.state_dict
       ~MAB.to

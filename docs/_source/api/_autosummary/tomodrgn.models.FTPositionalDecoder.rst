@@ -1,4 +1,4 @@
-tomodrgn.models.FTPositionalDecoder
+﻿tomodrgn.models.FTPositionalDecoder
 ===================================
 
 .. currentmodule:: tomodrgn.models
@@ -41,6 +41,7 @@ tomodrgn.models.FTPositionalDecoder
       ~FTPositionalDecoder.load
       ~FTPositionalDecoder.load_state_dict
       ~FTPositionalDecoder.modules
+      ~FTPositionalDecoder.mtia
       ~FTPositionalDecoder.named_buffers
       ~FTPositionalDecoder.named_children
       ~FTPositionalDecoder.named_modules
@@ -54,11 +55,14 @@ tomodrgn.models.FTPositionalDecoder
       ~FTPositionalDecoder.register_full_backward_hook
       ~FTPositionalDecoder.register_full_backward_pre_hook
       ~FTPositionalDecoder.register_load_state_dict_post_hook
+      ~FTPositionalDecoder.register_load_state_dict_pre_hook
       ~FTPositionalDecoder.register_module
       ~FTPositionalDecoder.register_parameter
+      ~FTPositionalDecoder.register_state_dict_post_hook
       ~FTPositionalDecoder.register_state_dict_pre_hook
       ~FTPositionalDecoder.requires_grad_
       ~FTPositionalDecoder.set_extra_state
+      ~FTPositionalDecoder.set_submodule
       ~FTPositionalDecoder.share_memory
       ~FTPositionalDecoder.state_dict
       ~FTPositionalDecoder.to

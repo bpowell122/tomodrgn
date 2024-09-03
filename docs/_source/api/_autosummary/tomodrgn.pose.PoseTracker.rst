@@ -1,4 +1,4 @@
-tomodrgn.pose.PoseTracker
+﻿tomodrgn.pose.PoseTracker
 =========================
 
 .. currentmodule:: tomodrgn.pose
@@ -39,6 +39,7 @@ tomodrgn.pose.PoseTracker
       ~PoseTracker.load
       ~PoseTracker.load_state_dict
       ~PoseTracker.modules
+      ~PoseTracker.mtia
       ~PoseTracker.named_buffers
       ~PoseTracker.named_children
       ~PoseTracker.named_modules
@@ -51,12 +52,15 @@ tomodrgn.pose.PoseTracker
       ~PoseTracker.register_full_backward_hook
       ~PoseTracker.register_full_backward_pre_hook
       ~PoseTracker.register_load_state_dict_post_hook
+      ~PoseTracker.register_load_state_dict_pre_hook
       ~PoseTracker.register_module
       ~PoseTracker.register_parameter
+      ~PoseTracker.register_state_dict_post_hook
       ~PoseTracker.register_state_dict_pre_hook
       ~PoseTracker.requires_grad_
       ~PoseTracker.save
       ~PoseTracker.set_extra_state
+      ~PoseTracker.set_submodule
       ~PoseTracker.share_memory
       ~PoseTracker.state_dict
       ~PoseTracker.to

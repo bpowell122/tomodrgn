@@ -1,4 +1,4 @@
-tomodrgn.losses.EquivarianceLoss
+﻿tomodrgn.losses.EquivarianceLoss
 ================================
 
 .. currentmodule:: tomodrgn.losses
@@ -37,6 +37,7 @@ tomodrgn.losses.EquivarianceLoss
       ~EquivarianceLoss.ipu
       ~EquivarianceLoss.load_state_dict
       ~EquivarianceLoss.modules
+      ~EquivarianceLoss.mtia
       ~EquivarianceLoss.named_buffers
       ~EquivarianceLoss.named_children
       ~EquivarianceLoss.named_modules
@@ -49,12 +50,15 @@ tomodrgn.losses.EquivarianceLoss
       ~EquivarianceLoss.register_full_backward_hook
       ~EquivarianceLoss.register_full_backward_pre_hook
       ~EquivarianceLoss.register_load_state_dict_post_hook
+      ~EquivarianceLoss.register_load_state_dict_pre_hook
       ~EquivarianceLoss.register_module
       ~EquivarianceLoss.register_parameter
+      ~EquivarianceLoss.register_state_dict_post_hook
       ~EquivarianceLoss.register_state_dict_pre_hook
       ~EquivarianceLoss.requires_grad_
       ~EquivarianceLoss.rotate
       ~EquivarianceLoss.set_extra_state
+      ~EquivarianceLoss.set_submodule
       ~EquivarianceLoss.share_memory
       ~EquivarianceLoss.state_dict
       ~EquivarianceLoss.to

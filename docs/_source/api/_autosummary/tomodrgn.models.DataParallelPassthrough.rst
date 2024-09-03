@@ -1,4 +1,4 @@
-tomodrgn.models.DataParallelPassthrough
+﻿tomodrgn.models.DataParallelPassthrough
 =======================================
 
 .. currentmodule:: tomodrgn.models
@@ -38,6 +38,7 @@ tomodrgn.models.DataParallelPassthrough
       ~DataParallelPassthrough.ipu
       ~DataParallelPassthrough.load_state_dict
       ~DataParallelPassthrough.modules
+      ~DataParallelPassthrough.mtia
       ~DataParallelPassthrough.named_buffers
       ~DataParallelPassthrough.named_children
       ~DataParallelPassthrough.named_modules
@@ -51,13 +52,16 @@ tomodrgn.models.DataParallelPassthrough
       ~DataParallelPassthrough.register_full_backward_hook
       ~DataParallelPassthrough.register_full_backward_pre_hook
       ~DataParallelPassthrough.register_load_state_dict_post_hook
+      ~DataParallelPassthrough.register_load_state_dict_pre_hook
       ~DataParallelPassthrough.register_module
       ~DataParallelPassthrough.register_parameter
+      ~DataParallelPassthrough.register_state_dict_post_hook
       ~DataParallelPassthrough.register_state_dict_pre_hook
       ~DataParallelPassthrough.replicate
       ~DataParallelPassthrough.requires_grad_
       ~DataParallelPassthrough.scatter
       ~DataParallelPassthrough.set_extra_state
+      ~DataParallelPassthrough.set_submodule
       ~DataParallelPassthrough.share_memory
       ~DataParallelPassthrough.state_dict
       ~DataParallelPassthrough.to

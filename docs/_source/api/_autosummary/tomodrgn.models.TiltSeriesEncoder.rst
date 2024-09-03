@@ -1,4 +1,4 @@
-tomodrgn.models.TiltSeriesEncoder
+﻿tomodrgn.models.TiltSeriesEncoder
 =================================
 
 .. currentmodule:: tomodrgn.models
@@ -37,6 +37,7 @@ tomodrgn.models.TiltSeriesEncoder
       ~TiltSeriesEncoder.ipu
       ~TiltSeriesEncoder.load_state_dict
       ~TiltSeriesEncoder.modules
+      ~TiltSeriesEncoder.mtia
       ~TiltSeriesEncoder.named_buffers
       ~TiltSeriesEncoder.named_children
       ~TiltSeriesEncoder.named_modules
@@ -49,12 +50,15 @@ tomodrgn.models.TiltSeriesEncoder
       ~TiltSeriesEncoder.register_full_backward_hook
       ~TiltSeriesEncoder.register_full_backward_pre_hook
       ~TiltSeriesEncoder.register_load_state_dict_post_hook
+      ~TiltSeriesEncoder.register_load_state_dict_pre_hook
       ~TiltSeriesEncoder.register_module
       ~TiltSeriesEncoder.register_parameter
+      ~TiltSeriesEncoder.register_state_dict_post_hook
       ~TiltSeriesEncoder.register_state_dict_pre_hook
       ~TiltSeriesEncoder.reparameterize
       ~TiltSeriesEncoder.requires_grad_
       ~TiltSeriesEncoder.set_extra_state
+      ~TiltSeriesEncoder.set_submodule
       ~TiltSeriesEncoder.share_memory
       ~TiltSeriesEncoder.state_dict
       ~TiltSeriesEncoder.to

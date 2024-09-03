@@ -1,4 +1,4 @@
-tomodrgn.commands.eval\_vol.DummyModel
+﻿tomodrgn.commands.eval\_vol.DummyModel
 ======================================
 
 .. currentmodule:: tomodrgn.commands.eval_vol
@@ -37,6 +37,7 @@ tomodrgn.commands.eval\_vol.DummyModel
       ~DummyModel.ipu
       ~DummyModel.load_state_dict
       ~DummyModel.modules
+      ~DummyModel.mtia
       ~DummyModel.named_buffers
       ~DummyModel.named_children
       ~DummyModel.named_modules
@@ -49,11 +50,14 @@ tomodrgn.commands.eval\_vol.DummyModel
       ~DummyModel.register_full_backward_hook
       ~DummyModel.register_full_backward_pre_hook
       ~DummyModel.register_load_state_dict_post_hook
+      ~DummyModel.register_load_state_dict_pre_hook
       ~DummyModel.register_module
       ~DummyModel.register_parameter
+      ~DummyModel.register_state_dict_post_hook
       ~DummyModel.register_state_dict_pre_hook
       ~DummyModel.requires_grad_
       ~DummyModel.set_extra_state
+      ~DummyModel.set_submodule
       ~DummyModel.share_memory
       ~DummyModel.state_dict
       ~DummyModel.to

@@ -1,4 +1,4 @@
-tomodrgn.models.ResidLinear
+﻿tomodrgn.models.ResidLinear
 ===========================
 
 .. currentmodule:: tomodrgn.models
@@ -37,6 +37,7 @@ tomodrgn.models.ResidLinear
       ~ResidLinear.ipu
       ~ResidLinear.load_state_dict
       ~ResidLinear.modules
+      ~ResidLinear.mtia
       ~ResidLinear.named_buffers
       ~ResidLinear.named_children
       ~ResidLinear.named_modules
@@ -49,11 +50,14 @@ tomodrgn.models.ResidLinear
       ~ResidLinear.register_full_backward_hook
       ~ResidLinear.register_full_backward_pre_hook
       ~ResidLinear.register_load_state_dict_post_hook
+      ~ResidLinear.register_load_state_dict_pre_hook
       ~ResidLinear.register_module
       ~ResidLinear.register_parameter
+      ~ResidLinear.register_state_dict_post_hook
       ~ResidLinear.register_state_dict_pre_hook
       ~ResidLinear.requires_grad_
       ~ResidLinear.set_extra_state
+      ~ResidLinear.set_submodule
       ~ResidLinear.share_memory
       ~ResidLinear.state_dict
       ~ResidLinear.to

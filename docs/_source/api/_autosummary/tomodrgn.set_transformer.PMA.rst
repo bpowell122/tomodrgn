@@ -1,4 +1,4 @@
-tomodrgn.set\_transformer.PMA
+﻿tomodrgn.set\_transformer.PMA
 =============================
 
 .. currentmodule:: tomodrgn.set_transformer
@@ -37,6 +37,7 @@ tomodrgn.set\_transformer.PMA
       ~PMA.ipu
       ~PMA.load_state_dict
       ~PMA.modules
+      ~PMA.mtia
       ~PMA.named_buffers
       ~PMA.named_children
       ~PMA.named_modules
@@ -49,11 +50,14 @@ tomodrgn.set\_transformer.PMA
       ~PMA.register_full_backward_hook
       ~PMA.register_full_backward_pre_hook
       ~PMA.register_load_state_dict_post_hook
+      ~PMA.register_load_state_dict_pre_hook
       ~PMA.register_module
       ~PMA.register_parameter
+      ~PMA.register_state_dict_post_hook
       ~PMA.register_state_dict_pre_hook
       ~PMA.requires_grad_
       ~PMA.set_extra_state
+      ~PMA.set_submodule
       ~PMA.share_memory
       ~PMA.state_dict
       ~PMA.to
