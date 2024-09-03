@@ -729,7 +729,7 @@ class MedianPool1d(nn.Module):
         super().__init__()
         self.pooling_axis = pooling_axis
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
         """
         Pass data forward through the layer.
 
@@ -737,6 +737,7 @@ class MedianPool1d(nn.Module):
         :return: Output data tensor.
         """
         with autocast(device_type=x.device.type, enabled=False):  # torch.quantile and torch.median do not support fp16 so casting to fp32 in case AMP is used
+            x = x.to(dtype=torch.float32, device=x.device)
             x = x.quantile(dim=self.pooling_axis, q=0.5)
             return x
 
