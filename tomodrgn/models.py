@@ -448,7 +448,7 @@ class FTPositionalDecoder(nn.Module):
         zslices = torch.linspace(-extent, extent, boxsize_ht, dtype=batch_vol_f.dtype)
         for (i, zslice) in enumerate(zslices):
             # create the z slice to evaluate
-            xy_coords = coords + torch.tensor([0, 0, zslice])
+            xy_coords = coords + torch.tensor([0, 0, zslice], dtype=coords.dtype, device=coords.device)
 
             # only evaluate coords within `extent` radius (if extent==0.5, nyquist limit in reciprocal space)
             slice_mask = xy_coords.pow(2).sum(dim=-1) <= extent ** 2
