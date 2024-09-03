@@ -454,6 +454,9 @@ def main(args):
                                   invert=args.invert,
                                   cuda=args.device, )
 
+    # do not render figure window when drawing/saving figures
+    plt.ioff()
+
     # plot the loss curve
     loss = analysis.parse_loss(f'{args.workdir}/run.log')
     plt.plot(loss)

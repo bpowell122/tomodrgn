@@ -201,9 +201,6 @@ def cluster_kmeans(z: np.ndarray,
 
     # reorder clusters by agglomerative clustering distance
     if reorder:
-        # temporarily suppress rendering figures since we use seaborn to get reordered row indices
-        plt.ioff()
-
         # clustermap generation
         g = sns.clustermap(centers)
 
@@ -213,8 +210,6 @@ def cluster_kmeans(z: np.ndarray,
         reorder_label_mapping = {old_label: new_label for new_label, old_label in enumerate(reordered)}
         labels = np.array([reorder_label_mapping[old_label] for old_label in labels])
 
-        # restore figure rendering
-        plt.ion()
         plt.close()
 
     return labels, centers
