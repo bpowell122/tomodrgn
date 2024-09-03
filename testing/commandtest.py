@@ -1,6 +1,6 @@
 """
 Test all primary tomoDRGN commands and common argument permutations for error-free functionality.
-Takes about 1 hour on a 2020 MacBook Pro, and creates about 800 MB of outputs.
+Takes about 50 minutes on a 2020 MacBook Pro or 10 minutes on an Ubuntu workstation, and creates about 900 MB of outputs.
 Note that outputs of some command tests are used as inputs to others.
 """
 

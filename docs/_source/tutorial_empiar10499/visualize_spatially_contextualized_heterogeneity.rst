@@ -1,0 +1,3 @@
+Visualize spatially-contextualized heterogeneity
+==================================================
+
