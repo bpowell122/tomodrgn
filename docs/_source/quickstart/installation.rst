@@ -1,16 +1,27 @@
 Installation
 ============
 
-Recommended system resources
------------------------------
-TODO
+System requirements
+--------------------
 
-* multi-core CPU
-* > 128 GB system RAM
-* 1 NVIDIA GPU ( > 12 GB VRAM)
-* fast local scratch disk if insufficient RAM to hold all particles + 25% margin at float32 precision
+.. tab-set::
 
-TODO add minimum system requirements for running commandtest with toy models (e.g. macbook)
+   .. tab-item:: Recommended system configuration
+
+      Recommended system resources to run tomoDRGN on real-world datasets:
+
+      * CPU: 8+ cores
+      * RAM: 128+ GB (enough to hold all particles + 25% margin at float32 precision)
+      * GPU: 1x Nvidia GPU with > 12 GB VRAM
+      * Disk: 10-100 GB disk space for tomoDRGN outputs + fast local scratch disk if insufficient RAM to hold all particles
+
+   .. tab-item:: Minimum system configuration
+
+      Minimum system resources to run tomoDRGN on toy datasets, develop source code, build documentation, etc.:
+
+      * CPU: 4+ cores
+      * RAM: 8+ GB
+      * Disk: 2 GB disk space for toy dataset outputs
 
 
 Setting up a new tomoDRGN environment
@@ -39,7 +50,7 @@ On an Ubuntu 24.04 machine, I had to install the following in order to build ``f
     sudo apt install build-essential
     sudo apt install cmake
 
-TomoDRGN requires ``pytorch>=2.3``, but `pytorch does not distribute prebuilt pip packages for x86 Macs starting with pytorch 2.3 <https://github.com/pytorch/pytorch/issues/114602>`_.
+TomoDRGN requires ``torch>=2.3``, but `pytorch does not distribute prebuilt pip packages for x86 Macs starting with pytorch 2.3 <https://github.com/pytorch/pytorch/issues/114602>`_.
 Therefore pytorch must be `built from source for x86 Macs <https://github.com/pytorch/pytorch#from-source>`_:
 
 .. code-block:: bash
@@ -66,13 +77,11 @@ Takes about 1 minute.
 Run a comprehensive end-to-end test of all commands with multiple options (except Jupyter notebooks).
 Takes about 50 minutes on a MacBook, about 10 minutes on an Ubuntu workstation with a 4060Ti.
 Produces about 1 GB of outputs in ``testing/outputs``.
+Also serves as a useful reference for commonly used command syntax.
 
 .. code-block:: bash
 
     cd testing
-    python ./quicktest.py
-
-    # a useful reference for commonly used command syntax
     python ./commandtest.py
 
 
