@@ -171,7 +171,7 @@ class GenericStarfile:
             :param _block_end_line: the last file line containing data values of the data block
             :return: pandas dataframe of the data block values
             """
-            columns = [line.split(' ')[0] for line in _header if line.startswith('_')]
+            columns = [line.split(' ')[0].strip() for line in _header if line.startswith('_')]
 
             # load the first 1 row to get dtypes of columns
             df = pd.read_csv(self.sourcefile,
