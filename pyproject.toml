@@ -1,5 +1,8 @@
 [build-system]
-requires = ["hatchling"]
+requires = [
+    "hatchling",
+    "hatch-vcs"
+]
 build-backend = "hatchling.build"
 
 [project]
@@ -50,7 +53,8 @@ tomodrgn = "tomodrgn.__main__:main"
 Homepage = "https://github.com/bpowell122/tomodrgn"
 
 [tool.hatch.version]
-path = "tomodrgn/__init__.py"
+source = "vcs"
+tag-pattern = "^(?:[\\w-]+-)?(?P<version>[vV]?\\d+(?:\\.\\d+){0,2}[^\\+]*)(?:\\+.*)?$"
 
 [tool.hatch.build.targets.sdist]
 exclude = [
