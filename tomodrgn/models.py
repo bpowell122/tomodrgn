@@ -5,7 +5,7 @@ Classes for creating, loading, training, and evaluating pytorch models.
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.cuda.amp import autocast
+from torch.amp import autocast
 from typing import Literal
 from einops import repeat, pack
 from einops.layers.torch import Reduce, Rearrange
@@ -736,7 +736,7 @@ class MedianPool1d(nn.Module):
         :param x: Input data tensor.
         :return: Output data tensor.
         """
-        with autocast(enabled=False):  # torch.quantile and torch.median do not support fp16 so casting to fp32 in case AMP is used
+        with autocast(device_type=x.device.type, enabled=False):  # torch.quantile and torch.median do not support fp16 so casting to fp32 in case AMP is used
             x = x.quantile(dim=self.pooling_axis, q=0.5)
             return x
 

@@ -10,7 +10,7 @@ from typing import Union
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.cuda.amp import GradScaler, autocast
+from torch.amp import GradScaler, autocast
 from torch.utils.data import DataLoader
 
 from tomodrgn import utils, ctf, mrc, config
@@ -163,7 +163,7 @@ def train_batch(model: FTPositionalDecoder | DataParallelPassthrough,
     model.train()
 
     # autocast auto-enabled and set to correct device
-    with autocast(enabled=use_amp):
+    with autocast(device_type=lat.device.type, enabled=use_amp):
         # center images via translation and calculate CTF
         batch_images_preprocessed, batch_ctf_weights = preprocess_batch(lat=lat,
                                                                         batch_images=batch_images,
@@ -377,7 +377,7 @@ def main(args):
     # Mixed precision training with AMP
     use_amp = not args.no_amp
     flog(f'AMP acceleration enabled (autocast + gradscaler) : {use_amp}')
-    scaler = GradScaler(enabled=use_amp)
+    scaler = GradScaler(device=device.type, enabled=use_amp)
     if use_amp:
         if not args.batch_size % 8 == 0:
             flog('Warning: recommended to have batch size divisible by 8 for AMP training')

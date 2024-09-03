@@ -13,7 +13,7 @@ import multiprocessing.pool
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
-from torch.cuda.amp import autocast
+from torch.amp import autocast
 
 from tomodrgn import mrc, utils, fft
 from tomodrgn.models import TiltSeriesHetOnlyVAE, FTPositionalDecoder
@@ -207,7 +207,7 @@ def main(args):
     model.eval()
     with torch.inference_mode():
         use_amp = not args.no_amp
-        with autocast(enabled=use_amp):
+        with autocast(device_type=device.type, enabled=use_amp):
 
             # prepare z when decoding multiple volumes (at varying z values)
             if args.z_start or args.zfile:
