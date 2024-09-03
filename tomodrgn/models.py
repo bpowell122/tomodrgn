@@ -126,7 +126,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
 
         # load weights if provided
         if weights is not None:
-            ckpt = torch.load(weights)
+            ckpt = torch.load(weights, weights_only=True)
             model.load_state_dict(ckpt['model_state_dict'])
 
         # move the model to the requested device
@@ -311,7 +311,7 @@ class FTPositionalDecoder(nn.Module):
 
         # load weights if provided
         if weights is not None:
-            ckpt = torch.load(weights)
+            ckpt = torch.load(weights, weights_only=True)
             model.load_state_dict(ckpt['model_state_dict'])
 
         # move the model to the requested device

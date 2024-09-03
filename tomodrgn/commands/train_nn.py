@@ -388,7 +388,7 @@ def main(args):
     # load weights if restarting from checkpoint
     if args.load:
         flog('Loading checkpoint from {}'.format(args.load))
-        checkpoint = torch.load(args.load)
+        checkpoint = torch.load(args.load, weights_only=True)
         model.load_state_dict(checkpoint['model_state_dict'])
         model.to(device)
         optim.load_state_dict(checkpoint['optimizer_state_dict'])
