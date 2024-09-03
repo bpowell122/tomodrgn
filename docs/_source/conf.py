@@ -44,5 +44,8 @@ add_module_names = False # Remove namespaces from class/method signatures
 html_theme = 'pydata_sphinx_theme'
 html_theme_options = {
     'navigation_with_keys': False,
+    'logo': {
+        'text': f'tomoDRGN v{metadata.version("tomodrgn")}',  # set the logo display text at top left of navigation bar
+    }
 }
 html_static_path = ['_static']
