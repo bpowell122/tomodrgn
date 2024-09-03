@@ -15,17 +15,22 @@ from tomodrgn import utils, mrc, fft, dataset, starfile
 log = utils.log
 
 
-def add_args(_parser):
-    _parser.add_argument('input', help='Input particles or volume (.mrc, .mrcs, .star, or .txt)')
-    _parser.add_argument('--downsample', type=int, required=True, help='New box size in pixels, must be even')
-    _parser.add_argument('--output', metavar='MRCS', type=os.path.abspath, required=True, help='Output projection stack (.mrcs)')
-    _parser.add_argument('--batch-size', type=int, default=5000, help='Batch size for processing images')
-    _parser.add_argument('--is-vol', action='store_true', help='Flag if input .mrc is a volume')
-    _parser.add_argument('--chunk', type=int, help='Chunksize (in # of images) to split particle stack when loading and saving if full stack + downsampled stack too large for system memory')
-    _parser.add_argument('--lazy', action='store_true', help='Lazily load each image on the fly if full stack too large for system memory')
-    _parser.add_argument('--datadir', help='Optionally provide path to input .mrcs if loading from a .star file')
-    _parser.add_argument('--write-tiltseries-starfile', action='store_true', help='If input is a star file, write a downsampled star file')
-    return _parser
+def add_args() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument('input', help='Input particles or volume (.mrc, .mrcs, .star, or .txt)')
+
+    group = parser.add_argument_group('Core arguments')
+    group.add_argument('--downsample', type=int, required=True, help='New box size in pixels, must be even')
+    group.add_argument('--output', metavar='MRCS', type=os.path.abspath, required=True, help='Output projection stack (.mrcs)')
+    group.add_argument('--batch-size', type=int, default=5000, help='Batch size for processing images')
+    group.add_argument('--is-vol', action='store_true', help='Flag if input .mrc is a volume')
+    group.add_argument('--chunk', type=int, help='Chunksize (in # of images) to split particle stack when loading and saving if full stack + downsampled stack too large for system memory')
+    group.add_argument('--lazy', action='store_true', help='Lazily load each image on the fly if full stack too large for system memory')
+    group.add_argument('--datadir', help='Optionally provide path to input .mrcs if loading from a .star file')
+    group.add_argument('--write-tiltseries-starfile', action='store_true', help='If input is a star file, write a downsampled star file')
+
+    return parser
 
 
 def mkbasedir(out: str) -> None:
@@ -276,5 +281,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__)
-    main(add_args(parser).parse_args())
+    main(add_args().parse_args())

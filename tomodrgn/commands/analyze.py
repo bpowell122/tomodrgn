@@ -18,26 +18,30 @@ from tomodrgn import analysis, utils, starfile
 log = utils.log
 
 
-def add_args(_parser):
-    _parser.add_argument('workdir', type=os.path.abspath, help='Directory with tomoDRGN results')
-    _parser.add_argument('epoch', type=int, help='Epoch number N to analyze (0-based indexing, corresponding to z.N.pkl, weights.N.pkl)')
-    _parser.add_argument('--device', type=int, help='Optionally specify CUDA device')
-    _parser.add_argument('-o', '--outdir', help='Output directory for analysis results (default: [workdir]/analyze.[epoch])')
-    _parser.add_argument('--skip-vol', action='store_true', help='Skip generation of volumes')
-    _parser.add_argument('--skip-umap', action='store_true', help='Skip running UMAP')
+def add_args() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    group = _parser.add_argument_group('Arguments for latent space analysis')
+    parser.add_argument('workdir', type=os.path.abspath, help='Directory with tomoDRGN results')
+    parser.add_argument('epoch', type=int, help='Epoch number N to analyze (0-based indexing, corresponding to z.N.pkl, weights.N.pkl)')
+
+    group = parser.add_argument_group('Core arguments')
+    group.add_argument('--device', type=int, help='Optionally specify CUDA device')
+    group.add_argument('-o', '--outdir', help='Output directory for analysis results (default: [workdir]/analyze.[epoch])')
+    group.add_argument('--skip-vol', action='store_true', help='Skip generation of volumes')
+    group.add_argument('--skip-umap', action='store_true', help='Skip running UMAP')
+
+    group = parser.add_argument_group('Arguments for latent space analysis')
     group.add_argument('--pc', type=int, default=2, help='Number of principal component traversals to generate (default: %(default)s)')
     group.add_argument('--pc-ondata', action='store_true', help='Find closest on-data latent point to each PC percentile')
     group.add_argument('--ksample', type=int, default=20, help='Number of kmeans samples to generate (default: %(default)s)')
 
-    group = _parser.add_argument_group('Arguments for volume generation')
+    group = parser.add_argument_group('Arguments for volume generation')
     group.add_argument('--downsample', type=int, help='Downsample volumes to this box size (pixels)')
     group.add_argument('--lowpass', type=float, default=None, help='Lowpass filter to this resolution in Å')
     group.add_argument('--flip', action='store_true', help='Flip handedness of output volumes')
     group.add_argument('--invert', action='store_true', help='Invert contrast of output volumes')
 
-    return _parser
+    return parser
 
 
 def analyze_z_onedimensional(z: np.ndarray,
@@ -502,5 +506,4 @@ def main(args):
 
 if __name__ == '__main__':
     matplotlib.use('Agg')  # non-interactive backend
-    parser = argparse.ArgumentParser(description=__doc__)
-    main(add_args(parser).parse_args())
+    main(add_args().parse_args())

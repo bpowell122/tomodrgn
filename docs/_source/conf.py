@@ -28,6 +28,7 @@ extensions = [
     'sphinx.ext.autosummary',  # automatic recursive documentation generation
     'sphinx.ext.viewcode',  # linking module/class/etc documentation to source code
     'sphinx_simplepdf',    # viewing and building PDFs
+    'sphinxarg.ext',   # adding argparse documentation to sphinx docs
 ]
 
 templates_path = ['_templates']

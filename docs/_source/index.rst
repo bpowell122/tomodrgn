@@ -27,5 +27,5 @@ References
    quickstart <quickstart/index>
    command usage <command_usage/index>
    API <api/index>
-   tutorial <tutorial_empiar10499/index>
+   tutorials <tutorial_empiar10499/index>
 

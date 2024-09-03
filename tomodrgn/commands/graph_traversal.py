@@ -17,17 +17,21 @@ from tomodrgn import utils
 log = utils.log
 
 
-def add_args(parser):
+def add_args() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
     parser.add_argument('z', type=os.path.abspath,
                         help='Input latent embeddings z.pkl file')
-    parser.add_argument('--anchors', type=int, nargs='+', required=True,
-                        help='Indices of anchor points along desired trajectory. At least 2 points must be specified.')
-    parser.add_argument('-o', '--outdir', type=os.path.abspath, required=True,
-                        help='Directory in which to store output .txt/.pkl files of path indices and latent embeddings')
-    parser.add_argument('--max-neighbors', type=int, default=10,
-                        help='The maximum number of neighbors to initially calculate distances for from each latent embedding')
-    parser.add_argument('--avg-neighbors', type=float, default=None,
-                        help='Used to set a cutoff distance defining connected neighbors such that each embedding will have this many connected neighbors on average')
+
+    group = parser.add_argument_group('Core arguments')
+    group.add_argument('--anchors', type=int, nargs='+', required=True,
+                       help='Indices of anchor points along desired trajectory. At least 2 points must be specified.')
+    group.add_argument('-o', '--outdir', type=os.path.abspath, required=True,
+                       help='Directory in which to store output .txt/.pkl files of path indices and latent embeddings')
+    group.add_argument('--max-neighbors', type=int, default=10,
+                       help='The maximum number of neighbors to initially calculate distances for from each latent embedding')
+    group.add_argument('--avg-neighbors', type=float, default=None,
+                       help='Used to set a cutoff distance defining connected neighbors such that each embedding will have this many connected neighbors on average')
 
     return parser
 
@@ -77,7 +81,7 @@ class LatentGraph:
         # calculate the maximum allowable distance to enforce an average of args.avg_neighbors neighbors per particle
         if avg_neighbors:
             total_neighbors = int(nptcls * avg_neighbors)
-            max_dist = np.sort(dists.flatten())[total_neighbors-1]
+            max_dist = np.sort(dists.flatten())[total_neighbors - 1]
         else:
             max_dist = None
 
@@ -285,4 +289,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    main(add_args(argparse.ArgumentParser(description=__doc__)).parse_args())
+    main(add_args().parse_args())

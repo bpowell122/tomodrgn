@@ -12,7 +12,8 @@ import numpy as np
 from tomodrgn import utils, convergence, analysis
 
 
-def add_args(parser):
+def add_args() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('training_directory', type=os.path.abspath, help='train_nn directory containing reconstruct.N.mrc')
     parser.add_argument('reference_volume', type=os.path.abspath, help='volume against which to calculate FSC')
     parser.add_argument('--max-epoch', type=int, help='Maximum epoch for which to calculate FSCs')
@@ -153,4 +154,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    main(add_args(argparse.ArgumentParser(description=__doc__)).parse_args())
+    main(add_args().parse_args())

@@ -17,17 +17,21 @@ from tomodrgn.starfile import TiltSeriesStarfile
 log = utils.log
 
 
-def add_args(_parser):
-    _parser.add_argument('particles', type=os.path.abspath, help='Input particles (.mrcs, .star, or .txt)')
-    _parser.add_argument('-w', '--weights', help='Model weights')
-    _parser.add_argument('-c', '--config', required=True, help='config.pkl file from train_vae')
-    _parser.add_argument('--out-z', metavar='PKL', type=os.path.abspath, required=True, help='Output pickle for z')
-    _parser.add_argument('--log-interval', type=int, default=1000, help='Logging interval in N_IMGS')
-    _parser.add_argument('-b', '--batch-size', type=int, default=64, help='Minibatch size')
-    _parser.add_argument('-v', '--verbose', action='store_true', help='Increases verbosity')
-    _parser.add_argument('--no-amp', action='store_true', help='Disable use of automatic mixed precision')
+def add_args() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    group = _parser.add_argument_group('Override configuration values -- star file')
+    parser.add_argument('particles', type=os.path.abspath, help='Input particles (.mrcs, .star, or .txt)')
+
+    group = parser.add_argument_group('Core arguments')
+    group.add_argument('-w', '--weights', help='Model weights')
+    group.add_argument('-c', '--config', required=True, help='config.pkl file from train_vae')
+    group.add_argument('--out-z', metavar='PKL', type=os.path.abspath, required=True, help='Output pickle for z')
+    group.add_argument('--log-interval', type=int, default=1000, help='Logging interval in N_IMGS')
+    group.add_argument('-b', '--batch-size', type=int, default=64, help='Minibatch size')
+    group.add_argument('-v', '--verbose', action='store_true', help='Increases verbosity')
+    group.add_argument('--no-amp', action='store_true', help='Disable use of automatic mixed precision')
+
+    group = parser.add_argument_group('Override configuration values -- star file')
     group.add_argument('--source-software', type=str, choices=('auto', 'warp_v1', 'nextpyp', 'relion_v5', 'warp_v2'), default='auto',
                        help='Manually set the software used to extract particles. Default is to auto-detect.')
     group.add_argument('--ind-ptcls', type=os.path.abspath, metavar='PKL', help='Filter starfile by particles (unique rlnGroupName values) using np array pkl as indices')
@@ -37,18 +41,18 @@ def add_args(_parser):
                                                                         'Default -1 means to use all. Will drop particles with fewer than this many tilt images.')
     group.add_argument('--use-first-nptcls', type=int, default=-1, help='Keep the first `use_first_nptcls` particles in the sorted star file. Default -1 means to use all.')
 
-    group = _parser.add_argument_group('Override configuration values -- data handling')
+    group = parser.add_argument_group('Override configuration values -- data handling')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths from a .star or .cs file')
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory')
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
 
-    group = _parser.add_argument_group('Dataloader arguments')
+    group = parser.add_argument_group('Dataloader arguments')
     group.add_argument('--num-workers', type=int, default=0, help='Number of workers to use when batching particles for training. Has moderate impact on epoch time')
     group.add_argument('--prefetch-factor', type=int, default=2, help='Number of particles to prefetch per worker for training. Has moderate impact on epoch time')
     group.add_argument('--persistent-workers', action='store_true', help='Whether to persist workers after dataset has been fully consumed. Has minimal impact on run time')
     group.add_argument('--pin-memory', action='store_true', help='Whether to use pinned memory for dataloader. Has large impact on epoch time. Recommended.')
 
-    return _parser
+    return parser
 
 
 def main(args):
@@ -149,5 +153,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__)
-    main(add_args(parser).parse_args())
+    main(add_args().parse_args())

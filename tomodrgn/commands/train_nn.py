@@ -24,16 +24,20 @@ log = utils.log
 vlog = utils.vlog
 
 
-def add_args(_parser):
-    _parser.add_argument('particles', type=os.path.abspath, help='Input particles (.mrcs, .star, or .txt)')
-    _parser.add_argument('--outdir', type=os.path.abspath, required=True, help='Output directory to save model')
-    _parser.add_argument('--load', metavar='WEIGHTS.PKL', help='Initialize training from a checkpoint')
-    _parser.add_argument('--checkpoint', type=int, default=1, help='Checkpointing interval in N_EPOCHS (default: %(default)s)')
-    _parser.add_argument('--log-interval', type=int, default=200, help='Logging interval in N_PTCLS (default: %(default)s)')
-    _parser.add_argument('--verbose', action='store_true', help='Increases verbosity')
-    _parser.add_argument('--seed', type=int, default=np.random.randint(0, 100000), help='Random seed')
+def add_args() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    group = _parser.add_argument_group('Particle starfile loading and filtering')
+    parser.add_argument('particles', type=os.path.abspath, help='Input particles (.mrcs, .star, or .txt)')
+
+    group = parser.add_argument_group('Core arguments')
+    group.add_argument('--outdir', type=os.path.abspath, required=True, help='Output directory to save model')
+    group.add_argument('--load', metavar='WEIGHTS.PKL', help='Initialize training from a checkpoint')
+    group.add_argument('--checkpoint', type=int, default=1, help='Checkpointing interval in N_EPOCHS (default: %(default)s)')
+    group.add_argument('--log-interval', type=int, default=200, help='Logging interval in N_PTCLS (default: %(default)s)')
+    group.add_argument('--verbose', action='store_true', help='Increases verbosity')
+    group.add_argument('--seed', type=int, default=np.random.randint(0, 100000), help='Random seed')
+
+    group = parser.add_argument_group('Particle starfile loading and filtering')
     group.add_argument('--source-software', type=str, choices=('auto', 'warp_v1', 'nextpyp', 'relion_v5', 'warp_v2'), default='auto',
                        help='Manually set the software used to extract particles. Default is to auto-detect.')
     group.add_argument('--ind-ptcls', type=os.path.abspath, metavar='PKL', help='Filter starfile by particles (unique rlnGroupName values) using np array pkl as indices')
@@ -43,7 +47,7 @@ def add_args(_parser):
                                                                         'Default -1 means to use all. Will drop particles with fewer than this many tilt images.')
     group.add_argument('--use-first-nptcls', type=int, default=-1, help='Keep the first `use_first_nptcls` particles in the sorted star file. Default -1 means to use all.')
 
-    group = _parser.add_argument_group('Dataset loading and preprocessing')
+    group = parser.add_argument_group('Dataset loading and preprocessing')
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
     group.add_argument('--no-window', dest='window', action='store_false', help='Turn off real space windowing of dataset')
     group.add_argument('--window-r', type=float, default=.8, help='Real space inner windowing radius for cosine falloff to radius 1')
@@ -52,12 +56,12 @@ def add_args(_parser):
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
     group.add_argument('--sequential-tilt-sampling', action='store_true', help='Supply particle images of one particle to encoder in filtered starfile order')
 
-    group = _parser.add_argument_group('Weighting and masking')
+    group = parser.add_argument_group('Weighting and masking')
     group.add_argument('--recon-tilt-weight', action='store_true', help='Weight reconstruction loss by cosine(tilt_angle)')
     group.add_argument('--recon-dose-weight', action='store_true', help='Weight reconstruction loss per tilt per pixel by dose dependent amplitude attenuation')
     group.add_argument('--l-dose-mask', action='store_true', help='Do not train on frequencies exposed to > 2.5x critical dose. Training lattice is intersection of this with --l-extent')
 
-    group = _parser.add_argument_group('Training parameters')
+    group = parser.add_argument_group('Training parameters')
     group.add_argument('--num-epochs', type=int, default=20, help='Number of training epochs')
     group.add_argument('--batch-size', type=int, default=1, help='Minibatch size')
     group.add_argument('--wd', type=float, default=0, help='Weight decay in Adam optimizer')
@@ -66,7 +70,7 @@ def add_args(_parser):
     group.add_argument('--no-amp', action='store_true', help='Disable use of mixed-precision training')
     group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs. Specify GPUs i,j via `export CUDA_VISIBLE_DEVICES=i,j` before tomodrgn train_vae')
 
-    group = _parser.add_argument_group('Network Architecture')
+    group = parser.add_argument_group('Network Architecture')
     group.add_argument('--layers', type=int, default=3, help='Number of hidden layers')
     group.add_argument('--dim', type=int, default=512, help='Number of nodes in hidden layers')
     group.add_argument('--l-extent', type=float, default=0.5, help='Coordinate lattice size (if not using positional encoding)')
@@ -75,12 +79,13 @@ def add_args(_parser):
     group.add_argument('--activation', choices=('relu', 'leaky_relu'), default='relu', help='Activation')
     group.add_argument('--feat-sigma', type=float, default=0.5, help="Scale for random Gaussian features")
 
-    group = _parser.add_argument_group('Dataloader arguments')
+    group = parser.add_argument_group('Dataloader arguments')
     group.add_argument('--num-workers', type=int, default=0, help='Number of workers to use when batching particles for training. Has moderate impact on epoch time')
     group.add_argument('--prefetch-factor', type=int, default=None, help='Number of particles to prefetch per worker for training. Has moderate impact on epoch time')
     group.add_argument('--persistent-workers', action='store_true', help='Whether to persist workers after dataset has been fully consumed. Has minimal impact on run time')
     group.add_argument('--pin-memory', action='store_true', help='Whether to use pinned memory for dataloader. Has large impact on epoch time. Recommended.')
-    return _parser
+
+    return parser
 
 
 def save_checkpoint(model: FTPositionalDecoder | DataParallelPassthrough,
@@ -485,5 +490,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__)
-    main(add_args(parser).parse_args())
+    main(add_args().parse_args())

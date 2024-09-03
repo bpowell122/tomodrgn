@@ -19,16 +19,19 @@ from tomodrgn import mrc, utils, analysis, starfile
 log = utils.log
 
 
-def add_args(_parser):
-    _parser.add_argument('--voldir', type=os.path.abspath, required=True, help='path to directory containing volumes to analyze')
-    _parser.add_argument('--config', type=os.path.abspath, required=True, help='path to train_vae config file')
-    _parser.add_argument('--outdir', type=os.path.abspath, default=None, help='path to directory to save outputs. Default is same directory and basename as voldir, appended with `analyze_volumes`')
-    _parser.add_argument('--num-pcs', type=int, default=128, help='keep this many PCs when saving PCA and running UMAP')
-    _parser.add_argument('--ksample', type=int, default=None, help='Number of kmeans samples to generate (clustering voxel-PCA space). '
+def add_args() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    group = parser.add_argument_group('Core arguments')
+    group.add_argument('--voldir', type=os.path.abspath, required=True, help='path to directory containing volumes to analyze')
+    group.add_argument('--config', type=os.path.abspath, required=True, help='path to train_vae config file')
+    group.add_argument('--outdir', type=os.path.abspath, default=None, help='path to directory to save outputs. Default is same directory and basename as voldir, appended with `analyze_volumes`')
+    group.add_argument('--num-pcs', type=int, default=128, help='keep this many PCs when saving PCA and running UMAP')
+    group.add_argument('--ksample', type=int, default=None, help='Number of kmeans samples to generate (clustering voxel-PCA space). '
                                                                    'Note that this is only recommended if all particles in the dataset have had volumes generated in --voldir, '
                                                                    'to avoid confusion of k-means origin in latent space clustering and/or volume space clustering.')
 
-    group = _parser.add_argument_group('Mask generation arguments')
+    group = parser.add_argument_group('Mask generation arguments')
     group.add_argument('--mask-path', type=os.path.abspath, help='Supply a custom real space mask instead of having tomoDRGN calculate a mask.')
     group.add_argument('--mask', type=str, choices=['none', 'sphere', 'tight', 'soft'], help='Type of real space mask to generate for each volume when calculating voxel-PCA.'
                                                                                              'Note that tight and soft masks are calculated uniquely per-volume.')
@@ -39,7 +42,7 @@ def add_args(_parser):
     group.add_argument('--dist', type=int, help='Number of voxels over which to apply a soft cosine falling edge from dilated mask boundary; default is to use 1/30th of box size (px). '
                                                 'Only relevant for soft mask.')
 
-    return _parser
+    return parser
 
 
 def make_plots(outdir: str,
@@ -435,5 +438,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    main(add_args(parser).parse_args())
+    main(add_args().parse_args())

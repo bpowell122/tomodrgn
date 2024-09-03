@@ -11,18 +11,23 @@ from tomodrgn import starfile, utils
 log = utils.log
 
 
-def add_args(_parser):
-    _parser.add_argument('input', help='Input .star file')
-    _parser.add_argument('--starfile-type', type=str, default='imageseries', choices=('imageseries', 'volumeseries'), help='Type of star file to filter; '
-                                                                                                                           'Do rows correspond to particle images or particle volumes')
-    _parser.add_argument('--ind', help='selected indices array (.pkl)')
-    _parser.add_argument('--ind-type', choices=('particle', 'image'), default='particle', help='use indices to filter by particle (multiple images) or by image (individual images). '
-                                                                                               'Only relevant for imageseries star files')
-    _parser.add_argument('--action', choices=('keep', 'drop'), default='keep', help='keep or remove particles associated with ind.pkl')
-    _parser.add_argument('--tomogram', type=str, help='optionally select by individual tomogram name (if `all` then writes individual star files per tomogram')
-    _parser.add_argument('--tomo-id-col', type=str, default='_rlnMicrographName', help='Name of column in input starfile with unique values per tomogram')
-    _parser.add_argument('-o', required=True, help='Output .star file (treated as output base name suffixed by tomogram name if specifying `--tomogram`)')
-    return _parser
+def add_args() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument('input', help='Input .star file')
+
+    group = parser.add_argument_group('Core arguments')
+    group.add_argument('--starfile-type', type=str, default='imageseries', choices=('imageseries', 'volumeseries'), help='Type of star file to filter; '
+                                                                                                                         'Do rows correspond to particle images or particle volumes')
+    group.add_argument('--ind', help='selected indices array (.pkl)')
+    group.add_argument('--ind-type', choices=('particle', 'image'), default='particle', help='use indices to filter by particle (multiple images) or by image (individual images). '
+                                                                                             'Only relevant for imageseries star files')
+    group.add_argument('--action', choices=('keep', 'drop'), default='keep', help='keep or remove particles associated with ind.pkl')
+    group.add_argument('--tomogram', type=str, help='optionally select by individual tomogram name (if `all` then writes individual star files per tomogram')
+    group.add_argument('--tomo-id-col', type=str, default='_rlnMicrographName', help='Name of column in input starfile with unique values per tomogram')
+    group.add_argument('-o', required=True, help='Output .star file (treated as output base name suffixed by tomogram name if specifying `--tomogram`)')
+
+    return parser
 
 
 def filter_image_series_starfile(star_path: str,
@@ -169,5 +174,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__)
-    main(add_args(parser).parse_args())
+    main(add_args().parse_args())

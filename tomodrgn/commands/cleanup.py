@@ -12,15 +12,16 @@ from tomodrgn import utils
 log = utils.log
 
 
-def add_args(_parser):
-    _parser.add_argument('workdir', type=os.path.abspath, help='Training directory containing training outputs to be cleaned')
-    _parser.add_argument('--weights', action='store_true', help='Remove weights.N.pkl files directly within training directory, excluding those with a matching analyze.N or convergence.N subfolder')
-    _parser.add_argument('--zfiles', action='store_true', help='Remove z.N.pkl files within directly training directory, excluding those with a matching analyze.N or convergence.N subfolder')
-    _parser.add_argument('--volumes', action='store_true', help='Remove *.mrc volumes recursively within training directory. '
+def add_args() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('workdir', type=os.path.abspath, help='Training directory containing training outputs to be cleaned')
+    parser.add_argument('--weights', action='store_true', help='Remove weights.N.pkl files directly within training directory, excluding those with a matching analyze.N or convergence.N subfolder')
+    parser.add_argument('--zfiles', action='store_true', help='Remove z.N.pkl files within directly training directory, excluding those with a matching analyze.N or convergence.N subfolder')
+    parser.add_argument('--volumes', action='store_true', help='Remove *.mrc volumes recursively within training directory. '
                                                                 'Note that volumes can be regenerated with config.pkl, weights.pkl, and appropriate z file.')
-    _parser.add_argument('--test', action='store_true', help='Don\'t actually delete any files, just list the files that would be deleted')
+    parser.add_argument('--test', action='store_true', help='Don\'t actually delete any files, just list the files that would be deleted')
 
-    return _parser
+    return parser
 
 
 def main(args):
@@ -62,5 +63,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__)
-    main(add_args(parser).parse_args())
+    main(add_args().parse_args())

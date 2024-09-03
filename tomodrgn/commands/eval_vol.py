@@ -22,30 +22,33 @@ log = utils.log
 vlog = utils.vlog
 
 
-def add_args(_parser):
-    _parser.add_argument('-w', '--weights', help='Model weights from train_vae')
-    _parser.add_argument('-c', '--config', required=True, help='config.pkl file from train_vae')
-    _parser.add_argument('-o', type=os.path.abspath, required=True, help='Output .mrc or directory')
-    _parser.add_argument('--prefix', default='vol_', help='Prefix when writing out multiple .mrc files')
-    _parser.add_argument('--no-amp', action='store_true', help='Disable use of mixed-precision training')
-    _parser.add_argument('-b', '--batch-size', type=int, default=1, help='Batch size to parallelize volume generation (32-64 works well for box64 volumes)')
-    _parser.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs. Specify GPUs i,j via `export CUDA_VISIBLE_DEVICES=i,j`')
-    _parser.add_argument('-v', '--verbose', action='store_true', help='Increases verbosity')
+def add_args() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    group = _parser.add_argument_group('Specify z values')
+    group = parser.add_argument_group('Core arguments')
+    group.add_argument('-w', '--weights', help='Model weights from train_vae')
+    group.add_argument('-c', '--config', required=True, help='config.pkl file from train_vae')
+    group.add_argument('-o', type=os.path.abspath, required=True, help='Output .mrc or directory')
+    group.add_argument('--prefix', default='vol_', help='Prefix when writing out multiple .mrc files')
+    group.add_argument('--no-amp', action='store_true', help='Disable use of mixed-precision training')
+    group.add_argument('-b', '--batch-size', type=int, default=1, help='Batch size to parallelize volume generation (32-64 works well for box64 volumes)')
+    group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs. Specify GPUs i,j via `export CUDA_VISIBLE_DEVICES=i,j`')
+    group.add_argument('-v', '--verbose', action='store_true', help='Increases verbosity')
+
+    group = parser.add_argument_group('Specify z values')
     group.add_argument('-z', type=np.float32, nargs='*', help='Specify one z-value')
     group.add_argument('--z-start', type=np.float32, nargs='*', help='Specify a starting z-value')
     group.add_argument('--z-end', type=np.float32, nargs='*', help='Specify an ending z-value')
     group.add_argument('-n', type=int, default=10, help='Number of structures between [z_start, z_end]')
     group.add_argument('--zfile', type=os.path.abspath, help='Text/.pkl file with z-values to evaluate')
 
-    group = _parser.add_argument_group('Volume arguments')
+    group = parser.add_argument_group('Volume arguments')
     group.add_argument('--flip', action='store_true', help='Flip handedness of output volume')
     group.add_argument('--invert', action='store_true', help='Invert contrast of output volume')
     group.add_argument('--downsample', type=int, help='Downsample volumes to this box size (pixels)')
     group.add_argument('--lowpass', type=float, default=None, help='Lowpass filter to this resolution in Å. Requires settings --Apix.')
 
-    return _parser
+    return parser
 
 
 def check_z_inputs(args):
@@ -294,5 +297,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__)
-    main(add_args(parser).parse_args())
+    main(add_args().parse_args())

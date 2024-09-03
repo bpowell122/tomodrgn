@@ -17,11 +17,13 @@ from tomodrgn.lattice import Lattice
 log = utils.log
 
 
-def add_args(_parser):
-    _parser.add_argument('particles', type=os.path.abspath, help='Input particles_imageseries.star')
-    _parser.add_argument('--output', type=os.path.abspath, required=True, help='Output .mrc file')
+def add_args() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    group = _parser.add_argument_group('Particle starfile loading and filtering')
+    parser.add_argument('particles', type=os.path.abspath, help='Input particles_imageseries.star')
+    parser.add_argument('--output', type=os.path.abspath, required=True, help='Output .mrc file')
+
+    group = parser.add_argument_group('Particle starfile loading and filtering')
     group.add_argument('--source-software', type=str, choices=('auto', 'warp_v1', 'nextpyp', 'relion_v5', 'warp_v2'), default='auto',
                        help='Manually set the software used to extract particles. Default is to auto-detect.')
     group.add_argument('--ind-ptcls', type=os.path.abspath, metavar='PKL', help='Filter starfile by particles (unique rlnGroupName values) using np array pkl as indices')
@@ -31,18 +33,18 @@ def add_args(_parser):
                                                                         'Default -1 means to use all. Will drop particles with fewer than this many tilt images.')
     group.add_argument('--use-first-nptcls', type=int, default=-1, help='Keep the first `use_first_nptcls` particles in the sorted star file. Default -1 means to use all.')
 
-    group = _parser.add_argument_group('Dataset loading options')
+    group = parser.add_argument_group('Dataset loading options')
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths star file')
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
 
-    group = _parser.add_argument_group('Reconstruction options')
+    group = parser.add_argument_group('Reconstruction options')
     group.add_argument('--recon-tilt-weight', action='store_true', help='Weight images in fourier space by cosine(tilt_angle)')
     group.add_argument('--recon-dose-weight', action='store_true', help='Weight images in fourieri space per tilt per pixel by dose dependent amplitude attenuation')
     group.add_argument('--lowpass', type=float, default=None, help='Lowpass filter reconstructed volume to this resolution in Angstrom. Defaults to FSC=0.143 correlation between half-maps')
     group.add_argument('--flip', action='store_true', help='Flip handedness of output volume')
 
-    return _parser
+    return parser
 
 
 def backproject_dataset(data: TiltSeriesMRCData,
@@ -292,5 +294,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__)
-    main(add_args(parser).parse_args())
+    main(add_args().parse_args())

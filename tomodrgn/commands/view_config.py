@@ -8,9 +8,12 @@ import os
 from tomodrgn import config
 
 
-def add_args(_parser):
-    _parser.add_argument('workdir', type=os.path.abspath, help='Directory with tomoDRGN results')
-    return _parser
+def add_args() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument('workdir', type=os.path.abspath, help='Directory with tomoDRGN results')
+
+    return parser
 
 
 def main(args):
@@ -18,5 +21,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__)
-    main(add_args(parser).parse_args())
+    main(add_args().parse_args())

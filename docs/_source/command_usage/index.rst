@@ -18,8 +18,10 @@ Here we present descriptions of all tomoDRGN commands, including for each comman
     train_vae
     convergence_vae
     analyze
+    analyze_volumes
     filter_star
     subtomo2chimerax
+    cleanup
 
 
 .. toctree::
@@ -27,6 +29,7 @@ Here we present descriptions of all tomoDRGN commands, including for each comman
     :hidden:
     :caption: Infrequently / indirectly used commands
 
+    downsample
     eval_images
     eval_vol
     graph_traversal

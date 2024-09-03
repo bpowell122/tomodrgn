@@ -16,20 +16,23 @@ flog = utils.flog
 log = utils.log
 
 
-def add_args(_parser):
-    _parser.add_argument('workdir', type=os.path.abspath, help='Directory with tomoDRGN results')
-    _parser.add_argument('epoch', type=str, default='latest', help='Latest epoch number N to analyze convergence (0-based indexing, corresponding to weights.N.pkl), "latest" for last detected epoch')
-    _parser.add_argument('-o', '--outdir', type=os.path.abspath, help='Output directory for convergence analysis results (default: [workdir]/convergence.[epoch])')
-    _parser.add_argument('--epoch-interval', type=int, default=5, help='Interval of epochs between calculating most convergence heuristics')
+def add_args() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('workdir', type=os.path.abspath, help='Directory with tomoDRGN results')
+    parser.add_argument('epoch', type=str, default='latest', help='Latest epoch number N to analyze convergence (0-based indexing, corresponding to weights.N.pkl), "latest" for last detected epoch')
 
-    group = _parser.add_argument_group('UMAP  calculation arguments')
+    group = parser.add_argument_group('Core arguments')
+    group.add_argument('-o', '--outdir', type=os.path.abspath, help='Output directory for convergence analysis results (default: [workdir]/convergence.[epoch])')
+    group.add_argument('--epoch-interval', type=int, default=5, help='Interval of epochs between calculating most convergence heuristics')
+
+    group = parser.add_argument_group('UMAP  calculation arguments')
     group.add_argument('--subset', default=50000, type=int, help='Max number of particles to be used for UMAP calculations. \'None\' means use all ptcls')
     group.add_argument('--random-seed', type=int, default=np.random.randint(0, 100000), help='Manually specify the seed used for selection of subset particles and other numpy operations')
     group.add_argument('--random-state', type=int, default=42,
                        help='Random state seed used by UMAP for reproducibility at slight cost of performance (default 42, None means slightly faster but non-reproducible)')
     group.add_argument('--skip-umap', action='store_true', help='Skip UMAP embedding. Requires that UMAP be precomputed for downstream calcs. Useful for tweaking volume generation settings.')
 
-    group = _parser.add_argument_group('Sketching UMAP via local maxima arguments')
+    group = parser.add_argument_group('Sketching UMAP via local maxima arguments')
     group.add_argument('--n-bins', type=int, default=30, help='the number of bins along UMAP1 and UMAP2')
     group.add_argument('--smooth', type=bool, default=True, help='smooth the 2D histogram before identifying local maxima')
     group.add_argument('--smooth-width', type=float, default=1.0, help='width of gaussian kernel for smoothing 2D histogram expressed as multiple of one bin\'s width')
@@ -37,7 +40,7 @@ def add_args(_parser):
     group.add_argument('--radius', type=float, default=5.0, help='distance at which two maxima are considered poorly-separated and are candidates for pruning (euclidean distance in bin-space)')
     group.add_argument('--final-maxima', type=int, default=10, help='select this many local maxima, sorted by highest bin count after pruning, for which to generate volumes')
 
-    group = _parser.add_argument_group('Volume generation arguments')
+    group = parser.add_argument_group('Volume generation arguments')
     group.add_argument('--downsample', type=int, help='Downsample volumes to this box size (pixels)')
     group.add_argument('--lowpass', type=float, default=None, help='Lowpass filter to this resolution in Å')
     group.add_argument('--flip', action='store_true', help='Flip handedness of output volumes')
@@ -46,13 +49,13 @@ def add_args(_parser):
     group.add_argument('--skip-volgen', action='store_true', help='Skip volume generation. Requires that volumes already exist for downstream CC + FSC calculations')
     group.add_argument('--ground-truth', type=os.path.abspath, nargs='+', default=None, help='Relative path containing wildcards to ground_truth_vols*.mrc for map-map CC calcs')
 
-    group = _parser.add_argument_group('Mask generation arguments')
+    group = parser.add_argument_group('Mask generation arguments')
     group.add_argument('--mask', type=str, choices=['none', 'sphere', 'tight', 'soft'], default='soft', help='Type of mask to generate for each volume when calculating volume-based metrics.')
     group.add_argument('--thresh', type=float, help='Isosurface percentile at which to threshold volume; default is to use 99th percentile.')
     group.add_argument('--dilate', type=int, help='Number of voxels to dilate thresholded isosurface outwards from mask boundary; default is to use 1/30th of box size (px).')
     group.add_argument('--dist', type=int, help='Number of voxels over which to apply a soft cosine falling edge from dilated mask boundary; default is to use 1/30th of box size (px)')
 
-    return _parser
+    return parser
 
 
 def get_latest(workdir: str) -> int:
@@ -216,5 +219,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__)
-    main(add_args(parser).parse_args())
+    main(add_args().parse_args())

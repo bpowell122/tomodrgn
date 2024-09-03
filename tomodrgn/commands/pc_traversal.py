@@ -13,14 +13,19 @@ from tomodrgn import analysis, utils
 log = utils.log
 
 
-def add_args(_parser):
-    _parser.add_argument('z', help='Input latent embeddings z.pkl file')
-    _parser.add_argument('-o', type=os.path.abspath, required=True, help='Output directory for pc.X.txt files containing latent embeddings sampled along each PC')
-    _parser.add_argument('--dim', type=int, help='Optionally specify which PC to calculate trajectory (1-based indexing) (default: all)')
-    _parser.add_argument('-n', type=int, default=10, help='Number of points to sample along each PC')
-    _parser.add_argument('--lim', nargs=2, type=float, help='Start and end point to sample along each PC (default: 5/95th percentile of each PC)')
-    _parser.add_argument('--use-percentile-spacing', action='store_true', help='Sample equally spaced percentiles along the PC instead of equally spaced points along the PC')
-    return _parser
+def add_args() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument('z', help='Input latent embeddings z.pkl file')
+
+    group = parser.add_argument_group('Core arguments')
+    group.add_argument('-o', type=os.path.abspath, required=True, help='Output directory for pc.X.txt files containing latent embeddings sampled along each PC')
+    group.add_argument('--dim', type=int, help='Optionally specify which PC to calculate trajectory (1-based indexing) (default: all)')
+    group.add_argument('-n', type=int, default=10, help='Number of points to sample along each PC')
+    group.add_argument('--lim', nargs=2, type=float, help='Start and end point to sample along each PC (default: 5/95th percentile of each PC)')
+    group.add_argument('--use-percentile-spacing', action='store_true', help='Sample equally spaced percentiles along the PC instead of equally spaced points along the PC')
+
+    return parser
 
 
 def analyze_data_support(z: np.ndarray,
@@ -82,5 +87,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__)
-    main(add_args(parser).parse_args())
+    main(add_args().parse_args())
