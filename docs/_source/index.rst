@@ -14,9 +14,9 @@ TomoDRGN extends the cryoDRGN framework to cryo-ET by learning heterogeneity fro
 
 References
 -----------
-| [1] GitHub: https://github.com/bpowell122/tomodrgn
-| [2] BioRxiv: https://www.biorxiv.org/content/10.1101/2023.05.31.542975v1
-| [3] Nature Methods:
+| [1] GitHub: `https://github.com/bpowell122/tomodrgn <https://github.com/bpowell122/tomodrgn>`_
+| [2] BioRxiv: `https://www.biorxiv.org/content/10.1101/2023.05.31.542975v1 <https://www.biorxiv.org/content/10.1101/2023.05.31.542975v1>`_
+| [3] Nature Methods: `https://www.nature.com/articles/s41592-024-02210-z <https://www.nature.com/articles/s41592-024-02210-z>`_
 
 
 .. toctree::
