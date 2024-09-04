@@ -1,19 +1,18 @@
 """
 Evaluate a trained FTPositionalDecoder model, optionally conditioned on values of latent embedding z.
 """
-import numpy as np
-import os
 import argparse
-from datetime import datetime as dt
-import pprint
+import os
 import itertools
 import multiprocessing as mp
 import multiprocessing.pool
+import pprint
+from datetime import datetime as dt
 
+import numpy as np
 import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader, Dataset
-from torch.amp import autocast
+import torch.amp
+import torch.utils.data
 
 from tomodrgn import mrc, utils, fft
 from tomodrgn.models import TiltSeriesHetOnlyVAE, FTPositionalDecoder
@@ -22,8 +21,13 @@ log = utils.log
 vlog = utils.vlog
 
 
-def add_args() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.ArgumentParser:
+    if parser is None:
+        # this script is called directly; need to create a parser
+        parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    else:
+        # this script is called from tomodrgn.__main__ entry point, in which case a parser is already created
+        pass
 
     group = parser.add_argument_group('Core arguments')
     group.add_argument('-w', '--weights', help='Model weights from train_vae')
@@ -56,7 +60,7 @@ def check_z_inputs(args):
         assert args.z_end, "Must provide --z-end with argument --z-start"
 
 
-class ZDataset(Dataset):
+class ZDataset(torch.utils.data.Dataset):
     """
     Dataset to allow easy pytorch batch-parallelized passing of latent embeddings to the decoder, particularly when using nn.DataParallel.
     """
@@ -78,7 +82,7 @@ class ZDataset(Dataset):
         return self.z[index]
 
 
-class DummyModel(nn.Module):
+class DummyModel(torch.nn.Module):
     """
     Helper class to call the correct eval_volume_batch method regardless of what model class is being evaluated.
     """
@@ -210,7 +214,7 @@ def main(args):
     model.eval()
     with torch.inference_mode():
         use_amp = not args.no_amp
-        with autocast(device_type=device.type, enabled=use_amp):
+        with torch.amp.autocast(device_type=device.type, enabled=use_amp):
 
             # prepare z when decoding multiple volumes (at varying z values)
             if args.z_start or args.zfile:
@@ -254,7 +258,7 @@ def main(args):
 
                 # construct dataset and dataloader
                 z = ZDataset(z)
-                z_iterator = DataLoader(z, batch_size=args.batch_size, shuffle=False)
+                z_iterator = torch.utils.data.DataLoader(z, batch_size=args.batch_size, shuffle=False)
                 log(f'Generating {len(z)} volumes in batches of {args.batch_size}')
                 for (i, zz) in enumerate(z_iterator):
                     log(f'    Generating volume batch {i}')

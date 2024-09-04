@@ -1,22 +1,26 @@
 """
 Downsample an image stack or volume by Fourier cropping
 """
-
 import argparse
-import numpy as np
-import os
 import math
+import os
+
+import numpy as np
 import torch
-from torch.utils import data
-from torch.utils.data import DataLoader
+import torch.utils.data
 
 from tomodrgn import utils, mrc, fft, dataset, starfile
 
 log = utils.log
 
 
-def add_args() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.ArgumentParser:
+    if parser is None:
+        # this script is called directly; need to create a parser
+        parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    else:
+        # this script is called from tomodrgn.__main__ entry point, in which case a parser is already created
+        pass
 
     parser.add_argument('input', help='Input particles or volume (.mrc, .mrcs, .star, or .txt)')
 
@@ -129,7 +133,7 @@ def write_downsampled_starfile(input_starfile: str,
     star.write(out_star)
 
 
-class ImageDataset(data.Dataset):
+class ImageDataset(torch.utils.data.Dataset):
     """
     Simple dataset class to rapidly supply and downsample particle images. Operates per-image (rather than more typical per-particle for tilt series).
     """
@@ -219,7 +223,7 @@ def main(args):
 
         # iterate through image batches to apply downsampling and store in new volume array
         particle_dataset = ImageDataset(particles=old, nimgs=nimgs)
-        data_generator = DataLoader(dataset=particle_dataset, batch_size=args.batch_size, shuffle=False)
+        data_generator = torch.utils.data.DataLoader(dataset=particle_dataset, batch_size=args.batch_size, shuffle=False)
         for batch_idx, batch_ptcls in data_generator:
             log(f'Processing indices {batch_idx[0]} - {batch_idx[-1]}')
             batch_ptcls.to(device)
@@ -253,7 +257,7 @@ def main(args):
             new = np.empty((len(chunk), boxsize_new, boxsize_new), dtype=np.float32)
 
             particle_dataset = ImageDataset(particles=chunk, nimgs=len(chunk))
-            data_generator = DataLoader(dataset=particle_dataset, batch_size=args.batch_size, shuffle=False)
+            data_generator = torch.utils.data.DataLoader(dataset=particle_dataset, batch_size=args.batch_size, shuffle=False)
             for batch_idx, batch_ptcls in data_generator:
                 log(f'Processing chunk indices {batch_idx[0]} - {batch_idx[-1]}')
                 batch_new = downsample_images(batch_original=batch_ptcls, start=start, stop=stop)

@@ -1,7 +1,6 @@
 """
 Analyze a volume ensemble in real space using a combination of masking, PCA, UMAP, and k-means clustering.
 """
-
 import argparse
 import glob
 import os
@@ -19,8 +18,13 @@ from tomodrgn import mrc, utils, analysis, starfile
 log = utils.log
 
 
-def add_args() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.ArgumentParser:
+    if parser is None:
+        # this script is called directly; need to create a parser
+        parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    else:
+        # this script is called from tomodrgn.__main__ entry point, in which case a parser is already created
+        pass
 
     group = parser.add_argument_group('Core arguments')
     group.add_argument('--voldir', type=os.path.abspath, required=True, help='path to directory containing volumes to analyze')
@@ -28,8 +32,8 @@ def add_args() -> argparse.ArgumentParser:
     group.add_argument('--outdir', type=os.path.abspath, default=None, help='path to directory to save outputs. Default is same directory and basename as voldir, appended with `analyze_volumes`')
     group.add_argument('--num-pcs', type=int, default=128, help='keep this many PCs when saving PCA and running UMAP')
     group.add_argument('--ksample', type=int, default=None, help='Number of kmeans samples to generate (clustering voxel-PCA space). '
-                                                                   'Note that this is only recommended if all particles in the dataset have had volumes generated in --voldir, '
-                                                                   'to avoid confusion of k-means origin in latent space clustering and/or volume space clustering.')
+                                                                 'Note that this is only recommended if all particles in the dataset have had volumes generated in --voldir, '
+                                                                 'to avoid confusion of k-means origin in latent space clustering and/or volume space clustering.')
 
     group = parser.add_argument_group('Mask generation arguments')
     group.add_argument('--mask-path', type=os.path.abspath, help='Supply a custom real space mask instead of having tomoDRGN calculate a mask.')

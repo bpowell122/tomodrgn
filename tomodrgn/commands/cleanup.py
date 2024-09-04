@@ -3,8 +3,8 @@ Clean an analyzed train_vae output directory of various types of outputs.
 """
 
 import argparse
-import glob
 import os
+import glob
 import re
 
 from tomodrgn import utils
@@ -12,13 +12,19 @@ from tomodrgn import utils
 log = utils.log
 
 
-def add_args() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.ArgumentParser:
+    if parser is None:
+        # this script is called directly; need to create a parser
+        parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    else:
+        # this script is called from tomodrgn.__main__ entry point, in which case a parser is already created
+        pass
+
     parser.add_argument('workdir', type=os.path.abspath, help='Training directory containing training outputs to be cleaned')
     parser.add_argument('--weights', action='store_true', help='Remove weights.N.pkl files directly within training directory, excluding those with a matching analyze.N or convergence.N subfolder')
     parser.add_argument('--zfiles', action='store_true', help='Remove z.N.pkl files within directly training directory, excluding those with a matching analyze.N or convergence.N subfolder')
     parser.add_argument('--volumes', action='store_true', help='Remove *.mrc volumes recursively within training directory. '
-                                                                'Note that volumes can be regenerated with config.pkl, weights.pkl, and appropriate z file.')
+                                                               'Note that volumes can be regenerated with config.pkl, weights.pkl, and appropriate z file.')
     parser.add_argument('--test', action='store_true', help='Don\'t actually delete any files, just list the files that would be deleted')
 
     return parser

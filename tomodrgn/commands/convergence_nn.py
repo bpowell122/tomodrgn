@@ -1,10 +1,9 @@
 """
 Assess convergence of a decoder-only network relative to an external volume by FSC
 """
-
 import argparse
-import fnmatch
 import os
+import fnmatch
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,8 +11,14 @@ import numpy as np
 from tomodrgn import utils, convergence, analysis
 
 
-def add_args() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.ArgumentParser:
+    if parser is None:
+        # this script is called directly; need to create a parser
+        parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    else:
+        # this script is called from tomodrgn.__main__ entry point, in which case a parser is already created
+        pass
+
     parser.add_argument('training_directory', type=os.path.abspath, help='train_nn directory containing reconstruct.N.mrc')
     parser.add_argument('reference_volume', type=os.path.abspath, help='volume against which to calculate FSC')
     parser.add_argument('--max-epoch', type=int, help='Maximum epoch for which to calculate FSCs')

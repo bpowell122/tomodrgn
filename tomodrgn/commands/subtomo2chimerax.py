@@ -33,10 +33,8 @@ Example usage: volumes mode (places unique tomoDRGN volumes per particle)
         --vols-render-level 0.008 \
         --coloring-labels analyze.49/kmeans20/labels.pkl
 """
-
 import argparse
 import os
-
 import numpy as np
 import pandas as pd
 from typing import Literal
@@ -46,8 +44,13 @@ from tomodrgn import starfile, utils, mrc, analysis
 log = utils.log
 
 
-def add_args() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.ArgumentParser:
+    if parser is None:
+        # this script is called directly; need to create a parser
+        parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    else:
+        # this script is called from tomodrgn.__main__ entry point, in which case a parser is already created
+        pass
 
     parser.add_argument('starfile',
                         type=os.path.abspath,

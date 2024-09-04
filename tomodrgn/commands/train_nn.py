@@ -9,23 +9,28 @@ from typing import Union
 
 import numpy as np
 import torch
-import torch.nn as nn
-from torch.amp import GradScaler, autocast
-from torch.utils.data import DataLoader
+import torch.nn
+import torch.amp
+import torch.utils.data
 
 from tomodrgn import utils, ctf, mrc, config
+from tomodrgn.commands.eval_vol import postprocess_vols
 from tomodrgn.dataset import TiltSeriesMRCData
 from tomodrgn.lattice import Lattice
 from tomodrgn.models import FTPositionalDecoder, DataParallelPassthrough
 from tomodrgn.starfile import TiltSeriesStarfile
-from tomodrgn.commands.eval_vol import postprocess_vols
 
 log = utils.log
 vlog = utils.vlog
 
 
-def add_args() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.ArgumentParser:
+    if parser is None:
+        # this script is called directly; need to create a parser
+        parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    else:
+        # this script is called from tomodrgn.__main__ entry point, in which case a parser is already created
+        pass
 
     parser.add_argument('particles', type=os.path.abspath, help='Input particles (.mrcs, .star, or .txt)')
 
@@ -132,7 +137,7 @@ def save_checkpoint(model: FTPositionalDecoder | DataParallelPassthrough,
 
 
 def train_batch(model: FTPositionalDecoder | DataParallelPassthrough,
-                scaler: GradScaler,
+                scaler: torch.amp.GradScaler,
                 optim: torch.optim.Optimizer,
                 lat: Lattice,
                 batch_images: torch.Tensor,
@@ -168,7 +173,7 @@ def train_batch(model: FTPositionalDecoder | DataParallelPassthrough,
     model.train()
 
     # autocast auto-enabled and set to correct device
-    with autocast(device_type=lat.device.type, enabled=use_amp):
+    with torch.amp.autocast(device_type=lat.device.type, enabled=use_amp):
         # center images via translation and calculate CTF
         batch_images_preprocessed, batch_ctf_weights = preprocess_batch(lat=lat,
                                                                         batch_images=batch_images,
@@ -357,7 +362,7 @@ def main(args):
     lat = Lattice(boxsize_ht, extent=args.l_extent, device=device)
 
     # instantiate model
-    activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]
+    activation = {"relu": torch.nn.ReLU, "leaky_relu": torch.nn.LeakyReLU}[args.activation]
     model = FTPositionalDecoder(boxsize_ht=boxsize_ht,
                                 in_dim=3,
                                 hidden_layers=args.layers,
@@ -382,7 +387,7 @@ def main(args):
     # Mixed precision training with AMP
     use_amp = not args.no_amp
     flog(f'AMP acceleration enabled (autocast + gradscaler) : {use_amp}')
-    scaler = GradScaler(device=device.type, enabled=use_amp)
+    scaler = torch.amp.GradScaler(device=device.type, enabled=use_amp)
     if use_amp:
         if not args.batch_size % 8 == 0:
             flog('Warning: recommended to have batch size divisible by 8 for AMP training')
@@ -419,13 +424,13 @@ def main(args):
 
     # train
     flog('Done all preprocessing; starting training now!')
-    data_generator = DataLoader(dataset=data,
-                                batch_size=args.batch_size,
-                                shuffle=True,
-                                num_workers=args.num_workers,
-                                prefetch_factor=args.prefetch_factor,
-                                persistent_workers=args.persistent_workers,
-                                pin_memory=args.pin_memory)
+    data_generator = torch.utils.data.DataLoader(dataset=data,
+                                                 batch_size=args.batch_size,
+                                                 shuffle=True,
+                                                 num_workers=args.num_workers,
+                                                 prefetch_factor=args.prefetch_factor,
+                                                 persistent_workers=args.persistent_workers,
+                                                 pin_memory=args.pin_memory)
     for epoch in range(start_epoch, args.num_epochs):
         t2 = dt.now()
         loss_accum = 0

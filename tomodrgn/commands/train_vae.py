@@ -1,32 +1,38 @@
 """
 Train a VAE for heterogeneous reconstruction with known pose for tomography data
 """
-import numpy as np
-import sys
-import os
+
 import argparse
+import os
 import pickle
+import sys
 from datetime import datetime as dt
 from typing import Union
 
+import numpy as np
 import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
-from torch.amp import GradScaler, autocast
+import torch.nn
+import torch.amp
+import torch.utils.data
 
 from tomodrgn import utils, ctf, config, convergence
-from tomodrgn.starfile import TiltSeriesStarfile
-from tomodrgn.dataset import TiltSeriesMRCData
-from tomodrgn.models import TiltSeriesHetOnlyVAE, DataParallelPassthrough, print_tiltserieshetonlyvae_ascii
-from tomodrgn.lattice import Lattice
 from tomodrgn.beta_schedule import get_beta_schedule
+from tomodrgn.dataset import TiltSeriesMRCData
+from tomodrgn.lattice import Lattice
+from tomodrgn.models import TiltSeriesHetOnlyVAE, DataParallelPassthrough, print_tiltserieshetonlyvae_ascii
+from tomodrgn.starfile import TiltSeriesStarfile
 
 log = utils.log
 vlog = utils.vlog
 
 
-def add_args() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.ArgumentParser:
+    if parser is None:
+        # this script is called directly; need to create a parser
+        parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    else:
+        # this script is called from tomodrgn.__main__ entry point, in which case a parser is already created
+        pass
 
     parser.add_argument('particles', type=os.path.abspath, help='Input particles (.mrcs, .star, or .txt)')
 
@@ -111,7 +117,7 @@ def add_args() -> argparse.ArgumentParser:
 
 def train_batch(*,
                 model: TiltSeriesHetOnlyVAE | DataParallelPassthrough,
-                scaler: GradScaler,
+                scaler: torch.amp.GradScaler,
                 optim: torch.optim.Optimizer,
                 lat: Lattice,
                 batch_images: torch.Tensor,
@@ -151,7 +157,7 @@ def train_batch(*,
     model.train()
 
     # autocast auto-enabled and set to correct device
-    with autocast(device_type=lat.device.type, enabled=use_amp):
+    with torch.amp.autocast(device_type=lat.device.type, enabled=use_amp):
         # center images via translation and phase flip for partial CTF correction
         batch_images_preprocessed, batch_ctf_weights = preprocess_batch(lat=lat,
                                                                         batch_images=batch_images,
@@ -178,7 +184,9 @@ def train_batch(*,
                                                  beta_control=beta_control)
 
     # backpropogate the scaled loss and optimize model weights
-    scaler.scale(loss).backward()
+    if np.random.randint(0, 1000, 1) == 1:
+        log('using gen_loss backward')
+    scaler.scale(gen_loss).backward()
     scaler.step(optim)
     scaler.update()
 
@@ -347,7 +355,7 @@ def encoder_inference(*,
     with torch.inference_mode():
 
         # autocast auto-enabled and set to correct device
-        with autocast(device_type=lat.device.type, enabled=use_amp):
+        with torch.amp.autocast(device_type=lat.device.type, enabled=use_amp):
 
             # pre-allocate tensors to store outputs
             z_mu_all = torch.zeros((data.nptcls, model.zdim),
@@ -356,10 +364,10 @@ def encoder_inference(*,
             z_logvar_all = torch.zeros_like(z_mu_all)
 
             # create the dataloader iterator with shuffle False to preserve index alignment between input dataset and output latent
-            data_generator = DataLoader(data,
-                                        batch_size=batchsize,
-                                        shuffle=False,
-                                        **kwargs)
+            data_generator = torch.utils.data.DataLoader(data,
+                                                         batch_size=batchsize,
+                                                         shuffle=False,
+                                                         **kwargs)
 
             for batch_images, _, batch_trans, batch_ctf_params, _, _, batch_indices in data_generator:
                 # transfer to GPU
@@ -396,7 +404,7 @@ def encoder_inference(*,
 
 def save_checkpoint(*,
                     model: TiltSeriesHetOnlyVAE | DataParallelPassthrough,
-                    scaler: GradScaler,
+                    scaler: torch.amp.GradScaler,
                     optim: torch.optim.Optimizer,
                     epoch: int,
                     z_mu_train: np.ndarray,
@@ -589,7 +597,7 @@ def main(args):
             flog(f'Will sample {n_tilts_for_model} tilts per particle for model input, for train split, due to model requirements of --pooling-function {args.pooling_function}')
 
     # instantiate model
-    activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[args.activation]
+    activation = {"relu": torch.nn.ReLU, "leaky_relu": torch.nn.LeakyReLU}[args.activation]
     flog(f'Pooling function prior to encoder B: {args.pooling_function}')
     model = TiltSeriesHetOnlyVAE(in_dim=in_dim,
                                  hidden_layers_a=args.qlayersA,
@@ -629,12 +637,14 @@ def main(args):
     beta_schedule = get_beta_schedule(args.beta, n_iterations=args.num_epochs * nptcls + args.batch_size)
 
     # instantiate optimizer
-    optim = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.wd, eps=1e-4)  # https://github.com/pytorch/pytorch/issues/40497#issuecomment-1084807134
+    optim = torch.optim.AdamW(model.parameters(),
+                              weight_decay=args.wd,
+                              eps=1e-4)  # https://github.com/pytorch/pytorch/issues/40497#issuecomment-1084807134
 
     # Mixed precision training with AMP
     use_amp = not args.no_amp
     flog(f'AMP acceleration enabled (autocast + gradscaler) : {use_amp}')
-    scaler = GradScaler(device=device.type, enabled=use_amp)
+    scaler = torch.amp.GradScaler(device=device.type, enabled=use_amp)
     if use_amp:
         if not args.batch_size % 8 == 0:
             flog('Warning: recommended to have batch size divisible by 8 for AMP training')
@@ -677,8 +687,13 @@ def main(args):
 
     # train
     flog('Done all preprocessing; starting training now!')
-    data_train_generator = DataLoader(data_train, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, prefetch_factor=args.prefetch_factor,
-                                      persistent_workers=args.persistent_workers, pin_memory=args.pin_memory)
+    data_train_generator = torch.utils.data.DataLoader(data_train,
+                                                       batch_size=args.batch_size,
+                                                       shuffle=True,
+                                                       num_workers=args.num_workers,
+                                                       prefetch_factor=args.prefetch_factor,
+                                                       persistent_workers=args.persistent_workers,
+                                                       pin_memory=args.pin_memory)
     for epoch in range(start_epoch, args.num_epochs):
         t2 = dt.now()
         losses_accum = np.zeros(3, dtype=np.float32)

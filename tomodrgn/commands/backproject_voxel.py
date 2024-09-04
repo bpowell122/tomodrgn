@@ -7,7 +7,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
-from torch.utils.data import DataLoader
+import torch.utils.data
 
 from tomodrgn import utils, mrc, fft, ctf
 from tomodrgn.starfile import TiltSeriesStarfile
@@ -17,8 +17,13 @@ from tomodrgn.lattice import Lattice
 log = utils.log
 
 
-def add_args() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.ArgumentParser:
+    if parser is None:
+        # this script is called directly; need to create a parser
+        parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    else:
+        # this script is called from tomodrgn.__main__ entry point, in which case a parser is already created
+        pass
 
     parser.add_argument('particles', type=os.path.abspath, help='Input particles_imageseries.star')
     parser.add_argument('--output', type=os.path.abspath, required=True, help='Output .mrc file')
@@ -69,7 +74,7 @@ def backproject_dataset(data: TiltSeriesMRCData,
 
     # prepare the data loader
     batchsize = 1
-    data_generator = DataLoader(data, batch_size=batchsize, shuffle=False)
+    data_generator = torch.utils.data.DataLoader(data, batch_size=batchsize, shuffle=False)
 
     for batch_images, batch_rot, batch_trans, batch_ctf_params, batch_frequency_weights, _, batch_indices in data_generator:
 

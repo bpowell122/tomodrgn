@@ -1,25 +1,29 @@
 """
 Visualize latent space and generate volumes
 """
-
 import argparse
-import numpy as np
 import os
 import shutil
 from datetime import datetime as dt
-from importlib_resources import files
 
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
+from importlib_resources import files
 
 from tomodrgn import analysis, utils, starfile
 
 log = utils.log
 
 
-def add_args() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.ArgumentParser:
+    if parser is None:
+        # this script is called directly; need to create a parser
+        parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    else:
+        # this script is called from tomodrgn.__main__ entry point, in which case a parser is already created
+        pass
 
     parser.add_argument('workdir', type=os.path.abspath, help='Directory with tomoDRGN results')
     parser.add_argument('epoch', type=int, help='Epoch number N to analyze (0-based indexing, corresponding to z.N.pkl, weights.N.pkl)')
