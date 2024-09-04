@@ -58,4 +58,5 @@ Arguments
 
 Common next steps
 ------------------
-# TODO
+
+* Quantify spatially contextualized heterogeneity trends using custom scripts or external software, perhaps involving tomogram segmentations

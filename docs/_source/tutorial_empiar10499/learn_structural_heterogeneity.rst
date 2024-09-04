@@ -48,6 +48,8 @@ This command produces several outputs in the ``03_heterogeneity-1_train_vae`` di
 
 Interpreting outputs
 ---------------------
+# TODO finish me
+
 tomodrgn analyze (latent space)
 
 * summary of heterogeneity,

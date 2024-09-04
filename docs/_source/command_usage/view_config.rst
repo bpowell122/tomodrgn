@@ -27,4 +27,5 @@ Arguments
 
 Common next steps
 ------------------
-# TODO
+
+* Highly variable, see next steps for ``tomodrgn train_vae``

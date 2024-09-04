@@ -44,4 +44,5 @@ Arguments
 
 Common next steps
 ------------------
-# TODO
+
+* Assess model convergence with ``tomodrgn convergence_nn``

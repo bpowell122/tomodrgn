@@ -40,4 +40,5 @@ Arguments
 
 Common next steps
 ------------------
-# TODO
+
+* Upload the resulting cleaned directory to Zenodo (or another data sharing service) as a routine element of data availability for publications

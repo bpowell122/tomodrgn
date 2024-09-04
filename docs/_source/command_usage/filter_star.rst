@@ -39,4 +39,7 @@ Arguments
 
 Common next steps
 ------------------
-# TODO
+
+* Validate that the filtered particle subset is structurall homogeneous for the tomoDRGN-identified feature with ``tomodrgn backproject_voxel``
+* Export this particle subset to external STA software including RELION and M
+* Train a new model on this subset of particles with ``tomodrgn train_vae`` to explore residual heterogeneity

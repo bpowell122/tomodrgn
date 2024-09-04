@@ -40,4 +40,5 @@ Arguments
 
 Common next steps
 ------------------
-# TODO
+
+* Validate the inferred latent space graph traversal by isolating indices of particles proximal to each neighbor point or anchor point along the path, and performing homogeneous reconstructions with ``tomodrgn backproject_voxel``

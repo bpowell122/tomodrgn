@@ -62,4 +62,10 @@ Arguments
 
 Common next steps
 ------------------
-# TODO
+
+* Assess model convergence with ``tomodrgn convergence_vae``
+* Analyze model at a particular epoch in latent space with ``tomodrgn analyze``
+* Analyze model at a particular epoch in volume space with ``tomodrgn analyze_volumes``
+* Generate volumes for all particles at a particular epoch with ``tomodrgn eval_vol``
+* Embed a (potentially related) dataset of images into the learned latent space with ``tomodrgn eval_images``
+* Map back generated volumes (for all particles) to source tomograms to explore spatially contextuallized heterogeneity with ``tomodrgn subtomo2chimerax``

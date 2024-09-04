@@ -42,4 +42,7 @@ Arguments
 
 Common next steps
 ------------------
-# TODO
+
+* Extend model training with ``tomodrgn train_vae [...] --load latest`` if not yet converged
+* Analyze model at a particular epoch in latent space with ``tomodrgn analyze``
+* Analyze model at a particular epoch in volume space with ``tomodrgn analyze_volumes``

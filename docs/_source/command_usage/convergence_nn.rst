@@ -45,4 +45,6 @@ Arguments
 
 Common next steps
 ------------------
-# TODO
+
+* Extend model training with ``tomodrgn train_nn [...] --load latest`` if not yet converged
+* Train a heterogeneous model with ``tomodrgn train_vae``

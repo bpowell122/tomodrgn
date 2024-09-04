@@ -40,4 +40,6 @@ Arguments
 
 Common next steps
 ------------------
-# TODO
+
+* Analyze a volume ensemble using dimensionality reduction with ``tomodrgn analyze_volumes``
+* Use external tools such as `MAVEn <https://github.com/lkinman/MAVEn>`_ or  `SIREn <https://github.com/lkinman/SIREn>`_ to systematically quantify structural heterogeneity either with or without an atomic model to guide analysis

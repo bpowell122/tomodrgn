@@ -47,5 +47,6 @@ Arguments
 
 Common next steps
 ------------------
-* Backproject a different particle subset to validate structural heterogeneity visualized by tomoDRGN's decoder network
-* Use backprojections to create initial models or masks for further particle refinement in RELION or M
+
+* Backproject a different particle subset (e.g. using ``--ind-ptcls``) to validate structural heterogeneity visualized by tomoDRGN's decoder network
+* Use backprojections to create initial models or masks for further particle refinement in STA software including RELION and M

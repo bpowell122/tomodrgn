@@ -35,4 +35,5 @@ Arguments
 
 Common next steps
 ------------------
-# TODO
+
+* Validate the inferred latent space PC traversal by isolating indices of particles proximal to each trajectory path, and performing homogeneous reconstructions with ``tomodrgn backproject_voxel``

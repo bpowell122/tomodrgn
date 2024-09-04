@@ -43,4 +43,5 @@ Arguments
 
 Common next steps
 ------------------
-# TODO
+
+* Validate that downsampling produced the desired downsampled particles with ``tomodrgn backproject_voxel`` or ``tomodrgn train_nn``

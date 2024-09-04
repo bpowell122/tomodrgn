@@ -41,4 +41,8 @@ Arguments
 
 Common next steps
 ------------------
-# TODO
+
+* Interactively explore correlations between and spatial context of star file parameters, latent embeddings, volume space dimensionality reduction in the ``tomodrgn analyze`` Jupyter notebooks
+* Identify one (or more) sets of particle indices whose particles share a common feature (e.g. in volume space)
+* Filter the input star file by particle indices with ``tomodrgn filter_star``
+* Generate an array of numeric labels describing a volume space property for each particle to color volumes in tomogram mapbacks with ``tomodrgn subtomo2chimerax``
