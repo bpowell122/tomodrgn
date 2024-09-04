@@ -184,9 +184,7 @@ def train_batch(*,
                                                  beta_control=beta_control)
 
     # backpropogate the scaled loss and optimize model weights
-    if np.random.randint(0, 1000, 1) == 1:
-        log('using gen_loss backward')
-    scaler.scale(gen_loss).backward()
+    scaler.scale(loss).backward()
     scaler.step(optim)
     scaler.update()
 
