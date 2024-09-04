@@ -1,62 +1,41 @@
 """
-TomoDRGN neural network reconstruction
+Entry point for tomoDRGN sub-commands
 """
 
 
 def main():
     import argparse
-    import os
+    import importlib
     from importlib import metadata
+    import pkgutil
+    import tomodrgn.commands
+
+    # create the top-level parser that allows users to type `tomodrgn [command] ...` at the command line
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--version', action='version', version=f'tomoDRGN {metadata.version("tomodrgn")}')
+    parser.add_argument('--version', action='version', version=f'tomoDRGN v{metadata.version("tomodrgn")}')
+    subparsers = parser.add_subparsers(title='Choose a sub-command', required=False)
 
-    import tomodrgn.commands.analyze
-    import tomodrgn.commands.analyze_volumes
-    import tomodrgn.commands.backproject_voxel
-    import tomodrgn.commands.cleanup
-    import tomodrgn.commands.convergence_nn
-    import tomodrgn.commands.convergence_vae
-    import tomodrgn.commands.downsample
-    import tomodrgn.commands.eval_images
-    import tomodrgn.commands.eval_vol
-    import tomodrgn.commands.filter_star
-    import tomodrgn.commands.graph_traversal
-    import tomodrgn.commands.pc_traversal
-    import tomodrgn.commands.subtomo2chimerax
-    import tomodrgn.commands.train_nn
-    import tomodrgn.commands.train_vae
-    import tomodrgn.commands.view_config
+    # enumerate the list of subcommands that can be called via `tomodrgn [command] ...`
+    subcommand_names = [f'tomodrgn.commands.{modname}' for importer, modname, ispkg in pkgutil.iter_modules(tomodrgn.commands.__path__)]
 
-    modules = [tomodrgn.commands.analyze,
-               tomodrgn.commands.analyze_volumes,
-               tomodrgn.commands.backproject_voxel,
-               tomodrgn.commands.cleanup,
-               tomodrgn.commands.convergence_nn,
-               tomodrgn.commands.convergence_vae,
-               tomodrgn.commands.downsample,
-               tomodrgn.commands.eval_images,
-               tomodrgn.commands.eval_vol,
-               tomodrgn.commands.filter_star,
-               tomodrgn.commands.graph_traversal,
-               tomodrgn.commands.pc_traversal,
-               tomodrgn.commands.subtomo2chimerax,
-               tomodrgn.commands.train_nn,
-               tomodrgn.commands.train_vae,
-               tomodrgn.commands.view_config, ]
+    for subcommand_name in subcommand_names:
+        # create the parser for the subcommand, where the name is just the `modename` string above
+        subcommand_parser = subparsers.add_parser(name=f'{subcommand_name.split(".")[-1]}')
+        # import the subcommand module
+        subcommand_module = importlib.import_module(subcommand_name)
+        # add the arg options of the subcommand module
+        subcommand_module.add_args(subcommand_parser)
+        # define the entry point to the subcommand script
+        subcommand_parser.set_defaults(func=subcommand_module.main)
 
-    subparsers = parser.add_subparsers(title='Choose a command')
-    subparsers.required = 'True'
-
-    def get_str_name(_module):
-        return os.path.splitext(os.path.basename(_module.__file__))[0]
-
-    for _module in modules:
-        this_parser = subparsers.add_parser(get_str_name(_module), description=_module.__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-        _module.add_args(this_parser)
-        this_parser.set_defaults(func=_module.main)
-
+    # parse all args, including defining which sub-command to execute
     args = parser.parse_args()
-    args.func(args)
+    if hasattr(args, 'func'):
+        # execute the sub-command
+        args.func(args)
+    else:
+        # no identifiable function given to tomodrgn; return help instead
+        parser.print_help()
 
 
 if __name__ == '__main__':
