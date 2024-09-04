@@ -46,7 +46,9 @@ coverage.xml
 *.cover
 .hypothesis/
 
+# Testing outputs
 testing/output
+testing/data/*.png
 
 # Translations
 *.mo
@@ -103,3 +105,10 @@ ENV/
 .mypy_cache/
 /analysis_scripts/
 /focused_heterogeneity/
+
+# pycharm
+.idea/
+
+# misc
+TODO.txt
+/personal_analysis_scripts/
