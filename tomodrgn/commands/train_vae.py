@@ -77,7 +77,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs')
     group.add_argument('-b', '--batch-size', type=int, default=1, help='Minibatch size')
     group.add_argument('--wd', type=float, default=0, help='Weight decay in Adam optimizer')
-    group.add_argument('--lr', type=float, default=0.0002, help='Learning rate in Adam optimizer. Should co-scale linearly with batch size.')
+    group.add_argument('--lr', type=float, default=0.0002, help='Learning rate in Adam optimizer for batch size 1. Is automatically linearly scaled with batch size.')
     group.add_argument('--beta', default=None, help='Choice of beta schedule or a constant for KLD weight')
     group.add_argument('--beta-control', type=float, help='KL-Controlled VAE gamma. Beta is KL target')
     group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: 0, std of dataset)')
@@ -638,6 +638,7 @@ def main(args):
 
     # instantiate optimizer
     optim = torch.optim.AdamW(model.parameters(),
+                              lr=args.lr * args.batch_size,
                               weight_decay=args.wd,
                               eps=1e-4)  # https://github.com/pytorch/pytorch/issues/40497#issuecomment-1084807134
 
