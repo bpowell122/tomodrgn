@@ -462,7 +462,8 @@ def main(args):
         return utils.flog(msg, logfile)
 
     if args.load == 'latest':
-        args = utils.get_latest(args=args)
+        latest_epoch = utils.get_latest_epoch(args.outdir)
+        args.load = f'{args.outdir}/weights.{latest_epoch}.pkl'
     flog(' '.join(sys.argv))
     flog(args)
 

@@ -26,9 +26,10 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
         pass
 
     parser.add_argument('workdir', type=os.path.abspath, help='Directory with tomoDRGN results')
-    parser.add_argument('epoch', type=int, help='Epoch number N to analyze (0-based indexing, corresponding to z.N.pkl, weights.N.pkl)')
 
     group = parser.add_argument_group('Core arguments')
+    parser.add_argument('--epoch', type=str, default='latest', help='Epoch number N to analyze (0-based indexing, corresponding to z.N.pkl, weights.N.pkl). '
+                                                                    'Supplying `latest` will auto-detect the latest completed epoch of training.')
     group.add_argument('--device', type=int, help='Optionally specify CUDA device')
     group.add_argument('-o', '--outdir', help='Output directory for analysis results (default: [workdir]/analyze.[epoch])')
     group.add_argument('--skip-vol', action='store_true', help='Skip generation of volumes')
@@ -435,6 +436,7 @@ def main(args):
     cfg = utils.load_pkl(config)
     star_path = cfg['starfile_args']['sourcefile_filtered']
     datadir = cfg['dataset_args']['datadir']
+    args.epoch = utils.get_latest_epoch(args.workdir) if args.epoch == 'latest' else int(args.epoch)
     if args.epoch == -1:
         zfile = f'{args.workdir}/z.train.pkl'
         weights = f'{args.workdir}/weights.pkl'

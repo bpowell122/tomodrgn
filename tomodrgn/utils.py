@@ -4,6 +4,7 @@ Common utility functions pertaining to both data processing and script execution
 import argparse
 import collections
 import functools
+import glob
 import os
 import pickle
 import subprocess
@@ -581,20 +582,21 @@ def get_default_device() -> torch.device:
     return device
 
 
-def get_latest(args: argparse.Namespace) -> argparse.Namespace:
+def get_latest_epoch(workdir: str) -> int:
     """
-    Detect the latest completed epoch of model training and update args to load that epoch's model weights.
+    Detect the latest completed epoch of model training.
 
-    :param args: argparse namespace from parse_args. Requires `num_epochs`, `outdir`, and `load` parameters
-    :return: updated argparse namespace
+    :param workdir: directory containing pre-existing training results
+    :return: integer representing the latest 0-indexed epoch of completeed model training
     """
     # assumes args.num_epochs > latest checkpoint
     log('Detecting latest checkpoint...')
-    weights = [f'{args.outdir}/weights.{i}.pkl' for i in range(args.num_epochs)]
-    weights = [f for f in weights if os.path.exists(f)]
-    args.load = weights[-1]
-    log(f'Loading {args.load}')
-    return args
+    files = glob.glob(f'{workdir}/weights.*.pkl')
+    if len(files) == 0:
+        raise RuntimeError(f'Could not find any files in {workdir} matching format weights.*.pkl to auto-detect latest epoch.')
+    epochs = [int(file.split('.')[-2]) for file in files]
+    epoch = max(epochs)
+    return epoch
 
 
 def print_progress_bar(curr_iteration: int,

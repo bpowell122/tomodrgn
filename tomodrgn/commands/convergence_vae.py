@@ -24,9 +24,9 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
         # this script is called from tomodrgn.__main__ entry point, in which case a parser is already created
         pass
     parser.add_argument('workdir', type=os.path.abspath, help='Directory with tomoDRGN results')
-    parser.add_argument('epoch', type=str, default='latest', help='Latest epoch number N to analyze convergence (0-based indexing, corresponding to weights.N.pkl), "latest" for last detected epoch')
 
     group = parser.add_argument_group('Core arguments')
+    parser.add_argument('--epoch', type=str, default='latest', help='Latest epoch number N to analyze convergence (0-based indexing, corresponding to weights.N.pkl), "latest" for last detected epoch')
     group.add_argument('-o', '--outdir', type=os.path.abspath, help='Output directory for convergence analysis results (default: [workdir]/convergence.[epoch])')
     group.add_argument('--epoch-interval', type=int, default=5, help='Interval of epochs between calculating most convergence heuristics')
 
@@ -63,15 +63,6 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     return parser
 
 
-def get_latest(workdir: str) -> int:
-    # assumes args.num_epochs > latest checkpoint
-    log('Detecting latest checkpoint...')
-    files = glob.glob(f'{workdir}/z.*.train.pkl')
-    epochs = [int(file.split('.')[-3]) for file in files]
-    epoch = max(epochs)
-    return epoch
-
-
 def main(args):
     t1 = dt.now()
 
@@ -83,8 +74,8 @@ def main(args):
     assert glob.glob(f'{args.workdir}/z.*.train.pkl'), f'No z.*.train.pkl files detected in {args.workdir}; exiting...'
 
     # get the array of epochs at which to calculate convergence metrics
-    final_epoch = get_latest(args.workdir) if args.epoch == 'latest' else int(args.epoch)
-    epochs = np.arange(4, final_epoch, args.epoch_interval)
+    final_epoch = utils.get_latest_epoch(args.workdir) if args.epoch == 'latest' else int(args.epoch)
+    epochs = np.arange(0, final_epoch, args.epoch_interval)
     if epochs[-1] != final_epoch:
         epochs = np.append(epochs, final_epoch)
     log(f'Will analyze epochs: {epochs}')

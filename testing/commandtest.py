@@ -378,7 +378,6 @@ def add_tests_convergence_vae(tester: CommandTester) -> CommandTester:
     tester.commands.append('tomodrgn '
                            'convergence_vae '
                            'output/vae_both_sim_zdim2 '
-                           'latest '
                            '--random-seed 42 '
                            '--final-maxima 2 '
                            '--ground-truth data/10076_class*_32.mrc')
@@ -386,7 +385,6 @@ def add_tests_convergence_vae(tester: CommandTester) -> CommandTester:
     tester.commands.append('tomodrgn '
                            'convergence_vae '
                            'output/vae_both_sim_zdim8_dosetiltweightmask_batchsize8 '
-                           'latest '
                            '--random-seed 42 '
                            '--final-maxima 2 '
                            '--ground-truth data/10076_class*_32.mrc')
@@ -398,17 +396,17 @@ def add_tests_analyze(tester: CommandTester) -> CommandTester:
     # baseline, 2 class heterogeneity, zdim 2
     tester.commands.append('tomodrgn '
                            'analyze '
-                           'output/vae_both_sim_zdim2 39 '
+                           'output/vae_both_sim_zdim2 '
                            '--ksample 20')
     # 2 class heterogeneity, zdim 8, dose weight, tilt wieght, recon dose mask, batchsize 8
     tester.commands.append('tomodrgn '
                            'analyze '
-                           'output/vae_both_sim_zdim8_dosetiltweightmask_batchsize8 39 '
+                           'output/vae_both_sim_zdim8_dosetiltweightmask_batchsize8 '
                            '--ksample 20')
     # 1 class heterogeneity, zdim 8
     tester.commands.append('tomodrgn '
                            'analyze '
-                           'output/vae_classE_sim_zdim8 39 '
+                           'output/vae_classE_sim_zdim8 '
                            '--ksample 20')
 
     return tester
