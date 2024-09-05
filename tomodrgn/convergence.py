@@ -139,10 +139,10 @@ def plot_latent_pca(workdir: str,
             ax.set_title(f'epoch {epochs[i]}')
             if i % n_cols == 0:
                 # set y axis label only for the left column of subplots
-                ax.set_ylabel('l-PC1')
+                ax.set_ylabel('l-PC2')
             if i >= n_cols * (n_rows - 1):
                 # set the x axis label only for the bottom row of subplots
-                ax.set_xlabel('l-PC2')
+                ax.set_xlabel('l-PC1')
             if i == len(epochs) - 1:
                 # add a colorbar of particle density
                 fig.subplots_adjust(left=0.15, right=0.8, top=0.85, bottom=0.15)
@@ -222,10 +222,10 @@ def plot_latent_umap(workdir: str,
             ax.set_title(f'epoch {epochs[i]}')
             if i % n_cols == 0:
                 # set y axis label only for the left column of subplots
-                ax.set_ylabel('l-UMAP1')
+                ax.set_ylabel('l-UMAP2')
             if i >= n_cols * (n_rows - 1):
                 # set the x axis label only for the bottom row of subplots
-                ax.set_xlabel('l-UMAP2')
+                ax.set_xlabel('l-UMAP1')
             if i == len(epochs) - 1:
                 # add a colorbar of particle density
                 fig.subplots_adjust(left=0.15, right=0.8, top=0.85, bottom=0.15)
@@ -561,10 +561,10 @@ def follow_candidate_particles(workdir: str,
 
             if i % n_cols == 0:
                 # set y axis label only for the left column of subplots
-                ax.set_ylabel('l-UMAP1')
+                ax.set_ylabel('l-UMAP2')
             if i >= n_cols * (n_rows - 1):
                 # set the x axis label only for the bottom row of subplots
-                ax.set_xlabel('l-UMAP2')
+                ax.set_xlabel('l-UMAP1')
 
             if i == len(epochs) - 1:
                 # add a colorbar of particle density
