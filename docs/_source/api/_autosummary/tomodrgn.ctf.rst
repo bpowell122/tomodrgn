@@ -1,4 +1,4 @@
-tomodrgn.ctf
+﻿tomodrgn.ctf
 ============
 
 .. automodule:: tomodrgn.ctf

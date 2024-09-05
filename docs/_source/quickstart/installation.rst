@@ -71,7 +71,7 @@ Takes about 1 minute.
 
 .. code-block:: bash
 
-    cd testing
+    cd $TOMODRGN_SOURCE_DIR/testing
     python ./quicktest.py
 
 Run a comprehensive end-to-end test of all commands with multiple options (except Jupyter notebooks).
@@ -81,7 +81,7 @@ Also serves as a useful reference for commonly used command syntax.
 
 .. code-block:: bash
 
-    cd testing
+    cd $TOMODRGN_SOURCE_DIR/testing
     python ./commandtest.py
 
 
@@ -92,7 +92,10 @@ Documentation is built with sphinx in the ``tomodrgn`` environment:
 
 .. code-block:: bash
 
+    CD $TOMODRGN_SOURCE_DIR
     python -m pip install .[docs]
     cd docs
-    make clean && make html
+    make clean
+    rm -rfv docs/_source/api/_autosummary  # this ensures all files from previous builds are removed, including autosummary API files missed by make clean
+    make html
     # documentation is accessible at ./docs/_build/html/index.html and can be viewed in a web browser

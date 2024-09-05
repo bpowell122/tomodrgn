@@ -1,4 +1,4 @@
-tomodrgn.commands.filter\_star
+﻿tomodrgn.commands.filter\_star
 ==============================
 
 .. automodule:: tomodrgn.commands.filter_star

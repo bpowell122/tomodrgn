@@ -1,4 +1,4 @@
-tomodrgn.so3\_grid
+﻿tomodrgn.so3\_grid
 ==================
 
 .. automodule:: tomodrgn.so3_grid

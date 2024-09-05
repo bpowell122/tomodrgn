@@ -1,4 +1,4 @@
-﻿tomodrgn.models.MedianPool1d
+tomodrgn.models.MedianPool1d
 ============================
 
 .. currentmodule:: tomodrgn.models

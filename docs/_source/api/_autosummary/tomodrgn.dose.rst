@@ -1,4 +1,4 @@
-tomodrgn.dose
+﻿tomodrgn.dose
 =============
 
 .. automodule:: tomodrgn.dose

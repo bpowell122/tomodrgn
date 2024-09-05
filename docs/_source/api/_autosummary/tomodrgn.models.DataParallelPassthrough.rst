@@ -1,4 +1,4 @@
-﻿tomodrgn.models.DataParallelPassthrough
+tomodrgn.models.DataParallelPassthrough
 =======================================
 
 .. currentmodule:: tomodrgn.models

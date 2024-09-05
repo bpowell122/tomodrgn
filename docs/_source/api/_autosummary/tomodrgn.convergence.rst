@@ -1,4 +1,4 @@
-tomodrgn.convergence
+﻿tomodrgn.convergence
 ====================
 
 .. automodule:: tomodrgn.convergence

@@ -1,4 +1,4 @@
-tomodrgn.commands.subtomo2chimerax
+﻿tomodrgn.commands.subtomo2chimerax
 ==================================
 
 .. automodule:: tomodrgn.commands.subtomo2chimerax

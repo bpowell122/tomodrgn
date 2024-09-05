@@ -1,4 +1,4 @@
-tomodrgn.commands.train\_vae
+﻿tomodrgn.commands.train\_vae
 ============================
 
 .. automodule:: tomodrgn.commands.train_vae

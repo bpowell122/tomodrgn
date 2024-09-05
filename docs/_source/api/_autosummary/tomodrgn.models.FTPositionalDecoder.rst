@@ -1,4 +1,4 @@
-﻿tomodrgn.models.FTPositionalDecoder
+tomodrgn.models.FTPositionalDecoder
 ===================================
 
 .. currentmodule:: tomodrgn.models

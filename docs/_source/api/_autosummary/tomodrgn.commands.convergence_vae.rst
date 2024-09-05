@@ -1,4 +1,4 @@
-tomodrgn.commands.convergence\_vae
+﻿tomodrgn.commands.convergence\_vae
 ==================================
 
 .. automodule:: tomodrgn.commands.convergence_vae
@@ -16,7 +16,6 @@ tomodrgn.commands.convergence\_vae
       :nosignatures:
    
       add_args
-      get_latest
       main
    
    

@@ -1,4 +1,4 @@
-﻿tomodrgn.pose.PoseTracker
+tomodrgn.pose.PoseTracker
 =========================
 
 .. currentmodule:: tomodrgn.pose

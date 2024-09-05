@@ -1,4 +1,4 @@
-tomodrgn.starfile
+﻿tomodrgn.starfile
 =================
 
 .. automodule:: tomodrgn.starfile

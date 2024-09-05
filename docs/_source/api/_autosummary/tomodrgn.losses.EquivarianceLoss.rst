@@ -1,4 +1,4 @@
-﻿tomodrgn.losses.EquivarianceLoss
+tomodrgn.losses.EquivarianceLoss
 ================================
 
 .. currentmodule:: tomodrgn.losses

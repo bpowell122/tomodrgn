@@ -1,4 +1,4 @@
-tomodrgn.config
+﻿tomodrgn.config
 ===============
 
 .. automodule:: tomodrgn.config

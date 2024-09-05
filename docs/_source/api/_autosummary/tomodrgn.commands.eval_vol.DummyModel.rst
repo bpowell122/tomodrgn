@@ -1,4 +1,4 @@
-﻿tomodrgn.commands.eval\_vol.DummyModel
+tomodrgn.commands.eval\_vol.DummyModel
 ======================================
 
 .. currentmodule:: tomodrgn.commands.eval_vol

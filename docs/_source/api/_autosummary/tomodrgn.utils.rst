@@ -1,4 +1,4 @@
-tomodrgn.utils
+﻿tomodrgn.utils
 ==============
 
 .. automodule:: tomodrgn.utils
@@ -24,7 +24,7 @@ tomodrgn.utils
       first_n_factors
       flog
       get_default_device
-      get_latest
+      get_latest_epoch
       load_pkl
       log
       lowpass_filter

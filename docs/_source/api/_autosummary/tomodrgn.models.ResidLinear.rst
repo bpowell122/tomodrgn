@@ -1,4 +1,4 @@
-﻿tomodrgn.models.ResidLinear
+tomodrgn.models.ResidLinear
 ===========================
 
 .. currentmodule:: tomodrgn.models

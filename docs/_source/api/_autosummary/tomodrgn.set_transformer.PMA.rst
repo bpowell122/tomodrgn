@@ -1,4 +1,4 @@
-﻿tomodrgn.set\_transformer.PMA
+tomodrgn.set\_transformer.PMA
 =============================
 
 .. currentmodule:: tomodrgn.set_transformer

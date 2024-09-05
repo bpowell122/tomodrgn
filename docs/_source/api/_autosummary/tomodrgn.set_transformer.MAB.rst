@@ -1,4 +1,4 @@
-﻿tomodrgn.set\_transformer.MAB
+tomodrgn.set\_transformer.MAB
 =============================
 
 .. currentmodule:: tomodrgn.set_transformer

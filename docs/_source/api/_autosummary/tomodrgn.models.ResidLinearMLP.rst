@@ -1,4 +1,4 @@
-﻿tomodrgn.models.ResidLinearMLP
+tomodrgn.models.ResidLinearMLP
 ==============================
 
 .. currentmodule:: tomodrgn.models

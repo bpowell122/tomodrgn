@@ -1,4 +1,4 @@
-tomodrgn.set\_transformer
+﻿tomodrgn.set\_transformer
 =========================
 
 .. automodule:: tomodrgn.set_transformer

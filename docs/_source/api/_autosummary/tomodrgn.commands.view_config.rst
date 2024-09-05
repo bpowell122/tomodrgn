@@ -1,4 +1,4 @@
-tomodrgn.commands.view\_config
+﻿tomodrgn.commands.view\_config
 ==============================
 
 .. automodule:: tomodrgn.commands.view_config

@@ -1,4 +1,4 @@
-﻿tomodrgn.set\_transformer.SetTransformer
+tomodrgn.set\_transformer.SetTransformer
 ========================================
 
 .. currentmodule:: tomodrgn.set_transformer

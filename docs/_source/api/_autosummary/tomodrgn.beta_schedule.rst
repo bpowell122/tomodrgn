@@ -1,4 +1,4 @@
-tomodrgn.beta\_schedule
+﻿tomodrgn.beta\_schedule
 =======================
 
 .. automodule:: tomodrgn.beta_schedule

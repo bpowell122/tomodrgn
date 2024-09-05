@@ -1,4 +1,4 @@
-tomodrgn.lattice
+﻿tomodrgn.lattice
 ================
 
 .. automodule:: tomodrgn.lattice

@@ -1,4 +1,4 @@
-﻿tomodrgn.models.TiltSeriesHetOnlyVAE
+tomodrgn.models.TiltSeriesHetOnlyVAE
 ====================================
 
 .. currentmodule:: tomodrgn.models
