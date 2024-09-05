@@ -321,9 +321,11 @@ def loss_function(*,
         # locally disable autocast for numerical stability in calculating KLD, particularly with batch size > 1 or equivalent large denominator
         kld = torch.mean(-0.5 * torch.sum(1 + z_logvar.float() - z_mu.float().pow(2) - z_logvar.float().exp(), dim=1), dim=0)
         if beta_control is None:
-            kld_loss = beta * kld / torch.sum(batch_hartley_2d_mask, dtype=kld.dtype)
+            # denominator is the largest number of pixels included in single particle of any particle in batch
+            kld_loss = beta * kld / torch.max(torch.sum(batch_hartley_2d_mask.view(z_mu.shape[0], -1), dtype=kld.dtype, dim=-1))
         else:
-            kld_loss = beta_control * (beta - kld) ** 2 / torch.sum(batch_hartley_2d_mask, dtype=kld.dtype)
+            # denominator is the largest number of pixels included in single particle of any particle in batch
+            kld_loss = beta_control * (beta - kld) ** 2 / torch.max(torch.sum(batch_hartley_2d_mask.view(z_mu.shape[0], -1), dtype=kld.dtype, dim=-1))
 
     # total loss
     loss = gen_loss + kld_loss
