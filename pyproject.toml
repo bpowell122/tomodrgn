@@ -1,0 +1,86 @@
+[build-system]
+requires = [
+    "hatchling",
+    "hatch-vcs"
+]
+build-backend = "hatchling.build"
+
+[project]
+name = "tomodrgn"
+dynamic = ["version"]
+description = "tomoDRGN heterogeneity training and analysis"
+readme = "README.md"
+license = {file = "LICENSE.txt"}
+requires-python = ">=3.10"
+authors = [
+    { name = "Barrett Powell", email = "bmp@mit.edu" },
+]
+dependencies = [
+    "adjustText",
+    "einops",
+    "fastcluster",
+    "healpy",
+    "importlib_resources",
+    "ipython",
+    "ipywidgets",
+    "matplotlib>=3.5",
+    "notebook",
+    "numpy<2.0",
+    "pandas",
+    "plotly",
+    "scikit-learn",
+    "scipy>=1.3.1",
+    "seaborn",
+    "torch>=2.3",
+    "torchinfo",
+    "typing_extensions>=3.7.4",
+    "umap-learn",
+]
+
+[project.optional-dependencies]
+docs = [
+    "sphinx",
+    "pydata_sphinx_theme",
+    "sphinx-copybutton",
+    "sphinx-simplepdf",
+    "sphinx_design",
+    "sphinx-argparse",
+]
+
+[project.scripts]
+tomodrgn = "tomodrgn.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/bpowell122/tomodrgn"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/testing/output",
+]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+[tool.hatch.envs.test]
+dependencies = []
+matrix-name-format = "{variable}_{value}"
+
+[[tool.hatch.envs.test.matrix]]
+python = ["3.10", "3.11", "3.12"]
+
+[tool.hatch.envs.test.scripts]
+test = 'cd testing && python commandtest.py'
+

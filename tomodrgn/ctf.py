@@ -1,109 +1,114 @@
+"""
+Functions for Contrast Transfer Function calculation, correction, and display
+"""
+from __future__ import annotations
+
 import numpy as np
 import torch
-from tomodrgn import utils
-log = utils.log
 
-def compute_ctf(freqs, dfu, dfv, dfang, volt, cs, w, phase_shift=0, bfactor=None):
-    '''
-    Compute the 2D CTF
-   
-    Input: 
-        freqs (np.ndarray) Nx2 or BxNx2 tensor of 2D spatial frequencies
-        dfu (float or Bx1 tensor): DefocusU (Angstrom)
-        dfv (float or Bx1 tensor): DefocusV (Angstrom)
-        dfang (float or Bx1 tensor): DefocusAngle (degrees)
-        volt (float or Bx1 tensor): accelerating voltage (kV)
-        cs (float or Bx1 tensor): spherical aberration (mm)
-        w (float or Bx1 tensor): amplitude contrast ratio
-        phase_shift (float or Bx1 tensor): degrees 
-        bfactor (float or Bx1 tensor): envelope fcn B-factor (Angstrom^2)
-    '''
-    assert freqs.shape[-1] == 2
-    # convert units
-    volt = volt * 1000
-    cs = cs * 10**7
-    dfang = dfang * np.pi / 180
-    phase_shift = phase_shift * np.pi / 180
-    
+from tomodrgn import utils
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from tomodrgn.lattice import Lattice
+
+
+def compute_ctf(lattice: Lattice,
+                angpix: torch.Tensor,
+                dfu: torch.Tensor,
+                dfv: torch.Tensor,
+                dfang: torch.Tensor,
+                volt: torch.Tensor,
+                cs: torch.Tensor,
+                w: torch.Tensor,
+                phase_shift: torch.Tensor = 0,
+                bfactor: float = None):
+    """
+    Calculates the 2-D CTF given spatial frequencies per image and a batch of CTF parameters.
+    Implementation of eq. 7 of https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8412055/ with additional reference to https://github.com/jianglab/ctfsimulation/blob/master/ctf_simulation.py
+
+    .. math::
+
+        CTF = sin( -\pi * z * \lambda * |k|^2 + (π/2) * Cs * \lambda^3 * |k|^4 - ps )
+
+    where
+
+    .. math::
+
+        z = 1/2 * (𝑧_1 + 𝑧_2) + 1/2 * (𝑧_1 − 𝑧_2) * cos( 2 * ( 𝛼_k − 𝛼_z ) )
+
+    and
+
+    .. math::
+
+        ps = phase shift + arcsin(w)
+
+    :param lattice: Lattice object for accessing pre-calculated spatial frequency magnitude and angle from x-axis
+    :param angpix: pixel size in angstroms for each image, shape (nimgs, 1)
+    :param dfu: defocus U in angstroms for each image, shape (nimgs, 1)
+    :param dfv: defocus V in angstroms for each image, shape (nimgs, 1)
+    :param dfang: defocus angle in degrees for each image, shape (nimgs, 1)
+    :param volt: microscope voltage in kV for each image, shape (nimgs, 1)
+    :param cs: sphrerical aberration in mm for each image, shape (nimgs, 1)
+    :param w: amplitude contrast ratio for each image, shape (nimgs, 1)
+    :param phase_shift: phase shift in degrees for each image, shape (nimgs, 1)
+    :param bfactor: envelope function bfactor for each image, shape (nimgs, 1)
+    :return: CTF evaluated at given spatial frequencies using input parameters, shape (nimgs, kx * ky)
+    """
+
+    # adjust units
+    dfang = dfang * torch.tensor(np.pi / 180, dtype=dfang.dtype)  # need in radians
+    volt = volt * torch.tensor(10 ** 3, dtype=volt.dtype)  # need in volts
+    cs = cs * torch.tensor(10 ** 7, dtype=cs.dtype)  # need in angstrom
+    phase_shift = phase_shift * np.pi / torch.tensor(180, dtype=phase_shift.dtype)  # need in radians
+    angpix2 = angpix ** 2
+
+    # calculate electron wavelength
     # lam = sqrt(h^2/(2*m*e*Vr)); Vr = V + (e/(2*m*c^2))*V^2
-    lam = 12.2639 / (volt + 0.97845e-6 * volt**2)**.5
-    x = freqs[...,0]
-    y = freqs[...,1]
-    ang = torch.atan2(y,x)
-    s2 = x**2 + y**2
-    df = .5*(dfu + dfv + (dfu-dfv)*torch.cos(2*(ang-dfang)))
-    gamma = 2*np.pi*(-.5*df*lam*s2 + .25*cs*lam**3*s2**2) - phase_shift
-    ctf = (1-w**2)**.5*torch.sin(gamma) - w*torch.cos(gamma) 
+    lam = 12.2639 / (volt + 0.97845e-6 * volt ** 2) ** .5
+
+    # calculate non-enveloped CTF
+    df = 0.5 * (dfu + dfv) + 0.5 * (dfu - dfv) * torch.cos(2 * (lattice.freqs2d_angle - dfang))
+    phase_shift = phase_shift + torch.arcsin(w)
+    gamma = -torch.pi * df * lam * (lattice.freqs2d_s2 / angpix2) + torch.pi / 2 * cs * lam ** 3 * (lattice.freqs2d_s2 / angpix2) ** 2 - phase_shift
+    ctf = torch.sin(gamma)
+
+    # apply CTF envelope
     if bfactor is not None:
-        ctf *= torch.exp(-bfactor/4*s2)
+        ctf *= torch.exp(-bfactor * (lattice.freqs2d_s2 / angpix2) / 4)
+
     return ctf
 
-def compute_ctf_np(freqs, dfu, dfv, dfang, volt, cs, w, phase_shift=0, bfactor=None):
-    '''
-    Compute the 2D CTF
-   
-    Input: 
-        freqs (np.ndarray) Nx2 array of 2D spatial frequencies
-        dfu (float): DefocusU (Angstrom)
-        dfv (float): DefocusV (Angstrom)
-        dfang (float): DefocusAngle (degrees)
-        volt (float): accelerating voltage (kV)
-        cs (float): spherical aberration (mm)
-        w (float): amplitude contrast ratio
-        phase_shift (float): degrees 
-        bfactor (float): envelope fcn B-factor (Angstrom^2)
-    '''
-    # convert units
-    volt = volt * 1000
-    cs = cs * 10**7
-    dfang = dfang * np.pi / 180
-    phase_shift = phase_shift * np.pi / 180
-    
-    # lam = sqrt(h^2/(2*m*e*Vr)); Vr = V + (e/(2*m*c^2))*V^2
-    lam = 12.2639 / np.sqrt(volt + 0.97845e-6 * volt**2)
-    x = freqs[:,0]
-    y = freqs[:,1]
-    ang = np.arctan2(y,x)
-    s2 = x**2 + y**2
-    df = .5*(dfu + dfv + (dfu-dfv)*np.cos(2*(ang-dfang)))
-    gamma = 2*np.pi*(-.5*df*lam*s2 + .25*cs*lam**3*s2**2) - phase_shift
-    ctf = np.sqrt(1-w**2)*np.sin(gamma) - w*np.cos(gamma) 
-    if bfactor is not None:
-        ctf *= np.exp(-bfactor/4*s2)
-    return np.require(ctf,dtype=freqs.dtype)
 
-def print_ctf_params(params):
+def print_ctf_params(params: np.ndarray | torch.Tensor) -> None:
+    """
+    Print a formatted table of CTF parameters.
+    Assumes that the parameters are ordered as
+
+    1. image size (px)
+    2. pixel size (Å/px)
+    3. defocus U (Å)
+    4. defocus V (Å)
+    5. defocus angle (Å)
+    6. voltage (kV)
+    7. spherical aberration (mm)
+    8. amplitude contrast ratio
+    9. phase shift (degrees)
+
+    :param params: array of CTF parameters, shape (nimgs, 9) or (9)
+    :return: None
+    """
+    assert params.ndim <= 2
+    if params.ndim == 2:
+        utils.log('Printing CTF parameters for first image only')
+        params = params[0]
     assert len(params) == 9
-    log('Image size (pix)  : {}'.format(int(params[0])))
-    log('A/pix             : {}'.format(params[1]))
-    log('DefocusU (A)      : {}'.format(params[2]))
-    log('DefocusV (A)      : {}'.format(params[3]))
-    log('Dfang (deg)       : {}'.format(params[4]))
-    log('voltage (kV)      : {}'.format(params[5]))
-    log('cs (mm)           : {}'.format(params[6]))
-    log('w                 : {}'.format(params[7]))
-    log('Phase shift (deg) : {}'.format(params[8]))
-
-def plot_ctf(D,Apix,ctf_params):
-    assert len(ctf_params) == 7
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-    freqs = np.stack(np.meshgrid(np.linspace(-.5,.5,D,endpoint=False),np.linspace(-.5,.5,D,endpoint=False)),-1)/Apix
-    freqs = freqs.reshape(-1,2)
-    c = compute_ctf_np(freqs, *ctf_params)
-    sns.heatmap(c.reshape(D, D))
-
-def load_ctf_for_training(D, ctf_params_pkl):
-    assert D%2 == 0
-    ctf_params = utils.load_pkl(ctf_params_pkl)
-    assert ctf_params.shape[1] == 9
-    # Replace original image size with current dimensions
-    Apix = ctf_params[0,0]*ctf_params[0,1]/D
-    ctf_params[:,0] = D
-    ctf_params[:,1] = Apix
-    print_ctf_params(ctf_params[0])
-    # Slice out the first column (D)
-    return ctf_params[:,1:]
-    
-
-
+    utils.log('Image size (pix)  : {}'.format(params[0]))
+    utils.log('Å/pix             : {}'.format(params[1]))
+    utils.log('DefocusU (Å)      : {}'.format(params[2]))
+    utils.log('DefocusV (Å)      : {}'.format(params[3]))
+    utils.log('Dfang (deg)       : {}'.format(params[4]))
+    utils.log('voltage (kV)      : {}'.format(params[5]))
+    utils.log('cs (mm)           : {}'.format(params[6]))
+    utils.log('w                 : {}'.format(params[7]))
+    utils.log('Phase shift (deg) : {}'.format(params[8]))

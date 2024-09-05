@@ -1,19 +1,21 @@
-'''
+"""
 Module to independently test multiple commands
-'''
+"""
 
 import os
 import subprocess
 
-class CommandTester():
 
-    def __init__(self, workdir):
+class CommandTester:
+
+    def __init__(self, workdir, verbose=False):
         self.commands = []
         self.stdout_file = f'{workdir}/commands.output'
         self.stderr_file = f'{workdir}/commands.error'
         self.successful_command_count = 0
         self.failed_command_count = 0
         self.failed_commands = []
+        self.verbose = verbose
 
         print('------  SETUP  ------')
         print(f'All output files will be saved to: {os.path.abspath(workdir)}')
@@ -33,6 +35,9 @@ class CommandTester():
             print(f'Running command {command_index}/{len(self.commands)}: ')
             print(f'    {command}')
             output = subprocess.run(command, capture_output=True, shell=True, text=True)
+            if self.verbose:
+                print(output.stdout)
+                print(output.stderr)
 
             # write all stdout to logfile
             with open(self.stdout_file, 'a+') as f:
@@ -60,6 +65,7 @@ class CommandTester():
         print(f'{self.failed_command_count}/{len(self.commands)} failed with errors')
         if len(self.failed_commands) > 0:
             print('    Failed commands:')
-            for command in self.failed_commands:
-                print(f'    {command}')
+            with open(self.stderr_file, 'r') as f:
+                for line in f.readlines():
+                    print(line.strip())
         print('\n')
