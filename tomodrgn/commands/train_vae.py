@@ -701,7 +701,7 @@ def main(args):
                                                        pin_memory=args.pin_memory)
     for epoch in range(start_epoch, args.num_epochs):
         t2 = dt.now()
-        losses_accum = np.zeros(3, dtype=np.float32)
+        losses_accum = np.zeros(3)
         batch_it = 0
 
         for batch_images, batch_rots, batch_trans, batch_ctf_params, batch_recon_error_weights, batch_hartley_2d_mask, batch_indices in data_train_generator:
@@ -735,16 +735,18 @@ def main(args):
 
             # logging
             if batch_it % args.log_interval == 0:
-                log(f'# [Train Epoch: {epoch + 1}/{args.num_epochs}] [{batch_it}/{nptcls} subtomos] '
-                    f'gen loss={losses_batch[1]:.6f}, '
-                    f'kld={losses_batch[2]:.6f}, beta={beta:.6f}, '
-                    f'loss={losses_batch[0]:.6f}')
+                log(f'# [Train Epoch: {epoch + 1}/{args.num_epochs}] '
+                    f'[{batch_it}/{nptcls} subtomos] '
+                    f'gen loss={losses_batch[1]:.15f}, '
+                    f'kld={losses_batch[2]:.15f}, '
+                    f'beta={beta:.15f}, '
+                    f'loss={losses_batch[0]:.15f}')
             losses_accum += losses_batch * len(batch_images)
         flog(
             f'# =====> Epoch: {epoch + 1} '
-            f'Average gen loss = {losses_accum[1] / batch_it:.6f}, '
-            f'KLD = {losses_accum[2] / batch_it:.6f}, '
-            f'total loss = {losses_accum[0] / batch_it:.6f}; '
+            f'Average gen loss = {losses_accum[1] / batch_it:.15f}, '
+            f'KLD = {losses_accum[2] / batch_it:.15f}, '
+            f'total loss = {losses_accum[0] / batch_it:.15f}; '
             f'Finished in {dt.now() - t2}')
         if args.checkpoint and (epoch + 1) % args.checkpoint == 0:
             if device.type != 'cpu':
