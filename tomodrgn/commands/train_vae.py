@@ -184,7 +184,8 @@ def train_batch(*,
                                                  beta_control=beta_control)
 
     # backpropogate the scaled loss and optimize model weights
-    scaler.scale(loss).backward()
+    scaler.scale(gen_loss).backward(retain_graph=True)
+    scaler.scale(kld_loss).backward()
     scaler.step(optim)
     scaler.update()
 
@@ -316,11 +317,13 @@ def loss_function(*,
     gen_loss = torch.mean(batch_recon_error_weights * ((batch_images_recon - batch_images) ** 2))
 
     # latent loss
-    kld = torch.mean(-0.5 * torch.sum(1 + z_logvar - z_mu.pow(2) - z_logvar.exp(), dim=1), dim=0)
-    if beta_control is None:
-        kld_loss = beta * kld / torch.sum(batch_hartley_2d_mask, dtype=kld.dtype)
-    else:
-        kld_loss = beta_control * (beta - kld) ** 2 / torch.sum(batch_hartley_2d_mask, dtype=kld.dtype)
+    with torch.amp.autocast(device_type=batch_images.device.type, enabled=False):
+        # locally disable autocast for numerical stability in calculating KLD, particularly with batch size > 1 or equivalent large denominator
+        kld = torch.mean(-0.5 * torch.sum(1 + z_logvar.float() - z_mu.float().pow(2) - z_logvar.float().exp(), dim=1), dim=0)
+        if beta_control is None:
+            kld_loss = beta * kld / torch.sum(batch_hartley_2d_mask, dtype=kld.dtype)
+        else:
+            kld_loss = beta_control * (beta - kld) ** 2 / torch.sum(batch_hartley_2d_mask, dtype=kld.dtype)
 
     # total loss
     loss = gen_loss + kld_loss
@@ -635,6 +638,9 @@ def main(args):
     beta_schedule = get_beta_schedule(args.beta, n_iterations=args.num_epochs * nptcls + args.batch_size)
 
     # instantiate optimizer
+    if not args.sequential_tilt_sampling:
+        log('Scaling learning rate larger by 2 due to using random tilt sampling')
+        args.lr = args.lr * 2
     optim = torch.optim.AdamW(model.parameters(),
                               lr=args.lr * args.batch_size,
                               weight_decay=args.wd,
