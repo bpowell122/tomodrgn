@@ -228,7 +228,7 @@ def make_plots(outdir: str,
     g = analysis.scatter_annotate_hex(x=umap_emb[:, 0],
                                       y=umap_emb[:, 1],
                                       centers_xy=np.vstack([umap_reducer.transform(pca.transform(voxel_trajectories[0])),  # trajectory in voxel space along pc 1, transformed to UMAP space
-                                                            umap_reducer.transform(pca.transform(voxel_trajectories[0]))]),  # trajectory in voxel space along pc 2, transformed to UMAP space
+                                                            umap_reducer.transform(pca.transform(voxel_trajectories[1]))]),  # trajectory in voxel space along pc 2, transformed to UMAP space
                                       annotate=True,
                                       labels=[f'v-PC1_{i}' for i in range(len(voxel_trajectories[0]))] + [f'v-PC2_{i}' for i in range(len(voxel_trajectories[1]))])
     g.set_axis_labels('v-UMAP1', 'v-UMAP2')
