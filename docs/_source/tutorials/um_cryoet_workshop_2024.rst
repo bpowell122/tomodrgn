@@ -9,5 +9,6 @@ The tutorial uses many precomputed results available on EMPIAR and Zenodo.
 
     The precomputed results are only compatible with the version of tomoDRGN released at publication (v0.2.2).
     This tutorial is not compatible with more updated versions of tomoDRGN.
+    However, it may still be useful as a conceptual guide / workflow reference.
 
 .. pdf-include:: ../_static/workshop_tomodrgn_commands_v5.pdf

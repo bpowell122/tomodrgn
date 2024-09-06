@@ -97,5 +97,5 @@ Documentation is built with sphinx in the ``tomodrgn`` environment:
     cd docs
     make clean
     rm -rfv docs/_source/api/_autosummary  # this ensures all files from previous builds are removed, including autosummary API files missed by make clean
-    make html
+    make html  # note that a large number of warnings about `torch.nn.modules.Module` are expected and can be ignored
     # documentation is accessible at ./docs/_build/html/index.html and can be viewed in a web browser

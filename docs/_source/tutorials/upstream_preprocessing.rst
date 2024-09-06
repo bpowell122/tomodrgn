@@ -1,6 +1,8 @@
 Upstream processing
 ====================
 
+# TODO update to reflect new upstream STA and extraction supported software
+
 tomoDRGN inputs and nomenclature
 ---------------------------------
 Several input data types from upstream processing are required to take full advantage of tomoDRGN's heterogeneity analysis, validation, and iterative processing potential.
