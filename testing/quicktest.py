@@ -38,7 +38,6 @@ def main():
     tester.commands.append(
         'tomodrgn analyze '
         'output/01_vae_both_sim '
-        '4 '
         '--ksample 20')
 
     # run the tests
