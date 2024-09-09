@@ -1546,10 +1546,8 @@ def ipy_tomo_ptcl_viewer(path_to_tomograms: str,
         with output:
             print(f'Using starfile pixel size: {star_angpix}')
 
+        df_particles_sub[coords_cols] = df_particles_sub[coords_cols] * star_angpix
         x, y, z, color = df_particles_sub[coords_cols + ['_UnfilteredParticleInds']].to_numpy().T
-        x *= star_angpix
-        y *= star_angpix
-        z *= star_angpix
 
         tomodatacontainer.scatter_x_ang = max(x)
         tomodatacontainer.scatter_y_ang = max(y)
