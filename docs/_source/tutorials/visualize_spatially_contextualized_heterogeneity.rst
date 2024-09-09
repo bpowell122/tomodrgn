@@ -22,7 +22,7 @@ Open the notebook, run the first few cells to import dependencies, enable widget
 
 .. figure:: ../assets/interactive_scatter3d_mapback.png
     :alt: tomoDRGN interactive particle viewer running in a Jupyter notebook
-    :scale: 100%
+    :scale: 50%
 
     The Jupyter notebook interactive viewer displaying particles and a tomogram from a toy dataset.
 
@@ -62,7 +62,7 @@ One such tomogram's mapback is shown below, where each particle is colored by it
 
 .. figure:: ../assets/empiar10499_00255_ribosomes.png
     :alt: example subtomo2chimerax tomogram mapback using EMPIAR dataset EMPIAR-10499
-    :scale: 100%
+    :scale: 50%
 
     Heterogeneous ribosome volumes learned and generated with tomoDRGN mapped back to the source tomogram of a Mycoplasma pneumoniae cell from EMPIAR-10499
 
