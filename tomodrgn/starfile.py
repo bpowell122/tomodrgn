@@ -175,7 +175,7 @@ class GenericStarfile:
 
             # load the first 1 row to get dtypes of columns
             df = pd.read_csv(self.sourcefile,
-                             sep='\s+',
+                             sep=r'\s+',  # raw string to avoid syntaxwarnings when compiling documentation
                              header=None,
                              names=columns,
                              index_col=None,
@@ -193,7 +193,7 @@ class GenericStarfile:
 
             # load the full dataframe with dtypes specified
             df = pd.read_csv(self.sourcefile,
-                             sep='\s+',
+                             sep=r'\s+',
                              header=None,
                              names=columns,
                              index_col=None,

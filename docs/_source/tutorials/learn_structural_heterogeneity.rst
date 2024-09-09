@@ -63,17 +63,20 @@ The full list of command line arguments can be found :doc:`here <../command_usag
 The outputs of this command include the following:
 
 * plots
-    - the model's loss (reconstructed image error, KL divergence from the standard normal distributed latent, and total loss) at each epoch
-    - PCA-projected latent space at every few epochs
-    - UMAP-projected latent space at every few epochs
-    - the mean relative change in latent embeddings for each particle in successive epochs
-    - a sampling of well-supported regions of latent space (i.e., highly populated neighborhoods of latent space) and the correlations between volumes generated from these neighborhoods every few epochs as evaluated by volumetric correlation coefficient and by FSC
+
+  - the model's loss (reconstructed image error, KL divergence from the standard normal distributed latent, and total loss) at each epoch
+  - PCA-projected latent space at every few epochs
+  - UMAP-projected latent space at every few epochs
+  - the mean relative change in latent embeddings for each particle in successive epochs
+  - a sampling of well-supported regions of latent space (i.e., highly populated neighborhoods of latent space) and the correlations between volumes generated from these neighborhoods every few epochs as evaluated by volumetric correlation coefficient and by FSC
+
 * a number of supporting files involved in generating these plots, if you desire to take a closer look at the model's training dynamics
 
 Generally, we expect a well-converged model to exhibit (relative) stabilization in most of these plots, though not all plots may fully stabilize.
 We suggest that further downstream analysis should be performed on the model at the epoch at which stabilization appears to begin, so as to minimize the potential for overfitting artifacts.
 
 Overfitting is periodically observed, and is generally characterized by
+
 * a loss curve that descends significantly with no visible improvement in map quality, map heterogeneity, or latent space distribution
 * maps that exhibit streaks along a particular axis (similar to preferred orientation issues), or exhibit increasing amounts of high frequency noise
 

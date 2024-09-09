@@ -29,7 +29,7 @@ def compute_ctf(lattice: Lattice,
 
     .. math::
 
-        CTF = sin( -\pi * z * \lambda * |k|^2 + (π/2) * Cs * \lambda^3 * |k|^4 - ps )
+        CTF = sin( -\\pi * z * \\lambda * |k|^2 + (π/2) * Cs * \\lambda^3 * |k|^4 - ps )
 
     where
 

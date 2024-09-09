@@ -2,10 +2,11 @@ Command usage
 ==============
 
 Here we present descriptions of all tomoDRGN commands, including for each command:
-    * the goal or motivation
-    * example usage
-    * an explanation of all arguments
-    * common next steps
+
+* the goal or motivation
+* example usage
+* an explanation of all arguments
+* common next steps
 
 .. toctree::
     :maxdepth: 1

@@ -11,19 +11,16 @@ However, only some files are required for minimal functionality.
 Required
 **********
 
-1. "Image series" subtomograms
+#. "Image series" subtomograms
 
-    - Real-space 2-D projection images, typically extracted from motion-corrected micrographs
+   * Real-space 2-D projection images, typically extracted from motion-corrected micrographs
+   * Each particle should be sampled by multiple images, collected at a range of different stage tilts
+   * Warp and M offer this option via "Subtomogram Extraction > Image series"
 
-    - Each particle should be sampled by multiple images, collected at a range of different stage tilts
+#. Star file metadata for "image series" subtomograms
 
-    - Warp and M offer this option via "Subtomogram Extraction > Image series"
-
-2. Star file metadata for "image series" subtomograms
-
-* RELION v3 star file (due to Warp/M compatibility)
-
-* each tilt image is referenced by one row, detailing pose (translation and rotation), CTF (defocus, pixel size, etc.), path on disk, and shared particle identity
+   * RELION v3 star file (due to Warp/M compatibility)
+   * each tilt image is referenced by one row, detailing pose (translation and rotation), CTF (defocus, pixel size, etc.), path on disk, and shared particle identity
 
 Recommended
 ************
