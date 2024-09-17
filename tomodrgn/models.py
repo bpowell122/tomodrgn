@@ -492,10 +492,10 @@ class FTPositionalDecoder(nn.Module):
         :param invert: Whether to invert the data light-on-dark vs dark-on-light convention, relative to the reconstruction returned by the decoder module.
         :return: Postprocessed volume batch in real space
         """
-        # sanit check inputs
+        # sanity check inputs
         assert batch_vols.ndim == 4, f'The volume batch must have four dimensions (batch size, boxsize, boxsize, boxsize). Found {batch_vols.shape}'
         if lowpass_mask is not None:
-            assert batch_vols.shape[-3:] == lowpass_mask.shape[-3], f'The volume batch must have the same volume dimensions as the lowpass mask. Found {batch_vols.shape}, {lowpass_mask.shape.shape}'
+            assert batch_vols.shape[-3:] == lowpass_mask.shape[-3:], f'The volume batch must have the same volume dimensions as the lowpass mask. Found {batch_vols.shape}, {lowpass_mask.shape}'
 
         # convert torch tensor to numpy array for future operations
         batch_vols = batch_vols.cpu().numpy()
@@ -900,7 +900,7 @@ class VolumeGenerator:
     def generate_volumes(self,
                          z: np.ndarray | str | None,
                          out_dir: str,
-                         out_name: str = 'vol_',
+                         out_name: str = 'vol',
                          downsample: int | None = None,
                          lowpass: float | None = None,
                          flip: bool = False,
@@ -953,20 +953,16 @@ class VolumeGenerator:
                 else:
                     # batch size cannot be larger than the number of latent embeddings to evaluate, or is 1 if homogeneous model
                     batch_size = min(batch_size, z.shape[0])
-                    num_batches = len(z) // batch_size + len(z) % batch_size
-
-                    # construct dataset and dataloader
+                    # construct z iterator
+                    z_iterator = torch.split(z, split_size_or_sections=batch_size, dim=0)
+                    num_batches = len(z_iterator)
                     log(f'Generating {len(z)} volumes in batches of {batch_size}')
-                    z_dataset = torch.utils.data.TensorDataset(z)
-                    z_iterator = torch.utils.data.DataLoader(dataset=z_dataset,
-                                                             batch_size=batch_size,
-                                                             shuffle=False)
 
                     # prepare threadpool for parallelized file writing
                     with Pool(min(os.cpu_count(), batch_size)) as p:
                         for (i, z_batch) in enumerate(z_iterator):
-                            log(f'    Generating volume batch {i} / {num_batches}')
-                            z_batch = z_batch.to(self.device)
+                            log(f'    Generating volume batch {i+1} / {num_batches}')
+                            z_batch = torch.as_tensor(z_batch, device=self.device)
                             batch_vols = self.eval_volume_batch(coords=coords,
                                                                 z=z_batch,
                                                                 extent=extent)
@@ -1004,7 +1000,7 @@ class VolumeGenerator:
                         out_dir: str,
                         downsample: int | None = None,
                         lowpass: float | None = None,
-                        z: np.ndarray | str | None = None) -> tuple[torch.Tensor, float, float, float, torch.Tensor, torch.Tensor | None]:
+                        z: np.ndarray | str | None = None) -> tuple[torch.Tensor, float, float, float, np.ndarray, torch.Tensor | None]:
         """
         Prepare inputs for repeatedly evaluating a tomoDRGN model to produce and postprocess and ensemble of volumes.
             generate 2d plane of coords to evaluate with appropriate extent and eventual volume scaling factor for downsampling
@@ -1027,16 +1023,15 @@ class VolumeGenerator:
             iht_downsample_scaling_correction = 1.
             angpix = self.model_angpix
 
-        # generate array to be multiplied into volumes as lowpass filter
+        # generate array to be multiplied into volumes as lowpass filter (note this takes place after removing symmetrized +k frequency row/column of pixels, and operates on np array so device None)
         if lowpass is not None:
-            lowpass_mask = utils.calc_lowpass_filter_mask(boxsize=boxsize_ht,
+            lowpass_mask = utils.calc_lowpass_filter_mask(boxsize=boxsize_ht-1,
                                                           angpix=angpix,
                                                           lowpass=lowpass,
-                                                          device=self.device)
+                                                          device=None)
         else:
-            lowpass_mask = torch.ones((boxsize_ht, boxsize_ht, boxsize_ht),
-                                      dtype=coords.dtype,
-                                      device=self.device)
+            lowpass_mask = np.ones((boxsize_ht-1, boxsize_ht-1, boxsize_ht-1),
+                                   dtype=bool)
         # unsqueeze along batch dimension
         lowpass_mask = lowpass_mask[np.newaxis, ...]
 
@@ -1044,11 +1039,16 @@ class VolumeGenerator:
         if z is not None:
             # load latent if not preloaded
             if type(z) is str:
-                z = utils.load_pkl(z)
+                if z.endswith('.pkl'):
+                    z = utils.load_pkl(z)
+                elif z.endswith('.txt'):
+                    z = np.loadtxt(z)
+                else:
+                    raise ValueError(f'Unrecognized file type for loading z: {z}')
             elif type(z) is np.ndarray:
                 pass
             else:
-                raise ValueError(f'Unrecognized type for z: {type(z)}')
+                raise ValueError(f'Unrecognized data structure for z: {type(z)}')
 
             # confirm latent array shape
             if z.ndim == 1:
@@ -1065,7 +1065,7 @@ class VolumeGenerator:
             log(f'Saved latent embeddings to decode to {zfile}')
 
             # convert z to tensor
-            z = torch.as_tensor(z)
+            z = torch.as_tensor(z, dtype=torch.float32)
 
         return coords, extent, iht_downsample_scaling_correction, angpix, lowpass_mask, z
 

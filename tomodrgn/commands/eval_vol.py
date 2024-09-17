@@ -35,7 +35,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     group.add_argument('--lowpass', type=float, default=None, help='Lowpass filter to this resolution in Å. Requires settings --Apix.')
 
     group = parser.add_argument_group('Compute arguments')
-    group.add_argument('-b', '--batch-size', type=int, default=1, help='Batch size to parallelize volume generation (32-64 works well for box64 volumes)')
+    group.add_argument('-b', '--batch-size', type=int, default=32, help='Batch size to parallelize volume generation (32-64 works well for box64 volumes)')
     group.add_argument('--no-amp', action='store_true', help='Disable use of mixed-precision training')
     group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs. Specify GPUs i,j via `export CUDA_VISIBLE_DEVICES=i,j`')
     return parser

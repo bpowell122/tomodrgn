@@ -126,7 +126,7 @@ def save_checkpoint(model: FTPositionalDecoder | DataParallelPassthrough,
     # generate volumes
     vg.generate_volumes(z=None,
                         out_dir=os.path.dirname(out_mrc),
-                        out_name=os.path.basename(out_mrc),
+                        out_name=os.path.splitext(os.path.basename(out_mrc))[0],
                         downsample=None,
                         lowpass=None,
                         flip=False,
