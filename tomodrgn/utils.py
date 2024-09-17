@@ -540,20 +540,22 @@ def lowpass_filter(vol_ft: np.ndarray | torch.Tensor,
     return vol_ft
 
 
-def check_memory_usage() -> list[str]:
+def check_memory_usage(device:  torch.device) -> list[str]:
     """
-    Get the current VRAM memory usage of each visible GPU.
-    Tries using torch functionality to get memory usage.
-    If installed torch does not have this method available, then uses subprocess call to nvidia-smi and parses output.
+    Get the current memory usage of the specified device_type.
 
-    :return: VRAM usage of each visible GPU as a pre-formatted string.
+    :param device: the (class of) hardware device for which to report memory usage. Allowable device types include `cuda` and `cpu`
+    :return: List of VRAM or RAM usage of each visible instance of the specified device_type.
     """
-    try:
+    if device.type == 'cuda':
         usage = [torch.cuda.mem_get_info(i) for i in range(torch.cuda.device_count())]
         return [f'{(total - free) // 1024 ** 2} MiB / {total // 1024 ** 2} MiB' for free, total in usage]
-    except AttributeError:
-        gpu_memory_usage = subprocess.check_output(['nvidia-smi', '--query-gpu=memory.used,memory.total', '--format=csv,noheader'], encoding='utf-8').strip().split('\n')
-        return [f'{gpu.split(", ")[0]} / {gpu.split(", ")[1]}' for gpu in gpu_memory_usage]
+    elif device.type == 'cpu':
+        import psutil
+        usage = psutil.virtual_memory()
+        return [f'{(usage.total - usage.free) // 1024 ** 2} MiB / {usage.total // 1024 ** 2} MiB']
+    else:
+        raise ValueError(f'Unknown torch device: {device}')
 
 
 def check_git_revision_hash(repo_path: str) -> str:

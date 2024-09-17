@@ -752,8 +752,7 @@ def main(args):
             f'total loss = {losses_accum[0] / batch_it:.15f}; '
             f'Finished in {dt.now() - t2}')
         if args.checkpoint and (epoch + 1) % args.checkpoint == 0:
-            if device.type != 'cpu':
-                flog(f'GPU memory usage: {utils.check_memory_usage()}')
+            flog(f'Memory usage: {utils.check_memory_usage(device=device)}')
             out_weights = f'{args.outdir}/weights.{epoch}.pkl'
             out_z_train = f'{args.outdir}/z.{epoch}.train.pkl'
             z_mu_train, z_logvar_train = encoder_inference(model=model,

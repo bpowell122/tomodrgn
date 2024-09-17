@@ -474,8 +474,7 @@ def main(args):
 
         flog(f'# =====> Epoch: {epoch + 1} Average loss = {loss_accum / batch_it:.6}; Finished in {dt.now() - t2}')
         if args.checkpoint and epoch % args.checkpoint == 0:
-            if device.type != 'cpu':
-                flog(f'GPU memory usage: {utils.check_memory_usage()}')
+            flog(f'Memory usage: {utils.check_memory_usage(device=device)}')
             save_checkpoint(model=model,
                             lat=lat,
                             optim=optim,
