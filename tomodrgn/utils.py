@@ -1,7 +1,6 @@
 """
 Common utility functions pertaining to both data processing and script execution
 """
-import argparse
 import collections
 import functools
 import glob

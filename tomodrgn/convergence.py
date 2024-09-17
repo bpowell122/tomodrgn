@@ -91,7 +91,7 @@ def plot_loss(runlog: str,
     :return: None
     """
 
-    fig, axes = analysis.plot_losses(runlog)
+    _ = analysis.plot_losses(runlog)
     outpath = f'{outdir}/plots/00_total_loss.png'
     plt.savefig(outpath, dpi=300)
     log(f'Saved total loss plot to {outdir}/plots/00_total_loss.png')

@@ -851,7 +851,7 @@ def plot_three_column_correlation(reference_array: np.ndarray,
                                   reference_names: list[str],
                                   query_name: str) -> None:
     """
-    Plot two reference vectors (e.g. l-UMAP1 and l-UMAP2) for potential correlation with a third query vector (e.g. CoordinateX, DefocusU, etc).
+    Plot two reference vectors (e.g. l-UMAP1 and l-UMAP2) for potential correlation with a third query vector (e.g. CoordinateX, DefocusU, etc.).
 
     Produces a figure with 1 row and 3 columns of subplots:
 

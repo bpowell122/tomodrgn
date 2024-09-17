@@ -363,7 +363,6 @@ def main(args):
                              sequential_tilt_sampling=args.sequential_tilt_sampling)
     boxsize_ht = data.boxsize_ht
     nptcls = data.nptcls
-    angpix = ptcls_star.get_tiltseries_pixelsize()
 
     # instantiate lattice
     lat = Lattice(boxsize_ht, extent=args.l_extent, device=device)
