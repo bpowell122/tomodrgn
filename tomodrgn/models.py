@@ -2,16 +2,22 @@
 Classes for creating, loading, training, and evaluating pytorch models.
 """
 
+import itertools
+import os
+from multiprocessing import Pool
+from typing import Literal
+
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.amp import autocast
-from typing import Literal
+import torchinfo
 from einops import repeat, pack
 from einops.layers.torch import Reduce, Rearrange
-import torchinfo
+from torch.amp import autocast
 
-from tomodrgn import utils, lattice, set_transformer
+from tomodrgn import utils, lattice, set_transformer, fft, mrc
+
+log = utils.log
 
 
 class TiltSeriesHetOnlyVAE(nn.Module):
@@ -465,6 +471,54 @@ class FTPositionalDecoder(nn.Module):
 
         return batch_vol_f
 
+    @staticmethod
+    def postprocess_volume_batch(batch_vols: torch.Tensor,
+                                 norm: tuple[float, float],
+                                 iht_downsample_scaling_correction: float,
+                                 lowpass_mask: np.ndarray | None = None,
+                                 flip: bool = False,
+                                 invert: bool = False) -> np.ndarray:
+        """
+        Apply post-volume-decoding processing steps: downsampling scaling correction, lowpass filtering, inverse fourier transform, volume handedness flipping, volume data sign inversion.
+
+        :param batch_vols: batch of fourier space non-symmetrized volumes directly from eval_vol_batch, shape (nvols, boxsize, boxsize, boxsize)
+        :param norm: tuple of floats representing mean and standard deviation of preprocessed particles used during model training
+        :param iht_downsample_scaling_correction: a global scaling factor applied when forward and inverse fourier / hartley transforming.
+                This is calculated and applied internally by the fft.py module as a function of array shape.
+                Thus, when the volume is downsampled, a further correction is required.
+        :param lowpass_mask: a binary mask applied to fourier space symmetrized volumes to low pass filter the reconstructions.
+                Typically, the same mask is used for all volumes via broadcasting, thus this may be of shape (1, boxsize, boxsize, boxsize) or (nvols, boxsize, boxsize, boxsize).
+        :param flip: Whether to invert the volume chirality by flipping the data order along the z axis.
+        :param invert: Whether to invert the data light-on-dark vs dark-on-light convention, relative to the reconstruction returned by the decoder module.
+        :return: Postprocessed volume batch in real space
+        """
+        # sanit check inputs
+        assert batch_vols.ndim == 4, f'The volume batch must have four dimensions (batch size, boxsize, boxsize, boxsize). Found {batch_vols.shape}'
+        if lowpass_mask is not None:
+            assert batch_vols.shape[-3:] == lowpass_mask.shape[-3], f'The volume batch must have the same volume dimensions as the lowpass mask. Found {batch_vols.shape}, {lowpass_mask.shape.shape}'
+
+        # convert torch tensor to numpy array for future operations
+        batch_vols = batch_vols.cpu().numpy()
+
+        # normalize the volume (mean and standard deviation) by normalization used when training the model
+        batch_vols = batch_vols * norm[1] + norm[0]
+
+        # lowpass filter with fourier space mask
+        if lowpass_mask is not None:
+            batch_vols = batch_vols * lowpass_mask
+
+        # transform to real space and scale values if downsampling was applied
+        batch_vols = fft.iht3_center(batch_vols)
+        batch_vols *= iht_downsample_scaling_correction
+
+        if flip:
+            batch_vols = np.flip(batch_vols, 1)
+
+        if invert:
+            batch_vols *= -1
+
+        return batch_vols
+
 
 class TiltSeriesEncoder(nn.Module):
     """
@@ -760,6 +814,260 @@ class DataParallelPassthrough(torch.nn.DataParallel):
             return super().__getattr__(name)
         except AttributeError:
             return getattr(self.module, name)
+
+
+class VolumeGenerator:
+    """
+    Convenience class to generate volume(s) from a trained tomoDRGN model.
+    Supports evaluating homogeneous (`train_nn`) or heterogeneous (`train_vae`) models.
+    """
+
+    def __init__(self,
+                 config: str | dict[str, dict],
+                 weights_path: str | None = None,
+                 model: TiltSeriesHetOnlyVAE | FTPositionalDecoder | None = None,
+                 lat: lattice.Lattice | None = None,
+                 amp: bool = True):
+        """
+        Instantiate a `VolumeGenerator` object.
+        :param config: path to trained model `config.pkl` from `train_vae.py` or `train_nn.py`, or the corresponding preloaded config dictionary
+        :param weights_path: path to trained model `weights.*.pkl` from `train_vae.py` or `train_nn.py`.
+                Prefer specifying `weights_path` over `model` when a model is not yet loaded in memory.
+        :param model: preloaded model from which to evaluate volumes.
+                Prefer specifying `model` over `weights_path` when a model is already loaded in memory. Must specify `lat` with `model`.
+        :param lat: preloaded tomodrgn lattice object. Must specify `model` with `lat`.
+        :param amp: Enable or disable use of mixed-precision model inference
+        """
+        # set the device
+        device = utils.get_default_device()
+        if device == torch.device('cpu'):
+            amp = False
+            log('Warning: pytorch AMP does not support non-CUDA (e.g. cpu) devices. Automatically disabling AMP and continuing')
+            # https://github.com/pytorch/pytorch/issues/55374
+
+        # load the model configuration
+        if type(config) is str:
+            cfg = utils.load_pkl(config)
+        else:
+            assert type(config) is dict
+            cfg = config
+
+        # set parameters for volume generation
+        boxsize_ht = int(cfg['lattice_args']['boxsize'])  # image size + 1
+        zdim = int(cfg['model_args']['zdim']) if 'zdim' in cfg['model_args'].keys() else None
+        norm = cfg['dataset_args']['norm']
+        angpix = float(cfg['angpix'])
+
+        # load the model and lattice
+        if weights_path is not None:
+            assert model is None, 'Cannot specify both weights_path` and `model`'
+            if zdim:
+                # load a VAE model
+                model, lat = TiltSeriesHetOnlyVAE.load(config=cfg,
+                                                       weights=weights_path,
+                                                       device=device)
+            else:
+                # load a non-VAE decoder-only model
+                model, lat = FTPositionalDecoder.load(config=cfg,
+                                                      weights=weights_path,
+                                                      device=device)
+        elif model is not None:
+            # using a pre-loaded model and lattice
+            assert weights_path is None, 'Cannot specify both weights_path` and `model`'
+            assert type(model) in [TiltSeriesHetOnlyVAE, FTPositionalDecoder], f'Unrecognized model type: {type(model)}'
+        else:
+            raise ValueError('Must specify one of weights_path` or `model`')
+
+        # define the volume evaluation and postprocessing functions associated with the model
+        if zdim:
+            eval_volume_batch = model.decoder.eval_volume_batch
+            postprocess_volume_batch = model.decoder.postprocess_volume_batch
+        else:
+            eval_volume_batch = model.eval_volume_batch
+            postprocess_volume_batch = model.postprocess_volume_batch
+
+        self.device = device
+        self.model_boxsize_ht = boxsize_ht
+        self.model_angpix = angpix
+        self.norm = norm
+        self.zdim = zdim
+        self.model = model
+        self.lat = lat
+        self.amp = amp
+        self.eval_volume_batch = eval_volume_batch
+        self.postprocess_volume_batch = postprocess_volume_batch
+
+    def generate_volumes(self,
+                         z: np.ndarray | str | None,
+                         out_dir: str,
+                         out_name: str = 'vol_',
+                         downsample: int | None = None,
+                         lowpass: float | None = None,
+                         flip: bool = False,
+                         invert: bool = False,
+                         batch_size: int = 1) -> None:
+        """
+        Generate volumes at specified latent embeddings and save to specified output directory.
+        Generated volume filename format is `out_dir / out_name _ {i:03d if multiple volumes} .mrc`
+
+        :param z: latent embeddings to evaluate as numpy array of shape `(nptcls, zdim)`, or path to a .txt or .pkl file containing array of shape (nptcls, zdim).
+                `None` if evaluating a homogeneous tomodrgn model.
+        :param out_dir: path to output directory in which to save output mrc file(s)
+        :param out_name: string to prepend to output .mrc file name(s)
+        :param downsample: downsample reconstructed volumes to this box size (units: px) by Fourier cropping, None means to skip downsampling
+        :param lowpass: lowpass filter reconstructed volumes to this resolution (units: Å), None means to skip lowpass filtering
+        :param flip: flip the chirality of the reconstructed volumes by inverting along the z axis
+        :param invert: invert the data sign of the reconstructed volumes (light-on-dark vs dark-on-light)
+        :param batch_size: batch size to parallelize volume generation (32-64 works well for box64 volumes)
+        :return: None
+        """
+        # sanity check inputs for evaluating model and postprocessing
+        self._check_inputs(downsample=downsample,
+                           out_dir=out_dir)
+
+        # prepare inputs for evaluating model and postprocessing
+        coords, extent, iht_downsample_scaling_correction, angpix, lowpass_mask, z = self._prepare_inputs(out_dir=out_dir,
+                                                                                                          downsample=downsample,
+                                                                                                          lowpass=lowpass,
+                                                                                                          z=z)
+
+        # set context managers and flags for inference mode evaluation loop
+        self.model.eval()
+        with torch.inference_mode():
+            with torch.amp.autocast(device_type=self.device.type, enabled=self.amp):
+                if z is None:
+                    batch_vols = self.eval_volume_batch(coords=coords,
+                                                        z=z,
+                                                        extent=extent)
+                    batch_vols = self.postprocess_volume_batch(batch_vols=batch_vols[:, :-1, :-1, :-1],  # exclude symmetrized +k frequency
+                                                               norm=self.norm,
+                                                               iht_downsample_scaling_correction=iht_downsample_scaling_correction,
+                                                               lowpass_mask=lowpass_mask,
+                                                               flip=flip,
+                                                               invert=invert)
+                    out_mrc = f'{out_dir}/{out_name}.mrc'
+                    mrc.write(fname=out_mrc,
+                              array=batch_vols[0],
+                              angpix=angpix)
+
+                else:
+                    # batch size cannot be larger than the number of latent embeddings to evaluate, or is 1 if homogeneous model
+                    batch_size = min(batch_size, z.shape[0])
+                    num_batches = len(z) // batch_size + len(z) % batch_size
+
+                    # construct dataset and dataloader
+                    log(f'Generating {len(z)} volumes in batches of {batch_size}')
+                    z_dataset = torch.utils.data.TensorDataset(z)
+                    z_iterator = torch.utils.data.DataLoader(dataset=z_dataset,
+                                                             batch_size=batch_size,
+                                                             shuffle=False)
+
+                    # prepare threadpool for parallelized file writing
+                    with Pool(min(os.cpu_count(), batch_size)) as p:
+                        for (i, z_batch) in enumerate(z_iterator):
+                            log(f'    Generating volume batch {i} / {num_batches}')
+                            z_batch = z_batch.to(self.device)
+                            batch_vols = self.eval_volume_batch(coords=coords,
+                                                                z=z_batch,
+                                                                extent=extent)
+                            batch_vols = self.postprocess_volume_batch(batch_vols=batch_vols[:, :-1, :-1, :-1],  # exclude symmetrized +k frequency
+                                                                       norm=self.norm,
+                                                                       iht_downsample_scaling_correction=iht_downsample_scaling_correction,
+                                                                       lowpass_mask=lowpass_mask,
+                                                                       flip=flip,
+                                                                       invert=invert)
+                            out_mrcs = [f'{out_dir}/{out_name}_{i * batch_size + j:03d}.mrc' for j in range(len(z_batch))]
+                            p.starmap(func=mrc.write, iterable=zip(out_mrcs,
+                                                                   batch_vols[:len(out_mrcs)],
+                                                                   itertools.repeat(None, len(out_mrcs)),
+                                                                   itertools.repeat(angpix, len(out_mrcs))))
+
+    def _check_inputs(self,
+                      out_dir: str,
+                      downsample: int | None = None) -> None:
+        """
+        Check inputs are expected types, shapes, and within expected bounds for model evaluation.
+        :param out_dir: path to output directory in which to save output mrc file(s)
+        :param downsample: downsample reconstructed volumes to this box size (units: px) by Fourier cropping, None means to skip downsampling
+        :return: None
+        """
+        # create output directory
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
+
+        # downsample checks
+        if downsample:
+            assert downsample % 2 == 0, "Boxsize must be even"
+            assert downsample <= self.model_boxsize_ht - 1, "Must be smaller than original box size"
+
+    def _prepare_inputs(self,
+                        out_dir: str,
+                        downsample: int | None = None,
+                        lowpass: float | None = None,
+                        z: np.ndarray | str | None = None) -> tuple[torch.Tensor, float, float, float, torch.Tensor, torch.Tensor | None]:
+        """
+        Prepare inputs for repeatedly evaluating a tomoDRGN model to produce and postprocess and ensemble of volumes.
+            generate 2d plane of coords to evaluate with appropriate extent and eventual volume scaling factor for downsampling
+            generate lowpass filter mask
+            calculate downsample scaling factor
+            load z values to evaluate (if any, and write to disk if given array)
+        :return:
+        """
+        # generate 2-D XY plane of coordinates to eventually evaluate (as cube of coords by repeating along z axis) with appropriate extent and IHT scaling factor for downsampling
+        if downsample:
+            boxsize_ht = downsample + 1
+            coords = self.lat.get_downsample_coords(boxsize_new=boxsize_ht).to(self.device)
+            extent = self.lat.extent * (downsample / (self.model_boxsize_ht - 1))
+            iht_downsample_scaling_correction = downsample ** 3 / (self.model_boxsize_ht - 1) ** 3
+            angpix = self.model_angpix * (self.model_boxsize_ht - 1) / downsample
+        else:
+            boxsize_ht = self.model_boxsize_ht
+            coords = self.lat.coords.to(self.device)
+            extent = self.lat.extent
+            iht_downsample_scaling_correction = 1.
+            angpix = self.model_angpix
+
+        # generate array to be multiplied into volumes as lowpass filter
+        if lowpass is not None:
+            lowpass_mask = utils.calc_lowpass_filter_mask(boxsize=boxsize_ht,
+                                                          angpix=angpix,
+                                                          lowpass=lowpass,
+                                                          device=self.device)
+        else:
+            lowpass_mask = torch.ones((boxsize_ht, boxsize_ht, boxsize_ht),
+                                      dtype=coords.dtype,
+                                      device=self.device)
+        # unsqueeze along batch dimension
+        lowpass_mask = lowpass_mask[np.newaxis, ...]
+
+        # prepare array of latent values to evaluate, if provided
+        if z is not None:
+            # load latent if not preloaded
+            if type(z) is str:
+                z = utils.load_pkl(z)
+            elif type(z) is np.ndarray:
+                pass
+            else:
+                raise ValueError(f'Unrecognized type for z: {type(z)}')
+
+            # confirm latent array shape
+            if z.ndim == 1:
+                z = z.reshape(1, -1)
+            elif z.ndim > 2:
+                raise ValueError(f'zdim must be 1 or 2, got {z.ndim}')
+
+            # confirm latent dimensionality matches value loaded from config
+            assert z.shape[1] == self.zdim
+
+            # save the z values used to generate the volumes in the output directory for future convenience
+            zfile = f'{out_dir}/z_values.txt'
+            np.savetxt(zfile, z)
+            log(f'Saved latent embeddings to decode to {zfile}')
+
+            # convert z to tensor
+            z = torch.as_tensor(z)
+
+        return coords, extent, iht_downsample_scaling_correction, angpix, lowpass_mask, z
 
 
 def mlp_ascii(input_dim: int, hidden_dims: list[int], output_dim: int):

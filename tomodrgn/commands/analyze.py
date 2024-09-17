@@ -12,7 +12,7 @@ import numpy as np
 import seaborn as sns
 from importlib_resources import files
 
-from tomodrgn import analysis, utils, starfile
+from tomodrgn import analysis, utils, starfile, models
 
 log = utils.log
 
@@ -51,9 +51,13 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
 
 def analyze_z_onedimensional(z: np.ndarray,
                              outdir: str,
-                             vg: analysis.VolumeGenerator,
+                             vg: models.VolumeGenerator,
                              skip_vol: bool = False,
-                             ondata: bool = False) -> None:
+                             ondata: bool = False,
+                             downsample: int | None = None,
+                             lowpass: float | None = None,
+                             flip: bool = False,
+                             invert: bool = False, ) -> None:
     """
     Plotting and volume generation for 1D z
 
@@ -62,6 +66,10 @@ def analyze_z_onedimensional(z: np.ndarray,
     :param vg: VolumeGenerator instance to aid volume generation at specficied z values
     :param skip_vol: whether to skip generation of volumes
     :param ondata: whether to use the closest on-data latent point to each z percentile for plotting and volume generation
+    :param downsample: downsample reconstructed volumes to this box size (units: px) by Fourier cropping, None means to skip downsampling
+    :param lowpass: lowpass filter reconstructed volumes to this resolution (units: Å), None means to skip lowpass filtering
+    :param flip: flip the chirality of the reconstructed volumes by inverting along the z axis
+    :param invert: invert the data sign of the reconstructed volumes (light-on-dark vs dark-on-light)
     :return: None
     """
     assert z.shape[1] == 1
@@ -99,20 +107,28 @@ def analyze_z_onedimensional(z: np.ndarray,
         plt.close()
 
         # generate corresponding volumes
-        vg.gen_volumes(z_values=ztraj,
-                       outdir=outdir, )
+        vg.generate_volumes(z=ztraj,
+                            out_dir=outdir,
+                            downsample=downsample,
+                            lowpass=lowpass,
+                            flip=flip,
+                            invert=invert)
 
 
 def analyze_z_multidimensional(z: np.ndarray,
                                outdir: str,
-                               vg: analysis.VolumeGenerator,
+                               vg: models.VolumeGenerator,
                                starfile_path: str,
                                datadir: str = None,
                                skip_vol: bool = False,
                                skip_umap: bool = False,
                                num_pcs: int = 2,
                                pc_ondata: int = False,
-                               num_ksamples: int = 20, ) -> None:
+                               num_ksamples: int = 20,
+                               downsample: int | None = None,
+                               lowpass: float | None = None,
+                               flip: bool = False,
+                               invert: bool = False, ) -> None:
     """
     Plotting and volume generation for multidimensional z
 
@@ -126,6 +142,10 @@ def analyze_z_multidimensional(z: np.ndarray,
     :param num_pcs: number of principal components along which to generate volumes. If 0, then no PCA is performed
     :param pc_ondata: whether to use the closest on-data latent point to each PCA axis trajectory for plotting and volume generation
     :param num_ksamples: number of latent clusters to form by k-means clustering for plotting and volume generation
+    :param downsample: downsample reconstructed volumes to this box size (units: px) by Fourier cropping, None means to skip downsampling
+    :param lowpass: lowpass filter reconstructed volumes to this resolution (units: Å), None means to skip lowpass filtering
+    :param flip: flip the chirality of the reconstructed volumes by inverting along the z axis
+    :param invert: invert the data sign of the reconstructed volumes (light-on-dark vs dark-on-light)
     :return: None
     """
     zdim = z.shape[1]
@@ -149,8 +169,12 @@ def analyze_z_multidimensional(z: np.ndarray,
         np.savetxt(f'{outdir}/pc{i + 1}/z_percentiles.txt', z_trajectory)
 
         if not skip_vol:
-            vg.gen_volumes(z_values=z_trajectory,
-                           outdir=f'{outdir}/pc{i + 1}')
+            vg.generate_volumes(z=z_trajectory,
+                                out_dir=f'{outdir}/pc{i + 1}',
+                                downsample=downsample,
+                                lowpass=lowpass,
+                                flip=flip,
+                                invert=invert)
 
     # K-means clustering
     log('Performing K-means clustering ...')
@@ -162,8 +186,12 @@ def analyze_z_multidimensional(z: np.ndarray,
     np.savetxt(f'{outdir}/kmeans{num_ksamples}/centers.txt', kmeans_centers)
     np.savetxt(f'{outdir}/kmeans{num_ksamples}/centers_ind.txt', kmeans_centers_ind, fmt='%d')
     if not skip_vol:
-        vg.gen_volumes(z_values=kmeans_centers,
-                       outdir=f'{outdir}/kmeans{num_ksamples}')
+        vg.generate_volumes(z=kmeans_centers,
+                            out_dir=f'{outdir}/kmeans{num_ksamples}',
+                            downsample=downsample,
+                            lowpass=lowpass,
+                            flip=flip,
+                            invert=invert)
 
     # Make some plots using PCA transformation
     log('Generating PCA plots ...')
@@ -456,13 +484,8 @@ def main(args):
     z = utils.load_pkl(zfile)
     zdim = z.shape[1]
 
-    vg = analysis.VolumeGenerator(weights_path=weights,
-                                  config_path=config,
-                                  downsample=args.downsample,
-                                  lowpass=args.lowpass,
-                                  flip=args.flip,
-                                  invert=args.invert,
-                                  cuda=args.device, )
+    vg = models.VolumeGenerator(config=config,
+                                weights_path=weights)
 
     # do not render figure window when drawing/saving figures
     plt.ioff()
@@ -479,6 +502,10 @@ def main(args):
         analyze_z_onedimensional(z=z,
                                  outdir=outdir,
                                  vg=vg,
+                                 downsample=args.downsample,
+                                 lowpass=args.lowpass,
+                                 flip=args.flip,
+                                 invert=args.invert,
                                  skip_vol=args.skip_vol,
                                  ondata=args.pc_ondata)
     else:
@@ -486,6 +513,10 @@ def main(args):
                                    outdir=outdir,
                                    skip_vol=args.skip_vol,
                                    vg=vg,
+                                   downsample=args.downsample,
+                                   lowpass=args.lowpass,
+                                   flip=args.flip,
+                                   invert=args.invert,
                                    num_pcs=args.pc,
                                    pc_ondata=args.pc_ondata,
                                    skip_umap=args.skip_umap,

@@ -14,7 +14,7 @@ from scipy import stats
 from scipy.ndimage.filters import maximum_filter, gaussian_filter
 from scipy.spatial import distance_matrix
 
-from tomodrgn import utils, analysis, mrc
+from tomodrgn import utils, analysis, mrc, models
 
 log = utils.log
 
@@ -941,14 +941,12 @@ def generate_test_train_pair_volumes(z_train: np.ndarray,
     ind_sel = np.sort(np.random.choice(n_particles, size=volume_count))
 
     # generate the train and test volumes for corresponding particles
-    vg = analysis.VolumeGenerator(weights_path=f'{workdir}/weights.{epoch}.pkl',
-                                  config_path=f'{workdir}/config.pkl')
-    os.mkdir(f'{workdir}/scratch.{epoch}.train')
-    os.mkdir(f'{workdir}/scratch.{epoch}.test')
-    vg.gen_volumes(z_values=z_train[ind_sel],
-                   outdir=f'{workdir}/scratch.{epoch}.train', )
-    vg.gen_volumes(z_values=z_test[ind_sel],
-                   outdir=f'{workdir}/scratch.{epoch}.test', )
+    vg = models.VolumeGenerator(config=f'{workdir}/config.pkl',
+                                weights_path=f'{workdir}/weights.{epoch}.pkl')
+    vg.generate_volumes(z=z_train[ind_sel],
+                        out_dir=f'{workdir}/scratch.{epoch}.train')
+    vg.generate_volumes(z=z_test[ind_sel],
+                        out_dir=f'{workdir}/scratch.{epoch}.test')
 
     # save data
     utils.save_pkl(data=ind_sel,

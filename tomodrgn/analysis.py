@@ -4,29 +4,27 @@ Functions for analysis of particle metadata: index, pose, ctf, latent embedding,
 import glob
 import os
 from datetime import datetime as dt
-import numpy as np
-import pandas as pd
-import subprocess
 from typing import Literal, Tuple, Any
 
-import matplotlib.pyplot as plt
 import matplotlib.figure
-import plotly.callbacks
-from matplotlib.colors import Colormap
 import matplotlib.gridspec as gridspec
-import seaborn as sns
-from adjustText import adjust_text
-import plotly.graph_objs as go
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import plotly.callbacks
 import plotly.colors as pl_colors
-from ipywidgets import interactive, widgets
-
-from scipy.spatial.distance import cdist
-from sklearn.manifold import TSNE
-from sklearn.decomposition import PCA
-from sklearn.cluster import KMeans
-from sklearn.mixture import GaussianMixture
+import plotly.graph_objs as go
+import seaborn as sns
 # noinspection PyPackageRequirements
 import umap
+from adjustText import adjust_text
+from ipywidgets import interactive, widgets
+from matplotlib.colors import Colormap
+from scipy.spatial.distance import cdist
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+from sklearn.mixture import GaussianMixture
 
 from tomodrgn import utils, mrc, starfile
 
@@ -1063,119 +1061,6 @@ def ipy_plot_interactive(df: pd.DataFrame) -> widgets.Box:
     print('  6. Hover over the scatter plot and select "Download plot as a png" to save a snapshot of the plot including lasso selection definition.')
 
     return container
-
-
-#############################
-# Volume generation helpers #
-#############################
-
-
-class VolumeGenerator:
-    """
-    Convenience class generate volume ensembles repeatedly.
-    Intended for use with variable input latent embeddings and output directories.
-    """
-
-    def __init__(self,
-                 weights_path: str,
-                 config_path: str,
-                 downsample: int | None = None,
-                 lowpass: float | None = None,
-                 flip: bool = False,
-                 invert: bool = False,
-                 cuda: int | None = None):
-        """
-        Instantiate a `VolumeGenerator` object.
-
-        :param weights_path: path to trained model `weights.*.pkl` from `train_vae.py`
-        :param config_path: path to trained model `config.pkl` from `train_vae.py`
-        :param downsample: downsample reconstructed volumes to this box size (units: px) by Fourier cropping, None means to skip downsampling
-        :param lowpass: lowpass filter reconstructed volumes to this resolution (units: Å), None means to skip lowpass filtering
-        :param flip: flip the chirality of the reconstructed volumes
-        :param invert: invert the data sign of the reconstructed volumes (light-on-dark vs dark-on-light)
-        :param cuda: specify the CUDA device index to use for reconstructing volumes, None means to let the system auto-detect the first available CUDA device and otherwise fall back to cpu
-        """
-        self.weights_path = weights_path
-        self.config_path = config_path
-        self.downsample = downsample
-        self.lowpass = lowpass
-        self.flip = flip
-        self.invert = invert
-        self.cuda = cuda
-
-    def gen_volumes(self,
-                    z_values: np.ndarray,
-                    outdir: str) -> None:
-        """
-        Generate volumes at specified latent embeddings and save to specified output directory.
-        Calls `analysis.gen_volumes` which launches a subprocess call to `eval_vol.py`.
-
-        :param z_values: array of latent embeddings at which to generate volumes, shape (nptcls, zdim)
-        :param outdir: path to output directory in which to save volumes
-        :return: None
-        """
-        # create output directory
-        if not os.path.exists(outdir):
-            os.makedirs(outdir)
-
-        # save the z values used to generate the volumes in the output directory for future convenience and to allow `eval_vol.py` to read them
-        zfile = f'{outdir}/z_values.txt'
-        np.savetxt(zfile, z_values)
-
-        # generate the corresponding volumes
-        gen_volumes(weights_path=self.weights_path,
-                    config_path=self.config_path,
-                    z_path=zfile,
-                    outdir=outdir,
-                    downsample=self.downsample,
-                    lowpass=self.lowpass,
-                    flip=self.flip,
-                    invert=self.invert,
-                    cuda=self.cuda)
-
-
-def gen_volumes(weights_path: str,
-                config_path: str,
-                z_path: str,
-                outdir: str,
-                downsample: int | None = None,
-                lowpass: float | None = None,
-                flip: bool = False,
-                invert: bool = False,
-                cuda: int | None = None) -> None:
-    """
-    Generate volumes from a trained model.
-    Launches a subprocess call to `eval_vol.py`.
-
-    :param weights_path: path to trained model `weights.*.pkl` from `train_vae.py`
-    :param config_path: path to trained model `config.pkl` from `train_vae.py`
-    :param z_path: path to a .txt or .pkl file containing latent embeddings to evaluate, shape (nptcls, zdim)
-    :param outdir: path to output directory in which to save volumes
-    :param downsample: downsample reconstructed volumes to this box size (units: px) by Fourier cropping, None means to skip downsampling
-    :param lowpass: lowpass filter reconstructed volumes to this resolution (units: Å), None means to skip lowpass filtering
-    :param flip: flip the chirality of the reconstructed volumes
-    :param invert: invert the data sign of the reconstructed volumes (light-on-dark vs dark-on-light)
-    :param cuda: specify the CUDA device index to use for reconstructing volumes, None means to let the system auto-detect the first available CUDA device and otherwise fall back to cpu
-    :return: None
-    """
-    # construct the eval_vol command to generate volumes
-    cmd = f'tomodrgn eval_vol --weights {weights_path} --config {config_path} --zfile {z_path} -o {outdir}'
-    if downsample is not None:
-        cmd += f' -d {downsample}'
-    if lowpass is not None:
-        cmd += f' --lowpass {lowpass}'
-    if flip:
-        cmd += f' --flip'
-    if invert:
-        cmd += f' --invert'
-
-    # prepend the command with setting CUDA-visible devices
-    if cuda is not None:
-        cmd = f'CUDA_VISIBLE_DEVICES={cuda} && {cmd}'
-
-    # run the command
-    log(f'Generating volumes with command:\n {cmd}')
-    subprocess.check_call(cmd, shell=True)
 
 
 def load_dataframe(*,

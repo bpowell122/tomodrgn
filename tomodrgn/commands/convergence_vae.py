@@ -10,7 +10,7 @@ from datetime import datetime as dt
 
 import numpy as np
 
-from tomodrgn import analysis, utils, convergence
+from tomodrgn import models, utils, convergence
 
 flog = utils.flog
 log = utils.log
@@ -161,16 +161,14 @@ def main(args):
     else:
         flog(f'Generating volumes at representative latent encodings in earlier epochs', logfile)
         for epoch in epochs:
-            vg = analysis.VolumeGenerator(weights_path=f'{workdir}/weights.{epoch}.pkl',
-                                          config_path=f'{workdir}/config.pkl',
-                                          downsample=args.downsample,
-                                          lowpass=args.lowpass,
-                                          flip=args.flip,
-                                          invert=args.invert,
-                                          cuda=args.device, )
-            z_values = np.asarray(np.loadtxt(f'{outdir}/repr_particles/latent_representative.{epoch}.txt'), dtype=np.float32)
-            vg.gen_volumes(z_values=z_values,
-                           outdir=f'{outdir}/vols.{epoch}')
+            vg = models.VolumeGenerator(config=f'{workdir}/config.pkl',
+                                        weights_path=f'{workdir}/weights.{epoch}.pkl', )
+            vg.generate_volumes(z=f'{outdir}/repr_particles/latent_representative.{epoch}.txt',
+                                out_dir=f'{outdir}/vols.{epoch}',
+                                downsample=args.downsample,
+                                lowpass=args.lowpass,
+                                flip=args.flip,
+                                invert=args.invert, )
 
     flog(f'Calculating successive epoch pairwise map-map CCs at representative latent encodings', logfile)
     convergence.calc_ccs_pairwise_epochs(outdir=outdir,

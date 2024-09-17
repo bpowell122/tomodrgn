@@ -39,7 +39,7 @@ import numpy as np
 import pandas as pd
 from typing import Literal
 
-from tomodrgn import starfile, utils, mrc, analysis
+from tomodrgn import starfile, utils, mrc, analysis, models
 
 log = utils.log
 
@@ -479,14 +479,15 @@ def main(args):
             utils.save_pkl(z_one_tomo, f'{outdir_one_tomo}/z_values.pkl')
 
             # generate all volumes in this tomogram by args and z_values.pkl, store in outdir_one_tomo
-            analysis.gen_volumes(weights_path=args.weights,
-                                 config_path=args.config,
-                                 z_path=f'{outdir_one_tomo}/z_values.pkl',
-                                 outdir=outdir_one_tomo,
-                                 downsample=args.downsample,
-                                 lowpass=args.lowpass,
-                                 flip=args.flip,
-                                 invert=args.invert)
+            vg = models.VolumeGenerator(config=args.config,
+                                        weights_path=args.weights)
+            vg.generate_volumes(z=f'{outdir_one_tomo}/z_values.pkl',
+                                out_dir=outdir_one_tomo,
+                                downsample=args.downsample,
+                                lowpass=args.lowpass,
+                                flip=args.flip,
+                                invert=args.invert,
+                                batch_size=1)
 
         # load the first tomodrgn vol to get boxsize and pixel size, check that all vols can be found
         args.vols_dir = outdir_one_tomo if args.mode == 'volumes' else None

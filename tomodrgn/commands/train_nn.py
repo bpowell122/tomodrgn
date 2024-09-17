@@ -13,8 +13,8 @@ import torch.nn
 import torch.amp
 import torch.utils.data
 
-from tomodrgn import utils, ctf, mrc, config
-from tomodrgn.commands.eval_vol import postprocess_vols
+from tomodrgn import utils, ctf, config
+from tomodrgn.models import VolumeGenerator
 from tomodrgn.dataset import TiltSeriesMRCData
 from tomodrgn.lattice import Lattice
 from tomodrgn.models import FTPositionalDecoder, DataParallelPassthrough
@@ -98,7 +98,8 @@ def save_checkpoint(model: FTPositionalDecoder | DataParallelPassthrough,
                     optim: torch.optim.Optimizer,
                     epoch: int,
                     norm: tuple[float, float],
-                    angpix: float,
+                    config_path: str,
+                    amp: bool,
                     out_mrc: str,
                     out_weights: str) -> None:
     """
@@ -109,25 +110,30 @@ def save_checkpoint(model: FTPositionalDecoder | DataParallelPassthrough,
     :param optim: optimizer object, to be saved into model pkl
     :param epoch: current epoch number, 0-indexed, saved into model pkl
     :param norm: mean and standard deviation of dataset by which input dataset was normalized, to be unscaled following volume generation
-    :param angpix: pixel size of the reconstruction
+    :param config_path: path to trained model `config.pkl`
+    :param amp: Enable or disable use of mixed-precision model inference
     :param out_mrc: name of the output mrc file to save consensus reconstruction
     :param out_weights: name of the output pkl file to save model state_dict, optimizer state_dict
     :return: None
     """
-    model.eval()
-    with torch.inference_mode():
-        vol = model.eval_volume_batch(coords=lat.coords,
-                                      z=None,
-                                      extent=lat.extent)
-    vol = postprocess_vols(batch_vols=vol[:, :-1, :-1, :-1],
-                           norm=norm,
-                           iht_downsample_scaling_correction=1.,
-                           lowpass_mask=None,
-                           flip=False,
-                           invert=False)
-    mrc.write(fname=out_mrc,
-              array=vol[0].astype(np.float32),
-              angpix=angpix)
+    # instantiate the volume generator
+    vg = VolumeGenerator(config=config_path,
+                         weights_path=None,
+                         model=model,
+                         lat=lat,
+                         amp=amp)
+
+    # generate volumes
+    vg.generate_volumes(z=None,
+                        out_dir=os.path.dirname(out_mrc),
+                        out_name=os.path.basename(out_mrc),
+                        downsample=None,
+                        lowpass=None,
+                        flip=False,
+                        invert=False,
+                        batch_size=1)
+
+    # save the model
     torch.save({
         'norm': norm,
         'epoch': epoch,
@@ -471,28 +477,26 @@ def main(args):
         if args.checkpoint and epoch % args.checkpoint == 0:
             if device.type != 'cpu':
                 flog(f'GPU memory usage: {utils.check_memory_usage()}')
-            out_mrc = f'{args.outdir}/reconstruct.{epoch}.mrc'
-            out_weights = f'{args.outdir}/weights.{epoch}.pkl'
             save_checkpoint(model=model,
                             lat=lat,
                             optim=optim,
                             epoch=epoch,
                             norm=data.norm,
-                            angpix=angpix,
-                            out_mrc=out_mrc,
-                            out_weights=out_weights)
+                            config_path=out_config,
+                            out_mrc=f'{args.outdir}/reconstruct.{epoch}.mrc',
+                            out_weights=f'{args.outdir}/weights.{epoch}.pkl',
+                            amp=use_amp)
 
     # save model weights and evaluate the model on 3D lattice
-    out_mrc = f'{args.outdir}/reconstruct.mrc'
-    out_weights = f'{args.outdir}/weights.pkl'
     save_checkpoint(model=model,
                     lat=lat,
                     optim=optim,
                     epoch=epoch,
                     norm=data.norm,
-                    angpix=angpix,
-                    out_mrc=out_mrc,
-                    out_weights=out_weights)
+                    config_path=out_config,
+                    out_mrc=f'{args.outdir}/reconstruct.mrc',
+                    out_weights=f'{args.outdir}/weights.pkl',
+                    amp=use_amp)
 
     td = dt.now() - t1
     flog(f'Finished in {td} ({td / (args.num_epochs - start_epoch)} per epoch)')
