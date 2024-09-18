@@ -63,7 +63,7 @@ def save_config(args: argparse.Namespace,
                         type=type(lat))
 
     if type(model) is TiltSeriesHetOnlyVAE:
-        model_args = dict(in_dim=model.encoder.in_dim,
+        model_args = dict(in_dim=model.encoder.in_dim.item(),
                           qlayersA=args.qlayersA,
                           qdimA=args.qdimA,
                           out_dimA=args.out_dim_A,
@@ -74,7 +74,7 @@ def save_config(args: argparse.Namespace,
                           players=args.players,
                           pdim=args.pdim,
                           activation=args.activation,
-                          enc_mask=model.enc_mask,
+                          enc_mask=model.enc_mask.detach().cpu().numpy(),
                           pooling_function=args.pooling_function,
                           feat_sigma=args.feat_sigma,
                           num_seeds=args.num_seeds,

@@ -166,7 +166,6 @@ def main(args):
 
     # set the device
     device = utils.get_default_device()
-    torch.set_grad_enabled(False)
 
     # load the original particles
     log(f'Loading {args.input}')

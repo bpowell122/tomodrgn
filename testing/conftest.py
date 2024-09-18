@@ -23,14 +23,6 @@ def output_dir(tmp_path_factory):
     yield output_dir
 
     # Cleanup the directory after all tests (byproduct of pytest-console-scripts, normally not noticed because pytest defaults to output in tmp dir
-    # dirs_to_remove = glob.glob(f'{output_dir}/*subprocess*') + glob.glob(f'{output_dir}/*inprocess*')
-    # for dir_to_remove in dirs_to_remove:
-    #     try:
-    #         # remove symlinks
-    #         os.unlink(dir_to_remove)
-    #     except IsADirectoryError:
-    #         # remove directories
-    #         shutil.rmtree(dir_to_remove)
     dirs_to_remove = glob.glob(f'{output_dir}/test_*')
     for dir_to_remove in dirs_to_remove:
         # remove symlinks and associated dirs

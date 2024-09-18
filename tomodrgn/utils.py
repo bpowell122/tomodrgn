@@ -349,8 +349,8 @@ def calc_real_space_mask(vol1: np.ndarray,
         dilate = int(np.ceil(boxsize / 30)) if dilate is None else dilate
         dist = int(np.ceil(boxsize / 30)) if dist is None else dist
         mask = np.where(vol1 >= np.percentile(vol1, thresh), True, False) | np.where(vol2 >= np.percentile(vol2, thresh), True, False)
-        mask = ndimage.morphology.binary_dilation(mask, iterations=dilate)
-        distance_to_mask = ndimage.morphology.distance_transform_edt(~mask)
+        mask = ndimage.binary_dilation(mask, iterations=dilate)
+        distance_to_mask = ndimage.distance_transform_edt(~mask)
         distance_to_mask = np.where(distance_to_mask > dist, dist, distance_to_mask) / dist
         mask = np.cos((np.pi / 2) * distance_to_mask)
     else:

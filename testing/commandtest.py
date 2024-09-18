@@ -145,7 +145,7 @@ def test_subtomo2chimerax_mode_markers(script_runner, output_dir):
     result = run_assert_no_error(script_runner, command=f'tomodrgn subtomo2chimerax data/10076_both_32_sim_vols.star --mode markers --outdir {output_dir}/vae_both_sim_zdim8_dosetiltweightmask_batchsize8/mapback_markers --tomoname both.tomostar --star-angpix-override 10 --coloring-labels data/ptcl_labels_D0_E1.pkl')
 
 def test_subtomo2chimerax_mode_volume(script_runner, output_dir):
-    result = run_assert_no_error(script_runner, command=f'tomodrgn subtomo2chimerax data/10076_both_32_sim_vols.star --mode volume --outdir {output_dir}/vae_both_sim_zdim8_dosetiltweightmask_batchsize8/mapback_volume --tomoname both.tomostar --star-angpix-override 10 --vol-path {output_dir}/00_backproject/classE_sim_doseweight.mrc --vol-render-level 0.7 --coloring-labels data/ptcl_labels_D0_E1.pkl')
+    result = run_assert_no_error(script_runner, command=f'tomodrgn subtomo2chimerax data/10076_both_32_sim_vols.star --mode volume --outdir {output_dir}/vae_both_sim_zdim8_dosetiltweightmask_batchsize8/mapback_volume --tomoname both.tomostar --star-angpix-override 10 --vol-path {output_dir}/backproject/classE_sim_doseweight.mrc --vol-render-level 0.7 --coloring-labels data/ptcl_labels_D0_E1.pkl')
 
 def test_subtomo2chimerax_mode_volumes(script_runner, output_dir):
     result = run_assert_no_error(script_runner, command=f'tomodrgn subtomo2chimerax data/10076_both_32_sim_vols.star --mode volumes --outdir {output_dir}/vae_both_sim_zdim8_dosetiltweightmask_batchsize8/mapback_volumes --tomoname both.tomostar --star-angpix-override 10 --weights {output_dir}/vae_both_sim_zdim8_dosetiltweightmask_batchsize8/weights.39.pkl --config {output_dir}/vae_both_sim_zdim8_dosetiltweightmask_batchsize8/config.pkl --zfile {output_dir}/vae_both_sim_zdim8_dosetiltweightmask_batchsize8/z.39.train.pkl --vol-render-level 0.7 --coloring-labels data/ptcl_labels_D0_E1.pkl')
@@ -193,8 +193,7 @@ def test_view_config(script_runner, output_dir):
 
 # tomodrgn cleanup
 def test_cleanup_dryrun(script_runner, output_dir):
-    result = run_assert_no_error(script_runner, command=f'cp -R {output_dir}/vae_both_sim_zdim2 {output_dir}/vae_both_sim_zdim2_copy_cleaned')
-    result = run_assert_no_error(script_runner, command=f'tomodrgn cleanup {output_dir}/vae_both_sim_zdim2_copy_cleaned --weights --zfiles --volumes --test')
+    result = run_assert_no_error(script_runner, command=f'tomodrgn cleanup {output_dir}/vae_classE_sim_zdim8 --weights --zfiles --volumes --test')
 
 def test_cleanup_delete(script_runner, output_dir):
-    result = run_assert_no_error(script_runner, command=f'tomodrgn cleanup {output_dir}/vae_both_sim_zdim2_copy_cleaned --weights --zfiles --volumes')
+    result = run_assert_no_error(script_runner, command=f'tomodrgn cleanup {output_dir}/vae_classE_sim_zdim8 --weights --zfiles --volumes')
