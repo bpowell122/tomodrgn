@@ -667,7 +667,7 @@ def main(args):
     # restart from checkpoint
     if args.load:
         flog('Loading checkpoint from {}'.format(args.load))
-        checkpoint = torch.load(args.load, weights_only=True)
+        checkpoint = torch.load(args.load, weights_only=True, map_location=device)
         model.load_state_dict(checkpoint['model_state_dict'])
         model.to(device)
         optim.load_state_dict(checkpoint['optimizer_state_dict'])
