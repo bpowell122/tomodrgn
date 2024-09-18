@@ -46,6 +46,14 @@ docs = [
     "sphinx_design",
     "sphinx-argparse",
 ]
+tests = [
+    "pytest",
+    "pytest-console-scripts"
+]
+dev = [
+    "tomodrgn[docs]",
+    "tomodrgn[tests]"
+]
 
 [project.scripts]
 tomodrgn = "tomodrgn.__main__:main"

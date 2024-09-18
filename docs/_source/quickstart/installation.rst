@@ -66,13 +66,20 @@ Therefore pytorch must be `built from source for x86 Macs <https://github.com/py
 Optional: verify code+dependency functionality on your system
 ---------------------------------------------------------------
 
+Running tests requires installation of testing dependencies.
+
+.. code-block:: bash
+
+    cd $TOMODRGN_SOURCE_DIR
+    python -m pip install .[tests]
+
 Run a quick test of the most essential and frequently used commands, ``tomodrgn train_vae`` and ``tomodrgn analyze``.
 Takes about 1 minute.
 
 .. code-block:: bash
 
     cd $TOMODRGN_SOURCE_DIR/testing
-    python ./quicktest.py
+    pytest --script-launch-mode=subprocess quicktest.py
 
 Run a comprehensive end-to-end test of all commands with multiple options (except Jupyter notebooks).
 Takes about 50 minutes on a MacBook, about 10 minutes on an Ubuntu workstation with a 4060Ti.
@@ -82,7 +89,12 @@ Also serves as a useful reference for commonly used command syntax.
 .. code-block:: bash
 
     cd $TOMODRGN_SOURCE_DIR/testing
-    python ./commandtest.py
+    pytest --script-launch-mode=subprocess ./commandtest.py
+
+Some useful arguments that can be supplied to the pytest commands above:
+
+* ``--capture=tee-sys``: log pytest and tomodrgn output to STDOUT (a useful way to see any warnings as opposed to always-visible errors)
+* ``--basetemp=/custom/output/directory``: change the directory to save all outputs from the test (perhaps to see sample outputs)
 
 
 Optional: build documentation

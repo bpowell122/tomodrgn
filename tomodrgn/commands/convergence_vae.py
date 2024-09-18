@@ -200,10 +200,13 @@ def main(args):
     if args.ground_truth is not None:
         flog(f'Calculating ground truth map-map CCs', logfile)
         flog(f'Using ground truth maps {args.ground_truth}', logfile)
+        ground_truth_paths = []
+        for potential_wildcard_path in args.ground_truth:
+            ground_truth_paths.extend(glob.glob(potential_wildcard_path))
         convergence.calc_ccs_alltogroundtruth(outdir=outdir,
                                               epochs=epochs,
                                               labels=labels,
-                                              ground_truth_paths=args.ground_truth,
+                                              ground_truth_paths=ground_truth_paths,
                                               mask=args.mask,
                                               thresh=args.thresh,
                                               dilate=args.dilate,
