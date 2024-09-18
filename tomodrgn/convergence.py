@@ -11,7 +11,7 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt, image
 from scipy import stats
-from scipy.ndimage.filters import maximum_filter, gaussian_filter
+from scipy.ndimage import maximum_filter, gaussian_filter
 from scipy.spatial import distance_matrix
 
 from tomodrgn import utils, analysis, mrc, models

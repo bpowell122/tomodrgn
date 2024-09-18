@@ -46,6 +46,14 @@ docs = [
     "sphinx_design",
     "sphinx-argparse",
 ]
+tests = [
+    "pytest",
+    "pytest-console-scripts"
+]
+dev = [
+    "tomodrgn[docs]",
+    "tomodrgn[tests]"
+]
 
 [project.scripts]
 tomodrgn = "tomodrgn.__main__:main"
@@ -82,5 +90,5 @@ matrix-name-format = "{variable}_{value}"
 python = ["3.10", "3.11", "3.12"]
 
 [tool.hatch.envs.test.scripts]
-test = 'cd testing && python commandtest.py'
+test = 'cd testing && pytest --script-launch-mode=subprocess --capture=tee-sys commandtest.py'
 

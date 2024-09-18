@@ -38,16 +38,21 @@ Potential errors during installation
 
 Optional: verify code+dependency functionality on your system
     
+    python -m pip install .[tests]
     cd tomodrgn/testing
 
     # ~1 minute
     # tests train_vae and analyze
-    python ./quicktest.py
+    pytest --script-launch-mode=subprocess quicktest.py 
 
     # ~50 minutes on Macbook Pro, ~10 minutes on Ubuntu workstation with 4060Ti
     # tests all commands with multiple options (except jupyter notebooks)
     # a useful reference for commonly used command syntax
-    python ./commandtest.py
+    pytest --script-launch-mode=subprocess ./commandtest.py
+
+    # useful arguments that can be supplied to pytest:
+    #  --capture=tee-sys    # log pytest and tomodrgn output to STDOUT (a useful way to see any warnings as opposed to always-visible errors)
+    #  --basetemp=/custom/output/directory    # change the directory to save all outputs from the test
 
 Optional: build documentation
 
