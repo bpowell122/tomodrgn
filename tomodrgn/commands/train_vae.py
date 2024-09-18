@@ -227,8 +227,6 @@ def preprocess_batch(*,
     else:
         batch_ctf_weights = None
 
-    # TODO weight y (inplace) by cumulative weights (unmasked) ? done in commit df7aa8
-
     return batch_images, batch_ctf_weights
 
 

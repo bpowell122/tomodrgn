@@ -505,8 +505,6 @@ def parse_mrc(fname: str,
     :return: array: numpy array of MRC data in header-specified dtype and shape, or list of a LazyImage for each section along the nz axis in the MRC file
             header: an MRCHeader object containing the information encoded in the header and extended header of the MRC file
     """
-    # TODO move to method of MRCHeader (which should be renamed MRCFile or inherited from)
-    #   -> might make it more clear / easy to have extended data offset for lazyimage / lazyimagestack
     # parse the header
     header = MRCHeader.parse(fname)
 
