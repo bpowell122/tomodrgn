@@ -50,7 +50,6 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     group.add_argument('--lowpass', type=float, default=None, help='Lowpass filter to this resolution in Å')
     group.add_argument('--flip', action='store_true', help='Flip handedness of output volumes')
     group.add_argument('--invert', action='store_true', help='Invert contrast of output volumes')
-    group.add_argument('--device', type=int, help='Optionally specify CUDA device')
     group.add_argument('--skip-volgen', action='store_true', help='Skip volume generation. Requires that volumes already exist for downstream CC + FSC calculations')
     group.add_argument('--ground-truth', type=os.path.abspath, nargs='+', default=None, help='Relative path containing wildcards to ground_truth_vols*.mrc for map-map CC calcs')
 

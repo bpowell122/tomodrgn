@@ -20,9 +20,9 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
         pass
 
     group = parser.add_argument_group('Core arguments')
-    group.add_argument('-w', '--weights', help='Model weights from train_vae')
+    group.add_argument('-w', '--weights', required=True, help='Model weights from train_vae')
     group.add_argument('-c', '--config', required=True, help='config.pkl file from train_vae')
-    group.add_argument('-o', type=os.path.abspath, required=True, help='Output .mrc or directory')
+    group.add_argument('-o', '--outdir', type=os.path.abspath, required=True, help='Output .mrc or directory')
     group.add_argument('--prefix', default='vol_', help='Prefix when writing out multiple .mrc files')
 
     group = parser.add_argument_group('Specify z values')
@@ -37,7 +37,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     group = parser.add_argument_group('Compute arguments')
     group.add_argument('-b', '--batch-size', type=int, default=32, help='Batch size to parallelize volume generation (32-64 works well for box64 volumes)')
     group.add_argument('--no-amp', action='store_true', help='Disable use of mixed-precision training')
-    group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs. Specify GPUs i,j via `export CUDA_VISIBLE_DEVICES=i,j`')
+    group.add_argument('--multigpu', action='store_true', help='Parallelize model evaluation across all detected GPUs. Specify GPUs i,j via `export CUDA_VISIBLE_DEVICES=i,j`')
     return parser
 
 
