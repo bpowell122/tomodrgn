@@ -3,7 +3,7 @@ tomodrgn filter_star
 
 Purpose
 --------
-Filter a star file ("image series" or "volume series") by selected particle indices.
+Filter a star file ("image series" or "volume series") by selected particle indices or by selected class labels.
 
 Sample usage
 ------------
@@ -11,7 +11,7 @@ The examples below are taken from ``tomodrgn/testing/commandtest.py``, and rely 
 
 .. code-block:: bash
 
-    # baseline TiltSeriesStarfile
+    # image series star file filtered by particle indices
     tomodrgn \
         filter_star data/10076_both_32_sim.star \
         --starfile-type imageseries \
@@ -19,7 +19,16 @@ The examples below are taken from ``tomodrgn/testing/commandtest.py``, and rely 
         --ind data/ind_ptcl_first10last10.pkl \
         -o output/10076_both_32_sim_filtered.star
 
-    # baseline volumeseries star file
+    # image series star file filtered by class labels
+    tomodrgn \
+        filter_star data/10076_both_32_sim.star \
+        --starfile-type imageseries \
+        --tomo-id-col _rlnImageName \
+        --labels data/labels_D-0_E-1.pkl \
+        --labels-sel 0 \
+        -o output/10076_both_32_sim_filtered_by_labels.star
+
+    # volume series star file filtered by particle indices
     tomodrgn \
         filter_star \
         data/10076_both_32_sim_vols.star \

@@ -161,6 +161,12 @@ def test_filter_star_tiltseriesstarfile(script_runner, output_dir):
 def test_filter_star_volumeseriesstarfile(script_runner, output_dir):
     result = run_assert_no_error(script_runner, command=f'tomodrgn filter_star data/10076_both_32_sim_vols.star --starfile-type volumeseries --tomo-id-col _rlnImageName --ind data/ind_ptcl_first10last10.pkl -o {output_dir}/10076_both_32_sim_vols_filtered.star')
 
+def test_filter_star_tiltseriesstarfile_labels(script_runner, output_dir):
+    result = run_assert_no_error(script_runner, command=f'tomodrgn filter_star data/10076_both_32_sim.star --starfile-type imageseries --tomo-id-col _rlnImageName --labels data/labels_D-0_E-1.pkl --labels-sel 0 -o {output_dir}/10076_both_32_sim_filtered_by_labels.star')
+
+def test_filter_star_volumeseriesstarfile_labels(script_runner, output_dir):
+    result = run_assert_no_error(script_runner, command=f'tomodrgn filter_star data/10076_both_32_sim_vols.star --starfile-type volumeseries --tomo-id-col _rlnImageName --labels data/labels_D-0_E-1.pkl --labels-sel 0 1 -o {output_dir}/10076_both_32_sim_vols_filtered_by_labels.star')
+
 
 # tomodrgn eval_images
 def test_eval_images(script_runner, output_dir):
