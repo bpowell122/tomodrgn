@@ -5,6 +5,7 @@ import argparse
 import os
 import shutil
 from datetime import datetime as dt
+from typing import Literal
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -34,6 +35,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     group.add_argument('-o', '--outdir', help='Output directory for analysis results (default: [workdir]/analyze.[epoch])')
     group.add_argument('--skip-vol', action='store_true', help='Skip generation of volumes')
     group.add_argument('--skip-umap', action='store_true', help='Skip running UMAP')
+    group.add_argument('--plot-format', type=str, choices=['png', 'svgz'], default='png', help='File format with which to save plots')
 
     group = parser.add_argument_group('Arguments for latent space analysis')
     group.add_argument('--pc', type=int, default=2, help='Number of principal component traversals to generate (default: %(default)s)')
@@ -51,6 +53,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
 
 def analyze_z_onedimensional(z: np.ndarray,
                              outdir: str,
+                             plot_format: Literal['png', 'svgz'],
                              vg: models.VolumeGenerator,
                              skip_vol: bool = False,
                              ondata: bool = False,
@@ -63,6 +66,7 @@ def analyze_z_onedimensional(z: np.ndarray,
 
     :param z: array of 1-D latent embeddings, shape (nptcls, 1)
     :param outdir: directory in which to save all outputs (plots and generated volumes)
+    :param plot_format: file format with which to save plots
     :param vg: VolumeGenerator instance to aid volume generation at specficied z values
     :param skip_vol: whether to skip generation of volumes
     :param ondata: whether to use the closest on-data latent point to each z percentile for plotting and volume generation
@@ -77,18 +81,18 @@ def analyze_z_onedimensional(z: np.ndarray,
     nptcls = len(z)
 
     # scatter plot of particle index against latent embedding
-    plt.scatter(np.arange(nptcls), z, alpha=.1, s=2)
+    plt.scatter(np.arange(nptcls), z, alpha=.1, s=2, rasterized=True)
     plt.xlabel('particle index')
     plt.ylabel('z')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/z.png')
+    plt.savefig(f'{outdir}/z.{plot_format}')
     plt.close()
 
     # histogram of latent embeddings with KDE overlay
     sns.displot(z, kde=True)
     plt.xlabel('z')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/z_hist.png')
+    plt.savefig(f'{outdir}/z_hist.{plot_format}')
     plt.close()
 
     if not skip_vol:
@@ -103,7 +107,7 @@ def analyze_z_onedimensional(z: np.ndarray,
             plt.axvline(percentile, color='red', linestyle='-')
         plt.xlabel('z')
         plt.tight_layout()
-        plt.savefig(f'{outdir}/z_hist_percentile_volumes.png')
+        plt.savefig(f'{outdir}/z_hist_percentile_volumes.{plot_format}')
         plt.close()
 
         # generate corresponding volumes
@@ -117,6 +121,7 @@ def analyze_z_onedimensional(z: np.ndarray,
 
 def analyze_z_multidimensional(z: np.ndarray,
                                outdir: str,
+                               plot_format: Literal['png', 'svgz'],
                                vg: models.VolumeGenerator,
                                starfile_path: str,
                                datadir: str = None,
@@ -134,6 +139,7 @@ def analyze_z_multidimensional(z: np.ndarray,
 
     :param z: array of 1-D latent embeddings, shape (nptcls, zdim)
     :param outdir: directory in which to save all outputs (plots and generated volumes)
+    :param plot_format: file format with which to save plots
     :param vg: VolumeGenerator instance to aid volume generation at specficied z values
     :param starfile_path: path to star file used during model training through which to load images
     :param datadir: path to particle images on disk, used when plotting images per kmeans class
@@ -202,7 +208,7 @@ def analyze_z_multidimensional(z: np.ndarray,
     plt.xlabel('principal components')
     plt.ylabel('explained variance')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/z_pca_explainedvariance.png')
+    plt.savefig(f'{outdir}/z_pca_explainedvariance.{plot_format}')
     plt.close()
 
     # scatter plot latent PCA
@@ -212,7 +218,7 @@ def analyze_z_multidimensional(z: np.ndarray,
                       s=2)
     g.set_axis_labels('l-PC1', 'l-PC2')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/z_pca_scatter.png')
+    plt.savefig(f'{outdir}/z_pca_scatter.{plot_format}')
     plt.close()
 
     # hexbin plot latent PCA
@@ -221,7 +227,7 @@ def analyze_z_multidimensional(z: np.ndarray,
                       kind='hex')
     g.set_axis_labels('l-PC1', 'l-PC2')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/z_pca_hexbin.png')
+    plt.savefig(f'{outdir}/z_pca_hexbin.{plot_format}')
     plt.close()
 
     # scatter plot latent PCA with kmeans center annotations
@@ -233,7 +239,7 @@ def analyze_z_multidimensional(z: np.ndarray,
     plt.xlabel('l-PC1')
     plt.ylabel('l-PC2')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_pca_scatter_annotatekmeans.png')
+    plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_pca_scatter_annotatekmeans.{plot_format}')
     plt.close()
 
     # hexbin plot latent PCA with kmeans center annotations
@@ -244,7 +250,7 @@ def analyze_z_multidimensional(z: np.ndarray,
                                       labels=[f'k{i}' for i in range(num_ksamples)])
     g.set_axis_labels('l-PC1', 'l-PC2')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_pca_hexbin_annotatekmeans.png')
+    plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_pca_hexbin_annotatekmeans.{plot_format}')
     plt.close()
 
     # scatter plot latent PCA with PCA trajectory annotations
@@ -257,7 +263,7 @@ def analyze_z_multidimensional(z: np.ndarray,
     plt.xlabel('l-PC1')
     plt.ylabel('l-PC2')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/pc1/z_pca_scatter_annotatepca.png')
+    plt.savefig(f'{outdir}/pc1/z_pca_scatter_annotatepca.{plot_format}')
     plt.close()
 
     # hexbin plot latent PCA with PCA trajectory annotations
@@ -269,7 +275,7 @@ def analyze_z_multidimensional(z: np.ndarray,
                                       labels=[f'l-PC1_{i}' for i in range(len(z_trajectories[0]))] + [f'l-PC2_{i}' for i in range(len(z_trajectories[1]))])
     g.set_axis_labels('l-PC1', 'l-PC2')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/pc1/z_pca_hexbin_annotatepca.png')
+    plt.savefig(f'{outdir}/pc1/z_pca_hexbin_annotatepca.{plot_format}')
     plt.close()
 
     # scatter plot latent PCA colored by k-means clusters
@@ -282,7 +288,7 @@ def analyze_z_multidimensional(z: np.ndarray,
     plt.xlabel('l-PC1')
     plt.ylabel('l-PC2')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_pca_scatter_colorkmeanslabel.png')
+    plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_pca_scatter_colorkmeanslabel.{plot_format}')
     plt.close()
 
     # scatter subplots latent PCA colored by k-means clusters
@@ -292,7 +298,7 @@ def analyze_z_multidimensional(z: np.ndarray,
                                      labels_sel=num_ksamples)
     plt.xlabel('l-PC1')
     plt.ylabel('l-PC2')
-    plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_pca_scatter_subplotkmeanslabel.png')
+    plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_pca_scatter_subplotkmeanslabel.{plot_format}')
     plt.close()
 
     # UMAP dimensionality reduction
@@ -310,7 +316,7 @@ def analyze_z_multidimensional(z: np.ndarray,
                           s=2)
         g.set_axis_labels('l-UMAP1', 'l-UMAP2')
         plt.tight_layout()
-        plt.savefig(f'{outdir}/z_umap_scatter.png')
+        plt.savefig(f'{outdir}/z_umap_scatter.{plot_format}')
         plt.close()
 
         # hexbin plot latent UMAP
@@ -319,7 +325,7 @@ def analyze_z_multidimensional(z: np.ndarray,
                           kind='hex')
         g.set_axis_labels('l-UMAP1', 'l-UMAP2')
         plt.tight_layout()
-        plt.savefig(f'{outdir}/z_umap_hexbin.png')
+        plt.savefig(f'{outdir}/z_umap_hexbin.{plot_format}')
         plt.close()
 
         # scatter plot latent UMAP with kmeans center annotations
@@ -331,7 +337,7 @@ def analyze_z_multidimensional(z: np.ndarray,
         plt.xlabel('l-UMAP1')
         plt.ylabel('l-UMAP2')
         plt.tight_layout()
-        plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_umap_scatter_annotatekmeans.png')
+        plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_umap_scatter_annotatekmeans.{plot_format}')
         plt.close()
 
         # hexbin plot latent UMAP with kmeans center annotations
@@ -342,7 +348,7 @@ def analyze_z_multidimensional(z: np.ndarray,
                                           labels=[f'k{i}' for i in range(num_ksamples)])
         g.set_axis_labels('l-UMAP1', 'l-UMAP2')
         plt.tight_layout()
-        plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_umap_hexbin_annotatekmeans.png')
+        plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_umap_hexbin_annotatekmeans.{plot_format}')
         plt.close()
 
         # scatter plot latent UMAP with PCA trajectory annotations
@@ -355,7 +361,7 @@ def analyze_z_multidimensional(z: np.ndarray,
         plt.xlabel('l-UMAP1')
         plt.ylabel('l-UMAP2')
         plt.tight_layout()
-        plt.savefig(f'{outdir}/pc1/z_umap_scatter_annotatepca.png')
+        plt.savefig(f'{outdir}/pc1/z_umap_scatter_annotatepca.{plot_format}')
         plt.close()
 
         # hexbin plot latent UMAP with PCA trajectory annotations
@@ -367,7 +373,7 @@ def analyze_z_multidimensional(z: np.ndarray,
                                           labels=[f'l-PC1_{i}' for i in range(len(z_trajectories[0]))] + [f'l-PC2_{i}' for i in range(len(z_trajectories[1]))])
         g.set_axis_labels('l-UMAP1', 'l-UMAP2')
         plt.tight_layout()
-        plt.savefig(f'{outdir}/pc1/z_umap_hexbin_annotatepca.png')
+        plt.savefig(f'{outdir}/pc1/z_umap_hexbin_annotatepca.{plot_format}')
         plt.close()
 
         # scatter plot latent UMAP colored by k-means clusters
@@ -380,7 +386,7 @@ def analyze_z_multidimensional(z: np.ndarray,
         plt.xlabel('l-UMAP1')
         plt.ylabel('l-UMAP2')
         plt.tight_layout()
-        plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_umap_scatter_colorkmeanslabel.png')
+        plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_umap_scatter_colorkmeanslabel.{plot_format}')
         plt.close()
 
         # scatter subplots latent UMAP colored by k-means clusters
@@ -391,7 +397,7 @@ def analyze_z_multidimensional(z: np.ndarray,
         plt.xlabel('l-UMAP1')
         plt.ylabel('l-UMAP2')
         plt.tight_layout()
-        plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_umap_scatter_subplotkmeanslabel.png')
+        plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_umap_scatter_subplotkmeanslabel.{plot_format}')
         plt.close()
 
         for i in range(num_pcs):
@@ -402,7 +408,7 @@ def analyze_z_multidimensional(z: np.ndarray,
             plt.xlabel('UMAP1')
             plt.ylabel('UMAP2')
             plt.tight_layout()
-            plt.savefig(f'{outdir}/pc{i + 1}/z_umap_colorlatentpca.png')
+            plt.savefig(f'{outdir}/pc{i + 1}/z_umap_colorlatentpca.{plot_format}')
             plt.close()
 
     # make plots of first 6 images of each kmeans class
@@ -424,7 +430,7 @@ def analyze_z_multidimensional(z: np.ndarray,
                                   labels=[f'{ptcl_ind}' for ptcl_ind in ptcl_inds_random_subset],
                                   width_between_imgs_px=30,
                                   height_between_imgs_px=50)
-        plt.savefig(f'{outdir}/kmeans{num_ksamples}/particle_images_kmeanslabel{label}.png')
+        plt.savefig(f'{outdir}/kmeans{num_ksamples}/particle_images_kmeanslabel{label}.{plot_format}')
         plt.close()
 
         s.df = star_df_backup.copy(deep=True)
@@ -432,7 +438,7 @@ def analyze_z_multidimensional(z: np.ndarray,
     # make plot of class label distribution versus tomogram / micrograph in star file order
     analysis.plot_label_count_distribution(ptcl_star=s,
                                            class_labels=kmeans_labels)
-    plt.savefig(f'{outdir}/kmeans{num_ksamples}/tomogram_label_distribution.png')
+    plt.savefig(f'{outdir}/kmeans{num_ksamples}/tomogram_label_distribution.{plot_format}')
     plt.close()
 
     # make plots of numeric columns in star file (e.g. pose, coordinate, ctf) for correlations with UMAP
@@ -450,7 +456,7 @@ def analyze_z_multidimensional(z: np.ndarray,
                                                reference_names=ref_names,
                                                query_name=numeric_column)
         plt.tight_layout()
-        plt.savefig(f'{outdir}/controls/{numeric_column}.png')
+        plt.savefig(f'{outdir}/controls/{numeric_column}.{plot_format}')
         plt.close()
 
 
@@ -495,12 +501,13 @@ def main(args):
     plt.plot(loss)
     plt.xlabel('epoch')
     plt.ylabel('total loss')
-    plt.savefig(f'{outdir}/model_loss.png')
+    plt.savefig(f'{outdir}/model_loss.{args.plot_format}')
     plt.close()
 
     if zdim == 1:
         analyze_z_onedimensional(z=z,
                                  outdir=outdir,
+                                 plot_format=args.plot_format,
                                  vg=vg,
                                  downsample=args.downsample,
                                  lowpass=args.lowpass,
@@ -511,6 +518,7 @@ def main(args):
     else:
         analyze_z_multidimensional(z=z,
                                    outdir=outdir,
+                                   plot_format=args.plot_format,
                                    skip_vol=args.skip_vol,
                                    vg=vg,
                                    downsample=args.downsample,

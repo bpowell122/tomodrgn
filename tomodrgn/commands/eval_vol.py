@@ -53,7 +53,7 @@ def main(args):
 
     # generate volumes
     vg.generate_volumes(z=args.zfile,
-                        out_dir=args.o,
+                        out_dir=args.outdir,
                         out_name='vol',
                         downsample=args.downsample,
                         lowpass=args.lowpass,

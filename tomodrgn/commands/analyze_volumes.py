@@ -5,6 +5,7 @@ import argparse
 import glob
 import os
 import shutil
+from typing import Literal
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -34,6 +35,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     group.add_argument('--ksample', type=int, default=None, help='Number of kmeans samples to generate (clustering voxel-PCA space). '
                                                                  'Note that this is only recommended if all particles in the dataset have had volumes generated in --voldir, '
                                                                  'to avoid confusion of k-means origin in latent space clustering and/or volume space clustering.')
+    group.add_argument('--plot-format', type=str, choices=['png', 'svgz'], default='png', help='File format with which to save plots')
 
     group = parser.add_argument_group('Mask generation arguments')
     group.add_argument('--mask-path', type=os.path.abspath, help='Supply a custom real space mask instead of having tomoDRGN calculate a mask.')
@@ -50,6 +52,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
 
 
 def make_plots(outdir: str,
+               plot_format: Literal['png', 'svgz'],
                config_path: str,
                pc: np.ndarray,
                pca: PCA,
@@ -70,7 +73,7 @@ def make_plots(outdir: str,
     plt.xlabel('principal components')
     plt.ylabel('explained variance')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/voxel_pca_explainedvariance.png')
+    plt.savefig(f'{outdir}/voxel_pca_explainedvariance.{plot_format}')
     plt.close()
 
     # scatter plot latent PCA
@@ -80,7 +83,7 @@ def make_plots(outdir: str,
                       s=2)
     g.set_axis_labels('v-PC1', 'v-PC2')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/voxel_pca_scatter.png')
+    plt.savefig(f'{outdir}/voxel_pca_scatter.{plot_format}')
     plt.close()
 
     # hexbin plot latent PCA
@@ -89,7 +92,7 @@ def make_plots(outdir: str,
                       kind='hex')
     g.set_axis_labels('v-PC1', 'v-PC2')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/voxel_pca_hexbin.png')
+    plt.savefig(f'{outdir}/voxel_pca_hexbin.{plot_format}')
     plt.close()
 
     # scatter plot latent PCA with kmeans center annotations
@@ -102,7 +105,7 @@ def make_plots(outdir: str,
         plt.xlabel('v-PC1')
         plt.ylabel('v-PC2')
         plt.tight_layout()
-        plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_pca_scatter_annotatekmeans.png')
+        plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_pca_scatter_annotatekmeans.{plot_format}')
         plt.close()
 
         # hexbin plot latent PCA with kmeans center annotations
@@ -113,7 +116,7 @@ def make_plots(outdir: str,
                                           labels=[f'k{i}' for i in range(num_ksamples)])
         g.set_axis_labels('v-PC1', 'v-PC2')
         plt.tight_layout()
-        plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_pca_hexbin_annotatekmeans.png')
+        plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_pca_hexbin_annotatekmeans.{plot_format}')
         plt.close()
 
     # scatter plot latent PCA with PCA trajectory annotations
@@ -126,7 +129,7 @@ def make_plots(outdir: str,
     plt.xlabel('v-PC1')
     plt.ylabel('v-PC2')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/pc1/voxel_pca_scatter_annotatepca.png')
+    plt.savefig(f'{outdir}/pc1/voxel_pca_scatter_annotatepca.{plot_format}')
     plt.close()
 
     # hexbin plot latent PCA with PCA trajectory annotations
@@ -138,7 +141,7 @@ def make_plots(outdir: str,
                                       labels=[f'v-PC1_{i}' for i in range(len(voxel_trajectories[0]))] + [f'v-PC2_{i}' for i in range(len(voxel_trajectories[1]))])
     g.set_axis_labels('v-PC1', 'v-PC2')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/pc1/voxel_pca_hexbin_annotatepca.png')
+    plt.savefig(f'{outdir}/pc1/voxel_pca_hexbin_annotatepca.{plot_format}')
     plt.close()
 
     if kmeans_labels is not None:
@@ -152,7 +155,7 @@ def make_plots(outdir: str,
         plt.xlabel('v-PC1')
         plt.ylabel('v-PC2')
         plt.tight_layout()
-        plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_pca_scatter_colorkmeanslabel.png')
+        plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_pca_scatter_colorkmeanslabel.{plot_format}')
         plt.close()
 
         # scatter subplots latent PCA colored by k-means clusters
@@ -162,7 +165,7 @@ def make_plots(outdir: str,
                                          labels_sel=num_ksamples)
         plt.xlabel('v-PC1')
         plt.ylabel('v-PC2')
-        plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_pca_scatter_subplotkmeanslabel.png')
+        plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_pca_scatter_subplotkmeanslabel.{plot_format}')
         plt.close()
 
     # UMAP dimensionality reduction
@@ -175,7 +178,7 @@ def make_plots(outdir: str,
                       s=2)
     g.set_axis_labels('v-UMAP1', 'v-UMAP2')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/voxel_umap_scatter.png')
+    plt.savefig(f'{outdir}/voxel_umap_scatter.{plot_format}')
     plt.close()
 
     # hexbin plot latent UMAP
@@ -184,7 +187,7 @@ def make_plots(outdir: str,
                       kind='hex')
     g.set_axis_labels('v-UMAP1', 'v-UMAP2')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/voxel_umap_hexbin.png')
+    plt.savefig(f'{outdir}/voxel_umap_hexbin.{plot_format}')
     plt.close()
 
     if kmeans_labels is not None:
@@ -197,7 +200,7 @@ def make_plots(outdir: str,
         plt.xlabel('v-UMAP1')
         plt.ylabel('v-UMAP2')
         plt.tight_layout()
-        plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_umap_scatter_annotatekmeans.png')
+        plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_umap_scatter_annotatekmeans.{plot_format}')
         plt.close()
 
         # hexbin plot latent UMAP with kmeans center annotations
@@ -208,7 +211,7 @@ def make_plots(outdir: str,
                                           labels=[f'k{i}' for i in range(num_ksamples)])
         g.set_axis_labels('v-UMAP1', 'v-UMAP2')
         plt.tight_layout()
-        plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_umap_hexbin_annotatekmeans.png')
+        plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_umap_hexbin_annotatekmeans.{plot_format}')
         plt.close()
 
     # scatter plot latent UMAP with PCA trajectory annotations
@@ -221,7 +224,7 @@ def make_plots(outdir: str,
     plt.xlabel('v-UMAP1')
     plt.ylabel('v-UMAP2')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/pc1/voxel_umap_scatter_annotatepca.png')
+    plt.savefig(f'{outdir}/pc1/voxel_umap_scatter_annotatepca.{plot_format}')
     plt.close()
 
     # hexbin plot latent UMAP with PCA trajectory annotations
@@ -233,7 +236,7 @@ def make_plots(outdir: str,
                                       labels=[f'v-PC1_{i}' for i in range(len(voxel_trajectories[0]))] + [f'v-PC2_{i}' for i in range(len(voxel_trajectories[1]))])
     g.set_axis_labels('v-UMAP1', 'v-UMAP2')
     plt.tight_layout()
-    plt.savefig(f'{outdir}/pc1/voxel_umap_hexbin_annotatepca.png')
+    plt.savefig(f'{outdir}/pc1/voxel_umap_hexbin_annotatepca.{plot_format}')
     plt.close()
 
     if kmeans_labels is not None:
@@ -247,7 +250,7 @@ def make_plots(outdir: str,
         plt.xlabel('v-UMAP1')
         plt.ylabel('v-UMAP2')
         plt.tight_layout()
-        plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_umap_scatter_colorkmeanslabel.png')
+        plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_umap_scatter_colorkmeanslabel.{plot_format}')
         plt.close()
 
         # scatter subplots latent UMAP colored by k-means clusters
@@ -258,7 +261,7 @@ def make_plots(outdir: str,
         plt.xlabel('v-UMAP1')
         plt.ylabel('v-UMAP2')
         plt.tight_layout()
-        plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_umap_scatter_subplotkmeanslabel.png')
+        plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_umap_scatter_subplotkmeanslabel.{plot_format}')
         plt.close()
 
     for i in range(num_pcs_to_sample):
@@ -269,7 +272,7 @@ def make_plots(outdir: str,
         plt.xlabel('v-UMAP1')
         plt.ylabel('v-UMAP2')
         plt.tight_layout()
-        plt.savefig(f'{outdir}/pc{i + 1}/voxel_umap_colorlatentpca.png')
+        plt.savefig(f'{outdir}/pc{i + 1}/voxel_umap_colorlatentpca.{plot_format}')
         plt.close()
 
     cfg = utils.load_pkl(config_path)
@@ -296,7 +299,7 @@ def make_plots(outdir: str,
                                       labels=[f'{ptcl_ind}' for ptcl_ind in ptcl_inds_random_subset],
                                       width_between_imgs_px=30,
                                       height_between_imgs_px=50)
-            plt.savefig(f'{outdir}/kmeans{num_ksamples}/particle_images_kmeanslabel{label}.png')
+            plt.savefig(f'{outdir}/kmeans{num_ksamples}/particle_images_kmeanslabel{label}.{plot_format}')
             plt.close()
 
             s.df = star_df_backup.copy(deep=True)
@@ -304,7 +307,7 @@ def make_plots(outdir: str,
         # make plot of class label distribution versus tomogram / micrograph in star file order
         analysis.plot_label_count_distribution(ptcl_star=s,
                                                class_labels=kmeans_labels)
-        plt.savefig(f'{outdir}/kmeans{num_ksamples}/tomogram_label_distribution.png')
+        plt.savefig(f'{outdir}/kmeans{num_ksamples}/tomogram_label_distribution.{plot_format}')
         plt.close()
 
     # make plots of numeric columns in star file (e.g. pose, coordinate, ctf) for correlations with UMAP
@@ -318,7 +321,7 @@ def make_plots(outdir: str,
                                                reference_names=ref_names,
                                                query_name=numeric_column)
         plt.tight_layout()
-        plt.savefig(f'{outdir}/controls/{numeric_column}.png')
+        plt.savefig(f'{outdir}/controls/{numeric_column}.{plot_format}')
         plt.close()
 
 
@@ -431,6 +434,7 @@ def main(args):
 
     # POST-PROCESSING: generate plots
     make_plots(outdir=args.outdir,
+               plot_format=args.plot_format,
                config_path=args.config,
                pc=pc, pca=pca,
                voxel_trajectories=voxel_trajectories,

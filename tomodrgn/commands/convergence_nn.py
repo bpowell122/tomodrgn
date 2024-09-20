@@ -4,6 +4,7 @@ Assess convergence of a decoder-only network relative to an external volume by F
 import argparse
 import os
 import fnmatch
+from typing import Literal
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -24,6 +25,8 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     parser.add_argument('--max-epoch', type=int, help='Maximum epoch for which to calculate FSCs')
     parser.add_argument('--include-dc', action='store_true', help='Include FSC calculation for DC component, default False because DC component default excluded during training')
     parser.add_argument('--fsc-mask', choices=('none', 'sphere', 'tight', 'soft'), default='soft', help='Type of mask applied to volumes before calculating FSC')
+    parser.add_argument('--plot-format', type=str, choices=['png', 'svgz'], default='png', help='File format with which to save plots')
+
     return parser
 
 
@@ -31,7 +34,8 @@ def make_plots(resolution: np.ndarray,
                fscs: np.ndarray,
                fsc_metrics: np.ndarray,
                epochs: np.ndarray | list,
-               outdir: str) -> None:
+               outdir: str,
+               plot_format: Literal['png', 'svgz']) -> None:
     """
     Save an array of standard plots characterizing homogeneous volume model training convergence.
 
@@ -40,6 +44,7 @@ def make_plots(resolution: np.ndarray,
     :param fsc_metrics: array of FSC metrics with shape (3, len(vol_paths)): resolution crossing FSC 0.143, resolution crossing FSC 0.5, integral under FSC before 0.143 crossing
     :param epochs: list of epochs being evaluated and saved
     :param outdir: output directory in which to save plots
+    :param plot_format: file format with which to save plots
     :return: None
     """
     def plot_and_save(x_values: np.ndarray | list,
@@ -69,21 +74,21 @@ def make_plots(resolution: np.ndarray,
                   y_values=fsc_metrics[0],
                   x_label='epoch',
                   y_label='0.143 fsc frequency (1/px)',
-                  outpath=f'{outdir}/convergence_nn_fsc0.143resolution.png',
+                  outpath=f'{outdir}/convergence_nn_fsc0.143resolution.{plot_format}',
                   linestyle='-', marker='.', mfc='red', mec='red', markersize=2)
     plt.close()
     plot_and_save(x_values=epochs,
                   y_values=fsc_metrics[1],
                   x_label='epoch',
                   y_label='0.5 fsc frequency (1/px)',
-                  outpath=f'{outdir}/convergence_nn_fsc0.5resolution.png',
+                  outpath=f'{outdir}/convergence_nn_fsc0.5resolution.{plot_format}',
                   linestyle='-', marker='.', mfc='red', mec='red', markersize=2)
     plt.close()
     plot_and_save(x_values=epochs,
                   y_values=fsc_metrics[2],
                   x_label='epoch',
                   y_label='fsc-frequency integral (1/px)',
-                  outpath=f'{outdir}/convergence_nn_fsc0.143integral.png',
+                  outpath=f'{outdir}/convergence_nn_fsc0.143integral.{plot_format}',
                   linestyle='-', marker='.', mfc='red', mec='red', markersize=2)
     plt.close()
     epoch_colors = analysis.get_colors_matplotlib(len(epochs), 'coolwarm')
@@ -92,14 +97,14 @@ def make_plots(resolution: np.ndarray,
                       y_values=fscs.T[:, epoch],
                       x_label='spatial frequency (1/px)',
                       y_label='fsc',
-                      outpath=f'{outdir}/convergence_nn_fullfsc_all.png',
+                      outpath=f'{outdir}/convergence_nn_fullfsc_all.{plot_format}',
                       color=epoch_colors[epoch])
     plt.close()
     plot_and_save(x_values=resolution,
                   y_values=fscs.T[:, -1],
                   x_label='spatial frequency (1/px)',
                   y_label='fsc',
-                  outpath=f'{outdir}/convergence_nn_fullfsc_final.png')
+                  outpath=f'{outdir}/convergence_nn_fullfsc_final.{plot_format}')
     plt.close()
 
 
@@ -150,7 +155,8 @@ def main(args):
                fscs=fscs,
                fsc_metrics=fsc_metrics,
                epochs=epochs,
-               outdir=outdir)
+               outdir=outdir,
+               plot_format=args.plot_format)
 
     # save all other outputs
     utils.save_pkl((resolution, fscs), f'{outdir}/freqs_fscs.pkl')

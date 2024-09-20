@@ -37,6 +37,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
                        help='The maximum number of neighbors to initially calculate distances for from each latent embedding')
     group.add_argument('--avg-neighbors', type=float, default=None,
                        help='Used to set a cutoff distance defining connected neighbors such that each embedding will have this many connected neighbors on average')
+    group.add_argument('--plot-format', type=str, choices=['png', 'svgz'], default='png', help='File format with which to save plots')
 
     return parser
 
@@ -275,10 +276,10 @@ def main(args):
     # make some plots
     log('Plotting graph and path')
     _ = graph.plot_graph(data=data)
-    plt.savefig(os.path.join(args.outdir, 'latent_graph.png'), dpi=300)
+    plt.savefig(os.path.join(args.outdir, f'latent_graph.{args.plot_format}'), dpi=300)
     plt.close()
     _ = graph.plot_path(data=data, anchor_inds=args.anchors, path_inds=full_path)
-    plt.savefig(os.path.join(args.outdir, 'latent_graph_path.png'), dpi=300)
+    plt.savefig(os.path.join(args.outdir, f'latent_graph_path.{args.plot_format}'), dpi=300)
     plt.close()
 
     potential_umap_path = f'{os.path.dirname(args.z)}/analyze.{os.path.basename(args.z).split(".")[1]}/umap.pkl'
@@ -286,10 +287,10 @@ def main(args):
         log('Found umap.pkl, creating additional plots with UMAP embeddings of latent graph for visualization')
         umap = utils.load_pkl(potential_umap_path)
         _ = graph.plot_graph(data=umap)
-        plt.savefig(os.path.join(args.outdir, 'umap_graph.png'), dpi=300)
+        plt.savefig(os.path.join(args.outdir, f'umap_graph.{args.plot_format}'), dpi=300)
         plt.close()
         _ = graph.plot_path(data=umap, anchor_inds=args.anchors, path_inds=full_path)
-        plt.savefig(os.path.join(args.outdir, 'umap_graph_path.png'), dpi=300)
+        plt.savefig(os.path.join(args.outdir, f'umap_graph_path.{args.plot_format}'), dpi=300)
         plt.close()
 
 

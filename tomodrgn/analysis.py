@@ -486,6 +486,7 @@ def scatter_annotate_hex(x: np.ndarray,
     g = sns.jointplot(x=x,
                       y=y,
                       kind='hex',
+                      rasterized=True,
                       **kwargs)
 
     # plot cluster centers either by directly passed centers_xy, or by indexing into all data xy
@@ -703,7 +704,8 @@ def plot_euler(theta: np.ndarray,
                       y=phi,
                       kind='hex',
                       xlim=(-180, 180),
-                      ylim=(0, 180))
+                      ylim=(0, 180),
+                      rasterized=True)
     g.set_axis_labels("theta", "phi")
 
     # create second plot for psi as histogram
@@ -725,7 +727,8 @@ def plot_translations(trans) -> matplotlib.figure.Figure:
     trans[np.isclose(trans, 0.0, atol=1e-4)] = 0.0
     g = sns.jointplot(x=trans[:, 0],
                       y=trans[:, 1],
-                      kind='hex')
+                      kind='hex',
+                      rasterized=True)
     g.set_axis_labels('tx (px)', 'ty (px)')
 
     return g
@@ -868,15 +871,15 @@ def plot_three_column_correlation(reference_array: np.ndarray,
     """
     fig, (ax0, ax1, ax2) = plt.subplots(nrows=1, ncols=3, figsize=(8, 2.5))
 
-    ax0.hexbin(reference_array[:, 0], query_array)
+    ax0.hexbin(reference_array[:, 0], query_array, rasterized=True)
     ax0.set_xlabel(reference_names[0])
     ax0.set_ylabel(query_name)
 
-    ax1.hexbin(reference_array[:, 1], query_array)
+    ax1.hexbin(reference_array[:, 1], query_array, rasterized=True)
     ax1.set_xlabel(reference_names[1])
     ax1.set_ylabel(query_name)
 
-    scatter1 = ax2.scatter(reference_array[:, 0], reference_array[:, 1], c=query_array, cmap='viridis', s=0.5)
+    scatter1 = ax2.scatter(reference_array[:, 0], reference_array[:, 1], c=query_array, cmap='viridis', s=0.5, rasterized=True)
     fig.colorbar(scatter1, ax=ax2, label=query_name)
     ax2.set_xlabel(reference_names[0])
     ax2.set_ylabel(reference_names[1])

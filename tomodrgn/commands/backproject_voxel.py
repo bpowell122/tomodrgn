@@ -27,6 +27,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
 
     parser.add_argument('particles', type=os.path.abspath, help='Input particles_imageseries.star')
     parser.add_argument('--output', type=os.path.abspath, required=True, help='Output .mrc file')
+    parser.add_argument('--plot-format', type=str, choices=['png', 'svgz'], default='png', help='File format with which to save plots')
 
     group = parser.add_argument_group('Particle starfile loading and filtering')
     group.add_argument('--source-software', type=str, choices=('auto', 'warp_v1', 'nextpyp', 'relion_v5', 'warp_v2'), default='auto',
@@ -198,7 +199,7 @@ def main(args):
     # load the star file
     ptcls_star = TiltSeriesStarfile(args.particles,
                                     source_software=args.source_software)
-    ptcls_star.plot_particle_uid_ntilt_distribution(outpath=f'{os.path.dirname(args.output)}/{os.path.basename(ptcls_star.sourcefile)}_particle_uid_ntilt_distribution.png')
+    ptcls_star.plot_particle_uid_ntilt_distribution(outpath=f'{os.path.dirname(args.output)}/{os.path.basename(ptcls_star.sourcefile)}_particle_uid_ntilt_distribution.{args.plot_format}')
 
     # filter star file
     ptcls_star.filter(ind_imgs=args.ind_imgs,
@@ -283,7 +284,8 @@ def main(args):
     plt.xlabel('Spatial frequency (1/Å)')
     plt.ylabel('Half-map FSC')
     plt.tight_layout()
-    plt.savefig(f'{args.output.split(".mrc")[0]}_FSC.png')
+    plt.savefig(f'{args.output.split(".mrc")[0]}_FSC.{args.plot_format}')
+    plt.close()
 
     # apply lowpass filter
     lowpass_target = angpix / threshold_resolution if args.lowpass is None else args.lowpass

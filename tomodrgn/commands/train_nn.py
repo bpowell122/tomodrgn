@@ -41,6 +41,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     group.add_argument('--log-interval', type=int, default=200, help='Logging interval in N_PTCLS (default: %(default)s)')
     group.add_argument('--verbose', action='store_true', help='Increases verbosity')
     group.add_argument('--seed', type=int, default=np.random.randint(0, 100000), help='Random seed')
+    group.add_argument('--plot-format', type=str, choices=['png', 'svgz'], default='png', help='File format with which to save plots')
 
     group = parser.add_argument_group('Particle starfile loading and filtering')
     group.add_argument('--source-software', type=str, choices=('auto', 'warp_v1', 'nextpyp', 'relion_v5', 'warp_v2'), default='auto',
@@ -331,7 +332,7 @@ def main(args):
     # load star file
     ptcls_star = TiltSeriesStarfile(args.particles,
                                     source_software=args.source_software)
-    ptcls_star.plot_particle_uid_ntilt_distribution(outpath=f'{args.outdir}/{os.path.basename(ptcls_star.sourcefile)}_particle_uid_ntilt_distribution.png')
+    ptcls_star.plot_particle_uid_ntilt_distribution(outpath=f'{args.outdir}/{os.path.basename(ptcls_star.sourcefile)}_particle_uid_ntilt_distribution.{args.plot_format}')
 
     # filter star file
     ptcls_star.filter(ind_imgs=args.ind_imgs,

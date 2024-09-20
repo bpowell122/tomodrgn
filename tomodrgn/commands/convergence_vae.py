@@ -29,6 +29,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     parser.add_argument('--epoch', type=str, default='latest', help='Latest epoch number N to analyze convergence (0-based indexing, corresponding to weights.N.pkl), "latest" for last detected epoch')
     group.add_argument('-o', '--outdir', type=os.path.abspath, help='Output directory for convergence analysis results (default: [workdir]/convergence.[epoch])')
     group.add_argument('--epoch-interval', type=int, default=5, help='Interval of epochs between calculating most convergence heuristics')
+    group.add_argument('--plot-format', type=str, choices=['png', 'svgz'], default='png', help='File format with which to save plots')
 
     group = parser.add_argument_group('UMAP  calculation arguments')
     group.add_argument('--subset', default=50000, type=int, help='Max number of particles to be used for UMAP calculations. \'None\' means use all ptcls')
@@ -112,11 +113,12 @@ def main(args):
     # Convergence 0: total loss
     flog('Plotting total loss curve', logfile)
     convergence.plot_loss(runlog=runlog,
-                          outdir=outdir)
+                          outdir=outdir,
+                          plot_format=args.plot_format)
 
     # Convergence 1: PCA latent
     flog('Calculating and plotting PCA at each epoch', logfile)
-    convergence.plot_latent_pca(workdir=workdir, outdir=outdir, epochs=epochs)
+    convergence.plot_latent_pca(workdir=workdir, outdir=outdir, epochs=epochs, plot_format=args.plot_format)
 
     # Convergence 2: UMAP latent embeddings
     if args.skip_umap:
@@ -125,6 +127,7 @@ def main(args):
         flog(f'Calculating and plotting UMAP embeddings at each epoch', logfile)
         convergence.plot_latent_umap(workdir=workdir,
                                      outdir=outdir,
+                                     plot_format=args.plot_format,
                                      epochs=epochs,
                                      nptcls=nptcls,
                                      subset=args.subset,
@@ -135,11 +138,13 @@ def main(args):
     flog(f'Calculating and plotting latent embedding vector shifts between all epochs', logfile)
     convergence.encoder_latent_shifts(workdir=workdir,
                                       outdir=outdir,
+                                      plot_format=args.plot_format,
                                       final_epoch=final_epoch)
 
     # Convergence 4: correlation of generated volumes
     flog(f'Sketching epoch {final_epoch}\'s latent space to find representative and well-supported latent encodings', logfile)
     binned_ptcls_mask, labels = convergence.sketch_via_umap_local_maxima(outdir=outdir,
+                                                                         plot_format=args.plot_format,
                                                                          sketch_epoch=final_epoch,
                                                                          n_bins=args.n_bins,
                                                                          smooth=args.smooth,
@@ -151,6 +156,7 @@ def main(args):
     flog('Locating representative latent encodings in earlier epochs', logfile)
     convergence.follow_candidate_particles(workdir=workdir,
                                            outdir=outdir,
+                                           plot_format=args.plot_format,
                                            epochs=epochs,
                                            binned_ptcls_mask=binned_ptcls_mask,
                                            labels=labels)
@@ -171,6 +177,7 @@ def main(args):
 
     flog(f'Calculating successive epoch pairwise map-map CCs at representative latent encodings', logfile)
     convergence.calc_ccs_pairwise_epochs(outdir=outdir,
+                                         plot_format=args.plot_format,
                                          epochs=epochs,
                                          labels=labels,
                                          mask=args.mask,
@@ -180,6 +187,7 @@ def main(args):
 
     flog(f'Calculating successive epoch pairwise map-map FSCs at representative latent encodings', logfile)
     convergence.calc_fscs_pairwise_epochs(outdir=outdir,
+                                          plot_format=args.plot_format,
                                           epochs=epochs,
                                           labels=labels,
                                           mask=args.mask,
@@ -189,6 +197,7 @@ def main(args):
 
     flog(f'Calculating intra-epoch all-to-all map-map CCs at representative latent encodings', logfile)
     convergence.calc_ccs_alltoall_intraepoch(outdir=outdir,
+                                             plot_format=args.plot_format,
                                              epochs=epochs,
                                              labels=labels,
                                              mask=args.mask,
@@ -203,6 +212,7 @@ def main(args):
         for potential_wildcard_path in args.ground_truth:
             ground_truth_paths.extend(glob.glob(potential_wildcard_path))
         convergence.calc_ccs_alltogroundtruth(outdir=outdir,
+                                              plot_format=args.plot_format,
                                               epochs=epochs,
                                               labels=labels,
                                               ground_truth_paths=ground_truth_paths,

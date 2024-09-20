@@ -1,6 +1,7 @@
 """
 Functions to model transmission electron microscopy signal degradation as a function of cumulative electron dose and stage tilt
 """
+from typing import Literal
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
@@ -9,6 +10,7 @@ import matplotlib.ticker as mticker
 def plot_weight_distribution(cumulative_weights: np.ndarray,
                              spatial_frequencies: np.ndarray,
                              outdir: str,
+                             plot_format: Literal['png', 'svg'],
                              weight_distribution_index: int = None) -> None:
     """
     Plot distribution of dose weights across tilts in the spirit of https://doi.org/10.1038/s41467-021-22251-8
@@ -16,6 +18,7 @@ def plot_weight_distribution(cumulative_weights: np.ndarray,
     :param cumulative_weights: array of weights applied per spatial frequency per tilt, shape (ntilts, D, D)
     :param spatial_frequencies: numpy array of spatial frequency at each pixel (units 1/Å), shape (D, D), dtype float
     :param outdir: directory in which to save plot(s)
+    :param plot_format: file format with which to save plots
     :param weight_distribution_index: useful if performing related repeated calls to this function with different parameters
     :return: None
     """
@@ -46,7 +49,7 @@ def plot_weight_distribution(cumulative_weights: np.ndarray,
     ax.xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
     ax.set_xticklabels([f'1/{1 / xtick:.1f}' if xtick != 0.0 else 0 for xtick in ticks_loc])
 
-    plt.savefig(f'{outdir}/weighting_scheme_{weight_distribution_index}.png', dpi=300)
+    plt.savefig(f'{outdir}/weighting_scheme_{weight_distribution_index}.{plot_format}', dpi=300)
     plt.close()
 
 

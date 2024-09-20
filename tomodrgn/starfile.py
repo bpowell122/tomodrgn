@@ -988,10 +988,9 @@ class TiltSeriesStarfile(GenericStarfile):
         self.df.loc[inds_test, self.header_image_random_split] = 2
 
     def plot_particle_uid_ntilt_distribution(self,
-                                             outpath: str = None) -> None:
+                                             outpath: str) -> None:
         """
         Plot the distribution of the number of tilt images per particle as a line plot (against star file particle index) and as a histogram.
-        Defaults to saving plot in the same location as the input star file.
 
         :param outpath: file name to save the plot
         :return: None
@@ -1010,8 +1009,6 @@ class TiltSeriesStarfile(GenericStarfile):
         ax2.set_ylabel('count')
 
         plt.tight_layout()
-        if outpath is None:
-            outpath = f'{os.path.splitext(self.sourcefile)[0]}/_particle_uid_ntilt_distribution.png'
         plt.savefig(outpath, dpi=200)
         plt.close()
 
