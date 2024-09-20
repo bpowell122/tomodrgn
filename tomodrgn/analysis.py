@@ -837,7 +837,8 @@ def plot_label_count_distribution(ptcl_star: starfile.TiltSeriesStarfile,
 
     fig, ax = plt.subplots(nrows=1,
                            ncols=1,
-                           figsize=(1 * len(ind_ptcls_per_tomo), 1 * len(set(class_labels))))
+                           figsize=(2 * len(ind_ptcls_per_tomo), 2 * len(set(class_labels))),
+                           layout='compressed')
 
     distribution_plot = ax.imshow(label_distribution.T)
     fig.colorbar(distribution_plot, ax=ax, label='particle count per class')

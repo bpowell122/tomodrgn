@@ -23,7 +23,7 @@ dependencies = [
     "importlib_resources",
     "ipython",
     "ipywidgets",
-    "matplotlib>=3.5",
+    "matplotlib>=3.6",
     "notebook",
     "numpy<2.0",
     "pandas",
