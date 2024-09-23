@@ -2,6 +2,7 @@
 Lightweight parsers for starfiles
 """
 
+import re
 import numpy as np
 import pandas as pd
 from datetime import datetime as dt
@@ -14,56 +15,78 @@ from tomodrgn import mrc, utils
 
 class GenericStarfile:
     """
-    Class to parse any star file with any number of blocks on disk, or a pre-existing pandas dataframe, to a (dictionary of) pandas dataframes.
+    Class to parse a STAR file, a pre-existing pandas dataframe, or a pre-existing dictionary, to a dictionary of dictionaries or pandas dataframes.
+    Simple two-column STAR blocks are parsed as dictionaries, while complex table-style blocks are parsed as pandas dataframes.
 
     Notes:
-       * Stores data blocks not initiated with `loop_` keyword as a list in the `preambles` attribute
-       * Will ignore comments between `loop_` and beginning of data block; will not be preserved if using .write()
-       * Will raise a RuntimeError if a comment is found within a data block initiated with `loop`
+
+    * Will ignore comments between `loop_` and beginning of data block; will not be preserved if using .write()
+    * Will raise a RuntimeError if a comment is found within a data block initiated with `loop`
+
     """
 
     def __init__(self,
                  starfile: str = None,
                  *,
+                 dictionary: dict = None,
                  dataframe: pd.DataFrame = None):
         """
-        Create the GenericStarfile object either by reading a star file on disk, or by passing in a pre-existing pandas dataframe.
+        Create the GenericStarfile object by reading a star file on disk, by passing in a pre-existing dictionary, or by passing in a pre-existing pandas dataframe.
 
-        :param starfile: path to star file on disk, mutually exclusive with setting `dataframe`
-        :param dataframe: pre-existing pandas dataframe, mutually exclusive with setting `starfile`
+        :param starfile: path to star file on disk, mutually exclusive with setting `dictionary` or `dataframe`
+        :param dictionary: pre-existing python dictionary, mutually exclusive with setting `starfile` or `dataframe
+        :param dataframe: pre-existing pandas dataframe, mutually exclusive with setting `starfile` or `dictionary`
         """
         if starfile is not None:
             assert not dataframe, 'Creating a GenericStarfile from a star file is mutually exclusive with creating a GenericStarfile from a dataframe.'
+            assert not dictionary, 'Creating a GenericStarfile from a star file is mutually exclusive with creating a GenericStarfile from a dictionary.'
             self.sourcefile = os.path.abspath(starfile)
             preambles, blocks = self._skeletonize()
             self.preambles = preambles
             if len(blocks) > 0:
                 blocks = self._load(blocks)
                 self.block_names = list(blocks.keys())
+            else:
+                self.block_names = []
             self.blocks = blocks
+        elif dictionary is not None:
+            assert not starfile, 'Creating a GenericStarfile from a dictionary is mutually exclusive with creating a GenericStarfile from a star file.'
+            assert not dataframe, 'Creating a GenericStarfile from a dictionary is mutually exclusive with creating a GenericStarfile from a dataframe.'
+            self.sourcefile = None
+            self.preambles = [['', 'data_', '']]
+            self.block_names = ['data_']
+            self.blocks = dictionary
         elif dataframe is not None:
+            assert not starfile, 'Creating a GenericStarfile from a dataframe is mutually exclusive with creating a GenericStarfile from a star file.'
+            assert not dictionary, 'Creating a GenericStarfile from a dataframe is mutually exclusive with creating a GenericStarfile from a dictionary.'
             self.sourcefile = None
             self.preambles = [['', 'data_', '', 'loop_']]
             self.block_names = ['data_']
             self.blocks = {'data_': dataframe}
-        utils.log('Loaded star file into memory.')
 
     def __len__(self):
         return len(self.block_names)
 
     def _skeletonize(self) -> tuple[list[list[str]], dict[str, [list[str], int, int]]]:
         """
-        Parse star file for key data including preamble lines, header lines, and first and last row numbers associated with each data block. Does not load the entire file.
+        Parse star file for key data including:
 
-        :return: preambles: list (for each data block) of lists (each line preceeding column header lines and following data rows, as relevant)
-        :return: blocks: dict mapping block names (e.g. `data_particles`) to a list of constituent column headers (e.g. `_rlnImageName),
-            the first file line containing the data values of that block, and the last file line containing data values of that block
+        * preamble lines,
+        * simple two-column blocks parsed as a dictionary, and
+        * header lines, first, and last row numbers associated with each table-style data block.
+
+        Does not load the entire file.
+
+        :return: preambles: list (for each data block) of lists (each line preceeding data block header lines and following data rows, as relevant)
+        :return: blocks: dict mapping block names (e.g. `data_particles`) to either the block contents as a dictionary (for simple two-column data blocks),
+                or to a list of constituent column headers (e.g. `_rlnImageName), and the first and last file lines containing data values of that block (for complex table-style blocks).
         """
 
         def parse_preamble(filehandle: TextIO,
                            _line_count: int) -> tuple[list[str], str | None, int]:
             """
-            Parse a star file preamble (the lines preceeding column header lines and following data rows, as relevant)
+            Parse a star file preamble (the lines preceeding column header lines and following data rows, as relevant).
+            Stop and return when the line initiating a data block is detected, or when end-of-file is detected
 
             :param filehandle: pre-existing file handle from which to read the star file
             :param _line_count: the currently active line number in the star file
@@ -74,21 +97,58 @@ class GenericStarfile:
             # parse all lines preceeding column headers (including 'loop_')
             _preamble = []
             while True:
-                line = filehandle.readline()
+                _line = filehandle.readline()
                 _line_count += 1
-                if not line:
+                if not _line:
                     # end of file detected
                     return _preamble, None, _line_count
-                _preamble.append(line.strip())
-                if line.startswith('loop_'):
-                    # entering loop
-                    _block_name = [line for line in _preamble if line != ''][-2]
+                _preamble.append(_line.strip())
+                if _line.startswith('data_'):
+                    # entering data block, potentially either simple block (to be parsed as dictionary) or loop block (to be parsed as pandas dataframe)
+                    _block_name = _line.strip()
                     return _preamble, _block_name, _line_count
+
+        def parse_single_dictionary(_f: TextIO,
+                                    _line_count: int,
+                                    _line: str) -> tuple[dict, int, bool]:
+            """
+            Parse and load a dictionary associated with a specific block name from a pre-existing file handle.
+            The currently active line and all following lines (until a blank line or end of file) must have two values per line after splitting on white space.
+            The first value becomes the dictionary key, and the second value becomes the dictionary value.
+
+            :param _f: pre-existing file handle from which to read the star file
+            :param _line_count: the currently active line number in the star file
+            :param _line: the current line read from the star file, which begins with `_` as the text beginning the first key in the dictionary to be returned
+            :return: dictionary: a dictionary of key:value per row's whitespace-delimited contents
+            :return: _line_count: the currently active line number in the star file after parsing the data block
+            :return: end_of_file: boolean indicating whether the entire file ends immediately following the data block
+            """
+            # store the current line in the dictionary, where the current line is known to start with _ and therefore to be the first entry to the dictionary
+            key_val = re.split(r'\s+', _line.strip())
+            assert len(key_val) == 2, f'The number of whitespace-delimited strings must be 2 to parse a simple STAR block, found {len(key_val)} for line {_line} at row {_line_count}'
+            dictionary = {key_val[0]: key_val[1]}
+
+            # iterate through lines until blank line (end of STAR block) or no line (end of file) is reached
+            while True:
+                _line = _f.readline()
+                _line_count += 1
+
+                if not _line:
+                    # endo of data block, and end of file detected
+                    return dictionary, _line_count, True
+                elif _line.strip() == '':
+                    # end of data block, not end of file
+                    return dictionary, _line_count, False
+                else:
+                    key_val = re.split(r'\s+', _line.strip())
+                    assert len(key_val) == 2, f'The number of whitespace-delimited strings must be 2 to parse a simple STAR block, found {len(key_val)} for line {_line} at row {_line_count}'
+                    dictionary[key_val[0]] = key_val[1]
 
         def parse_single_block(_f: TextIO,
                                _line_count: int) -> tuple[list[str], int, int, bool]:
             """
-            Parse a single data block of a star file
+            Parse, but do not load, the rows defining a dataframe associated with a specific block name from a pre-existing file handle.
+            The currently active line is `loop_` when entering this function, and therefore is not part of the dataframe (column names or body).
 
             :param _f: pre-existing file handle from which to read the star file
             :param _line_count: the currently active line number in the star file
@@ -101,20 +161,20 @@ class GenericStarfile:
             _block_start_line = _line_count
             while True:
                 # populate header
-                line = _f.readline()
+                _line = _f.readline()
                 _line_count += 1
-                if not line.strip():
+                if not _line.strip():
                     # blank line between `loop_` and first header row
                     continue
-                elif line.startswith('_'):
+                elif _line.startswith('_'):
                     # column header
-                    _header.append(line)
+                    _header.append(_line)
                     continue
-                elif line.startswith('#'):
+                elif _line.startswith('#'):
                     # line is a comment, discarding for now
                     utils.log(f'Found comment at STAR file line {_line_count}, will not be preserved if writing star file later')
                     continue
-                elif len(line.split()) == len([column for column in _header if column.startswith('_')]):
+                elif len(_line.split()) == len([column for column in _header if column.startswith('_')]):
                     # first data line
                     _block_start_line = _line_count
                     break
@@ -123,12 +183,12 @@ class GenericStarfile:
                     raise RuntimeError
             while True:
                 # get length of data block
-                line = _f.readline()
+                _line = _f.readline()
                 _line_count += 1
-                if not line:
+                if not _line:
                     # end of file, therefore end of data block
                     return _header, _block_start_line, _line_count, True
-                if line.strip() == '':
+                elif _line.strip() == '':
                     # end of data block
                     return _header, _block_start_line, _line_count, False
 
@@ -136,16 +196,38 @@ class GenericStarfile:
         blocks = {}
         line_count = 0
         with open(self.sourcefile, 'r') as f:
+            # iterates once per preamble/header/block combination, ends when parse_preamble detects EOF
             while True:
-                # iterates once per preamble/header/block combination, ends when parse_preamble detects EOF
+                # file cursor is at the beginning of the file (first iteration) or at the end of a data_ block (subsequent iterations); parsing preamble of next data_ block
                 preamble, block_name, line_count = parse_preamble(f, line_count)
                 if preamble:
                     preambles.append(preamble)
                 if block_name is None:
                     return preambles, blocks
 
-                header, block_start_line, line_count, end_of_file = parse_single_block(f, line_count)
-                blocks[block_name] = [header, block_start_line, line_count]
+                # file cursor is at a `data_*` line; now parsing contents of this block from either simple block (as dictionary) or complex block (as pandas dataframe)
+                while True:
+                    line = f.readline()
+                    line_count += 1
+                    if line.startswith('_'):
+                        # no loop_ detected, this is a simple STAR block
+                        block_dictionary, line_count, end_of_file = parse_single_dictionary(f, line_count, line)
+                        blocks[block_name] = block_dictionary
+                        break
+                    elif line.startswith('loop_'):
+                        # this is a complex block
+                        preambles[-1].append(line.strip())
+                        header, block_start_line, line_count, end_of_file = parse_single_block(f, line_count)
+                        blocks[block_name] = [header, block_start_line, line_count]
+                        break
+                    elif not line:
+                        # the data_ block contains no details and end of file reached
+                        end_of_file = True
+                        blocks[block_name] = {}  # treated as empty simple block
+                        break
+                    else:
+                        # blank lines, comment lines, etc
+                        preambles[-1].append(line.strip())
 
                 if end_of_file:
                     return preambles, blocks
@@ -153,7 +235,7 @@ class GenericStarfile:
     def _load(self,
               blocks: dict[str, [list[str], int, int]]) -> dict[str, pd.DataFrame]:
         """
-        Load each data block of a pre-skeletonized star file into a pandas dataframe
+        Load each table-style data block of a pre-skeletonized star file into a pandas dataframe.
 
         :param blocks: dict mapping block names (e.g. `data_particles`) to a list of constituent column headers (e.g. `_rlnImageName),
             the first file line containing the data values of that block, and the last file line containing data values of that block
@@ -164,7 +246,8 @@ class GenericStarfile:
                               _block_start_line: int,
                               _block_end_line: int) -> pd.DataFrame:
             """
-            Load a single data block of a pre-skeletonized star file into a pandas dataframe
+            Load a single data block of a pre-skeletonized star file into a pandas dataframe.
+            Only needs to be called (and should only be called) on blocks containing complex STAR blocks that are to be loaded as pandas dataframes.
 
             :param _header: list of column headers (e.g. `_rlnImageName) of the data block
             :param _block_start_line: the first file line containing the data values of the data block
@@ -206,8 +289,17 @@ class GenericStarfile:
             return df
 
         for block_name in blocks.keys():
-            header, block_start_line, block_end_line = blocks[block_name]
-            blocks[block_name] = load_single_block(header, block_start_line, block_end_line)
+            if type(blocks[block_name]) is dict:
+                # this is a simple STAR block and was loaded earlier during _skeletonize
+                # or this is an empty block (i.e. a `data_` block was declared but no following rows were found)
+                pass
+            elif type(blocks[block_name]) is list:
+                # this list describes the column headers, start row, and end row of a table-style block
+                header, block_start_line, block_end_line = blocks[block_name]
+                blocks[block_name] = load_single_block(header, block_start_line, block_end_line)
+            else:
+                raise TypeError(f'Unknown block type {type(blocks[block_name])}; value of self.blocks[block_name] should be a python dictionary '
+                                f'or a list of defining rows to be parsed into a pandas dataframe')
         return blocks
 
     def write(self,
@@ -224,7 +316,7 @@ class GenericStarfile:
         def write_single_block(_f: TextIO,
                                _block_name: str) -> None:
             """
-            Write a single star file block to a pre-existing file handle
+            Write a dataframe associated with a specific block name to a pre-existing file handle.
 
             :param _f: pre-existing file handle to which to write this block's contents
             :param _block_name: name of star file block to write (e.g. `data_`, `data_particles`)
@@ -236,6 +328,19 @@ class GenericStarfile:
             _f.write('\n')
             df.to_csv(_f, index=False, header=False, mode='a', sep='\t')
 
+        def write_single_dictionary(_f: TextIO,
+                                    _block_name: str) -> None:
+            """
+            Write a dictionary associated with a specific block name to a pre-existing file handle.
+
+            :param _f: pre-existing file handle to which to write this block's contents
+            :param _block_name: name of star file dictionary to write (e.g. `data_`)
+            :return: None
+            """
+            dictionary = self.blocks[_block_name]
+            for key, value in dictionary.items():
+                _f.write(f'{key}\t{value}\n')
+
         with open(outstar, 'w') as f:
             if timestamp:
                 f.write('# Created {}\n'.format(dt.now()))
@@ -244,7 +349,13 @@ class GenericStarfile:
                 for row in preamble:
                     f.write(row)
                     f.write('\n')
-                write_single_block(f, block_name)
+                # check if block is dataframe or dictionary, separate writing methods for each
+                if type(self.blocks[block_name]) is pd.DataFrame:
+                    write_single_block(f, block_name)
+                elif type(self.blocks[block_name]) is dict:
+                    write_single_dictionary(f, block_name)
+                else:
+                    raise TypeError(f'Unknown block type {type(self.blocks[block_name])}; value of self.blocks[block_name] should be a python dictionary or a pandas dataframe')
                 f.write('\n')
 
         utils.log(f'Wrote {os.path.abspath(outstar)}')
