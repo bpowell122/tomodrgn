@@ -1,8 +1,6 @@
 """
 Lightweight parsers for starfiles
 """
-from typing_extensions import Unpack
-
 import os
 import re
 from datetime import datetime as dt
@@ -137,82 +135,89 @@ class TomoParticlesStarfileStarHeaders(Enum):
     Enumeration of known source software with constituent data block names and headers which are compatible with the ``TomoParticlesStarfile`` class.
     """
     warptools = {
+        'data_general': [
+            '_rlnTomoSubTomosAre2DStacks'
+        ],
         'data_optics': [
-            '_rlnOpticsGroupName',
             '_rlnOpticsGroup',
-            '_rlnMicrographOriginalPixelSize',
-            '_rlnVoltage',
+            '_rlnOpticsGroupName',
             '_rlnSphericalAberration',
-            '_rlnAmplitudeContrast',
+            '_rlnVoltage',
+            '_rlnTomoTiltSeriesPixelSize',
+            '_rlnCtfDataAreCtfPremultiplied',
+            '_rlnImageDimensionality',
+            '_rlnTomoSubtomogramBinning',
             '_rlnImagePixelSize',
             '_rlnImageSize',
-            '_rlnImageDimensionality',
+            '_rlnAmplitudeContrast',
         ],
         'data_particles': [
-            '_rlnImageName',
-            '_rlnMicrographName',
+            '_rlnTomoName',
+            '_rlnTomoParticleId',
             '_rlnCoordinateX',
             '_rlnCoordinateY',
-            '_rlnAnglePsi',
-            '_rlnAngleTilt',
+            '_rlnCoordinateZ',
             '_rlnAngleRot',
+            '_rlnAngleTilt',
+            '_rlnAnglePsi',
+            '_rlnTomoParticleName',
+            '_rlnOpticsGroup',
+            '_rlnImageName',
             '_rlnOriginXAngst',
             '_rlnOriginYAngst',
-            '_rlnDefocusU',
-            '_rlnDefocusV',
-            '_rlnDefocusAngle',
-            '_rlnPhaseShift',
-            '_rlnOpticsGroup',
-            '_rlnGroupNumber',
-            '_rlnCtfBfactor',
-            '_rlnCtfScalefactor',
-            '_rlnLogLikeliContribution',
-            '_rlnRandomSubset',
-            '_rlnTiltIndex',
+            '_rlnOriginZAngst',
+            '_rlnTomoVisibleFrames',
         ]
     }
     relion = {
+        'data_general': [
+            '_rlnTomoSubTomosAre2DStacks'
+        ],
         'data_optics': [
-            '_rlnOpticsGroupName',
             '_rlnOpticsGroup',
-            '_rlnMicrographOriginalPixelSize',
-            '_rlnVoltage',
+            '_rlnOpticsGroupName',
             '_rlnSphericalAberration',
-            '_rlnAmplitudeContrast',
+            '_rlnVoltage',
+            '_rlnTomoTiltSeriesPixelSize',
+            '_rlnCtfDataAreCtfPremultiplied',
+            '_rlnImageDimensionality',
+            '_rlnTomoSubtomogramBinning',
             '_rlnImagePixelSize',
             '_rlnImageSize',
-            '_rlnImageDimensionality',
+            '_rlnAmplitudeContrast',
         ],
         'data_particles': [
-            '_rlnImageName',
-            '_rlnMicrographName',
+            '_rlnTomoName',
+            '_rlnTomoParticleId',
             '_rlnCoordinateX',
             '_rlnCoordinateY',
-            '_rlnAnglePsi',
-            '_rlnAngleTilt',
+            '_rlnCoordinateZ',
             '_rlnAngleRot',
+            '_rlnAngleTilt',
+            '_rlnAnglePsi',
+            '_rlnTomoParticleName',
+            '_rlnOpticsGroup',
+            '_rlnImageName',
             '_rlnOriginXAngst',
             '_rlnOriginYAngst',
-            '_rlnDefocusU',
-            '_rlnDefocusV',
-            '_rlnDefocusAngle',
-            '_rlnPhaseShift',
-            '_rlnOpticsGroup',
+            '_rlnOriginZAngst',
+            '_rlnTomoVisibleFrames',
             '_rlnGroupNumber',
-            '_rlnCtfBfactor',
-            '_rlnCtfScalefactor',
-            '_rlnLogLikeliContribution',
+            '_rlnClassNumber',
+            '_rlnNormCorrection',
             '_rlnRandomSubset',
-            '_rlnTiltIndex',
+            '_rlnLogLikeliContribution',
+            '_rlnMaxValueProbDistribution',
+            '_rlnNrOfSignificantSamples',
         ]
-    },
+    }
 
 
 # to avoid potential mistakes while repeating names of supported star file source software, dynamically define the Literal of allowable source software
 # note that this does not work for static typing, but does work correctly at runtime (e.g. for building documentation)
-TILTSERIESSTARFILE_STAR_SOURCES = Literal['auto', Unpack[[str(source_software.name) for source_software in TiltSeriesStarfileStarHeaders]]]
+TILTSERIESSTARFILE_STAR_SOURCES = Literal['auto', 'warp', 'cryosrpnt', 'nextpyp', 'cistem']
 
-TOMOPARTICLESSTARFILE_STAR_SOURCES = Literal['auto', Unpack[[str(source_software.name) for source_software in TomoParticlesStarfileStarHeaders]]]
+TOMOPARTICLESSTARFILE_STAR_SOURCES = Literal['auto', 'warptools', 'relion']
 
 KNOWN_STAR_SOURCES = Literal[TILTSERIESSTARFILE_STAR_SOURCES, TOMOPARTICLESSTARFILE_STAR_SOURCES]
 
@@ -245,7 +250,7 @@ class GenericStarfile:
             assert not dataframe, 'Creating a GenericStarfile from a star file is mutually exclusive with creating a GenericStarfile from a dataframe.'
             assert not dictionary, 'Creating a GenericStarfile from a star file is mutually exclusive with creating a GenericStarfile from a dictionary.'
             self.sourcefile = os.path.abspath(starfile)
-            preambles, blocks = self._skeletonize()
+            preambles, blocks = self._skeletonize(sourcefile=self.sourcefile)
             self.preambles = preambles
             if len(blocks) > 0:
                 blocks = self._load(blocks)
@@ -271,7 +276,8 @@ class GenericStarfile:
     def __len__(self):
         return len(self.block_names)
 
-    def _skeletonize(self) -> tuple[list[list[str]], dict[str, [list[str], int, int]]]:
+    @staticmethod
+    def _skeletonize(sourcefile) -> tuple[list[list[str]], dict[str, [list[str], int, int]]]:
         """
         Parse star file for key data including:
 
@@ -281,6 +287,7 @@ class GenericStarfile:
 
         Does not load the entire file.
 
+        :param sourcefile: path to star file on disk
         :return: preambles: list (for each data block) of lists (each line preceeding data block header lines and following data rows, as relevant)
         :return: blocks: dict mapping block names (e.g. `data_particles`) to either the block contents as a dictionary (for simple two-column data blocks),
                 or to a list of constituent column headers (e.g. `_rlnImageName), and the first and last file lines containing data values of that block (for complex table-style blocks).
@@ -399,7 +406,7 @@ class GenericStarfile:
         preambles = []
         blocks = {}
         line_count = 0
-        with open(self.sourcefile, 'r') as f:
+        with open(sourcefile, 'r') as f:
             # iterates once per preamble/header/block combination, ends when parse_preamble detects EOF
             while True:
                 # file cursor is at the beginning of the file (first iteration) or at the end of a data_ block (subsequent iterations); parsing preamble of next data_ block
@@ -1247,3 +1254,351 @@ class TiltSeriesStarfile(GenericStarfile):
         if self.block_optics is not None:
             # re-merge data_optics with data_particles so that the starfile object appears unchanged after calling this method
             self.df = self.df.merge(self.blocks[self.block_optics], on='_rlnOpticsGroup', how='inner', validate='many_to_one', suffixes=('', '_DROP')).filter(regex='^(?!.*_DROP)')
+
+
+class TomoParticlesStarfile(GenericStarfile):
+    """
+    Class to parse a particle star file from upstream STA software.
+    The input star file must be an optimisation set star file from e.g. WarpTools, RELION v5.
+    The _rlnTomoParticlesFile referenced in the optimisation set must have each row describing a group of images observing a particular particle.
+    This TomoParticlesStarfile is the object which is immediately loaded, though a reference to the parent optimisation set are also stored
+    (to reference TomoTomogramsStarfile if loading tomogram-level metadata, and to write a new optimisation set of modified the _rlnTomoParticlesFile contents).
+    """
+
+    def __init__(self,
+                 starfile: str,
+                 source_software: TOMOPARTICLESSTARFILE_STAR_SOURCES = 'auto'):
+        # the input star file is the optimisation set; store its path and contents for future writing
+        assert is_starfile_optimisation_set(starfile)
+        self.optimisation_set_star_path = os.path.abspath(starfile)
+        self.optimisation_set_star = GenericStarfile(self.optimisation_set_star_path)
+
+        # initialize the main TomoParticlesStarfile object from the _rlnTomoParticlesFile header
+        ptcls_star_rel_path = self.optimisation_set_star.blocks['data_']['_rlnTomoParticlesFile']
+        ptcls_star_path = os.path.join(os.path.dirname(self.optimisation_set_star_path), ptcls_star_rel_path)
+        super().__init__(ptcls_star_path)
+
+        # check that the particles star file references 2D image stacks
+        assert self.blocks['data_general']['_rlnTomoSubTomosAre2DStacks'] == '1', 'TomoDRGN is only compatible with tilt series particles extracted as 2D image stacks.'
+
+        # pre-initialize header aliases as None, to be set as appropriate by _infer_metadata_mapping()
+        self.block_optics = None
+        self.block_particles = None
+
+        self.header_pose_phi = None
+        self.header_pose_theta = None
+        self.header_pose_psi = None
+
+        self.header_pose_tx = None
+        self.header_pose_tx_angst = None
+        self.header_pose_ty = None
+        self.header_pose_ty_angst = None
+
+        self.header_ctf_angpix = None
+        self.header_ctf_defocus_u = None
+        self.header_ctf_defocus_v = None
+        self.header_ctf_defocus_ang = None
+        self.header_ctf_voltage = None
+        self.header_ctf_cs = None
+        self.header_ctf_w = None
+        self.header_ctf_ps = None
+
+        self.header_coord_x = None
+        self.header_coord_y = None
+        self.header_coord_z = None
+
+        self.header_ptcl_uid = None
+        self.header_ptcl_dose = None
+        self.header_ptcl_tilt = None
+        self.header_ptcl_image = None
+        self.header_ptcl_micrograph = None
+
+        self.header_image_random_split = None
+        self.image_ctf_corrected = None
+        self.image_dose_weighted = None
+        self.image_tilt_weighted = None
+
+        self.ind_imgs = None
+        self.ind_ptcls = None
+        self.sort_ptcl_imgs = 'unsorted'
+        self.use_first_ntilts = -1
+        self.use_first_nptcls = -1
+        self.sourcefile_filtered = None
+
+        self.source_software = source_software
+
+        # infer the upstream metadata format
+        if source_software == 'auto':
+            self._infer_metadata_mapping()
+        elif source_software == TomoParticlesStarfileStarHeaders.warptools.name:
+            self._warptools_metadata_mapping()
+        elif source_software == TomoParticlesStarfileStarHeaders.relion.name:
+            self._relion_metadata_mapping()
+        else:
+            raise ValueError(f'Unrecognized source_software {source_software} not one of known starfile sources for TomoParticlesStarfile {TOMOPARTICLESSTARFILE_STAR_SOURCES}')
+
+    def _warptools_metadata_mapping(self):
+        utils.log(f'Using STAR source software: {TomoParticlesStarfileStarHeaders.warptools.name}')
+        raise NotImplementedError
+
+    def _relion_metadata_mapping(self):
+        utils.log(f'Using STAR source software: {TomoParticlesStarfileStarHeaders.relion.name}')
+
+        # TomoParticlesStarfile optics block and contents
+        self.block_optics = 'data_optics'
+
+        self.header_ctf_angpix = '_rlnImagePixelSize'
+
+        # TomoParticlesStarfile particles block and contents
+        self.block_particles = 'data_particles'
+
+        self.header_pose_phi = '_rlnAngleRot'
+        self.header_pose_theta = '_rlnAngleTilt'
+        self.header_pose_psi = '_rlnAnglePsi'
+
+        self.header_pose_tx_angst = '_rlnOriginXAngst'
+        self.header_pose_ty_angst = '_rlnOriginYAngst'
+        self.header_pose_tz_angst = '_rlnOriginZAngst'
+        self.header_pose_tx = '_rlnOriginX'
+        self.header_pose_ty = '_rlnOriginY'
+        self.header_pose_tz = '_rlnOriginZ'
+
+        self.header_coord_x = '_rlnCoordinateX'
+        self.header_coord_y = '_rlnCoordinateY'
+        self.header_coord_z = '_rlnCoordinateZ'
+
+        self.header_ptcl_uid = '_rlnTomoParticleId'
+        self.header_ptcl_image = '_rlnImageName'
+        self.header_ptcl_tomogram = '_rlnTomoName'
+
+        # TomoTomogramsStarfile global block and contents -- NOT accessible from this class directly
+        self.header_ctf_voltage = '_rlnVoltage'
+        self.header_ctf_cs = '_rlnSphericalAberration'
+        self.header_ctf_w = '_rlnAmplitudeContrast'
+
+        # TomoTomogramsStarfile TOMOGRAM_NAME block and contents -- NOT accessible from this class directly
+        self.header_tomo_proj_x = '_rlnTomoProjX'
+        self.header_tomo_proj_y = '_rlnTomoProjY'
+        self.header_tomo_proj_z = '_rlnTomoProjZ'
+        self.header_tomo_proj_w = '_rlnTomoProjW'
+
+        self.header_ctf_defocus_u = '_rlnDefocusU'
+        self.header_ctf_defocus_v = '_rlnDefocusV'
+        self.header_ctf_defocus_ang = '_rlnDefocusAngle'
+        self.header_ctf_ps = '_rlnPhaseShift'  # potentially not created yet
+
+        self.header_tomo_dose = '_rlnMicrographPreExposure'
+        self.header_tomo_tilt = '_tomodrgnPseudoStageTilt'  # pseudo because arccos returns values in [0,pi] so lose +/- tilt information
+
+        # merge optics groups block with particle data block
+        self.df = self.df.merge(self.blocks[self.block_optics], on='_rlnOpticsGroup', how='inner', validate='many_to_one', suffixes=('', '_DROP')).filter(regex='^(?!.*_DROP)')
+
+        # set additional headers needed by tomodrgn
+        # TODO eventually need to calculate dose/tilt distributions for weighting schemes -- may need to do this in dataset
+        # self.df[self.header_ptcl_dose] = self.df['_rlnCtfBfactor'] / -4
+        # self.df[self.header_ptcl_tilt] = np.arccos(self.df['_rlnCtfScalefactor'])
+        self.df[self.header_pose_tx] = self.df[self.header_pose_tx_angst] / self.df[self.header_ctf_angpix]
+        self.df[self.header_pose_ty] = self.df[self.header_pose_ty_angst] / self.df[self.header_ctf_angpix]
+        if self.header_ctf_ps not in self.df.columns:
+            self.df[self.header_ctf_ps] = np.zeros(len(self.df), dtype=float)
+
+        # image processing applied during particle extraction
+        # TODO make use of whether CTF corrected or not in Dataset
+        self.image_ctf_corrected = bool(self.blocks[self.block_optics]['_rlnCtfDataAreCtfPremultiplied'].to_numpy()[0])
+        self.image_dose_weighted = False
+        self.image_tilt_weighted = False
+
+        # TODO other headers that we probably want to eventually use
+        self.header_ptcl_visible_frames = '_rlnTomoVisibleFrames'
+
+    def _infer_metadata_mapping(self) -> None:
+        """
+        Infer particle source software and version for key metadata and extraction-time processing corrections
+
+        :return: None
+        """
+
+        headers = {block_name: (self.blocks[block_name].columns.values.tolist() if type(self.blocks[block_name]) is pd.DataFrame else list(self.blocks[block_name].keys()))
+                   for block_name in self.block_names}
+        match headers:
+
+            case TomoParticlesStarfileStarHeaders.warptools.value:
+                self._warptools_metadata_mapping()
+
+            case TomoParticlesStarfileStarHeaders.relion.value:
+                self._relion_metadata_mapping()
+
+            case _:
+                raise NotImplementedError(f'Auto detection of source software failed. '
+                                          f'Consider retrying with manually specified `source_software`.'
+                                          f'Found STAR file headers: {headers}. '
+                                          f'TomoDRGN known STAR file headers: {TomoParticlesStarfileStarHeaders}')
+
+    @property
+    def headers_rot(self) -> list[str]:
+        """
+        Shortcut to return headers associated with rotation parameters.
+
+        :return: list of particles dataframe header names for rotations
+        """
+        return [self.header_pose_phi,
+                self.header_pose_theta,
+                self.header_pose_psi]
+
+    @property
+    def headers_trans(self) -> list[str]:
+        """
+        Shortcut to return headers associated with translation parameters.
+
+        :return: list of particles dataframe header names for translations
+        """
+        return [self.header_pose_tx,
+                self.header_pose_ty]
+
+    @property
+    def headers_ctf(self) -> list[str]:
+        """
+        Shortcut to return headers associated with CTF parameters.
+
+        :return: list of particles dataframe header names for CTF parameters
+        """
+        return [self.header_ctf_angpix,
+                self.header_ctf_defocus_u,
+                self.header_ctf_defocus_v,
+                self.header_ctf_defocus_ang,
+                self.header_ctf_voltage,
+                self.header_ctf_cs,
+                self.header_ctf_w,
+                self.header_ctf_ps]
+
+    @property
+    def df(self) -> pd.DataFrame:
+        """
+        Shortcut to access the particles dataframe associated with the TomoParticlesStarfile object.
+
+        :return: pandas dataframe of particles metadata
+        """
+        return self.blocks[self.block_particles]
+
+    @df.setter
+    def df(self,
+           value: pd.DataFrame) -> None:
+        """
+        Shortcut to update the particles dataframe associated with the TomoParticlesStarfile object
+
+        :param value: modified particles dataframe
+        :return: None
+        """
+        self.blocks[self.block_particles] = value
+
+    def get_tiltseries_pixelsize(self):
+        raise NotImplementedError
+
+    def get_tiltseries_voltage(self):
+        raise NotImplementedError
+
+    def get_ptcl_img_indices(self):
+        raise NotImplementedError
+
+    def get_image_size(self):
+        raise NotImplementedError
+
+    def filter(self, ind_imgs=None, ind_ptcls=None, sort_ptcl_imgs='unsorted', use_first_ntilts=-1, use_first_nptcls=-1):
+        raise NotImplementedError
+
+    def make_test_train_split(self, fraction_split1=0.5, show_summary_stats=True):
+        raise NotImplementedError
+
+    def plot_particle_uid_ntilt_distribution(self, outpath):
+        raise NotImplementedError
+
+    def get_particles_stack(self, *, datadir=None, lazy=False, **kwargs):
+        raise NotImplementedError
+
+    def write(self,
+              outstar: str,
+              *args,
+              **kwargs) -> None:
+        """
+        Temporarily removes columns in data_particles dataframe that are present in data_optics dataframe (to restore expected input star file format), then calls parent GenericStarfile write.
+        Writes both the TomoParticlesStar file and the updated Optimisation Set star file pointing to the new TomoParticlesStar file.
+        The optimisation set star file is written to the same directory as the TomoParticlesStar file, with the suffix ``_optimisation_set.star`` appended in place of ``.star``.
+        :param outstar: name of the output TomoParticlesStar file, optionally as absolute or relative path
+        :param args: Passed to parent GenericStarfile write
+        :param kwargs: Passed to parent GenericStarfile write
+        :return: None
+        """
+
+        # during loading TomoParticlesStarfile, block_optics and block_particles are merged for internal convenience
+        columns_in_common = self.df.columns.intersection(self.blocks[self.block_optics].columns)
+        # need to preserve the optics groups in the data_particles block
+        columns_in_common = columns_in_common.drop('_rlnOpticsGroup')
+        # drop all other columns in common from the data_particles block
+        self.df = self.df.drop(columns_in_common, axis=1)
+
+        # now call parent write method for the TomoParticlesStar file
+        super().write(*args, outstar=outstar, **kwargs)
+
+        # re-merge data_optics with data_particles so that the starfile object appears unchanged after calling this method
+        self.df = self.df.merge(self.blocks[self.block_optics], on='_rlnOpticsGroup', how='inner', validate='many_to_one', suffixes=('', '_DROP')).filter(regex='^(?!.*_DROP)')
+
+        # also need to update the optimisation set contents and write out the updated optimisation set star file
+        self.optimisation_set_star.blocks['data_']['_rlnTomoParticlesFile'] = outstar
+        outstar_optimisation_set = f'{os.path.splitext(outstar)[0]}/_optimisation_set.star'
+        self.optimisation_set_star.write(outstar=outstar_optimisation_set)
+
+
+def is_starfile_optimisation_set(star_path: str) -> bool:
+    """
+    Infer whether a star file on disk is a RELION optimisation set, or some other type of star file.
+    Defining characteristics of an optimisation set star file:
+
+    * the data block name is ``data_``
+    * the data block is a simple, two column, dictionary-style block
+    * the data block minimally contains the keys ``_rlnTomoTomogramsFile`` and ``_rlnTomoParticlesFile``, as these are needed for tomodrgn
+
+    :param star_path: path to potential optimisation set star file on disk
+    :return: bool of whether the input star file matches characteristics of an optimisation set star file
+    """
+    # only skeletonize the star file for faster processing in case this is a large file (e.g. particle imageseries star file)
+    preambles, blocks = GenericStarfile._skeletonize(star_path)
+
+    # the data block named ``data_`` must be present
+    if 'data_' not in blocks.keys():
+        return False
+
+    # the ``data_`` data block must be a dictionary-style block
+    if type(blocks['data_']) is not dict:
+        return False
+
+    # the ``data_`` data block must minimally contain keys ``_rlnTomoTomogramsFile`` and ``_rlnTomoParticlesFile``
+    if not {'_rlnTomoTomogramsFile', '_rlnTomoParticlesFile'}.issubset(blocks['data_'].keys()):
+        return False
+
+    return True
+
+
+def load_sta_starfile(star_path: str,
+                      source_software: KNOWN_STAR_SOURCES = 'auto') -> TiltSeriesStarfile | TomoParticlesStarfile:
+    """
+    Loads a tomodrgn star file handling class (either ``TiltSeriesStarfile`` or ``TomoParticlesStarfile``) from a star file on disk.
+    The input ``star_path`` must point to either a particle imageseries star file (e.g. from Warp v1) or an optimisation set star file (e.g. from RELION v5).
+
+    :param star_path: path to star file to load on disk
+    :param source_software: type of source software used to create the star file, used to indicate the appropriate star file handling class to instantiate.
+            Default of 'auto' tries to infer the appropriate star file handling class based on whether ``star_path`` is an optimisation set star file.
+    :return:
+    """
+
+    if source_software == 'auto':
+        if is_starfile_optimisation_set(star_path):
+            return TomoParticlesStarfile(star_path)
+        else:
+            return TiltSeriesStarfile(star_path)
+    else:
+        if source_software in get_args(TILTSERIESSTARFILE_STAR_SOURCES):
+            return TiltSeriesStarfile(star_path, source_software=source_software)
+        elif source_software in get_args(TOMOPARTICLESSTARFILE_STAR_SOURCES):
+            return TomoParticlesStarfile(star_path, source_software=source_software)
+        else:
+            raise ValueError(f'Unrecognized source_software {source_software} not one of known starfile sources {KNOWN_STAR_SOURCES}')
