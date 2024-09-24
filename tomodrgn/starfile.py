@@ -1,16 +1,220 @@
 """
 Lightweight parsers for starfiles
 """
+from typing_extensions import Unpack
 
+import os
 import re
+from datetime import datetime as dt
+from enum import Enum
+from typing import TextIO, Literal, get_args
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from datetime import datetime as dt
-import os
-import matplotlib.pyplot as plt
-from typing import TextIO, Literal
 
 from tomodrgn import mrc, utils
+
+
+class TiltSeriesStarfileStarHeaders(Enum):
+    """
+    Enumeration of known source software with constituent data block names and headers which are compatible with the ``TiltSeriesStarfile`` class.
+    """
+    warp = {
+        'data_': [
+            '_rlnMagnification',
+            '_rlnDetectorPixelSize',
+            '_rlnVoltage',
+            '_rlnSphericalAberration',
+            '_rlnAmplitudeContrast',
+            '_rlnPhaseShift',
+            '_rlnDefocusU',
+            '_rlnDefocusV',
+            '_rlnDefocusAngle',
+            '_rlnImageName',
+            '_rlnMicrographName',
+            '_rlnCoordinateX',
+            '_rlnCoordinateY',
+            '_rlnAngleRot',
+            '_rlnAngleTilt',
+            '_rlnAnglePsi',
+            '_rlnCtfBfactor',
+            '_rlnCtfScalefactor',
+            '_rlnRandomSubset',
+            '_rlnGroupName'
+        ],
+    }
+    cryosrpnt = {
+        'data_': [
+            '_rlnImageName',
+            '_rlnDetectorPixelSize',
+            '_rlnDefocusU',
+            '_rlnDefocusV',
+            '_rlnDefocusAngle',
+            '_rlnVoltage',
+            '_rlnSphericalAberration',
+            '_rlnAmplitudeContrast',
+            '_rlnPhaseShift',
+            '_rlnAngleRot',
+            '_rlnAngleTilt',
+            '_rlnAnglePsi',
+            '_rlnCtfBfactor',
+            '_rlnCtfScalefactor',
+            '_rlnGroupName',
+        ],
+    }
+    nextpyp = {
+        'data_optics': [
+            '_rlnOpticsGroupName',
+            '_rlnOpticsGroup',
+            '_rlnMicrographOriginalPixelSize',
+            '_rlnVoltage',
+            '_rlnSphericalAberration',
+            '_rlnAmplitudeContrast',
+            '_rlnImagePixelSize',
+            '_rlnImageSize',
+            '_rlnImageDimensionality',
+        ],
+        'data_particles': [
+            '_rlnImageName',
+            '_rlnMicrographName',
+            '_rlnCoordinateX',
+            '_rlnCoordinateY',
+            '_rlnAnglePsi',
+            '_rlnAngleTilt',
+            '_rlnAngleRot',
+            '_rlnOriginXAngst',
+            '_rlnOriginYAngst',
+            '_rlnDefocusU',
+            '_rlnDefocusV',
+            '_rlnDefocusAngle',
+            '_rlnPhaseShift',
+            '_rlnOpticsGroup',
+            '_rlnGroupNumber',
+            '_rlnCtfBfactor',
+            '_rlnCtfScalefactor',
+            '_rlnLogLikeliContribution',
+            '_rlnRandomSubset',
+            '_rlnTiltIndex',
+        ]
+    }
+    cistem = {
+        'data_': [
+            '_cisTEMPositionInStack',
+            '_cisTEMAnglePsi',
+            '_cisTEMAngleTheta',
+            '_cisTEMAnglePhi',
+            '_cisTEMXShift',
+            '_cisTEMYShift',
+            '_cisTEMDefocus1',
+            '_cisTEMDefocus2',
+            '_cisTEMDefocusAngle',
+            '_cisTEMPhaseShift',
+            '_cisTEMOccupancy',
+            '_cisTEMLogP',
+            '_cisTEMSigma',
+            '_cisTEMScore',
+            '_cisTEMScoreChange',
+            '_cisTEMPixelSize',
+            '_cisTEMMicroscopeVoltagekV',
+            '_cisTEMMicroscopeCsMM',
+            '_cisTEMAmplitudeContrast',
+            '_cisTEMBeamTiltX',
+            '_cisTEMBeamTiltY',
+            '_cisTEMImageShiftX',
+            '_cisTEMImageShiftY',
+            '_cisTEMBest2DClass',
+            '_cisTEMBeamTiltGroup',
+            '_cisTEMParticleGroup',
+            '_cisTEMPreExposure',
+            '_cisTEMTotalExposure',
+        ]
+    }
+
+
+class TomoParticlesStarfileStarHeaders(Enum):
+    """
+    Enumeration of known source software with constituent data block names and headers which are compatible with the ``TomoParticlesStarfile`` class.
+    """
+    warptools = {
+        'data_optics': [
+            '_rlnOpticsGroupName',
+            '_rlnOpticsGroup',
+            '_rlnMicrographOriginalPixelSize',
+            '_rlnVoltage',
+            '_rlnSphericalAberration',
+            '_rlnAmplitudeContrast',
+            '_rlnImagePixelSize',
+            '_rlnImageSize',
+            '_rlnImageDimensionality',
+        ],
+        'data_particles': [
+            '_rlnImageName',
+            '_rlnMicrographName',
+            '_rlnCoordinateX',
+            '_rlnCoordinateY',
+            '_rlnAnglePsi',
+            '_rlnAngleTilt',
+            '_rlnAngleRot',
+            '_rlnOriginXAngst',
+            '_rlnOriginYAngst',
+            '_rlnDefocusU',
+            '_rlnDefocusV',
+            '_rlnDefocusAngle',
+            '_rlnPhaseShift',
+            '_rlnOpticsGroup',
+            '_rlnGroupNumber',
+            '_rlnCtfBfactor',
+            '_rlnCtfScalefactor',
+            '_rlnLogLikeliContribution',
+            '_rlnRandomSubset',
+            '_rlnTiltIndex',
+        ]
+    }
+    relion = {
+        'data_optics': [
+            '_rlnOpticsGroupName',
+            '_rlnOpticsGroup',
+            '_rlnMicrographOriginalPixelSize',
+            '_rlnVoltage',
+            '_rlnSphericalAberration',
+            '_rlnAmplitudeContrast',
+            '_rlnImagePixelSize',
+            '_rlnImageSize',
+            '_rlnImageDimensionality',
+        ],
+        'data_particles': [
+            '_rlnImageName',
+            '_rlnMicrographName',
+            '_rlnCoordinateX',
+            '_rlnCoordinateY',
+            '_rlnAnglePsi',
+            '_rlnAngleTilt',
+            '_rlnAngleRot',
+            '_rlnOriginXAngst',
+            '_rlnOriginYAngst',
+            '_rlnDefocusU',
+            '_rlnDefocusV',
+            '_rlnDefocusAngle',
+            '_rlnPhaseShift',
+            '_rlnOpticsGroup',
+            '_rlnGroupNumber',
+            '_rlnCtfBfactor',
+            '_rlnCtfScalefactor',
+            '_rlnLogLikeliContribution',
+            '_rlnRandomSubset',
+            '_rlnTiltIndex',
+        ]
+    },
+
+
+# to avoid potential mistakes while repeating names of supported star file source software, dynamically define the Literal of allowable source software
+# note that this does not work for static typing, but does work correctly at runtime (e.g. for building documentation)
+TILTSERIESSTARFILE_STAR_SOURCES = Literal['auto', Unpack[[str(source_software.name) for source_software in TiltSeriesStarfileStarHeaders]]]
+
+TOMOPARTICLESSTARFILE_STAR_SOURCES = Literal['auto', Unpack[[str(source_software.name) for source_software in TomoParticlesStarfileStarHeaders]]]
+
+KNOWN_STAR_SOURCES = Literal[TILTSERIESSTARFILE_STAR_SOURCES, TOMOPARTICLESSTARFILE_STAR_SOURCES]
 
 
 class GenericStarfile:
@@ -473,12 +677,13 @@ class GenericStarfile:
 
 class TiltSeriesStarfile(GenericStarfile):
     """
-    Class to parse a particle image-series star file from multiple upstream STA software into a consistent format
+    Class to parse a particle image-series star file from upstream STA software.
+    Each row in the star file must describe an individual image of a particle; groups of related rows describe all images observing one particle.
     """
 
     def __init__(self,
                  starfile: str,
-                 source_software: str = 'auto'):
+                 source_software: TILTSERIESSTARFILE_STAR_SOURCES = 'auto'):
         # initialize object from parent class with parent attributes assigned at parent __init__
         super().__init__(starfile)
 
@@ -527,23 +732,19 @@ class TiltSeriesStarfile(GenericStarfile):
         # infer the upstream metadata format
         if source_software == 'auto':
             self._infer_metadata_mapping()
-        elif source_software == 'warp_v1':
-            self._warpv1_metadata_mapping()
-        elif source_software == 'cryosrpnt':
+        elif source_software == TiltSeriesStarfileStarHeaders.warp.name:
+            self._warp_metadata_mapping()
+        elif source_software == TiltSeriesStarfileStarHeaders.cryosrpnt.name:
             self._cryosrpnt_metadata_mapping()
-        elif source_software == 'nextpyp':
+        elif source_software == TiltSeriesStarfileStarHeaders.nextpyp.name:
             self._nextpyp_metadata_mapping()
-        elif source_software == 'relion_v5':
-            self._relionv5_metadata_mapping()
-        elif source_software == 'cistem':
+        elif source_software == TiltSeriesStarfileStarHeaders.cistem.name:
             self._cistem_metadata_mapping()
-        elif source_software == 'warp_v2':
-            self._warpv2_metadata_mapping()
         else:
-            raise ValueError(f'Unrecognized source software: {source_software}')
+            raise ValueError(f'Unrecognized source_software {source_software} not one of known starfile sources for TiltSeriesStarfile {TILTSERIESSTARFILE_STAR_SOURCES}')
 
-    def _warpv1_metadata_mapping(self):
-        utils.log('Using STAR source software: Warp_v1 | M_v1')
+    def _warp_metadata_mapping(self):
+        utils.log(f'Using STAR source software: {TiltSeriesStarfileStarHeaders.warp.name}')
 
         # easy reference to particles data block
         self.block_particles = 'data_'
@@ -578,7 +779,7 @@ class TiltSeriesStarfile(GenericStarfile):
         self.image_tilt_weighted = False
 
     def _cryosrpnt_metadata_mapping(self):
-        utils.log('Using STAR source software: cryoSRPNT_v0.1')
+        utils.log(f'Using STAR source software: {TiltSeriesStarfileStarHeaders.cryosrpnt.name}')
 
         # easy reference to particles data block
         self.block_particles = 'data_'
@@ -613,7 +814,7 @@ class TiltSeriesStarfile(GenericStarfile):
         self.image_tilt_weighted = False
 
     def _nextpyp_metadata_mapping(self):
-        utils.log('Using STAR source software: nextPYP')
+        utils.log(f'Using STAR source software: {TiltSeriesStarfileStarHeaders.nextpyp.name}')
 
         # easy reference to particles data block
         self.block_optics = 'data_optics'
@@ -658,13 +859,8 @@ class TiltSeriesStarfile(GenericStarfile):
         self.image_dose_weighted = False
         self.image_tilt_weighted = False
 
-    def _relionv5_metadata_mapping(self):
-        raise NotImplementedError
-
     def _cistem_metadata_mapping(self):
-        raise NotImplementedError
-
-    def _warpv2_metadata_mapping(self):
+        utils.log(f'Using STAR source software: {TiltSeriesStarfileStarHeaders.cistem.name}')
         raise NotImplementedError
 
     def _infer_metadata_mapping(self) -> None:
@@ -673,141 +869,27 @@ class TiltSeriesStarfile(GenericStarfile):
 
         :return: None
         """
-        known_star_headers = {
-            'warpm_v1': {
-                'data_': [
-                    '_rlnMagnification',
-                    '_rlnDetectorPixelSize',
-                    '_rlnVoltage',
-                    '_rlnSphericalAberration',
-                    '_rlnAmplitudeContrast',
-                    '_rlnPhaseShift',
-                    '_rlnDefocusU',
-                    '_rlnDefocusV',
-                    '_rlnDefocusAngle',
-                    '_rlnImageName',
-                    '_rlnMicrographName',
-                    '_rlnCoordinateX',
-                    '_rlnCoordinateY',
-                    '_rlnAngleRot',
-                    '_rlnAngleTilt',
-                    '_rlnAnglePsi',
-                    '_rlnCtfBfactor',
-                    '_rlnCtfScalefactor',
-                    '_rlnRandomSubset',
-                    '_rlnGroupName'
-                ],
-            },
-            'cryosrpnt_v0.1': {
-                'data_': [
-                    '_rlnImageName',
-                    '_rlnDetectorPixelSize',
-                    '_rlnDefocusU',
-                    '_rlnDefocusV',
-                    '_rlnDefocusAngle',
-                    '_rlnVoltage',
-                    '_rlnSphericalAberration',
-                    '_rlnAmplitudeContrast',
-                    '_rlnPhaseShift',
-                    '_rlnAngleRot',
-                    '_rlnAngleTilt',
-                    '_rlnAnglePsi',
-                    '_rlnCtfBfactor',
-                    '_rlnCtfScalefactor',
-                    '_rlnGroupName',
-                ],
-            },
-            'nextpyp': {
-                'data_optics': [
-                    '_rlnOpticsGroupName',
-                    '_rlnOpticsGroup',
-                    '_rlnMicrographOriginalPixelSize',
-                    '_rlnVoltage',
-                    '_rlnSphericalAberration',
-                    '_rlnAmplitudeContrast',
-                    '_rlnImagePixelSize',
-                    '_rlnImageSize',
-                    '_rlnImageDimensionality',
-                ],
-                'data_particles': [
-                    '_rlnImageName',
-                    '_rlnMicrographName',
-                    '_rlnCoordinateX',
-                    '_rlnCoordinateY',
-                    '_rlnAnglePsi',
-                    '_rlnAngleTilt',
-                    '_rlnAngleRot',
-                    '_rlnOriginXAngst',
-                    '_rlnOriginYAngst',
-                    '_rlnDefocusU',
-                    '_rlnDefocusV',
-                    '_rlnDefocusAngle',
-                    '_rlnPhaseShift',
-                    '_rlnOpticsGroup',
-                    '_rlnGroupNumber',
-                    '_rlnCtfBfactor',
-                    '_rlnCtfScalefactor',
-                    '_rlnLogLikeliContribution',
-                    '_rlnRandomSubset',
-                    '_rlnTiltIndex',
-                ]
-            },
-            'cistem': {
-                'data_': [
-                    '_cisTEMPositionInStack',
-                    '_cisTEMAnglePsi',
-                    '_cisTEMAngleTheta',
-                    '_cisTEMAnglePhi',
-                    '_cisTEMXShift',
-                    '_cisTEMYShift',
-                    '_cisTEMDefocus1',
-                    '_cisTEMDefocus2',
-                    '_cisTEMDefocusAngle',
-                    '_cisTEMPhaseShift',
-                    '_cisTEMOccupancy',
-                    '_cisTEMLogP',
-                    '_cisTEMSigma',
-                    '_cisTEMScore',
-                    '_cisTEMScoreChange',
-                    '_cisTEMPixelSize',
-                    '_cisTEMMicroscopeVoltagekV',
-                    '_cisTEMMicroscopeCsMM',
-                    '_cisTEMAmplitudeContrast',
-                    '_cisTEMBeamTiltX',
-                    '_cisTEMBeamTiltY',
-                    '_cisTEMImageShiftX',
-                    '_cisTEMImageShiftY',
-                    '_cisTEMBest2DClass',
-                    '_cisTEMBeamTiltGroup',
-                    '_cisTEMParticleGroup',
-                    '_cisTEMPreExposure',
-                    '_cisTEMTotalExposure',
-                ]
-            },
-        }
 
-        headers = {block: self.blocks[block].columns.values.tolist() for block in self.block_names}
+        headers = {block_name: self.blocks[block_name].columns.values.tolist() for block_name in self.block_names}
         match headers:
 
-            case {'data_': headers1} if set(known_star_headers['warpm_v1']['data_']).issubset(headers1):
-                utils.log('Detected STAR source software: Warp_v1 | M_v1')
-                self._warpv1_metadata_mapping()
+            case TiltSeriesStarfileStarHeaders.warp.value:
+                self._warp_metadata_mapping()
 
-            case {'data_': headers1} if set(known_star_headers['cryosrpnt_v0.1']['data_']).issubset(headers1):
-                utils.log('Detected STAR source software: cryoSRPNT_v0.1')
+            case TiltSeriesStarfileStarHeaders.cryosrpnt.value:
                 self._cryosrpnt_metadata_mapping()
 
-            case {'data_optics': headers1, 'data_particles': headers2} if (
-                    set(known_star_headers['nextpyp']['data_optics']).issubset(headers1) and set(known_star_headers['nextpyp']['data_particles']).issubset(headers2)):
-                utils.log('Detected STAR source software: nextPYP')
+            case TiltSeriesStarfileStarHeaders.nextpyp.value:
                 self._nextpyp_metadata_mapping()
 
-            case {'data_': headers1} if set(known_star_headers['cistem']['data_']).issubset(headers1):
-                utils.log('Detected STAR source software: cisTEM')
+            case TiltSeriesStarfileStarHeaders.cistem.value:
                 self._cistem_metadata_mapping()
 
             case _:
-                raise NotImplementedError(f'Auto detection of source software failed. STAR file headers do not match any pattern known to tomoDRGN: {headers}')
+                raise NotImplementedError(f'Auto detection of source software failed. '
+                                          f'Consider retrying with manually specified `source_software`.'
+                                          f'Found STAR file headers: {headers}. '
+                                          f'TomoDRGN known STAR file headers: {TiltSeriesStarfileStarHeaders}')
 
     @property
     def headers_rot(self) -> list[str]:
