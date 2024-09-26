@@ -1,10 +1,12 @@
 """
 Lightweight parsers for starfiles
 """
+import ast
 import os
 import re
 from datetime import datetime as dt
 from enum import Enum
+from itertools import pairwise
 from typing import TextIO, Literal, get_args
 
 import matplotlib.pyplot as plt
@@ -1261,7 +1263,7 @@ class TomoParticlesStarfile(GenericStarfile):
     Class to parse a particle star file from upstream STA software.
     The input star file must be an optimisation set star file from e.g. WarpTools, RELION v5.
     The _rlnTomoParticlesFile referenced in the optimisation set must have each row describing a group of images observing a particular particle.
-    This TomoParticlesStarfile is the object which is immediately loaded, though a reference to the parent optimisation set are also stored
+    This TomoParticlesStarfile is the object which is immediately loaded, though a reference to the parent optimisation set and related _lnTomoTomogramsFile are also stored
     (to reference TomoTomogramsStarfile if loading tomogram-level metadata, and to write a new optimisation set of modified the _rlnTomoParticlesFile contents).
     """
 
@@ -1272,6 +1274,13 @@ class TomoParticlesStarfile(GenericStarfile):
         assert is_starfile_optimisation_set(starfile)
         self.optimisation_set_star_path = os.path.abspath(starfile)
         self.optimisation_set_star = GenericStarfile(self.optimisation_set_star_path)
+
+        # the input star also references a TomoTomogramsFile; store its path and contents for future reference
+        tomograms_star_rel_path = self.optimisation_set_star.blocks['data_']['_rlnTomoTomogramsFile']
+        assert tomograms_star_rel_path != ''
+        tomograms_star_path = os.path.join(os.path.dirname(self.optimisation_set_star_path), tomograms_star_rel_path)
+        self.tomograms_star_path = tomograms_star_path
+        self.tomograms_star = GenericStarfile(self.tomograms_star_path)
 
         # initialize the main TomoParticlesStarfile object from the _rlnTomoParticlesFile header
         ptcls_star_rel_path = self.optimisation_set_star.blocks['data_']['_rlnTomoParticlesFile']
@@ -1370,6 +1379,8 @@ class TomoParticlesStarfile(GenericStarfile):
         self.header_ptcl_uid = '_rlnTomoParticleId'
         self.header_ptcl_image = '_rlnImageName'
         self.header_ptcl_tomogram = '_rlnTomoName'
+        self.header_image_random_split = '_rlnRandomSubset'
+        self.header_ptcl_visible_frames = '_rlnTomoVisibleFrames'
 
         # TomoTomogramsStarfile global block and contents -- NOT accessible from this class directly
         self.header_ctf_voltage = '_rlnVoltage'
@@ -1394,22 +1405,19 @@ class TomoParticlesStarfile(GenericStarfile):
         self.df = self.df.merge(self.blocks[self.block_optics], on='_rlnOpticsGroup', how='inner', validate='many_to_one', suffixes=('', '_DROP')).filter(regex='^(?!.*_DROP)')
 
         # set additional headers needed by tomodrgn
-        # TODO eventually need to calculate dose/tilt distributions for weighting schemes -- may need to do this in dataset
-        # self.df[self.header_ptcl_dose] = self.df['_rlnCtfBfactor'] / -4
-        # self.df[self.header_ptcl_tilt] = np.arccos(self.df['_rlnCtfScalefactor'])
+        for tomo_name in self.df[self.header_ptcl_tomogram]:
+            # create a temporary column with values of stage tilt in radians
+            self.tomograms_star.blocks[f'data_{tomo_name}'][self.header_tomo_tilt] = np.arccos(self.tomograms_star.blocks[f'data_{tomo_name}']['_rlnCtfScalefactor'])
         self.df[self.header_pose_tx] = self.df[self.header_pose_tx_angst] / self.df[self.header_ctf_angpix]
         self.df[self.header_pose_ty] = self.df[self.header_pose_ty_angst] / self.df[self.header_ctf_angpix]
+        self.df[self.header_pose_tz] = self.df[self.header_pose_tz_angst] / self.df[self.header_ctf_angpix]
         if self.header_ctf_ps not in self.df.columns:
             self.df[self.header_ctf_ps] = np.zeros(len(self.df), dtype=float)
 
         # image processing applied during particle extraction
-        # TODO make use of whether CTF corrected or not in Dataset
         self.image_ctf_corrected = bool(self.blocks[self.block_optics]['_rlnCtfDataAreCtfPremultiplied'].to_numpy()[0])
         self.image_dose_weighted = False
         self.image_tilt_weighted = False
-
-        # TODO other headers that we probably want to eventually use
-        self.header_ptcl_visible_frames = '_rlnTomoVisibleFrames'
 
     def _infer_metadata_mapping(self) -> None:
         """
@@ -1453,7 +1461,8 @@ class TomoParticlesStarfile(GenericStarfile):
         :return: list of particles dataframe header names for translations
         """
         return [self.header_pose_tx,
-                self.header_pose_ty]
+                self.header_pose_ty,
+                self.header_pose_tz]
 
     @property
     def headers_ctf(self) -> list[str]:
@@ -1491,14 +1500,44 @@ class TomoParticlesStarfile(GenericStarfile):
         """
         self.blocks[self.block_particles] = value
 
-    def get_tiltseries_pixelsize(self):
-        raise NotImplementedError
+    def get_tiltseries_pixelsize(self) -> float | int:
+        """
+        Returns the pixel size of the extracted particles in Ångstroms.
+        Assumes all particles have the same pixel size.
 
-    def get_tiltseries_voltage(self):
-        raise NotImplementedError
+        :return: pixel size in Ångstroms/pixel
+        """
+        pixel_sizes = self.df[self.header_ctf_angpix].value_counts().index.to_numpy()
+        if len(pixel_sizes) > 1:
+            print(f'WARNING: found multiple pixel sizes {pixel_sizes} in star file! '
+                  f' TomoDRGN does not support this for any volume-space reconstructions (e.g. backproject_voxel, train_vae).'
+                  f' Will use the most common pixel size {pixel_sizes[0]}, but this will almost certainly lead to incorrect results.')
+        return pixel_sizes[0]
 
-    def get_ptcl_img_indices(self):
-        raise NotImplementedError
+    def get_tiltseries_voltage(self) -> float | int:
+        """
+        Returns the voltage of the microscope used to image the particles in kV.
+
+        :return: voltage in kV
+        """
+        voltages = self.df[self.header_ctf_voltage].value_counts().index.to_numpy()
+        if len(voltages) > 1:
+            print(f'WARNING: found multiple voltages {voltages} in star file! '
+                  f' TomoDRGN does not support this for any volume-space reconstructions (e.g. backproject_voxel, train_vae).'
+                  f' Will use the most common voltage {voltages[0]}, but this will almost certainly lead to incorrect results.')
+        return voltages[0]
+
+    def get_ptcl_img_indices(self) -> list[np.ndarray]:
+        """
+        Returns the indices of each tilt image in the particles dataframe using the ``header_ptcl_visible_frames`` column as a binary mask of which images to include.
+        The number of tilt images per particle may vary across the STAR file, so a list (or object-type numpy array or ragged torch tensor) is required
+
+        :return: integer indices of each tilt image in the particles dataframe grouped by particle ID
+        """
+        cumulative_images_per_ptcl = self.df[self.header_ptcl_visible_frames].str.count('1').cumsum().to_list()
+        cumulative_images_per_ptcl.insert(0, 0)
+        ptcl_to_img_indices = [np.arange(start, stop) for start, stop in pairwise(cumulative_images_per_ptcl)]
+        return ptcl_to_img_indices
 
     def get_image_size(self):
         raise NotImplementedError
@@ -1512,8 +1551,55 @@ class TomoParticlesStarfile(GenericStarfile):
     def plot_particle_uid_ntilt_distribution(self, outpath):
         raise NotImplementedError
 
-    def get_particles_stack(self, *, datadir=None, lazy=False, **kwargs):
-        raise NotImplementedError
+    def get_particles_stack(self,
+                            *,
+                            datadir: str = None,
+                            lazy: bool = False,
+                            **kwargs) -> np.ndarray | list[mrc.LazyImageStack]:
+        """
+        Load the particles referenced in the TomoParticlesStarfile.
+        Particles are loaded into memory directly as a numpy array of shape ``(n_images, boxsize+1, boxsize+1)``, or as a list of ``mrc.LazyImageStack`` objects of length ``n_particles``.
+        The column specifying the path to images on disk must not specify the image index to load from that file (i.e., syntax like ``1@/path/to/stack.mrcs`` is not supported).
+        Instead, specification of which images to load for each particle should be done in the ``_rlnTomoVisibleFrames`` column.
+
+        :param datadir: absolute path to particle images .mrcs to override particles_path_column
+        :param lazy: whether to load particle images now in memory (False) or later on-the-fly (True)
+        :return: np.ndarray of shape (n_ptcls * n_tilts, D, D) or list of LazyImage objects of length (n_ptcls * n_tilts)
+        """
+        # assert that no paths include `@` specification of individual images to load from the referenced file
+        assert all(~self.df[self.header_ptcl_image].str.contains('@'))
+
+        # validate where to load MRC file(s) from disk
+        ptcl_mrcs_files = self.df[self.header_ptcl_image].to_list()
+        if datadir is None:
+            # if star file contains relative paths to images, and star file is being loaded from other directory, try setting datadir to starfile abspath
+            datadir = os.path.dirname(self.sourcefile)
+        ptcl_mrcs_files = utils.prefix_paths(ptcl_mrcs_files, datadir)
+
+        # identify which tilt images to load for each particle
+        all_ptcls_visible_frames = [ast.literal_eval(ptcl_visible_frames) for ptcl_visible_frames in self.df[self.header_ptcl_visible_frames].to_list()]  # [[1, 1, 0], [1, 1, 1], ...]
+        all_ptcls_visible_frames = [[index for index, include in enumerate(ptcl_visible_frames) if include == 1] for ptcl_visible_frames in all_ptcls_visible_frames]  # [[0, 1], [0, 1, 2], ...]
+
+        # create the LazyImageStack object for each particle
+        lazyparticles = [mrc.LazyImageStack(fname=ptcl_mrcs_file, indices_image=ptcl_visible_frames)
+                         for ptcl_mrcs_file, ptcl_visible_frames in zip(ptcl_mrcs_files, all_ptcls_visible_frames, strict=True)]
+
+        # assert that all files have the same dtype and same image shape
+        assert all([ptcl.dtype_image == lazyparticles[0].dtype_image for ptcl in lazyparticles])
+        assert all([ptcl.shape_image == lazyparticles[0].shape_image for ptcl in lazyparticles])
+
+        if lazy:
+            return lazyparticles
+        else:
+            # preallocating numpy array for in-place loading, fourier transform, fourier transform centering, etc.
+            # allocating 1 extra pixel along x and y dimensions in anticipation of symmetrizing the hartley transform in-place
+            all_ptcls_nimgs = [len(ptcl_visible_frames) for ptcl_visible_frames in all_ptcls_visible_frames]
+            particles = np.zeros((sum(all_ptcls_nimgs), lazyparticles[0].shape_image[0] + 1, lazyparticles[0].shape_image[1] + 1), dtype=lazyparticles[0].dtype_image)
+            loaded_images = 0
+            for lazyparticle, ptcl_nimgs in zip(lazyparticles, all_ptcls_nimgs):
+                particles[loaded_images:loaded_images + ptcl_nimgs, :-1, :-1] = lazyparticle.get()
+                loaded_images += ptcl_nimgs
+            return particles
 
     def write(self,
               outstar: str,
@@ -1583,11 +1669,12 @@ def load_sta_starfile(star_path: str,
     """
     Loads a tomodrgn star file handling class (either ``TiltSeriesStarfile`` or ``TomoParticlesStarfile``) from a star file on disk.
     The input ``star_path`` must point to either a particle imageseries star file (e.g. from Warp v1) or an optimisation set star file (e.g. from RELION v5).
+    This is the preferred way of creating a tomodrgn starfile class instance.
 
     :param star_path: path to star file to load on disk
     :param source_software: type of source software used to create the star file, used to indicate the appropriate star file handling class to instantiate.
             Default of 'auto' tries to infer the appropriate star file handling class based on whether ``star_path`` is an optimisation set star file.
-    :return:
+    :return: The created starfile object (either ``TiltSeriesStarfile`` or ``TomoParticlesStarfile``)
     """
 
     if source_software == 'auto':
