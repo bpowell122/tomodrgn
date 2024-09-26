@@ -1419,6 +1419,9 @@ class TomoParticlesStarfile(GenericStarfile):
         self.image_dose_weighted = False
         self.image_tilt_weighted = False
 
+        # note columns added during init, so that we can remove these columns later when writing the star file
+        self.tomodrgn_added_headers = [self.header_pose_tx, self.header_pose_ty, self.header_pose_tz, self.header_ctf_ps]
+
     def _infer_metadata_mapping(self) -> None:
         """
         Infer particle source software and version for key metadata and extraction-time processing corrections
@@ -1622,15 +1625,22 @@ class TomoParticlesStarfile(GenericStarfile):
         # drop all other columns in common from the data_particles block
         self.df = self.df.drop(columns_in_common, axis=1)
 
+        # temporarily move columns added during __init__ to separate dataframe so that the written file does not contain these new columns
+        temp_df = self.df[self.tomodrgn_added_headers].copy()
+        self.df = self.df.drop(self.tomodrgn_added_headers, axis=1)
+
         # now call parent write method for the TomoParticlesStar file
         super().write(*args, outstar=outstar, **kwargs)
 
         # re-merge data_optics with data_particles so that the starfile object appears unchanged after calling this method
         self.df = self.df.merge(self.blocks[self.block_optics], on='_rlnOpticsGroup', how='inner', validate='many_to_one', suffixes=('', '_DROP')).filter(regex='^(?!.*_DROP)')
 
-        # also need to update the optimisation set contents and write out the updated optimisation set star file
-        self.optimisation_set_star.blocks['data_']['_rlnTomoParticlesFile'] = outstar
-        outstar_optimisation_set = f'{os.path.splitext(outstar)[0]}/_optimisation_set.star'
+        # re-add the columns added during __init__ to restore the state of self.df from the start of this function call
+        self.df = pd.concat([self.df, temp_df], axis=1)
+
+        # also need to update the optimisation set contents and write out the updated optimisation set star file to the same directory
+        self.optimisation_set_star.blocks['data_']['_rlnTomoParticlesFile'] = os.path.basename(outstar)
+        outstar_optimisation_set = f'{os.path.splitext(outstar)[0]}_optimisation_set.star'
         self.optimisation_set_star.write(outstar=outstar_optimisation_set)
 
 
