@@ -764,7 +764,7 @@ class TomoParticlesMRCData(data.Dataset):
         :return: ntilts_min: minimum number of tilt images associated with any particle in the dataset
         :return: ntilts_max: maximum number of tilt images associated with any particle in the dataset
         """
-        images_per_ptcl = self.star.df[self.star.header_ptcl_visible_frames].str.count('1').sum().to_numpy()
+        images_per_ptcl = self.star.df[self.star.header_ptcl_visible_frames].str.count('1').to_numpy()
         ntilts_per_ptcl, ptcl_counts_per_ntilt = np.unique(images_per_ptcl, return_counts=True)
         ntilts_min = min(ntilts_per_ptcl)
         ntilts_max = max(ntilts_per_ptcl)
