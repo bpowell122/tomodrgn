@@ -1317,12 +1317,10 @@ class TomoParticlesStarfile(GenericStarfile):
         self.header_coord_z = None
 
         self.header_ptcl_uid = None
-        self.header_ptcl_dose = None
-        self.header_ptcl_tilt = None
         self.header_ptcl_image = None
         self.header_ptcl_micrograph = None
 
-        self.header_image_random_split = None
+        self.header_image_random_split = '_tomodrgnRandomSubset'
         self.image_ctf_corrected = None
         self.image_dose_weighted = None
         self.image_tilt_weighted = None
@@ -1545,14 +1543,269 @@ class TomoParticlesStarfile(GenericStarfile):
     def get_image_size(self):
         raise NotImplementedError
 
-    def filter(self, ind_imgs=None, ind_ptcls=None, sort_ptcl_imgs='unsorted', use_first_ntilts=-1, use_first_nptcls=-1):
-        raise NotImplementedError
+    def filter(self,
+               ind_imgs: np.ndarray | str = None,
+               ind_ptcls: np.ndarray | str = None,
+               sort_ptcl_imgs: Literal['unsorted', 'dose_ascending', 'random'] = 'unsorted',
+               use_first_ntilts: int = -1,
+               use_first_nptcls: int = -1) -> None:
+        """
+        Filter the TomoParticlesStarfile in-place by image indices (e.g., datafram _rlnTomoVisibleFrames column) and particle indices (dataframe rows).
+        Operations are applied in order: `ind_img -> ind_ptcl -> sort_ptcl_imgs -> use_first_ntilts -> use_first_nptcls`.
 
-    def make_test_train_split(self, fraction_split1=0.5, show_summary_stats=True):
-        raise NotImplementedError
+        :param ind_imgs: numpy array or path to numpy array of integer images to preserve, shape (nimgs),
+                Sets values in the _rlnTomoVisibleFrames column to 0 if that image's index is not in ind_imgs.
+        :param ind_ptcls: numpy array or path to numpy array of integer particle indices to preserve, shape (nptcls).
+                Drops particles from the dataframe if that particle's index is not in ind_ptcls.
+        :param sort_ptcl_imgs: sort the star file images on a per-particle basis by the specified criteria.
+                This is primarily useful in combination with ``use_first_ntilts`` to get the first ``ntilts`` images of each particle after sorting.
+        :param use_first_ntilts: keep the first `use_first_ntilts` images (of those images previously marked to be included by _rlnTomoVisibleFrames) of each particle in the sorted star file.
+                Default -1 means to use all. Will drop particles with fewer than this many tilt images.
+        :param use_first_nptcls: keep the first `use_first_nptcls` particles in the sorted star file.
+                Default -1 means to use all.
+        :return: None
+        """
 
-    def plot_particle_uid_ntilt_distribution(self, outpath):
-        raise NotImplementedError
+        # save inputs as attributes of object for ease of future saving config
+        self.ind_imgs = ind_imgs
+        self.ind_ptcls = ind_ptcls
+        self.sort_ptcl_imgs = sort_ptcl_imgs
+        self.use_first_ntilts = use_first_ntilts
+        self.use_first_nptcls = use_first_nptcls
+
+        # how many particles does the star file initially contain
+        ptcls_unique_list = self.df[self.header_ptcl_uid].unique().to_numpy()
+        utils.log(f'Found {len(ptcls_unique_list)} particles in input star file')
+
+        # filter by image (row of dataframe) by presupplied indices
+        if ind_imgs is not None:
+            utils.log('Filtering particle images by supplied indices')
+
+            if type(ind_imgs) is str:
+                if ind_imgs.endswith('.pkl'):
+                    ind_imgs = utils.load_pkl(ind_imgs)
+                else:
+                    raise ValueError(f'Expected .pkl file for {ind_imgs=}')
+
+            assert min(ind_imgs) >= 0, 'The minimum allowable image index is 0'
+            nimgs_total = self.df[self.header_ptcl_visible_frames].str.count('0|1').sum()
+            assert max(ind_imgs) <= nimgs_total, f'The maximum allowable image index is the total number of images referenced in {self.header_ptcl_visible_frames}: {nimgs_total}'
+            unique_ind_imgs, unique_ind_imgs_counts = np.unique(ind_imgs, return_counts=True)
+            assert np.all(unique_ind_imgs_counts == 1), f'Repeated image indices are not allowed, found the following repeated image indices: {unique_ind_imgs[unique_ind_imgs_counts != 1]}'
+
+            nimgs_total = self.df[self.header_ptcl_visible_frames].str.count('0|1').sum()
+            ind_imgs_mask = np.zeros(nimgs_total)
+            ind_imgs_mask[ind_imgs] = 1
+
+            masked_visible_frames = []
+            ind_img_cursor = 0
+            for ptcl_visible_frames in self.df[self.header_ptcl_visible_frames]:
+                # convert the original visible frames from string of list to list of ints
+                original_ptcl_visible_frames = ast.literal_eval(ptcl_visible_frames)
+                # get the number of images in this image as the window width to draw from the ind_imgs_mask
+                imgs_this_ptcl = len(original_ptcl_visible_frames)
+                # only preserve images that were both initially marked 1 and are selected by ind_imgs
+                masked_ptcl_visible_frames = np.logical_and(original_ptcl_visible_frames, ind_imgs_mask[ind_img_cursor: ind_img_cursor + imgs_this_ptcl]).astype(int)
+                # recast this array of ints to the same input format (str of list) and append to an overall list for all particles
+                masked_visible_frames.append(f'[{",".join([str(include) for include in masked_ptcl_visible_frames])}]')
+                # increment the global image index offset by the number of images in this particle so that the next iteration's particle is correctly masked
+                ind_img_cursor += imgs_this_ptcl
+
+            self.df[self.header_ptcl_visible_frames] = masked_visible_frames
+
+        # filter by particle (group of rows sharing common header_ptcl_uid) by presupplied indices
+        if ind_ptcls is not None:
+            utils.log('Filtering particles by supplied indices')
+
+            if type(ind_ptcls) is str:
+                if ind_ptcls.endswith('.pkl'):
+                    ind_ptcls = utils.load_pkl(ind_ptcls)
+                else:
+                    raise ValueError(f'Expected .pkl file for {ind_ptcls=}')
+
+            assert min(ind_ptcls) >= 0
+            assert max(ind_ptcls) <= len(ptcls_unique_list)
+            unique_ind_ptcls, unique_ind_ptcls_counts = np.unique(ind_imgs, return_counts=True)
+            assert np.all(unique_ind_ptcls_counts == 1), f'Repeated particle indices are not allowed, found the following repeated particle indices: {unique_ind_ptcls[unique_ind_ptcls_counts != 1]}'
+
+            # recalculate the ptcls_unique_list due to possible upstream filtering invalidating the original list
+            ptcls_unique_list = self.df[self.header_ptcl_uid].unique().to_numpy()
+            ptcls_unique_list = ptcls_unique_list[ind_ptcls]
+            self.df = self.df[self.df[self.header_ptcl_uid].isin(ptcls_unique_list)]
+            self.df = self.df.reset_index(drop=True)
+
+        # sort the star file per-particle by the specified method
+        if sort_ptcl_imgs != 'unsorted':
+            utils.log(f'Sorting star file per-particle by {sort_ptcl_imgs}')
+            sorted_visible_frames = []
+            # apply sorting to TomoTomogramsStarfile by sorting rows per-tomogram-block, then apply updated tilt indexing to TomoParticlesStarfile header_ptcl_visible_frames to keep metadata in sync
+            for tomo_name, ptcl_group_df in self.df.groupby(self.header_ptcl_tomogram):
+
+                if sort_ptcl_imgs == 'dose_ascending':
+                    # sort the tilts of this tomo by dose
+                    self.tomograms_star.blocks[f'data_{tomo_name}'] = self.tomograms_star.blocks[f'data_{tomo_name}'].sort_values(by=self.header_tomo_dose, ascending=True)
+                elif sort_ptcl_imgs == 'random':
+                    # sort the tilts of this tomo randomly
+                    self.tomograms_star.blocks[f'data_{tomo_name}'] = self.tomograms_star.blocks[f'data_{tomo_name}'].sample(frac=1)
+                else:
+                    raise ValueError(f'Unsupported value for {sort_ptcl_imgs=}')
+
+                # update the ordering of images via header_ptcl_visible_frames to match the corresponding tomogram df index
+                reordered_tilts_this_tomo = self.tomograms_star.blocks[f'data_{tomo_name}'].index.to_numpy()
+                for ptcl_visible_frames in ptcl_group_df[self.header_ptcl_visible_frames]:
+                    # convert the original visible frames from string of list to list of ints
+                    original_ptcl_visible_frames = ast.literal_eval(ptcl_visible_frames)
+                    # reindex this image's visible frames
+                    sorted_ptcl_visible_frames = np.array(original_ptcl_visible_frames)[reordered_tilts_this_tomo]
+                    # recast this array of ints to the same input format (str of list) and append to an overall list for all particles
+                    sorted_visible_frames.append(f'[{",".join([str(include) for include in sorted_ptcl_visible_frames])}]')
+
+            # update the particles df header_ptcl_visible_frames to the newly sorted visible_frames
+            self.df[self.header_ptcl_visible_frames] = sorted_visible_frames
+
+        # keep the first ntilts images of each particle
+        if use_first_ntilts != -1:
+            utils.log(f'Keeping first {use_first_ntilts} images of each particle. Excluding particles with fewer than this many images.')
+
+            assert use_first_ntilts > 0
+
+            particles_to_drop_insufficient_tilts = []
+            masked_visible_frames = []
+            for ind_ptcl, ptcl_visible_frames in enumerate(self.df[self.header_ptcl_visible_frames]):
+                # convert the original visible frames from string of list to list of ints
+                original_ptcl_visible_frames = ast.literal_eval(ptcl_visible_frames)
+
+                # preserve the first use_first_ntilts frames that are already marked include (1); set the remaineder to not include (0)
+                original_ptcl_visible_frames = np.asarray(original_ptcl_visible_frames)
+                cumulative_ptcl_visible_frames = np.cumsum(original_ptcl_visible_frames)
+                masked_ptcl_visible_frames = [include if cumulative < use_first_ntilts else 0 for include, cumulative in zip(original_ptcl_visible_frames, cumulative_ptcl_visible_frames)]
+
+                # check how many images are now included for this particle; add this particle to the list to be dropped if fewer than use_first_ntilts
+                if sum(masked_ptcl_visible_frames) < use_first_ntilts:
+                    particles_to_drop_insufficient_tilts.append(ind_ptcl)
+
+                # recast this array of ints to the same input format (str of list) and append to an overall list for all particles
+                masked_visible_frames.append(f'[{",".join([str(include) for include in masked_ptcl_visible_frames])}]')
+
+            # update the particles df header_ptcl_visible_frames to the newly masked visible_frames
+            self.df[self.header_ptcl_visible_frames] = masked_visible_frames
+
+            # drop particles (rows) with fewer than use_first_ntilts
+            self.df = self.df.drop(particles_to_drop_insufficient_tilts).reset_index(drop=True)
+
+        # keep the first nptcls particles
+        if use_first_nptcls != -1:
+            utils.log(f'Keeping first {use_first_nptcls=} particles.')
+
+            assert use_first_nptcls > 0
+
+            # recalculate the ptcls_unique_list due to possible upstream filtering invalidating the original list
+            ptcls_unique_list = self.df[self.header_ptcl_uid].unique().to_numpy()
+            ptcls_unique_list = ptcls_unique_list[:use_first_nptcls]
+            self.df = self.df[self.df[self.header_ptcl_uid].isin(ptcls_unique_list)]
+            self.df = self.df.reset_index(drop=True)
+
+        # reset indexing of TomoTomogramsStarfile tomogram block rows and of TomoParticlesStarfile header_ptcl_visible_frames to keep image indexing in .mrcs consistent with metadata indexing in .star
+        # only necessary if images were sorted
+        if sort_ptcl_imgs != 'unsorted':
+
+            unsorted_visible_frames = []
+            for tomo_name, ptcl_group_df in self.df.groupby(self.header_ptcl_tomogram):
+
+                # create temporary index of sorted images
+                self.tomograms_star.blocks[f'data_{tomo_name}']['_reindexed_img_order'] = np.arange(len(self.tomograms_star.blocks[f'data_{tomo_name}']))
+
+                # undo the tilt image sorting applied by sort_ptcl_imgs
+                self.tomograms_star.blocks[f'data_{tomo_name}'] = self.tomograms_star.blocks[f'data_{tomo_name}'].sort_index()
+
+                # undo the header_ptcl_visible_frames sorting applied by sort_ptcl_imgs
+                reordered_tilts_this_tomo = self.tomograms_star.blocks[f'data_{tomo_name}']['_reindexed_img_order'].to_numpy()
+                for ptcl_visible_frames in ptcl_group_df[self.header_ptcl_visible_frames]:
+                    # convert the original visible frames from string of list to list of ints
+                    original_ptcl_visible_frames = ast.literal_eval(ptcl_visible_frames)
+                    # reindex this image's visible frames
+                    sorted_ptcl_visible_frames = np.array(original_ptcl_visible_frames)[reordered_tilts_this_tomo]
+                    # recast this array of ints to the same input format (str of list) and append to an overall list for all particles
+                    unsorted_visible_frames.append(f'[{",".join([str(include) for include in sorted_ptcl_visible_frames])}]')
+
+                # remove the temporary index of sorted images
+                self.tomograms_star.blocks[f'data_{tomo_name}'] = self.tomograms_star.blocks[f'data_{tomo_name}'].drop(['_reindexed_img_order'], axis=1)
+
+            # update the particles df header_ptcl_visible_frames to the newly unsorted visible_frames
+            self.df[self.header_ptcl_visible_frames] = unsorted_visible_frames
+
+    def make_test_train_split(self,
+                              fraction_split1: float = 0.5,
+                              show_summary_stats: bool = True) -> None:
+        """
+        Create indices for tilt images assigned to train vs test split.
+        Images are randomly assigned to one set or the other by precisely respecting `fraction_train` on a per-particle basis.
+        Random split is stored in `self.df` under the `self.header_image_random_split` column as a list of ints in (0, 1, 2) with length `self.header_ptcl_visible_frames`.
+        These values map as follows:
+        * 0: images marked to not include (value 0) in `self.header_ptcl_visible_frames`.
+        * 1: images marked to include (value 1) in `self.header_ptcl_visible_frames`, assigned to image-level half-set 1
+        * 2: images marked to include (value 1) in `self.header_ptcl_visible_frames`, assigned to image-level half-set 2
+
+        :param fraction_split1: fraction of each particle's included tilt images to label split1. All other included images will be labeled split2.
+        :param show_summary_stats: log distribution statistics of particle sampling for test/train splits
+        :return: None
+        """
+
+        # check required inputs are present
+        assert 0 < fraction_split1 <= 1.0
+
+        # get indices associated with train and test
+        train_test_split = []
+        for ptcl_visible_frames in self.df[self.header_ptcl_visible_frames]:
+            # cast the array of visible frames from str of list to array of int
+            ptcl_visible_frames = np.asarray(ast.literal_eval(ptcl_visible_frames))
+
+            # get the number of included images, and split this set into the number of included assigned to train/test
+            ptcl_n_imgs = np.sum(ptcl_visible_frames == 1)
+            ptcl_n_imgs_train = np.rint(ptcl_n_imgs * fraction_split1).astype(int)
+            ptcl_n_imgs_test = ptcl_n_imgs - ptcl_n_imgs_train
+
+            # the initial array of ptcl_visible_frames already contains values in (0,1); set random ptcl_img_inds_test indices from 1 (include split1) to 2 (include split2)
+            ptcl_img_inds = np.flatnonzero(ptcl_visible_frames == 1)
+            ptcl_img_inds_test = np.random.choice(a=ptcl_img_inds, size=ptcl_n_imgs_test, replace=False)
+            ptcl_visible_frames[ptcl_img_inds_test] = 2
+
+            train_test_split.append(ptcl_visible_frames)
+
+        # store random split in particles dataframe
+        self.df[self.header_image_random_split] = train_test_split
+
+        # provide summary statistics
+        if show_summary_stats:
+            ntilts_imgs_train = [np.sum(ptcl_imgs == 1) for ptcl_imgs in train_test_split]
+            ntilts_imgs_test = [np.sum(ptcl_imgs == 2) for ptcl_imgs in train_test_split]
+            print(set(ntilts_imgs_train), set(ntilts_imgs_test))
+            utils.log(f'    Number of tilts sampled by inds_train: {set(ntilts_imgs_train)}')
+            utils.log(f'    Number of tilts sampled by inds_test: {set(ntilts_imgs_test)}')
+
+    def plot_particle_uid_ntilt_distribution(self,
+                                             outpath: str) -> None:
+        """
+        Plot the distribution of the number of tilt images per particle as a line plot (against star file particle index) and as a histogram.
+
+        :param outpath: file name to save the plot
+        :return: None
+        """
+        ntilts_per_ptcl = self.df[self.header_ptcl_visible_frames].str.count('1').to_numpy()
+        unique_ntilts_per_ptcl, ptcl_counts_per_unique_ntilt = np.unique(ntilts_per_ptcl, return_counts=True)
+
+        fig, (ax1, ax2) = plt.subplots(2, 1)
+        ax1.plot(ntilts_per_ptcl, linewidth=0.5)
+        ax1.set_xlabel('star file particle index')
+        ax1.set_ylabel('ntilts per particle')
+
+        ax2.bar(unique_ntilts_per_ptcl, ptcl_counts_per_unique_ntilt)
+        ax2.set_xlabel('ntilts per particle')
+        ax2.set_ylabel('count')
+
+        plt.tight_layout()
+        plt.savefig(outpath, dpi=200)
+        plt.close()
 
     def get_particles_stack(self,
                             *,

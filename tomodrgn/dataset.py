@@ -497,15 +497,31 @@ class TomoParticlesMRCData(data.Dataset):
         self.l_dose_mask = l_dose_mask
         self.norm = norm
 
-        # filter particle images by random subset within each particle
+        # filter particle images by random image subset within each particle
         if self.star_random_subset == -1:
+            # keeping all images of all particles, regardless of split1 / split2 label
             pass
         elif self.star_random_subset == 1:
-            self.star.df = self.star.df.drop(self.star.df.loc[self.star.df[self.star.header_image_random_split] != 1].index).reset_index(drop=True)
+            # only keep included images assigned to split1 (set images assigned to split2 to NOT include)
+            halfset_visible_frames = []
+            for ptcl_visible_frames, ptcl_train_test_split in self.star.df[[self.star.header_ptcl_visible_frames, self.star.header_image_random_split]].to_numpy():
+                ptcl_visible_frames = np.asarray(ast.literal_eval(ptcl_visible_frames))
+                ptcl_visible_frames[ptcl_train_test_split == 2] = 0
+                halfset_visible_frames.append(f'[{",".join([str(include) for include in ptcl_visible_frames])}]')
+            self.star.df[self.star.header_ptcl_visible_frames] = halfset_visible_frames
         elif self.star_random_subset == 2:
-            self.star.df = self.star.df.drop(self.star.df.loc[self.star.df[self.star.header_image_random_split] != 2].index).reset_index(drop=True)
+            # only keep included images assigned to split2 (set images assigned to split1 to NOT include)
+            halfset_visible_frames = []
+            for ptcl_visible_frames, ptcl_train_test_split in self.star.df[[self.star.header_ptcl_visible_frames, self.star.header_image_random_split]].to_numpy():
+                ptcl_visible_frames = np.asarray(ast.literal_eval(ptcl_visible_frames))
+                ptcl_visible_frames[ptcl_train_test_split == 1] = 0
+                halfset_visible_frames.append(f'[{",".join([str(include) for include in ptcl_visible_frames])}]')
+            self.star.df[self.star.header_ptcl_visible_frames] = halfset_visible_frames
         else:
             raise ValueError(f'Random star subset label not supported: {self.star_random_subset}. Must be either `1` or `2`')
+        # drop particles that now have 0 visible frames (keeping these will likely cause downstream problems loading images / assigning z to particles with no data)
+        ptcl_inds_to_drop = self.star.df[self.star.df[self.star.header_ptcl_visible_frames].str.count('1') == 0].index.to_numpy()
+        self.star.df = self.star.df.drop(ptcl_inds_to_drop, axis=0).reset_index(drop=True)
 
         # filter particles by image indices and particle indices
         self.ptcls_list = self.star.df[self.star.header_ptcl_uid].unique()
@@ -609,6 +625,7 @@ class TomoParticlesMRCData(data.Dataset):
         """
         Load pose parameters from TomoParticlesStarfile associated with this TomoParticlesMRCData object to numpy array.
         The optimisation set structuring of metadata means we need to combine the per-tilt-series geometry in the TomoTomogramsStarfile with per-particle poses in the TomoParticlesStarfile.
+        # TODO include fine pose shifts from TomoTrajectoriesFile
 
         :return: rot: numpy array of rotation matrices, shape (nimgs, 3, 3)
         :return: trans: numpy array of translation vectors in pixels, shape (nimgs, 2)
