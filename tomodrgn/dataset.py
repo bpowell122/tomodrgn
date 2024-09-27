@@ -889,3 +889,24 @@ class TomoParticlesMRCData(data.Dataset):
         norm[0] = 0.0
         utils.log(f'Normalizing HT by {norm[0]} +/- {norm[1]}')
         return norm
+
+
+def load_sta_dataset(ptcls_star: starfile.TiltSeriesStarfile | starfile.TomoParticlesStarfile,
+                     *args,
+                     **kwargs) -> TiltSeriesMRCData | TomoParticlesMRCData:
+    """
+    Loads a tomodrgn particles dataset class (either ``TiltSeriesMRCData`` or ``TomoParticlesMRCData``) given an instantiated star file handler class.
+    Loads particle image data, pose parameters, CTF parameters, dose and tilt weighting parameters, etc.
+    This is the preferred way of creating a tomodrgn dataset class instance.
+
+    :param ptcls_star: pre-existing starfile object used to obtain file paths and metadata in creating the returned dataset object.
+    :return: The created dataset object (either ``TiltSeriesMRCData`` or ``TomoParticlesMRCData``)
+    """
+
+    if type(ptcls_star) is starfile.TiltSeriesStarfile:
+        return TiltSeriesMRCData(*args, **kwargs)
+    elif type(ptcls_star) is starfile.TomoParticlesStarfile:
+        return TomoParticlesMRCData(*args, **kwargs)
+    else:
+        raise ValueError(f'Unrecognized input star file type: {type(ptcls_star)}. '
+                         f'Must be one of ``tomodrgn.starfile.TiltSeriesStarfile`` or ``tomodrgn.starfile.TomoParticlesStarfile``.')
