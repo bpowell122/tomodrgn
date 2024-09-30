@@ -524,7 +524,7 @@ class TomoParticlesMRCData(data.Dataset):
         self.star.df = self.star.df.drop(ptcl_inds_to_drop, axis=0).reset_index(drop=True)
 
         # filter particles by image indices and particle indices
-        self.ptcls_list = self.star.df[self.star.header_ptcl_uid].unique()
+        self.ptcls_list = self.star.df.index.to_numpy()
         self.nimgs = self.star.df[self.star.header_ptcl_visible_frames].str.count('1').sum()
         self.nptcls = len(self.ptcls_list)
 
@@ -551,7 +551,7 @@ class TomoParticlesMRCData(data.Dataset):
         # load the CTF parameters
         ctf_params = self._load_ctf_params()
         self.ctf_params = ctf_params
-        self.boxsize_ht = int(self.ctf_params[0, 0] + 1)
+        self.boxsize_ht = int(self.star.df[self.star.header_ptcl_box_size].to_numpy()[0]) + 1
 
         # get dose weights and masks for each spatial frequency
         self.cumulative_doses = np.concatenate([self.star.tomograms_star.blocks[f'data_{tomo_name}'][self.star.header_tomo_dose].to_numpy(dtype=np.float32)
@@ -655,27 +655,35 @@ class TomoParticlesMRCData(data.Dataset):
             # PARTICLE ROTATIONS
             # get (n_particles, 3, 3) particle rotation_matrices
             ptcl_euler_angles = ptcl_group_df[self.star.headers_rot].to_numpy()
-            ptcl_rotation_matrices = Rotation.from_euler(seq='ZYZ', angles=ptcl_euler_angles, degrees=True).inv().as_matrix()
+            ptcl_rotation_matrices = Rotation.from_euler(seq='ZYZ', angles=ptcl_euler_angles, degrees=True).inv().as_matrix()  # equivalent to tomodrgn.utils.rot_3d_from_relion in TiltSeriesMRCData
 
             # get (n_particles, n_tilts, 3, 3) per particle per tilt rotation matrices
             ptcl_rotation_matrices = einops.rearrange(ptcl_rotation_matrices, 'nptcls i j -> nptcls 1 i j')
-            ptcl_rotation_matrices = ptcl_rotation_matrices @ tilt_rotation_matrices  # (nptcls, 1, 3, 3) @ (ntilts, 3, 3) -> (nptcls, ntilts, 3, 3)
+            ptcl_rotation_matrices = tilt_rotation_matrices @ ptcl_rotation_matrices  # (ntilts, 3, 3) @ (nptcls, 1, 3, 3) -> (nptcls, ntilts, 3, 3)
             ptcl_rotation_matrices = einops.rearrange(ptcl_rotation_matrices, 'nptcls ntilts i j -> (nptcls ntilts) i j')
-
-            # save per-particle-per-tilt rotations from this tomogram
-            rots.append(ptcl_rotation_matrices)
 
             # PARTICLE TRANSLATIONS
             # get (n_particles, 3) particle translation matrices (units: px)
             ptcl_trans_matrices = ptcl_group_df[self.star.headers_trans].to_numpy()
 
             # get (n_particles, n_tilts, 3) per particle per tilt translation matrices
-            ptcl_trans_matrices = einops.rearrange(ptcl_trans_matrices, 'nptcls i -> nptcls 1 1 i')
-            ptcl_trans_matrices = ptcl_trans_matrices @ tilt_rotation_matrices  # (nptcls, 1, 1, 3) @ (ntilts, 3, 3) -> (nptcls, ntilts, 1, 3)
-            ptcl_trans_matrices = einops.rearrange(ptcl_trans_matrices, 'nptcls ntilts 1 i -> (nptcls ntilts) i')
+            ptcl_trans_matrices = einops.rearrange(ptcl_trans_matrices, 'nptcls i -> nptcls 1 i 1')
+            ptcl_trans_matrices = tilt_rotation_matrices @ ptcl_trans_matrices  # (ntilts, 3, 3) @ (nptcls, 1, 3, 1) -> (nptcls, ntilts, 3, 1)
+            ptcl_trans_matrices = einops.rearrange(ptcl_trans_matrices, 'nptcls ntilts i 1 -> (nptcls ntilts) i')
+
+            # only keeping translations in X and Y
+            ptcl_trans_matrices = ptcl_trans_matrices[:, :2]
+            ptcl_trans_matrices *= -1
+
+            # SAVE POSES
+            # get (n_particles * ntilts) mask of which images are loaded for each particle
+            ptcl_visible_frames = np.hstack([ast.literal_eval(visible_frames) for visible_frames in ptcl_group_df[self.star.header_ptcl_visible_frames]]).astype(bool)
+
+            # save per-particle-per-tilt rotations from this tomogram
+            rots.append(ptcl_rotation_matrices[ptcl_visible_frames].astype(np.float32))
 
             # save per-particle-per-tilt translations from this tomogram
-            trans.append(ptcl_trans_matrices)
+            trans.append(ptcl_trans_matrices[ptcl_visible_frames].astype(np.float32))
 
         rots = np.concatenate(rots)
         trans = np.concatenate(trans)
@@ -904,9 +912,9 @@ def load_sta_dataset(ptcls_star: starfile.TiltSeriesStarfile | starfile.TomoPart
     """
 
     if type(ptcls_star) is starfile.TiltSeriesStarfile:
-        return TiltSeriesMRCData(*args, **kwargs)
+        return TiltSeriesMRCData(ptcls_star, *args, **kwargs)
     elif type(ptcls_star) is starfile.TomoParticlesStarfile:
-        return TomoParticlesMRCData(*args, **kwargs)
+        return TomoParticlesMRCData(ptcls_star, *args, **kwargs)
     else:
         raise ValueError(f'Unrecognized input star file type: {type(ptcls_star)}. '
                          f'Must be one of ``tomodrgn.starfile.TiltSeriesStarfile`` or ``tomodrgn.starfile.TomoParticlesStarfile``.')

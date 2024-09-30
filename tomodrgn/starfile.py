@@ -1338,19 +1338,19 @@ class TomoParticlesStarfile(GenericStarfile):
         if source_software == 'auto':
             self._infer_metadata_mapping()
         elif source_software == TomoParticlesStarfileStarHeaders.warptools.name:
+            utils.log(f'Using STAR source software: {TomoParticlesStarfileStarHeaders.warptools.name}')
             self._warptools_metadata_mapping()
         elif source_software == TomoParticlesStarfileStarHeaders.relion.name:
+            utils.log(f'Using STAR source software: {TomoParticlesStarfileStarHeaders.relion.name}')
             self._relion_metadata_mapping()
         else:
             raise ValueError(f'Unrecognized source_software {source_software} not one of known starfile sources for TomoParticlesStarfile {TOMOPARTICLESSTARFILE_STAR_SOURCES}')
 
     def _warptools_metadata_mapping(self):
-        utils.log(f'Using STAR source software: {TomoParticlesStarfileStarHeaders.warptools.name}')
-        raise NotImplementedError
+        # in the examples I have seen so far, the warptools metadata and relion metadata are equivalent for the fields required by tomodrgn
+        self._relion_metadata_mapping()
 
     def _relion_metadata_mapping(self):
-        utils.log(f'Using STAR source software: {TomoParticlesStarfileStarHeaders.relion.name}')
-
         # TomoParticlesStarfile optics block and contents
         self.block_optics = 'data_optics'
 
@@ -1374,11 +1374,12 @@ class TomoParticlesStarfile(GenericStarfile):
         self.header_coord_y = '_rlnCoordinateY'
         self.header_coord_z = '_rlnCoordinateZ'
 
-        self.header_ptcl_uid = '_rlnTomoParticleId'
+        self.header_ptcl_uid = 'index'
         self.header_ptcl_image = '_rlnImageName'
         self.header_ptcl_tomogram = '_rlnTomoName'
         self.header_image_random_split = '_rlnRandomSubset'
         self.header_ptcl_visible_frames = '_rlnTomoVisibleFrames'
+        self.header_ptcl_box_size = '_rlnImageSize'
 
         # TomoTomogramsStarfile global block and contents -- NOT accessible from this class directly
         self.header_ctf_voltage = '_rlnVoltage'
@@ -1432,9 +1433,11 @@ class TomoParticlesStarfile(GenericStarfile):
         match headers:
 
             case TomoParticlesStarfileStarHeaders.warptools.value:
+                utils.log(f'Using STAR source software: {TomoParticlesStarfileStarHeaders.warptools.name}')
                 self._warptools_metadata_mapping()
 
             case TomoParticlesStarfileStarHeaders.relion.value:
+                utils.log(f'Using STAR source software: {TomoParticlesStarfileStarHeaders.relion.name}')
                 self._relion_metadata_mapping()
 
             case _:
@@ -1574,10 +1577,9 @@ class TomoParticlesStarfile(GenericStarfile):
         self.use_first_nptcls = use_first_nptcls
 
         # how many particles does the star file initially contain
-        ptcls_unique_list = self.df[self.header_ptcl_uid].unique().to_numpy()
-        utils.log(f'Found {len(ptcls_unique_list)} particles in input star file')
+        utils.log(f'Found {len(self.df)} particles in input star file')
 
-        # filter by image (row of dataframe) by presupplied indices
+        # filter by image (element of _rlnTomoVisibleFrames list per row) by presupplied indices
         if ind_imgs is not None:
             utils.log('Filtering particle images by supplied indices')
 
@@ -1613,7 +1615,7 @@ class TomoParticlesStarfile(GenericStarfile):
 
             self.df[self.header_ptcl_visible_frames] = masked_visible_frames
 
-        # filter by particle (group of rows sharing common header_ptcl_uid) by presupplied indices
+        # filter by particle (df row) by presupplied indices
         if ind_ptcls is not None:
             utils.log('Filtering particles by supplied indices')
 
@@ -1624,15 +1626,11 @@ class TomoParticlesStarfile(GenericStarfile):
                     raise ValueError(f'Expected .pkl file for {ind_ptcls=}')
 
             assert min(ind_ptcls) >= 0
-            assert max(ind_ptcls) <= len(ptcls_unique_list)
+            assert max(ind_ptcls) <= len(self.df)
             unique_ind_ptcls, unique_ind_ptcls_counts = np.unique(ind_imgs, return_counts=True)
             assert np.all(unique_ind_ptcls_counts == 1), f'Repeated particle indices are not allowed, found the following repeated particle indices: {unique_ind_ptcls[unique_ind_ptcls_counts != 1]}'
 
-            # recalculate the ptcls_unique_list due to possible upstream filtering invalidating the original list
-            ptcls_unique_list = self.df[self.header_ptcl_uid].unique().to_numpy()
-            ptcls_unique_list = ptcls_unique_list[ind_ptcls]
-            self.df = self.df[self.df[self.header_ptcl_uid].isin(ptcls_unique_list)]
-            self.df = self.df.reset_index(drop=True)
+            self.df = self.df.iloc[ind_ptcls, :].reset_index(drop=True)
 
         # sort the star file per-particle by the specified method
         if sort_ptcl_imgs != 'unsorted':
@@ -1700,10 +1698,7 @@ class TomoParticlesStarfile(GenericStarfile):
             assert use_first_nptcls > 0
 
             # recalculate the ptcls_unique_list due to possible upstream filtering invalidating the original list
-            ptcls_unique_list = self.df[self.header_ptcl_uid].unique().to_numpy()
-            ptcls_unique_list = ptcls_unique_list[:use_first_nptcls]
-            self.df = self.df[self.df[self.header_ptcl_uid].isin(ptcls_unique_list)]
-            self.df = self.df.reset_index(drop=True)
+            self.df = self.df.iloc[:use_first_nptcls, :].reset_index(drop=True)
 
         # reset indexing of TomoTomogramsStarfile tomogram block rows and of TomoParticlesStarfile header_ptcl_visible_frames to keep image indexing in .mrcs consistent with metadata indexing in .star
         # only necessary if images were sorted

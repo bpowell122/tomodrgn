@@ -25,7 +25,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
         # this script is called from tomodrgn.__main__ entry point, in which case a parser is already created
         pass
 
-    parser.add_argument('particles', type=os.path.abspath, help='Input particles_imageseries.star (if using Warp/M or NextPYP), or optimisation set star file (if using WarpTools or RELION v5')
+    parser.add_argument('particles', type=os.path.abspath, help='Input particles_imageseries.star (if using Warp/M or NextPYP), or optimisation set star file (if using WarpTools or RELION v5)')
     parser.add_argument('--output', type=os.path.abspath, required=True, help='Output .mrc file')
     parser.add_argument('--plot-format', type=str, choices=['png', 'svgz'], default='png', help='File format with which to save plots')
 
