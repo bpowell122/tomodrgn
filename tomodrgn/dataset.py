@@ -673,7 +673,6 @@ class TomoParticlesMRCData(data.Dataset):
 
             # only keeping translations in X and Y
             ptcl_trans_matrices = ptcl_trans_matrices[:, :2]
-            ptcl_trans_matrices *= -1
 
             # SAVE POSES
             # get (n_particles * ntilts) mask of which images are loaded for each particle
