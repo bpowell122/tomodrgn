@@ -1806,6 +1806,7 @@ class TomoParticlesStarfile(GenericStarfile):
                             *,
                             datadir: str = None,
                             lazy: bool = False,
+                            check_headers: bool = False,
                             **kwargs) -> np.ndarray | list[mrc.LazyImageStack]:
         """
         Load the particles referenced in the TomoParticlesStarfile.
@@ -1813,8 +1814,11 @@ class TomoParticlesStarfile(GenericStarfile):
         The column specifying the path to images on disk must not specify the image index to load from that file (i.e., syntax like ``1@/path/to/stack.mrcs`` is not supported).
         Instead, specification of which images to load for each particle should be done in the ``_rlnTomoVisibleFrames`` column.
 
-        :param datadir: absolute path to particle images .mrcs to override particles_path_column
-        :param lazy: whether to load particle images now in memory (False) or later on-the-fly (True)
+        :param datadir: absolute path to particle images .mrcs to override particles_path_column.
+        :param lazy: whether to load particle images now in memory (False) or later on-the-fly (True).
+        :param check_headers: whether to parse each file's header to ensure consistency in dtype and array shape in X,Y (True),
+                or to use the first .mrc(s) file as representative for the dataset (False).
+                Caution that settting ``False`` is faster, but assumes that the first file's header is representative of all files.
         :return: np.ndarray of shape (n_ptcls * n_tilts, D, D) or list of LazyImage objects of length (n_ptcls * n_tilts)
         """
         # assert that no paths include `@` specification of individual images to load from the referenced file
@@ -1832,12 +1836,18 @@ class TomoParticlesStarfile(GenericStarfile):
         all_ptcls_visible_frames = [[index for index, include in enumerate(ptcl_visible_frames) if include == 1] for ptcl_visible_frames in all_ptcls_visible_frames]  # [[0, 1], [0, 1, 2], ...]
 
         # create the LazyImageStack object for each particle
-        lazyparticles = [mrc.LazyImageStack(fname=ptcl_mrcs_file, indices_image=ptcl_visible_frames)
-                         for ptcl_mrcs_file, ptcl_visible_frames in zip(ptcl_mrcs_files, all_ptcls_visible_frames, strict=True)]
+        if check_headers:
+            lazyparticles = [mrc.LazyImageStack(fname=ptcl_mrcs_file, indices_image=ptcl_visible_frames, representative_header=None)
+                             for ptcl_mrcs_file, ptcl_visible_frames in zip(ptcl_mrcs_files, all_ptcls_visible_frames, strict=True)]
 
-        # assert that all files have the same dtype and same image shape
-        assert all([ptcl.dtype_image == lazyparticles[0].dtype_image for ptcl in lazyparticles])
-        assert all([ptcl.shape_image == lazyparticles[0].shape_image for ptcl in lazyparticles])
+            # assert that all files have the same dtype and same image shape
+            assert all([ptcl.dtype_image == lazyparticles[0].dtype_image for ptcl in lazyparticles])
+            assert all([ptcl.shape_image == lazyparticles[0].shape_image for ptcl in lazyparticles])
+
+        else:
+            representative_header = mrc.parse_header(fname=ptcl_mrcs_files[0])
+            lazyparticles = [mrc.LazyImageStack(fname=ptcl_mrcs_file, indices_image=ptcl_visible_frames, representative_header=representative_header)
+                             for ptcl_mrcs_file, ptcl_visible_frames in zip(ptcl_mrcs_files, all_ptcls_visible_frames, strict=True)]
 
         if lazy:
             return lazyparticles
