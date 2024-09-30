@@ -381,12 +381,28 @@ class LazyImageStack:
     Minimizes calls to file opening, file seeking, and file reading in single-process context.
     """
 
-    def __init__(self, fname, indices_image):
+    def __init__(self,
+                 fname: str,
+                 indices_image: list[int],
+                 representative_header: MRCHeader = None):
+        """
+        Create a LazyImageStack object from a file on disk.
+
+        :param fname: path to the .mrc(s) file on disk.
+        :param indices_image: list of integer indices of which sections (slow axis in the array) to load from the file.
+        :param representative_header: pre-existing MRCHeader object. Skips disk access during object creation that would otherwise be required to parse this file's header.
+                Causes the ``fname`` file to be loaded using values from ``representative_header`` for extended header bytes, array dtype, array shape in X,Y.
+        """
         # store the input file name
         self.fname = fname
 
-        # load the input file header as an MRCHeader object
-        header = MRCHeader.parse(fname)
+        if representative_header is None:
+            # load the input file header as an MRCHeader object
+            header = MRCHeader.parse(fname)
+        else:
+            # use a pre-existing MRCHeader object (skips disk access in parsing this file's header)
+            assert type(representative_header) is MRCHeader
+            header = representative_header
         self.header = header
 
         # store the indices of images to load from this file and group the indices into continuous blocks for contiguous reads
