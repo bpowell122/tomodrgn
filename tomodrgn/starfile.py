@@ -1320,6 +1320,7 @@ class TomoParticlesStarfile(GenericStarfile):
         self.header_ptcl_image = None
         self.header_ptcl_micrograph = None
 
+        self.header_ptcl_random_split = None
         self.header_image_random_split = '_tomodrgnRandomSubset'
         self.image_ctf_corrected = None
         self.image_dose_weighted = None
@@ -1377,7 +1378,8 @@ class TomoParticlesStarfile(GenericStarfile):
         self.header_ptcl_uid = 'index'
         self.header_ptcl_image = '_rlnImageName'
         self.header_ptcl_tomogram = '_rlnTomoName'
-        self.header_image_random_split = '_rlnRandomSubset'
+        self.header_ptcl_random_split = '_rlnRandomSubset'  # used for random split per-particle (e.g. from RELION)
+        self.header_image_random_split = '_tomodrgnRandomSubset'  # used for random split per-particle-image
         self.header_ptcl_visible_frames = '_rlnTomoVisibleFrames'
         self.header_ptcl_box_size = '_rlnImageSize'
 
@@ -1412,6 +1414,11 @@ class TomoParticlesStarfile(GenericStarfile):
         self.df[self.header_pose_tz] = self.df[self.header_pose_tz_angst] / self.df[self.header_ctf_angpix]
         if self.header_ctf_ps not in self.df.columns:
             self.df[self.header_ctf_ps] = np.zeros(len(self.df), dtype=float)
+
+        # convert the _rlnTomoVisibleFrames column from default dtype inferred by pandas (str of list of int, e.g. '[1,1,0,1,...]' to numpy array of ints
+        # more efficient (though less robust) than ast.literal_eval because we know the data structure ahead of time
+        self.df[self.header_ptcl_visible_frames] = [np.asarray([include for include in ptcl_frames.replace('[', '').replace(']', '').split(',')], dtype=int)
+                                                    for ptcl_frames in self.df[self.header_ptcl_visible_frames]]
 
         # image processing applied during particle extraction
         self.image_ctf_corrected = bool(self.blocks[self.block_optics]['_rlnCtfDataAreCtfPremultiplied'].to_numpy()[0])
@@ -1533,12 +1540,15 @@ class TomoParticlesStarfile(GenericStarfile):
 
     def get_ptcl_img_indices(self) -> list[np.ndarray]:
         """
-        Returns the indices of each tilt image in the particles dataframe using the ``header_ptcl_visible_frames`` column as a binary mask of which images to include.
-        The number of tilt images per particle may vary across the STAR file, so a list (or object-type numpy array or ragged torch tensor) is required
+        Returns the indices of each tilt image and associated metadata relative to the pre-filtered subset of all images of all particles in the star file.
+        Filtering is done using the ``self.header_ptcl_visible_frames`` column.
+        For example, using the first two dataframe rows of this column as ``[[1,1,0,1],[1,0,0,1]]``, this method would return indices ``[np.array([0,1,2]), np.array([3,4])]``.
+        The number of tilt images per particle may vary across the STAR file, so returning a list (or object-type numpy array or ragged torch tensor) is required.
 
         :return: integer indices of each tilt image in the particles dataframe grouped by particle ID
         """
-        cumulative_images_per_ptcl = self.df[self.header_ptcl_visible_frames].str.count('1').cumsum().to_list()
+        images_per_ptcl = self.df[self.header_ptcl_visible_frames].apply(np.sum)  # array of number of included images per particle
+        cumulative_images_per_ptcl = images_per_ptcl.cumsum().to_list()  # array of cumulative number of included images throughout entire dataframe
         cumulative_images_per_ptcl.insert(0, 0)
         ptcl_to_img_indices = [np.arange(start, stop) for start, stop in pairwise(cumulative_images_per_ptcl)]
         return ptcl_to_img_indices
@@ -1590,26 +1600,23 @@ class TomoParticlesStarfile(GenericStarfile):
                     raise ValueError(f'Expected .pkl file for {ind_imgs=}')
 
             assert min(ind_imgs) >= 0, 'The minimum allowable image index is 0'
-            nimgs_total = self.df[self.header_ptcl_visible_frames].str.count('0|1').sum()
+            nimgs_total = self.df[self.header_ptcl_visible_frames].apply(len).sum()
             assert max(ind_imgs) <= nimgs_total, f'The maximum allowable image index is the total number of images referenced in {self.header_ptcl_visible_frames}: {nimgs_total}'
             unique_ind_imgs, unique_ind_imgs_counts = np.unique(ind_imgs, return_counts=True)
             assert np.all(unique_ind_imgs_counts == 1), f'Repeated image indices are not allowed, found the following repeated image indices: {unique_ind_imgs[unique_ind_imgs_counts != 1]}'
 
-            nimgs_total = self.df[self.header_ptcl_visible_frames].str.count('0|1').sum()
             ind_imgs_mask = np.zeros(nimgs_total)
             ind_imgs_mask[ind_imgs] = 1
 
             masked_visible_frames = []
             ind_img_cursor = 0
             for ptcl_visible_frames in self.df[self.header_ptcl_visible_frames]:
-                # convert the original visible frames from string of list to list of ints
-                original_ptcl_visible_frames = ast.literal_eval(ptcl_visible_frames)
                 # get the number of images in this image as the window width to draw from the ind_imgs_mask
-                imgs_this_ptcl = len(original_ptcl_visible_frames)
+                imgs_this_ptcl = len(ptcl_visible_frames)
                 # only preserve images that were both initially marked 1 and are selected by ind_imgs
-                masked_ptcl_visible_frames = np.logical_and(original_ptcl_visible_frames, ind_imgs_mask[ind_img_cursor: ind_img_cursor + imgs_this_ptcl]).astype(int)
-                # recast this array of ints to the same input format (str of list) and append to an overall list for all particles
-                masked_visible_frames.append(f'[{",".join([str(include) for include in masked_ptcl_visible_frames])}]')
+                masked_ptcl_visible_frames = np.logical_and(ptcl_visible_frames, ind_imgs_mask[ind_img_cursor: ind_img_cursor + imgs_this_ptcl]).astype(int)
+                # append to an overall list for all particles
+                masked_visible_frames.append(masked_ptcl_visible_frames)
                 # increment the global image index offset by the number of images in this particle so that the next iteration's particle is correctly masked
                 ind_img_cursor += imgs_this_ptcl
 
@@ -1637,7 +1644,7 @@ class TomoParticlesStarfile(GenericStarfile):
             utils.log(f'Sorting star file per-particle by {sort_ptcl_imgs}')
             sorted_visible_frames = []
             # apply sorting to TomoTomogramsStarfile by sorting rows per-tomogram-block, then apply updated tilt indexing to TomoParticlesStarfile header_ptcl_visible_frames to keep metadata in sync
-            for tomo_name, ptcl_group_df in self.df.groupby(self.header_ptcl_tomogram):
+            for tomo_name, ptcl_group_df in self.df.groupby(self.header_ptcl_tomogram, sort=False):
 
                 if sort_ptcl_imgs == 'dose_ascending':
                     # sort the tilts of this tomo by dose
@@ -1651,12 +1658,10 @@ class TomoParticlesStarfile(GenericStarfile):
                 # update the ordering of images via header_ptcl_visible_frames to match the corresponding tomogram df index
                 reordered_tilts_this_tomo = self.tomograms_star.blocks[f'data_{tomo_name}'].index.to_numpy()
                 for ptcl_visible_frames in ptcl_group_df[self.header_ptcl_visible_frames]:
-                    # convert the original visible frames from string of list to list of ints
-                    original_ptcl_visible_frames = ast.literal_eval(ptcl_visible_frames)
                     # reindex this image's visible frames
-                    sorted_ptcl_visible_frames = np.array(original_ptcl_visible_frames)[reordered_tilts_this_tomo]
+                    sorted_ptcl_visible_frames = ptcl_visible_frames[reordered_tilts_this_tomo]
                     # recast this array of ints to the same input format (str of list) and append to an overall list for all particles
-                    sorted_visible_frames.append(f'[{",".join([str(include) for include in sorted_ptcl_visible_frames])}]')
+                    sorted_visible_frames.append(sorted_ptcl_visible_frames)
 
             # update the particles df header_ptcl_visible_frames to the newly sorted visible_frames
             self.df[self.header_ptcl_visible_frames] = sorted_visible_frames
@@ -1670,20 +1675,18 @@ class TomoParticlesStarfile(GenericStarfile):
             particles_to_drop_insufficient_tilts = []
             masked_visible_frames = []
             for ind_ptcl, ptcl_visible_frames in enumerate(self.df[self.header_ptcl_visible_frames]):
-                # convert the original visible frames from string of list to list of ints
-                original_ptcl_visible_frames = ast.literal_eval(ptcl_visible_frames)
-
                 # preserve the first use_first_ntilts frames that are already marked include (1); set the remaineder to not include (0)
-                original_ptcl_visible_frames = np.asarray(original_ptcl_visible_frames)
-                cumulative_ptcl_visible_frames = np.cumsum(original_ptcl_visible_frames)
-                masked_ptcl_visible_frames = [include if cumulative < use_first_ntilts else 0 for include, cumulative in zip(original_ptcl_visible_frames, cumulative_ptcl_visible_frames)]
+                cumulative_ptcl_visible_frames = np.cumsum(ptcl_visible_frames)
+                masked_ptcl_visible_frames = np.where(cumulative_ptcl_visible_frames < use_first_ntilts,
+                                                      ptcl_visible_frames,
+                                                      0)
 
                 # check how many images are now included for this particle; add this particle to the list to be dropped if fewer than use_first_ntilts
                 if sum(masked_ptcl_visible_frames) < use_first_ntilts:
                     particles_to_drop_insufficient_tilts.append(ind_ptcl)
 
-                # recast this array of ints to the same input format (str of list) and append to an overall list for all particles
-                masked_visible_frames.append(f'[{",".join([str(include) for include in masked_ptcl_visible_frames])}]')
+                # append to an overall list for all particles
+                masked_visible_frames.append(masked_ptcl_visible_frames)
 
             # update the particles df header_ptcl_visible_frames to the newly masked visible_frames
             self.df[self.header_ptcl_visible_frames] = masked_visible_frames
@@ -1705,7 +1708,7 @@ class TomoParticlesStarfile(GenericStarfile):
         if sort_ptcl_imgs != 'unsorted':
 
             unsorted_visible_frames = []
-            for tomo_name, ptcl_group_df in self.df.groupby(self.header_ptcl_tomogram):
+            for tomo_name, ptcl_group_df in self.df.groupby(self.header_ptcl_tomogram, sort=False):
 
                 # create temporary index of sorted images
                 self.tomograms_star.blocks[f'data_{tomo_name}']['_reindexed_img_order'] = np.arange(len(self.tomograms_star.blocks[f'data_{tomo_name}']))
@@ -1716,12 +1719,10 @@ class TomoParticlesStarfile(GenericStarfile):
                 # undo the header_ptcl_visible_frames sorting applied by sort_ptcl_imgs
                 reordered_tilts_this_tomo = self.tomograms_star.blocks[f'data_{tomo_name}']['_reindexed_img_order'].to_numpy()
                 for ptcl_visible_frames in ptcl_group_df[self.header_ptcl_visible_frames]:
-                    # convert the original visible frames from string of list to list of ints
-                    original_ptcl_visible_frames = ast.literal_eval(ptcl_visible_frames)
-                    # reindex this image's visible frames
-                    sorted_ptcl_visible_frames = np.array(original_ptcl_visible_frames)[reordered_tilts_this_tomo]
-                    # recast this array of ints to the same input format (str of list) and append to an overall list for all particles
-                    unsorted_visible_frames.append(f'[{",".join([str(include) for include in sorted_ptcl_visible_frames])}]')
+                    # reindex this particle's visible frames
+                    unsorted_ptcl_visible_frames = ptcl_visible_frames[reordered_tilts_this_tomo]
+                    # append to an overall list for all particles
+                    unsorted_visible_frames.append(unsorted_ptcl_visible_frames)
 
                 # remove the temporary index of sorted images
                 self.tomograms_star.blocks[f'data_{tomo_name}'] = self.tomograms_star.blocks[f'data_{tomo_name}'].drop(['_reindexed_img_order'], axis=1)
@@ -1752,9 +1753,6 @@ class TomoParticlesStarfile(GenericStarfile):
         # get indices associated with train and test
         train_test_split = []
         for ptcl_visible_frames in self.df[self.header_ptcl_visible_frames]:
-            # cast the array of visible frames from str of list to array of int
-            ptcl_visible_frames = np.asarray(ast.literal_eval(ptcl_visible_frames))
-
             # get the number of included images, and split this set into the number of included assigned to train/test
             ptcl_n_imgs = np.sum(ptcl_visible_frames == 1)
             ptcl_n_imgs_train = np.rint(ptcl_n_imgs * fraction_split1).astype(int)
@@ -1781,12 +1779,12 @@ class TomoParticlesStarfile(GenericStarfile):
     def plot_particle_uid_ntilt_distribution(self,
                                              outpath: str) -> None:
         """
-        Plot the distribution of the number of tilt images per particle as a line plot (against star file particle index) and as a histogram.
+        Plot the distribution of the number of visible tilt images per particle as a line plot (against star file particle index) and as a histogram.
 
         :param outpath: file name to save the plot
         :return: None
         """
-        ntilts_per_ptcl = self.df[self.header_ptcl_visible_frames].str.count('1').to_numpy()
+        ntilts_per_ptcl = self.df[self.header_ptcl_visible_frames].apply(np.sum)  # number of included images per particle
         unique_ntilts_per_ptcl, ptcl_counts_per_unique_ntilt = np.unique(ntilts_per_ptcl, return_counts=True)
 
         fig, (ax1, ax2) = plt.subplots(2, 1)
@@ -1832,7 +1830,7 @@ class TomoParticlesStarfile(GenericStarfile):
         ptcl_mrcs_files = utils.prefix_paths(ptcl_mrcs_files, datadir)
 
         # identify which tilt images to load for each particle
-        all_ptcls_visible_frames = [ast.literal_eval(ptcl_visible_frames) for ptcl_visible_frames in self.df[self.header_ptcl_visible_frames].to_list()]  # [[1, 1, 0], [1, 1, 1], ...]
+        all_ptcls_visible_frames = self.df[self.header_ptcl_visible_frames].to_list()  # [np.array([1, 1, 0]), np.array([1, 1, 1]), ...]
         all_ptcls_visible_frames = [[index for index, include in enumerate(ptcl_visible_frames) if include == 1] for ptcl_visible_frames in all_ptcls_visible_frames]  # [[0, 1], [0, 1, 2], ...]
 
         # create the LazyImageStack object for each particle
@@ -1887,8 +1885,16 @@ class TomoParticlesStarfile(GenericStarfile):
         temp_df = self.df[self.tomodrgn_added_headers].copy()
         self.df = self.df.drop(self.tomodrgn_added_headers, axis=1)
 
+        # temporarily convert self.header_ptcl_visible_frames to dtype str of list of int, as it was at input, for appropriate white-spacing in writing file to disk
+        self.df[self.header_ptcl_visible_frames] = [f'[{",".join([str(include) for include in ptcl_visible_frames])}]' for ptcl_visible_frames in self.df[self.header_ptcl_visible_frames]]
+
         # now call parent write method for the TomoParticlesStar file
         super().write(*args, outstar=outstar, **kwargs)
+
+        # also need to update the optimisation set contents and write out the updated optimisation set star file to the same directory
+        self.optimisation_set_star.blocks['data_']['_rlnTomoParticlesFile'] = os.path.basename(outstar)
+        outstar_optimisation_set = f'{os.path.splitext(outstar)[0]}_optimisation_set.star'
+        self.optimisation_set_star.write(outstar=outstar_optimisation_set)
 
         # re-merge data_optics with data_particles so that the starfile object appears unchanged after calling this method
         self.df = self.df.merge(self.blocks[self.block_optics], on='_rlnOpticsGroup', how='inner', validate='many_to_one', suffixes=('', '_DROP')).filter(regex='^(?!.*_DROP)')
@@ -1896,10 +1902,9 @@ class TomoParticlesStarfile(GenericStarfile):
         # re-add the columns added during __init__ to restore the state of self.df from the start of this function call
         self.df = pd.concat([self.df, temp_df], axis=1)
 
-        # also need to update the optimisation set contents and write out the updated optimisation set star file to the same directory
-        self.optimisation_set_star.blocks['data_']['_rlnTomoParticlesFile'] = os.path.basename(outstar)
-        outstar_optimisation_set = f'{os.path.splitext(outstar)[0]}_optimisation_set.star'
-        self.optimisation_set_star.write(outstar=outstar_optimisation_set)
+        # re-convert the header_ptcl_visible_frames to dtype np.array of int, as set during __init__
+        self.df[self.header_ptcl_visible_frames] = [np.asarray([include for include in ptcl_frames.replace('[', '').replace(']', '').split(',')], dtype=int)
+                                                    for ptcl_frames in self.df[self.header_ptcl_visible_frames]]
 
 
 def is_starfile_optimisation_set(star_path: str) -> bool:

@@ -506,27 +506,25 @@ class TomoParticlesMRCData(data.Dataset):
             # only keep included images assigned to split1 (set images assigned to split2 to NOT include)
             halfset_visible_frames = []
             for ptcl_visible_frames, ptcl_train_test_split in self.star.df[[self.star.header_ptcl_visible_frames, self.star.header_image_random_split]].to_numpy():
-                ptcl_visible_frames = np.asarray(ast.literal_eval(ptcl_visible_frames))
-                halfset_visible_frames.append(f'[{",".join([str(include) for include in ptcl_visible_frames])}]')
                 ptcl_visible_frames = np.where(ptcl_train_test_split == 1, 1, 0)
+                halfset_visible_frames.append(ptcl_visible_frames)
             self.star.df[self.star.header_ptcl_visible_frames] = halfset_visible_frames
         elif self.star_random_subset == 2:
             # only keep included images assigned to split2 (set images assigned to split1 to NOT include)
             halfset_visible_frames = []
             for ptcl_visible_frames, ptcl_train_test_split in self.star.df[[self.star.header_ptcl_visible_frames, self.star.header_image_random_split]].to_numpy():
-                ptcl_visible_frames = np.asarray(ast.literal_eval(ptcl_visible_frames))
-                halfset_visible_frames.append(f'[{",".join([str(include) for include in ptcl_visible_frames])}]')
                 ptcl_visible_frames = np.where(ptcl_train_test_split == 2, 1, 0)
+                halfset_visible_frames.append(ptcl_visible_frames)
             self.star.df[self.star.header_ptcl_visible_frames] = halfset_visible_frames
         else:
             raise ValueError(f'Random star subset label not supported: {self.star_random_subset}. Must be either `1` or `2`')
         # drop particles that now have 0 visible frames (keeping these will likely cause downstream problems loading images / assigning z to particles with no data)
-        ptcl_inds_to_drop = self.star.df[self.star.df[self.star.header_ptcl_visible_frames].str.count('1') == 0].index.to_numpy()
+        ptcl_inds_to_drop = self.star.df[self.star.df[self.star.header_ptcl_visible_frames].apply(np.sum) == 0].index.to_numpy()
         self.star.df = self.star.df.drop(ptcl_inds_to_drop, axis=0).reset_index(drop=True)
 
         # filter particles by image indices and particle indices
         self.ptcls_list = self.star.df.index.to_numpy()
-        self.nimgs = self.star.df[self.star.header_ptcl_visible_frames].str.count('1').sum()
+        self.nimgs = self.star.df[self.star.header_ptcl_visible_frames].apply(np.sum).sum()
         self.nptcls = len(self.ptcls_list)
 
         # get mapping of particle indices to image indices using star file ordering
@@ -677,7 +675,7 @@ class TomoParticlesMRCData(data.Dataset):
 
             # SAVE POSES
             # get (n_particles * ntilts) mask of which images are loaded for each particle
-            ptcl_visible_frames = np.hstack([ast.literal_eval(visible_frames) for visible_frames in ptcl_group_df[self.star.header_ptcl_visible_frames]]).astype(bool)
+            ptcl_visible_frames = np.hstack(ptcl_group_df[self.star.header_ptcl_visible_frames]).astype(bool)
 
             # save per-particle-per-tilt rotations from this tomogram
             rots.append(ptcl_rotation_matrices[ptcl_visible_frames].astype(np.float32))
@@ -789,10 +787,10 @@ class TomoParticlesMRCData(data.Dataset):
         :return: ntilts_min: minimum number of tilt images associated with any particle in the dataset
         :return: ntilts_max: maximum number of tilt images associated with any particle in the dataset
         """
-        images_per_ptcl = self.star.df[self.star.header_ptcl_visible_frames].str.count('1').to_numpy()
-        ntilts_per_ptcl, ptcl_counts_per_ntilt = np.unique(images_per_ptcl, return_counts=True)
-        ntilts_min = min(ntilts_per_ptcl)
-        ntilts_max = max(ntilts_per_ptcl)
+        ntilts_per_ptcl = self.star.df[self.star.header_ptcl_visible_frames].apply(np.sum)  # number of included images per particle
+        unique_ntilts_per_ptcl, ptcl_counts_per_unique_ntilt = np.unique(ntilts_per_ptcl, return_counts=True)
+        ntilts_min = min(unique_ntilts_per_ptcl)
+        ntilts_max = max(unique_ntilts_per_ptcl)
         utils.log(f'Found {ntilts_min} (min) to {ntilts_max} (max) tilt images per particle')
 
         return ntilts_min, ntilts_max
