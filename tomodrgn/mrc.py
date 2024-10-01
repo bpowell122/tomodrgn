@@ -447,11 +447,12 @@ class LazyImageStack:
         """
 
         with open(self.fname, 'rb') as f:
-            # calculate and apply the offset from the start of the file to the beginning of the first image to be loaded
-            f.seek(self.header_offset + self.indices_image[0][0] * self.stride_image, 0)
 
             if low_memory:
                 # only read selected indices into memory via reading multiple sequentially grouped slices from the file
+
+                # calculate and apply the offset from the start of the file to the beginning of the first image to be loaded
+                f.seek(self.header_offset + self.indices_image[0][0] * self.stride_image, 0)
 
                 # preallocate an array to be populated by the loaded images
                 stack = np.zeros((self.n_images, *self.shape_image), dtype=self.dtype_image)
@@ -479,15 +480,25 @@ class LazyImageStack:
                     # track the last image loaded of the contiguous block, to be used in adjusting file pointer offset at next iteration
                     previous_ind = inds_contiguous[-1]
             else:
-                # read the entire file into memory in one file access, then mask to selected images
+                # read most of the entire file (spanning the first to the last index to preserve) into memory in one file access, then mask to selected images
+
+                # calculate and apply the offset from the start of the file to the beginning of the first image to be loaded
+                f.seek(self.header_offset + self.indices_image[0][0] * self.stride_image, 0)
+
+                # index -1,-1 is largest 0-indexed image, index[0][0] is the smallest 0-indexed image
+                n_images_to_read = self.indices_image[-1][-1] - self.indices_image[0][0] + 1
+
+                # read all data from disk in one call
                 stack = np.fromfile(f,
                                     dtype=self.dtype_image,
-                                    count=self.shape_image[0] * self.shape_image[1] * self.n_images
-                                    ).reshape(self.n_images,
+                                    count=self.shape_image[0] * self.shape_image[1] * n_images_to_read
+                                    ).reshape(n_images_to_read,
                                               self.shape_image[0],
                                               self.shape_image[1])
-                indices_image_flat = [ind_img for ind_img_contiguous in self.indices_image for ind_img in ind_img_contiguous]
-                stack = stack[np.asarray(indices_image_flat)]
+
+                # get the indices of the images to preserve, offset relative to the number of images in the loaded array
+                indices_image_flat = np.asarray([ind_img - self.indices_image[0][0] for ind_img_contiguous in self.indices_image for ind_img in ind_img_contiguous])
+                stack = stack[indices_image_flat]
 
         return stack
 
