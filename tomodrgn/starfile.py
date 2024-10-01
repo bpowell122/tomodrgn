@@ -631,7 +631,7 @@ class GenericStarfile:
             loaded_images = 0
             for ind_stack, file in zip(mrcs_grouped_image_inds, mrcs_files):
                 particles[loaded_images:loaded_images + len(ind_stack), :-1, :-1] = mrc.LazyImageStack(fname=file,
-                                                                                                       indices_image=ind_stack).get()
+                                                                                                       indices_image=ind_stack).get(low_memory=True)
                 loaded_images += len(ind_stack)
             return particles
 
@@ -1858,7 +1858,7 @@ class TomoParticlesStarfile(GenericStarfile):
             particles = np.zeros((sum(all_ptcls_nimgs), lazyparticles[0].shape_image[0] + 1, lazyparticles[0].shape_image[1] + 1), dtype=lazyparticles[0].dtype_image)
             loaded_images = 0
             for lazyparticle, ptcl_nimgs in zip(lazyparticles, all_ptcls_nimgs):
-                particles[loaded_images:loaded_images + ptcl_nimgs, :-1, :-1] = lazyparticle.get()
+                particles[loaded_images:loaded_images + ptcl_nimgs, :-1, :-1] = lazyparticle.get(low_memory=False)
                 loaded_images += ptcl_nimgs
             return particles
 
