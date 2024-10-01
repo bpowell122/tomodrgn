@@ -17,7 +17,8 @@ def load_particles(mrcs_txt_star: str,
     """
     Load particle stack from a .mrcs file, a .star file, or a .txt file containing paths to .mrcs files
 
-    :param mrcs_txt_star: path to .mrcs, .star, or .txt file referencing images to load
+    :param mrcs_txt_star: path to .mrcs, .star, or .txt file referencing images to load.
+            If using a star file, should be an image-series star file (if using Warp/M or NextPYP), or an optimisation set star file (if using WarpTools or RELION v5)').
     :param lazy: whether to load particle images now in memory (False) or later on-the-fly (True)
     :param datadir: relative or absolute path to overwrite path to particle image .mrcs specified in the STAR file
     :return: numpy array of particle images of shape (n_images, boxsize+1, boxsize+1), or list of LazyImage objects
@@ -26,7 +27,7 @@ def load_particles(mrcs_txt_star: str,
         particles = mrc.parse_mrc_list(mrcs_txt_star,
                                        lazy=lazy)
     elif mrcs_txt_star.endswith('.star'):
-        star = starfile.TiltSeriesStarfile(mrcs_txt_star)
+        star = starfile.load_sta_starfile(mrcs_txt_star)
         particles = star.get_particles_stack(particles_block_name=star.block_particles,
                                              particles_path_column=star.header_ptcl_image,
                                              datadir=datadir,
