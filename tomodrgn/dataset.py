@@ -636,7 +636,7 @@ class TomoParticlesMRCData(data.Dataset):
         rots = []
         trans = []
         # iterate through tomograms
-        for tomo_name, ptcl_group_df in self.star.df.groupby(self.star.header_ptcl_tomogram):
+        for tomo_name, ptcl_group_df in self.star.df.groupby(self.star.header_ptcl_tomogram, sort=False):
             # TOMOGRAMS
             # get tomogram table for this tomogram
             tomogram_df = self.star.tomograms_star.blocks[f'data_{tomo_name}']
