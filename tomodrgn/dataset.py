@@ -590,7 +590,9 @@ class TomoParticlesMRCData(data.Dataset):
 
         # load and preprocess the images to be returned
         if self.lazy:
-            images = self.ptcls[idx_ptcl].get(low_memory=False)[ptcl_img_ind]
+            images = self.ptcls[idx_ptcl].get(low_memory=False)
+            # apply image shuffling encoded in ptcl_img_ind for this particle. ptcl_img_ind is 0-indexed relative to image positions in entire dataset, so need to offset to start at 0
+            images = images[ptcl_img_ind - np.min(ptcl_img_ind)]
             if self.window:
                 images *= self.real_space_2d_mask
             for (i, img) in enumerate(images):
