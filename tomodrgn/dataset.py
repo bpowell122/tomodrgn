@@ -507,16 +507,16 @@ class TomoParticlesMRCData(data.Dataset):
             halfset_visible_frames = []
             for ptcl_visible_frames, ptcl_train_test_split in self.star.df[[self.star.header_ptcl_visible_frames, self.star.header_image_random_split]].to_numpy():
                 ptcl_visible_frames = np.asarray(ast.literal_eval(ptcl_visible_frames))
-                ptcl_visible_frames[ptcl_train_test_split == 2] = 0
                 halfset_visible_frames.append(f'[{",".join([str(include) for include in ptcl_visible_frames])}]')
+                ptcl_visible_frames = np.where(ptcl_train_test_split == 1, 1, 0)
             self.star.df[self.star.header_ptcl_visible_frames] = halfset_visible_frames
         elif self.star_random_subset == 2:
             # only keep included images assigned to split2 (set images assigned to split1 to NOT include)
             halfset_visible_frames = []
             for ptcl_visible_frames, ptcl_train_test_split in self.star.df[[self.star.header_ptcl_visible_frames, self.star.header_image_random_split]].to_numpy():
                 ptcl_visible_frames = np.asarray(ast.literal_eval(ptcl_visible_frames))
-                ptcl_visible_frames[ptcl_train_test_split == 1] = 0
                 halfset_visible_frames.append(f'[{",".join([str(include) for include in ptcl_visible_frames])}]')
+                ptcl_visible_frames = np.where(ptcl_train_test_split == 2, 1, 0)
             self.star.df[self.star.header_ptcl_visible_frames] = halfset_visible_frames
         else:
             raise ValueError(f'Random star subset label not supported: {self.star_random_subset}. Must be either `1` or `2`')
