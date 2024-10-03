@@ -1,7 +1,6 @@
 """
 Lightweight parsers for starfiles
 """
-import ast
 import os
 import re
 from datetime import datetime as dt
@@ -1741,6 +1740,7 @@ class TomoParticlesStarfile(GenericStarfile):
         Images are randomly assigned to one set or the other by precisely respecting `fraction_train` on a per-particle basis.
         Random split is stored in `self.df` under the `self.header_image_random_split` column as a list of ints in (0, 1, 2) with length `self.header_ptcl_visible_frames`.
         These values map as follows:
+
         * 0: images marked to not include (value 0) in `self.header_ptcl_visible_frames`.
         * 1: images marked to include (value 1) in `self.header_ptcl_visible_frames`, assigned to image-level half-set 1
         * 2: images marked to include (value 1) in `self.header_ptcl_visible_frames`, assigned to image-level half-set 2
@@ -1775,9 +1775,8 @@ class TomoParticlesStarfile(GenericStarfile):
         if show_summary_stats:
             ntilts_imgs_train = [np.sum(ptcl_imgs == 1) for ptcl_imgs in train_test_split]
             ntilts_imgs_test = [np.sum(ptcl_imgs == 2) for ptcl_imgs in train_test_split]
-            print(set(ntilts_imgs_train), set(ntilts_imgs_test))
-            utils.log(f'    Number of tilts sampled by inds_train: {set(ntilts_imgs_train)}')
-            utils.log(f'    Number of tilts sampled by inds_test: {set(ntilts_imgs_test)}')
+            utils.log(f'    Number of tilts sampled by inds_train: {sorted(list(set(ntilts_imgs_train)))}')
+            utils.log(f'    Number of tilts sampled by inds_test: {sorted(list(set(ntilts_imgs_test)))}')
 
     def plot_particle_uid_ntilt_distribution(self,
                                              outpath: str) -> None:
