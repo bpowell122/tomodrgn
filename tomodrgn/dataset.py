@@ -885,7 +885,7 @@ class TomoParticlesMRCData(data.Dataset):
         """
         n = min(500, self.nptcls)
         random_ptcls_for_normalization = np.random.choice(self.nptcls, size=n, replace=False)
-        imgs = np.asarray([self.ptcls[i].get(low_memory=False) for i in random_ptcls_for_normalization])
+        imgs = np.concatenate([self.ptcls[i].get(low_memory=False) for i in random_ptcls_for_normalization])
         if self.window:
             imgs *= self.real_space_2d_mask
         for (i, img) in enumerate(imgs):
@@ -893,6 +893,7 @@ class TomoParticlesMRCData(data.Dataset):
         if self.invert_data:
             imgs *= -1
         imgs = fft.symmetrize_ht(imgs)
+        imgs = imgs.astype(np.float64)  # higher precision to avoid internal numpy overflow when calculating mean
         norm = [np.mean(imgs), np.std(imgs)]
         norm[0] = 0.0
         utils.log(f'Normalizing HT by {norm[0]} +/- {norm[1]}')
