@@ -1287,6 +1287,9 @@ class TomoParticlesStarfile(GenericStarfile):
         ptcls_star_path = os.path.join(os.path.dirname(self.optimisation_set_star_path), ptcls_star_rel_path)
         super().__init__(ptcls_star_path)
 
+        # override the sourcefile attribute set by parent init to point to the optimisation set, since that is the file that must be passed to re-load this object
+        self.sourcefile = self.optimisation_set_star_path
+
         # check that the particles star file references 2D image stacks
         assert self.blocks['data_general']['_rlnTomoSubTomosAre2DStacks'] == '1', 'TomoDRGN is only compatible with tilt series particles extracted as 2D image stacks.'
 
@@ -1867,8 +1870,10 @@ class TomoParticlesStarfile(GenericStarfile):
         """
         Temporarily removes columns in data_particles dataframe that are present in data_optics dataframe (to restore expected input star file format), then calls parent GenericStarfile write.
         Writes both the TomoParticlesStar file and the updated Optimisation Set star file pointing to the new TomoParticlesStar file.
-        The optimisation set star file is written to the same directory as the TomoParticlesStar file, with the suffix ``_optimisation_set.star`` appended in place of ``.star``.
-        :param outstar: name of the output TomoParticlesStar file, optionally as absolute or relative path
+        The TomoParticlesStar file is written to the same directory as the optimisation set star file, and has the same name as the optimisation set after removing the string ``_optimisation_set``.
+
+        :param outstar: name of the output optimisation set star file, optionally as absolute or relative path.
+                Filename should include the string ``_optimisation_set``, e.g. ``run_optimisation_set.star``.
         :param args: Passed to parent GenericStarfile write
         :param kwargs: Passed to parent GenericStarfile write
         :return: None
@@ -1889,12 +1894,13 @@ class TomoParticlesStarfile(GenericStarfile):
         self.df[self.header_ptcl_visible_frames] = [f'[{",".join([str(include) for include in ptcl_visible_frames])}]' for ptcl_visible_frames in self.df[self.header_ptcl_visible_frames]]
 
         # now call parent write method for the TomoParticlesStar file
-        super().write(*args, outstar=outstar, **kwargs)
+        assert '_optimisation_set' in os.path.basename(outstar), f'The name of the output star file must include the string "_optimisation_set", but got {outstar}'
+        outstar_particles = f'{os.path.dirname(outstar)}/{os.path.basename(outstar).replace("_optimisation_set", "")}'
+        super().write(*args, outstar=outstar_particles, **kwargs)
 
         # also need to update the optimisation set contents and write out the updated optimisation set star file to the same directory
-        self.optimisation_set_star.blocks['data_']['_rlnTomoParticlesFile'] = os.path.basename(outstar)
-        outstar_optimisation_set = f'{os.path.splitext(outstar)[0]}_optimisation_set.star'
-        self.optimisation_set_star.write(outstar=outstar_optimisation_set)
+        self.optimisation_set_star.blocks['data_']['_rlnTomoParticlesFile'] = os.path.basename(outstar_particles)
+        self.optimisation_set_star.write(outstar=outstar)
 
         # re-merge data_optics with data_particles so that the starfile object appears unchanged after calling this method
         self.df = self.df.merge(self.blocks[self.block_optics], on='_rlnOpticsGroup', how='inner', validate='many_to_one', suffixes=('', '_DROP')).filter(regex='^(?!.*_DROP)')

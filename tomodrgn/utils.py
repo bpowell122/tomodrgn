@@ -36,10 +36,18 @@ def prefix_paths(mrcs: list[str],
         mrcs,
         [f'{datadir}/{os.path.basename(x)}' for x in mrcs],
         [f'{datadir}/{x}' for x in mrcs],
+        [f'{datadir}/{x.split("/")[-2]}/{x.split("/")[-1]}' for x in mrcs]
     ]
 
     for filename_pattern in filename_patterns:
-        if all([os.path.isfile(file) for file in set(filename_pattern)]):
+        # loop through all defined filename patterns
+        for filename in set(filename_pattern):
+            # loop through all non-redundant files
+            if not os.path.isfile(filename):
+                # the moment any file is not found with this filename pattern, we can stop trying this pattern
+                break
+        else:
+            # all files have been found with this filename pattern
             return filename_pattern
 
     raise FileNotFoundError(f'Not all files (or possibly no files) could be found using any of the filename patterns: {[filename_pattern[0] for filename_pattern in filename_patterns]}')

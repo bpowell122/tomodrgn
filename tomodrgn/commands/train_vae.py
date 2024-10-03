@@ -17,10 +17,10 @@ import torch.utils.data
 
 from tomodrgn import utils, ctf, config, convergence
 from tomodrgn.beta_schedule import get_beta_schedule
-from tomodrgn.dataset import TiltSeriesMRCData
+from tomodrgn.dataset import load_sta_dataset, TiltSeriesMRCData, TomoParticlesMRCData
 from tomodrgn.lattice import Lattice
 from tomodrgn.models import TiltSeriesHetOnlyVAE, DataParallelPassthrough, print_tiltserieshetonlyvae_ascii
-from tomodrgn.starfile import TiltSeriesStarfile
+from tomodrgn.starfile import load_sta_starfile
 
 log = utils.log
 vlog = utils.vlog
@@ -34,7 +34,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
         # this script is called from tomodrgn.__main__ entry point, in which case a parser is already created
         pass
 
-    parser.add_argument('particles', type=os.path.abspath, help='Input particles (.mrcs, .star, or .txt)')
+    parser.add_argument('particles', type=os.path.abspath, help='Input particles_imageseries.star (if using Warp/M or NextPYP), or optimisation set star file (if using WarpTools or RELION v5)')
 
     group = parser.add_argument_group('Core arguments')
     group.add_argument('-o', '--outdir', type=os.path.abspath, required=True, help='Output directory to save model')
@@ -334,7 +334,7 @@ def loss_function(*,
 def encoder_inference(*,
                       model: TiltSeriesHetOnlyVAE | DataParallelPassthrough,
                       lat: Lattice,
-                      data: TiltSeriesMRCData,
+                      data: TiltSeriesMRCData | TomoParticlesMRCData,
                       use_amp: bool = False,
                       batchsize: int = 1,
                       **kwargs) -> tuple[np.ndarray, np.ndarray]:
@@ -343,7 +343,7 @@ def encoder_inference(*,
 
     :param model: TiltSeriesHetOnlyVAE object to be used for encoder module inference. Informs device on which to run inference.
     :param lat: Hartley-transform lattice of points for voxel grid operations
-    :param data: TiltSeriesMRCData object for accessing tilt images with known CTF and pose parameters, to be embedded in latent space
+    :param data: TiltSeriesMRCData or TomoParticlesMRCData object for accessing tilt images with known CTF and pose parameters, to be embedded in latent space
     :param use_amp: If true, use Automatic Mixed Precision to reduce memory consumption and accelerate code execution via `torch.autocast`
     :param batchsize: batch size used in DataLoader for model inference
     :param kwargs: All other key word arguments are passed to `torch.DataLoader`
@@ -480,8 +480,8 @@ def main(args):
         # https://github.com/pytorch/pytorch/issues/55374
 
     # load star file
-    ptcls_star = TiltSeriesStarfile(args.particles,
-                                    source_software=args.source_software)
+    ptcls_star = load_sta_starfile(star_path=args.particles,
+                                   source_software=args.source_software)
     ptcls_star.plot_particle_uid_ntilt_distribution(outpath=f'{args.outdir}/{os.path.basename(ptcls_star.sourcefile)}_particle_uid_ntilt_distribution.{args.plot_format}')
 
     # filter star file
@@ -503,35 +503,35 @@ def main(args):
     # load the particles + poses + ctf from input starfile
     flog(f'Loading dataset from {args.particles}')
     datadir = args.datadir if args.datadir is not None else os.path.dirname(ptcls_star.sourcefile)
-    data_train = TiltSeriesMRCData(ptcls_star=ptcls_star,
-                                   star_random_subset=1,
-                                   datadir=datadir,
-                                   lazy=args.lazy,
-                                   norm=args.norm,
-                                   invert_data=args.invert_data,
-                                   window=args.window,
-                                   window_r=args.window_r,
-                                   window_r_outer=args.window_r_outer,
-                                   recon_dose_weight=args.recon_dose_weight,
-                                   recon_tilt_weight=args.recon_tilt_weight,
-                                   l_dose_mask=args.l_dose_mask,
-                                   constant_mintilt_sampling=True,
-                                   sequential_tilt_sampling=args.sequential_tilt_sampling)
+    data_train = load_sta_dataset(ptcls_star=ptcls_star,
+                                  star_random_subset=1,
+                                  datadir=datadir,
+                                  lazy=args.lazy,
+                                  norm=args.norm,
+                                  invert_data=args.invert_data,
+                                  window=args.window,
+                                  window_r=args.window_r,
+                                  window_r_outer=args.window_r_outer,
+                                  recon_dose_weight=args.recon_dose_weight,
+                                  recon_tilt_weight=args.recon_tilt_weight,
+                                  l_dose_mask=args.l_dose_mask,
+                                  constant_mintilt_sampling=True,
+                                  sequential_tilt_sampling=args.sequential_tilt_sampling)
     if args.fraction_train < 1:
-        data_test = TiltSeriesMRCData(ptcls_star,
-                                      star_random_subset=2,
-                                      datadir=datadir,
-                                      lazy=args.lazy,
-                                      norm=data_train.norm,
-                                      invert_data=args.invert_data,
-                                      window=args.window,
-                                      window_r=args.window_r,
-                                      window_r_outer=args.window_r_outer,
-                                      recon_dose_weight=args.recon_dose_weight,
-                                      recon_tilt_weight=args.recon_tilt_weight,
-                                      l_dose_mask=args.l_dose_mask,
-                                      constant_mintilt_sampling=True,
-                                      sequential_tilt_sampling=args.sequential_tilt_sampling)
+        data_test = load_sta_dataset(ptcls_star=ptcls_star,
+                                     star_random_subset=2,
+                                     datadir=datadir,
+                                     lazy=args.lazy,
+                                     norm=data_train.norm,
+                                     invert_data=args.invert_data,
+                                     window=args.window,
+                                     window_r=args.window_r,
+                                     window_r_outer=args.window_r_outer,
+                                     recon_dose_weight=args.recon_dose_weight,
+                                     recon_tilt_weight=args.recon_tilt_weight,
+                                     l_dose_mask=args.l_dose_mask,
+                                     constant_mintilt_sampling=True,
+                                     sequential_tilt_sampling=args.sequential_tilt_sampling)
     else:
         data_test = None
     boxsize_ht = data_train.boxsize_ht

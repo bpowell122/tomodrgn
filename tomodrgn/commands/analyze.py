@@ -412,7 +412,7 @@ def analyze_z_multidimensional(z: np.ndarray,
             plt.close()
 
     # make plots of first 6 images of each kmeans class
-    s = starfile.TiltSeriesStarfile(starfile=starfile_path)
+    s = starfile.load_sta_starfile(star_path=starfile_path)
     star_df_backup = s.df.copy(deep=True)
     for label in range(num_ksamples):
         # get indices of particles within this kmeans class
