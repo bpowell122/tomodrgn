@@ -1422,6 +1422,17 @@ class TomoParticlesStarfile(GenericStarfile):
         self.df[self.header_ptcl_visible_frames] = [np.asarray([include for include in ptcl_frames.replace('[', '').replace(']', '').split(',')], dtype=int)
                                                     for ptcl_frames in self.df[self.header_ptcl_visible_frames]]
 
+        # convert the _rlnTomoProj{X,Y,Z,W} columns from default dtype inferred by pandas (str of list of float, e.g. '[1.0,0.0,0.0,0]' to numpy array of floats
+        for tomogram_block_name in self.tomograms_star.block_names:
+            if tomogram_block_name == 'data_global':
+                # this is global data block, no projection matrices to convert
+                continue
+            df_tomo = self.tomograms_star.blocks[tomogram_block_name]
+            projection_matrices_headers = [self.header_tomo_proj_x, self.header_tomo_proj_y, self.header_tomo_proj_z, self.header_tomo_proj_w]
+            for projection_matrices_header in projection_matrices_headers:
+                df_tomo[projection_matrices_header] = [np.asarray([proj_element for proj_element in tilt_proj.replace('[', '').replace(']', '').split(',')], dtype=float)
+                                                       for tilt_proj in df_tomo[projection_matrices_header]]
+
         # image processing applied during particle extraction
         self.image_ctf_corrected = bool(self.blocks[self.block_optics]['_rlnCtfDataAreCtfPremultiplied'].to_numpy()[0])
         self.image_dose_weighted = False

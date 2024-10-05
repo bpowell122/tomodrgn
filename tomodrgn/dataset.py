@@ -2,7 +2,6 @@
 Classes and functions for interfacing with particle image data and associated starfile metadata.
 """
 
-import ast
 import einops
 import numpy as np
 from copy import deepcopy
@@ -642,9 +641,9 @@ class TomoParticlesMRCData(data.Dataset):
             tomogram_df = self.star.tomograms_star.blocks[f'data_{tomo_name}']
 
             # get (n_tilts, 4) arrays for first three rows of tomogram projection matrices
-            projection_matrices_x = np.stack(tomogram_df[self.star.header_tomo_proj_x].apply(lambda x: ast.literal_eval(x)))
-            projection_matrices_y = np.stack(tomogram_df[self.star.header_tomo_proj_y].apply(lambda x: ast.literal_eval(x)))
-            projection_matrices_z = np.stack(tomogram_df[self.star.header_tomo_proj_z].apply(lambda x: ast.literal_eval(x)))
+            projection_matrices_x = tomogram_df[self.star.header_tomo_proj_x].to_numpy()
+            projection_matrices_y = tomogram_df[self.star.header_tomo_proj_x].to_numpy()
+            projection_matrices_z = tomogram_df[self.star.header_tomo_proj_x].to_numpy()
 
             # get (n_tilts, 3, 4) tomogram projection_matrices
             tilt_projection_matrices = np.asarray([projection_matrices_x, projection_matrices_y, projection_matrices_z])
