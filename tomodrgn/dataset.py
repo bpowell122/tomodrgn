@@ -641,9 +641,9 @@ class TomoParticlesMRCData(data.Dataset):
             tomogram_df = self.star.tomograms_star.blocks[f'data_{tomo_name}']
 
             # get (n_tilts, 4) arrays for first three rows of tomogram projection matrices
-            projection_matrices_x = tomogram_df[self.star.header_tomo_proj_x].to_numpy()
-            projection_matrices_y = tomogram_df[self.star.header_tomo_proj_x].to_numpy()
-            projection_matrices_z = tomogram_df[self.star.header_tomo_proj_x].to_numpy()
+            projection_matrices_x = np.stack(tomogram_df[self.star.header_tomo_proj_x])
+            projection_matrices_y = np.stack(tomogram_df[self.star.header_tomo_proj_y])
+            projection_matrices_z = np.stack(tomogram_df[self.star.header_tomo_proj_z])
 
             # get (n_tilts, 3, 4) tomogram projection_matrices
             tilt_projection_matrices = np.asarray([projection_matrices_x, projection_matrices_y, projection_matrices_z])
