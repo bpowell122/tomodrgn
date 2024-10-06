@@ -724,7 +724,7 @@ class TiltSeriesStarfile(GenericStarfile):
         self.header_ptcl_micrograph = None
 
         self.header_image_random_split = '_tomodrgnRandomSubset'
-        self.image_ctf_corrected = None
+        self.image_ctf_premultiplied = None
         self.image_dose_weighted = None
         self.image_tilt_weighted = None
 
@@ -782,7 +782,7 @@ class TiltSeriesStarfile(GenericStarfile):
         self.df[self.header_ptcl_tilt] = np.arccos(self.df['_rlnCtfScalefactor'])
 
         # image processing applied during particle extraction
-        self.image_ctf_corrected = False
+        self.image_ctf_premultiplied = False
         self.image_dose_weighted = False
         self.image_tilt_weighted = False
 
@@ -817,7 +817,7 @@ class TiltSeriesStarfile(GenericStarfile):
         self.df[self.header_ptcl_tilt] = np.arccos(self.df['_rlnCtfScalefactor'])
 
         # image processing applied during particle extraction
-        self.image_ctf_corrected = False
+        self.image_ctf_premultiplied = False
         self.image_dose_weighted = False
         self.image_tilt_weighted = False
 
@@ -863,7 +863,7 @@ class TiltSeriesStarfile(GenericStarfile):
         self.df[self.header_pose_ty] = self.df[self.header_pose_ty_angst] / self.df[self.header_ctf_angpix]
 
         # image processing applied during particle extraction
-        self.image_ctf_corrected = False
+        self.image_ctf_premultiplied = False
         self.image_dose_weighted = False
         self.image_tilt_weighted = False
 
@@ -1324,7 +1324,7 @@ class TomoParticlesStarfile(GenericStarfile):
 
         self.header_ptcl_random_split = None
         self.header_image_random_split = '_tomodrgnRandomSubset'
-        self.image_ctf_corrected = None
+        self.image_ctf_premultiplied = None
         self.image_dose_weighted = None
         self.image_tilt_weighted = None
 
@@ -1434,8 +1434,8 @@ class TomoParticlesStarfile(GenericStarfile):
                                                        for tilt_proj in df_tomo[projection_matrices_header]]
 
         # image processing applied during particle extraction
-        self.image_ctf_corrected = bool(self.blocks[self.block_optics]['_rlnCtfDataAreCtfPremultiplied'].to_numpy()[0])
-        self.image_dose_weighted = False
+        self.image_ctf_premultiplied = bool(self.blocks[self.block_optics]['_rlnCtfDataAreCtfPremultiplied'].to_numpy()[0])
+        self.image_dose_weighted = True  # warptools applie fixed exposure weights per-frequency for each extracted image
         self.image_tilt_weighted = False
 
         # note columns added during init, so that we can remove these columns later when writing the star file

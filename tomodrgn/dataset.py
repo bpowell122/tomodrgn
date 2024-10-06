@@ -255,7 +255,7 @@ class TiltSeriesMRCData(data.Dataset):
         """
         ctf_params = None
 
-        if self.star.image_ctf_corrected:
+        if self.star.image_ctf_premultiplied:
             utils.log('Particles exported by detected STAR file source software are pre-CTF corrected. During training, reconstructed Fourier central slices will not have CTF applied.')
             return ctf_params
 
@@ -462,7 +462,7 @@ class TiltSeriesMRCData(data.Dataset):
 
 class TomoParticlesMRCData(data.Dataset):
     """
-    Class for loading and accessing image, pose, ctf, and weighting data associated with a tomodrgn.starfile.TiltSeriesStarfile instance.
+    Class for loading and accessing image, pose, ctf, and weighting data associated with a tomodrgn.starfile.TomoParticlesStarfile instance.
     """
 
     def __init__(self,
@@ -691,24 +691,116 @@ class TomoParticlesMRCData(data.Dataset):
 
     def _load_ctf_params(self) -> np.ndarray | None:
         """
-        Load CTF parameters from TiltSeriesMRCData-associated TiltSeriesStarfile object to numpy array.
-        If CTF parameters are not present in star file, or if images are not CTF corrected, returns None.
+        Load CTF parameters from TomoParticlesMRCData-associated TomoParticlesStarfile object to numpy array.
+        If CTF parameters are not present in star file, returns None.
+        If images are CTF pre-multiplied, returns CTF parameters as numpy array of shape ``(nptcls * ntilts, 9)``.
+        Note that CTF pre-multiplied images have correct phases but doubly CTF-down-weighted amplitudes and appropriate corrections should be taken when processing images.
         CTF parameters are organized as columns: box_size, pixel_size, defocus_u, defocus_v, defocus_angle, voltage, spherical_aberration, amplitude_contrast, phase_shift.
 
         :return: ctf_params as either numpy array with shape (nimgs, 9) or None
         """
         ctf_params = None
 
-        if self.star.image_ctf_corrected:
-            utils.log('Particles exported by detected STAR file source software are pre-CTF corrected. During training, reconstructed Fourier central slices will not have CTF applied.')
-            return ctf_params
-
         if not all(header_ctf in self.star.df.columns for header_ctf in self.star.headers_ctf):
             utils.log('CTF parameters not found in star file. During training, reconstructed Fourier central slices will not have CTF applied.')
             return ctf_params
 
-        # TODO figure out how to calculate CTF parameters per particle given particle coordinate in tomogram and tomogram projection geometry to each tilt micrograph
-        raise NotImplementedError('TomoDRGN does not yet support images that are not pre-CTF corrected from RELION-5 style star files')
+        # z-coordinate correction for defocus derived from WarpTools GetCTFsForOneParticle and GetPositionInAllTilts
+        ctf_params = []
+
+        # iterate through tomograms
+        for tomo_name, ptcl_group_df in self.star.df.groupby(self.star.header_ptcl_tomogram, sort=False):
+            # TOMOGRAMS
+            # get tomogram table for this tomogram
+            tomogram_df = self.star.tomograms_star.blocks[f'data_{tomo_name}']
+
+            # get (n_tilts, 4) arrays for first three rows of tomogram projection matrices
+            projection_matrices_x = np.stack(tomogram_df[self.star.header_tomo_proj_x])
+            projection_matrices_y = np.stack(tomogram_df[self.star.header_tomo_proj_y])
+            projection_matrices_z = np.stack(tomogram_df[self.star.header_tomo_proj_z])
+
+            # get (n_tilts, 3, 4) tomogram projection_matrices
+            tilt_projection_matrices = np.asarray([projection_matrices_x, projection_matrices_y, projection_matrices_z])
+            tilt_projection_matrices = einops.rearrange(tilt_projection_matrices, pattern='projxyz ntilts d -> ntilts projxyz d')
+
+            # get (n_tilts, 3, 3) tomogram rotation matrices
+            tilt_rotation_matrices = tilt_projection_matrices[:, :, :-1]
+
+            # get the size of this tomogram in angstroms
+            global_tomo_row = self.star.tomograms_star.blocks['data_global'].loc[self.star.tomograms_star.blocks['data_global']['_rlnTomoName'] == tomo_name]
+            tomo_dims_px = global_tomo_row[['_rlnTomoSizeX', '_rlnTomoSizeY', '_rlnTomoSizeZ']].to_numpy()
+            tomo_raw_angpix = global_tomo_row['_rlnTomoTiltSeriesPixelSize'].to_numpy()
+            tomo_dims_angst = tomo_dims_px * tomo_raw_angpix
+
+            # get whether this tomogram has positive or negative correlation of z coordinate with defocus
+            z_defocus_correlation = global_tomo_row['_rlnTomoHand'].item()
+            if z_defocus_correlation == -1:
+                flipz_matrix = np.asarray([[1, 0, 0],
+                                           [0, 1, 0],
+                                           [0, 0, -1]])
+                tilt_rotation_matrices = flipz_matrix @ tilt_rotation_matrices
+
+            # PARTICLES
+            # get (n_particles, 3) array of particle coordinates
+            ptcl_coords_px = ptcl_group_df[[self.star.header_coord_x, self.star.header_coord_y, self.star.header_coord_z]].to_numpy()
+
+            # convert coordinates from px to angstrom
+            ptcl_extracted_angpix = ptcl_group_df[self.star.header_ctf_angpix].to_numpy()
+            ptcl_extracted_angpix = einops.rearrange(ptcl_extracted_angpix, pattern='ptcls -> ptcls 1')
+            ptcl_coords_angst = ptcl_coords_px * ptcl_extracted_angpix
+
+            # center coords within tomogram spatial extent
+            assert np.min(ptcl_coords_angst) >= 0, 'At least one particle coordinate within the tomogram is negative; are these coordinates pre-centered?'
+            ptcl_coords_angst_centered = ptcl_coords_angst - (tomo_dims_angst / 2)
+
+            # update z coordinate with whether this tomogram has positive or negative correlation of z with defocus
+            if z_defocus_correlation == -1:
+                flipz_coordinate = np.array([1, 1, -1])
+                flipz_coordinate = einops.rearrange(flipz_coordinate, 'i -> 1 i')  # match ndim of ptcl_coords_angst_centered to avoid potential confusion during broadcasting
+                ptcl_coords_angst_centered = ptcl_coords_angst_centered * flipz_coordinate
+
+            # DEFOCUS PER PARTICLE IMAGE
+            # rotate particle coordinates in tomogram into tilted reference frames
+            ptcl_coords_angst_centered = einops.rearrange(ptcl_coords_angst_centered, 'ptcls xyz -> ptcls 1 xyz 1')  # (nptcls, 1, 3, 1)
+            ptcl_coords_angst_rotated = tilt_rotation_matrices @ ptcl_coords_angst_centered  # (ntilts, 3, 3) @ (nptcls, 1, 3, 1) = (nptcls, ntilts, 3, 1)
+
+            # get (n_tilts, 2) defocusU and defocusV values for each tilt micrograph
+            df_uv_micrographs = tomogram_df[[self.star.header_ctf_defocus_u, self.star.header_ctf_defocus_v]].to_numpy()
+
+            # reshape defocus array to (nptcls, ntilts, 2)
+            df_uv_micrographs = einops.rearrange(df_uv_micrographs, 'ntilts uv -> 1 ntilts uv')
+
+            # offset defocus by particle position in z
+            df_uv_particles = df_uv_micrographs + ptcl_coords_angst_rotated[:, :, -1]
+
+            # ARRAY OF CTF PARAMETERS PER PARTICLE IMAGE
+            # get number of tilts and number of particles this tomogram
+            ntilts = global_tomo_row['_rlnTomoFrameCount'].item()
+            nptcls = len(ptcl_group_df)
+
+            # get inidividual parameters per particle image (nptcls * ntilts, 1)
+            boxsize = einops.repeat(ptcl_group_df[self.star.header_ptcl_box_size].to_numpy(), 'nptcls -> (repeat nptcls)', repeat=ntilts)
+            angpix = einops.repeat(ptcl_group_df[self.star.header_ctf_angpix].to_numpy(), 'nptcls -> (repeat nptcls)', repeat=ntilts)
+            df_u = einops.rearrange(df_uv_particles[..., 0], 'nptcls ntilts -> (nptcls ntilts)')
+            df_v = einops.rearrange(df_uv_particles[..., 1], 'nptcls ntilts -> (nptcls ntilts)')
+            df_angle = einops.repeat(tomogram_df[self.star.header_ctf_defocus_ang].to_numpy(), 'ntilts -> (repeat ntilts)', repeat=nptcls)
+            voltage = einops.repeat(ptcl_group_df[self.star.header_ctf_voltage].to_numpy(), 'nptcls -> (repeat nptcls)', repeat=ntilts)
+            cs = einops.repeat(ptcl_group_df[self.star.header_ctf_cs].to_numpy(), 'nptcls -> (repeat nptcls)', repeat=ntilts)
+            amp_contrast = einops.repeat(ptcl_group_df[self.star.header_ctf_w].to_numpy(), 'nptcls -> (repeat nptcls)', repeat=ntilts)
+            phase_shift = einops.repeat(ptcl_group_df[self.star.header_ctf_ps].to_numpy(), 'nptcls -> (repeat nptcls)', repeat=ntilts)
+
+            # merge into a single array (nptcls * ntilts, 8)
+            ptcl_ctf_params = np.stack([boxsize, angpix, df_u, df_v, df_angle, voltage, cs, amp_contrast, phase_shift], axis=1).astype(np.float32)
+
+            # get (n_particles * ntilts) mask of which images are loaded for each particle
+            ptcl_visible_frames = np.hstack(ptcl_group_df[self.star.header_ptcl_visible_frames]).astype(bool)
+
+            # save per-particle-per-tilt CTF parameters from this tomogram
+            ctf_params.append(ptcl_ctf_params[ptcl_visible_frames])
+
+        # merge all particle's parameters across all tomograms
+        ctf_params = np.concatenate(ctf_params, axis=0)
+        ctf.print_ctf_params(ctf_params[0])
 
     def _load_particles(self) -> tuple[np.ndarray | list[mrc.LazyImage], tuple[float, float] | None, np.ndarray]:
         """

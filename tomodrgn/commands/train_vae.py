@@ -127,6 +127,8 @@ def train_batch(*,
                 batch_ctf_params: torch.Tensor,
                 batch_recon_error_weights: torch.Tensor,
                 batch_hartley_2d_mask: torch.Tensor,
+                image_ctf_premultiplied: bool,
+                image_dose_weighted: bool,
                 beta: float,
                 beta_control: float | None = None,
                 use_amp: bool = False) -> np.ndarray:
@@ -148,6 +150,8 @@ def train_batch(*,
             May be `torch.zeros((batchsize))` instead to indicate no weighting should be applied to the reconstructed slice error.
     :param batch_hartley_2d_mask: Batch of 2-D masks to be applied per-spatial-frequency.
             Calculated as the intersection of critical dose exposure curves and a Nyquist-limited circular mask in reciprocal space, including masking the DC component.
+    :param image_ctf_premultiplied: Whether images were multiplied by their CTF during particle extraction.
+    :param image_dose_weighted: Whether images were multiplied by their exposure-dependent frequency weighting during particle extraction.
     :param beta: scaling factor to apply to KLD during loss calculation.
     :param beta_control: KL-Controlled VAE gamma. Beta is KL target.
     :param use_amp: If true, use Automatic Mixed Precision to reduce memory consumption and accelerate code execution via `autocast` and `GradScaler`
@@ -163,7 +167,8 @@ def train_batch(*,
         batch_images_preprocessed, batch_ctf_weights = preprocess_batch(lat=lat,
                                                                         batch_images=batch_images,
                                                                         batch_trans=batch_trans,
-                                                                        batch_ctf_params=batch_ctf_params)
+                                                                        batch_ctf_params=batch_ctf_params,
+                                                                        image_ctf_premultiplied=image_ctf_premultiplied)
         # encode the translated and CTF-phase-flipped images
         z_mu, z_logvar, z = encode_batch(model=model,
                                          batch_images=batch_images_preprocessed)
@@ -181,6 +186,8 @@ def train_batch(*,
                                                  batch_ctf_weights=batch_ctf_weights,
                                                  batch_recon_error_weights=batch_recon_error_weights,
                                                  batch_hartley_2d_mask=batch_hartley_2d_mask,
+                                                 image_ctf_premultiplied=image_ctf_premultiplied,
+                                                 image_dose_weighted=image_dose_weighted,
                                                  beta=beta,
                                                  beta_control=beta_control)
 
@@ -197,7 +204,8 @@ def preprocess_batch(*,
                      lat: Lattice,
                      batch_images: torch.Tensor,
                      batch_trans: torch.Tensor,
-                     batch_ctf_params: torch.Tensor) -> tuple[torch.Tensor, Union[torch.Tensor, None]]:
+                     batch_ctf_params: torch.Tensor,
+                     image_ctf_premultiplied: bool) -> tuple[torch.Tensor, Union[torch.Tensor, None]]:
     """
     Center images via translation and phase flip for partial CTF correction, as needed
 
@@ -207,6 +215,7 @@ def preprocess_batch(*,
             May be `torch.zeros((batchsize))` instead to indicate no translations should be applied to the input images.
     :param batch_ctf_params: Batch of CTF parameters corresponding to `batch_images` known CTF parameters, shape (batchsize, ntilts, 9).
             May be `torch.zeros((batchsize))` instead to indicate no CTF corruption should be applied to the reconstructed slice.
+    :param image_ctf_premultiplied: Whether images were multiplied by their CTF during particle extraction.
     :return batch_images: translationally-centered and phase-flipped batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht**2)
     :return batch_ctf_weights: CTF evaluated at each spatial frequency corresponding to input images, shape (batchsize, ntilts, boxsize_ht**2) or None if no CTF should be applied
     """
@@ -224,7 +233,8 @@ def preprocess_batch(*,
     # phase flip the input CTF-corrupted image and calculate CTF weights to apply later
     if not torch.all(batch_ctf_params == torch.zeros(*batch_ctf_params.shape, device=batch_ctf_params.device)):
         batch_ctf_weights = ctf.compute_ctf(lat, *torch.split(batch_ctf_params[:, :, 1:], 1, 2))
-        batch_images = batch_images * batch_ctf_weights.sign()  # phase flip by CTF to be all positive amplitudes
+        if not image_ctf_premultiplied:
+            batch_images = batch_images * batch_ctf_weights.sign()  # phase flip by CTF to be all positive amplitudes
     else:
         batch_ctf_weights = None
 
@@ -288,6 +298,8 @@ def loss_function(*,
                   batch_ctf_weights: torch.Tensor,
                   batch_recon_error_weights: torch.Tensor,
                   batch_hartley_2d_mask: torch.Tensor,
+                  image_ctf_premultiplied: bool,
+                  image_dose_weighted: bool,
                   beta: float,
                   beta_control: float | None = None) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
@@ -302,22 +314,38 @@ def loss_function(*,
             Calculated from critical dose exposure curves and electron beam vs sample tilt geometry.
     :param batch_hartley_2d_mask: Batch of 2-D masks to be applied per-spatial-frequency.
             Calculated as the intersection of critical dose exposure curves and a Nyquist-limited circular mask in reciprocal space, including masking the DC component.
+    :param image_ctf_premultiplied: Whether images were multiplied by their CTF during particle extraction.
+    :param image_dose_weighted: Whether images were multiplied by their exposure-dependent frequency weighting during particle extraction.    :param beta: scaling factor to apply to KLD during loss calculation.
     :param beta: scaling factor to apply to KLD during loss calculation.
     :param beta_control: KL-Controlled VAE gamma. Beta is KL target.
     :return: total summed loss, generative loss between reconstructed slices and input images, and beta-weighted kld loss between latent embeddings and standard normal
     """
-    # reconstruction error
-    batch_images = batch_images[batch_hartley_2d_mask].view(-1)
-    batch_recon_error_weights = batch_recon_error_weights[batch_hartley_2d_mask].view(-1)
-    if batch_ctf_weights is not None:
-        batch_ctf_weights = batch_ctf_weights[batch_hartley_2d_mask].view(-1)
-        batch_images_recon = batch_images_recon * batch_ctf_weights  # apply CTF to reconstructed image
-        batch_images = batch_images * batch_ctf_weights.sign()  # undo phase flipping in place from preprocess_batch
-    gen_loss = torch.mean(batch_recon_error_weights * ((batch_images_recon - batch_images) ** 2))
-
-    # latent loss
+    # locally disable autocast for numerical stability in calculating losses, particularly with batch size > 1 or equivalent large denominator for kld or large num pixels for mse
     with torch.amp.autocast(device_type=batch_images.device.type, enabled=False):
-        # locally disable autocast for numerical stability in calculating KLD, particularly with batch size > 1 or equivalent large denominator
+        # upcast tensors for numerical stability in loss if amp was enabled upstream
+        batch_images = batch_images.to(torch.float32)
+        batch_images_recon = batch_images_recon.to(torch.float32)
+        batch_ctf_weights = batch_ctf_weights.to(torch.float32) if batch_ctf_weights is not None else None
+        batch_recon_error_weights = batch_recon_error_weights.to(torch.float32)
+
+        # reconstruction error
+        batch_images = batch_images[batch_hartley_2d_mask].view(-1)
+        batch_recon_error_weights = batch_recon_error_weights[batch_hartley_2d_mask].view(-1)
+        if batch_ctf_weights is not None:
+            batch_ctf_weights = batch_ctf_weights[batch_hartley_2d_mask].view(-1)
+            batch_images_recon = batch_images_recon * batch_ctf_weights  # apply CTF to reconstructed image
+            if not image_ctf_premultiplied:
+                # undo phase flipping in place from preprocess_batch, this was only applied if images are not ctf premultiplied
+                batch_images = batch_images * batch_ctf_weights.sign()
+            else:
+                # reconstructed image needs to correspond to input ctf_premultiplied images, i.e. images that are doubly convolved with the CTF
+                batch_images_recon = batch_images_recon * batch_ctf_weights  # apply CTF to reconstructed image again
+        if image_dose_weighted:
+            # images may have been extracted with dose weights pre-applied
+            batch_images_recon = batch_images_recon * batch_recon_error_weights
+        gen_loss = torch.mean(batch_recon_error_weights * ((batch_images_recon - batch_images) ** 2))
+
+        # latent loss
         kld = torch.mean(-0.5 * torch.sum(1 + z_logvar.float() - z_mu.float().pow(2) - z_logvar.float().exp(), dim=1), dim=0)
         if beta_control is None:
             # denominator is the largest number of pixels included in single particle of any particle in batch
@@ -381,7 +409,8 @@ def encoder_inference(*,
                 batch_images, ctf_weights = preprocess_batch(lat=lat,
                                                              batch_images=batch_images,
                                                              batch_trans=batch_trans,
-                                                             batch_ctf_params=batch_ctf_params)
+                                                             batch_ctf_params=batch_ctf_params,
+                                                             image_ctf_premultiplied=data.star.image_ctf_premultiplied)
 
                 # decode the lattice coordinate positions given the encoder-generated embeddings
                 z_mu, z_logvar, z = encode_batch(model=model,
@@ -536,6 +565,8 @@ def main(args):
         data_test = None
     boxsize_ht = data_train.boxsize_ht
     nptcls = data_train.nptcls
+    image_ctf_premultiplied = data_train.star.image_ctf_premultiplied
+    image_dose_weighted = data_train.star.image_dose_weighted
 
     # instantiate lattice
     lat = Lattice(boxsize_ht, extent=args.l_extent, device=device)
@@ -731,6 +762,8 @@ def main(args):
                                        batch_ctf_params=batch_ctf_params,
                                        batch_recon_error_weights=batch_recon_error_weights,
                                        batch_hartley_2d_mask=batch_hartley_2d_mask,
+                                       image_ctf_premultiplied=image_ctf_premultiplied,
+                                       image_dose_weighted=image_dose_weighted,
                                        beta=beta,
                                        beta_control=args.beta_control,
                                        use_amp=use_amp)

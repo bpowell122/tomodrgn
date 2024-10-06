@@ -101,8 +101,9 @@ def backproject_dataset(data: TiltSeriesMRCData | TomoParticlesMRCData,
 
         # correct CTF by phase flipping images
         if not torch.all(batch_ctf_params == torch.zeros(batchsize, device=batch_ctf_params.device)):
-            batch_ctf_weights = ctf.compute_ctf(lattice, *torch.split(batch_ctf_params.view(batchsize * ntilts, 9)[:, 1:], 1, 1))
-            batch_images *= batch_ctf_weights.sign()  # phase flip by CTF to be all positive amplitudes
+            if not data.star.image_ctf_premultiplied:
+                batch_ctf_weights = ctf.compute_ctf(lattice, *torch.split(batch_ctf_params.view(batchsize * ntilts, 9)[:, 1:], 1, 1))
+                batch_images *= batch_ctf_weights.sign()  # phase flip by CTF to be all positive amplitudes
 
         # weight by dose and tilt
         batch_images = batch_images * batch_frequency_weights
