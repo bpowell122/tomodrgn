@@ -3,6 +3,7 @@ Lightweight parsers for starfiles
 """
 import os
 import re
+import shutil
 from datetime import datetime as dt
 from enum import Enum
 from itertools import pairwise
@@ -897,7 +898,7 @@ class TiltSeriesStarfile(GenericStarfile):
                 raise NotImplementedError(f'Auto detection of source software failed. '
                                           f'Consider retrying with manually specified `source_software`.'
                                           f'Found STAR file headers: {headers}. '
-                                          f'TomoDRGN known STAR file headers: {TiltSeriesStarfileStarHeaders}')
+                                          f'TomoDRGN known STAR file headers: {[e.name for e in TiltSeriesStarfileStarHeaders]}')
 
     @property
     def headers_rot(self) -> list[str]:
@@ -1439,7 +1440,7 @@ class TomoParticlesStarfile(GenericStarfile):
         self.image_tilt_weighted = False
 
         # note columns added during init, so that we can remove these columns later when writing the star file
-        self.tomodrgn_added_headers = [self.header_pose_tx, self.header_pose_ty, self.header_pose_tz, self.header_ctf_ps]
+        self.tomodrgn_added_headers = [self.header_pose_tx, self.header_pose_ty, self.header_pose_tz, self.header_ctf_ps, self.header_image_random_split]
 
     def _infer_metadata_mapping(self) -> None:
         """
@@ -1908,8 +1909,13 @@ class TomoParticlesStarfile(GenericStarfile):
         outstar_particles = f'{os.path.dirname(outstar)}/{os.path.basename(outstar).replace("_optimisation_set", "")}'
         super().write(*args, outstar=outstar_particles, **kwargs)
 
+        # need to copy the tomoTomogramsFile to this new location -- can just copy (not starfile.write) because the file contents do not change
+        outstar_tomograms = f'{os.path.dirname(outstar)}/{os.path.basename(self.tomograms_star_path)}'
+        shutil.copy(self.tomograms_star_path, outstar_tomograms)
+
         # also need to update the optimisation set contents and write out the updated optimisation set star file to the same directory
         self.optimisation_set_star.blocks['data_']['_rlnTomoParticlesFile'] = os.path.basename(outstar_particles)
+        self.optimisation_set_star.blocks['data_']['_rlnTomoTomogramsFile'] = os.path.basename(outstar_tomograms)
         self.optimisation_set_star.write(outstar=outstar)
 
         # re-merge data_optics with data_particles so that the starfile object appears unchanged after calling this method

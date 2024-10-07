@@ -124,6 +124,7 @@ def analyze_z_multidimensional(z: np.ndarray,
                                plot_format: Literal['png', 'svgz'],
                                vg: models.VolumeGenerator,
                                starfile_path: str,
+                               source_software: str,
                                datadir: str = None,
                                skip_vol: bool = False,
                                skip_umap: bool = False,
@@ -142,6 +143,8 @@ def analyze_z_multidimensional(z: np.ndarray,
     :param plot_format: file format with which to save plots
     :param vg: VolumeGenerator instance to aid volume generation at specficied z values
     :param starfile_path: path to star file used during model training through which to load images
+    :param source_software: type of source software used to create the star file, used to indicate the appropriate star file handling class to instantiate.
+            Default of 'auto' tries to infer the appropriate star file handling class based on whether ``star_path`` is an optimisation set star file.
     :param datadir: path to particle images on disk, used when plotting images per kmeans class
     :param skip_vol: whether to skip generation of volumes
     :param skip_umap: whether to skip latent embeddings UMAP dimensionality reduction
@@ -412,7 +415,8 @@ def analyze_z_multidimensional(z: np.ndarray,
             plt.close()
 
     # make plots of first 6 images of each kmeans class
-    s = starfile.load_sta_starfile(star_path=starfile_path)
+    s = starfile.load_sta_starfile(star_path=starfile_path,
+                                   source_software=source_software)
     star_df_backup = s.df.copy(deep=True)
     for label in range(num_ksamples):
         # get indices of particles within this kmeans class
@@ -530,6 +534,7 @@ def main(args):
                                    skip_umap=args.skip_umap,
                                    num_ksamples=args.ksample,
                                    starfile_path=star_path,
+                                   source_software=cfg['starfile_args']['source_software'],
                                    datadir=datadir)
 
     # copy over template if file doesn't exist
