@@ -700,8 +700,14 @@ class TomoParticlesMRCData(data.Dataset):
         :return: ctf_params as either numpy array with shape (nimgs, 9) or None
         """
         ctf_params = None
-
-        if not all(header_ctf in self.star.df.columns for header_ctf in self.star.headers_ctf):
+        ctf_params_in_particles_df = all([header_ctf in self.star.df.columns for header_ctf in [self.star.header_ptcl_box_size,
+                                                                                                self.star.header_ctf_angpix,
+                                                                                                self.star.header_ctf_voltage,
+                                                                                                self.star.header_ctf_cs,
+                                                                                                self.star.header_ctf_w,
+                                                                                                self.star.header_ctf_ps]])
+        # assumes that ctf parameters are present in tomograms df (defocusU, defocusV, defocusAngle)
+        if not ctf_params_in_particles_df:
             utils.log('CTF parameters not found in star file. During training, reconstructed Fourier central slices will not have CTF applied.')
             return ctf_params
 
@@ -800,7 +806,8 @@ class TomoParticlesMRCData(data.Dataset):
 
         # merge all particle's parameters across all tomograms
         ctf_params = np.concatenate(ctf_params, axis=0)
-        ctf.print_ctf_params(ctf_params[0])
+
+        return ctf_params
 
     def _load_particles(self) -> tuple[np.ndarray | list[mrc.LazyImage], tuple[float, float] | None, np.ndarray]:
         """

@@ -567,6 +567,7 @@ def main(args):
     nptcls = data_train.nptcls
     image_ctf_premultiplied = data_train.star.image_ctf_premultiplied
     image_dose_weighted = data_train.star.image_dose_weighted
+    ctf.print_ctf_params(data_train.ctf_params[0])
 
     # instantiate lattice
     lat = Lattice(boxsize_ht, extent=args.l_extent, device=device)
