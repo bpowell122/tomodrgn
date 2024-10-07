@@ -6,13 +6,14 @@ import os
 import pickle
 import pprint
 from datetime import datetime as dt
+from typing import get_args
 
 import torch
 
 from tomodrgn import utils, dataset
 from tomodrgn.commands.train_vae import encoder_inference
 from tomodrgn.models import TiltSeriesHetOnlyVAE
-from tomodrgn.starfile import TiltSeriesStarfile
+from tomodrgn.starfile import TiltSeriesStarfile, KNOWN_STAR_SOURCES
 
 log = utils.log
 
@@ -37,7 +38,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     group.add_argument('--no-amp', action='store_true', help='Disable use of automatic mixed precision')
 
     group = parser.add_argument_group('Override configuration values -- star file')
-    group.add_argument('--source-software', type=str, choices=('auto', 'warp_v1', 'nextpyp', 'relion_v5', 'warp_v2'), default='auto',
+    group.add_argument('--source-software', type=str, choices=get_args(KNOWN_STAR_SOURCES), default='auto',
                        help='Manually set the software used to extract particles. Default is to auto-detect.')
     group.add_argument('--ind-ptcls', type=os.path.abspath, metavar='PKL', help='Filter starfile by particles (unique rlnGroupName values) using np array pkl as indices')
     group.add_argument('--ind-imgs', type=os.path.abspath, help='Filter starfile by particle images (star file rows) using np array pkl as indices')

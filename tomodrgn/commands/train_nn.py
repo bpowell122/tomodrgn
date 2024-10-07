@@ -5,7 +5,7 @@ import argparse
 import os
 import sys
 from datetime import datetime as dt
-from typing import Union
+from typing import Union, get_args
 
 import numpy as np
 import torch
@@ -18,7 +18,7 @@ from tomodrgn.models import VolumeGenerator
 from tomodrgn.dataset import TiltSeriesMRCData
 from tomodrgn.lattice import Lattice
 from tomodrgn.models import FTPositionalDecoder, DataParallelPassthrough
-from tomodrgn.starfile import TiltSeriesStarfile
+from tomodrgn.starfile import TiltSeriesStarfile, KNOWN_STAR_SOURCES
 
 log = utils.log
 vlog = utils.vlog
@@ -44,7 +44,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     group.add_argument('--plot-format', type=str, choices=['png', 'svgz'], default='png', help='File format with which to save plots')
 
     group = parser.add_argument_group('Particle starfile loading and filtering')
-    group.add_argument('--source-software', type=str, choices=('auto', 'warp_v1', 'nextpyp', 'relion_v5', 'warp_v2'), default='auto',
+    group.add_argument('--source-software', type=str, choices=get_args(KNOWN_STAR_SOURCES), default='auto',
                        help='Manually set the software used to extract particles. Default is to auto-detect.')
     group.add_argument('--ind-ptcls', type=os.path.abspath, metavar='PKL', help='Filter starfile by particles (unique rlnGroupName values) using np array pkl as indices')
     group.add_argument('--ind-imgs', type=os.path.abspath, help='Filter starfile by particle images (star file rows) using np array pkl as indices')

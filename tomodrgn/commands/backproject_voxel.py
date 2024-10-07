@@ -2,6 +2,7 @@
 Backproject 2-D images to form 3-D reconstruction with optional filtering and weighting
 """
 
+from typing import get_args
 import argparse
 import os
 import numpy as np
@@ -10,7 +11,7 @@ import torch
 import torch.utils.data
 
 from tomodrgn import utils, mrc, fft, ctf
-from tomodrgn.starfile import load_sta_starfile
+from tomodrgn.starfile import load_sta_starfile, KNOWN_STAR_SOURCES
 from tomodrgn.dataset import load_sta_dataset, TiltSeriesMRCData, TomoParticlesMRCData
 from tomodrgn.lattice import Lattice
 
@@ -30,7 +31,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     parser.add_argument('--plot-format', type=str, choices=['png', 'svgz'], default='png', help='File format with which to save plots')
 
     group = parser.add_argument_group('Particle starfile loading and filtering')
-    group.add_argument('--source-software', type=str, choices=('auto', 'warp_v1', 'nextpyp', 'relion_v5', 'warp_v2'), default='auto',
+    group.add_argument('--source-software', type=str, choices=get_args(KNOWN_STAR_SOURCES), default='auto',
                        help='Manually set the software used to extract particles. Default is to auto-detect.')
     group.add_argument('--ind-ptcls', type=os.path.abspath, metavar='PKL', help='Filter starfile by particles (unique rlnGroupName values) using np array pkl as indices')
     group.add_argument('--ind-imgs', type=os.path.abspath, help='Filter starfile by particle images (star file rows) using np array pkl as indices')
