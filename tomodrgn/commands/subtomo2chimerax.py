@@ -32,7 +32,6 @@ Example usage: volumes mode (places unique tomoDRGN volumes per particle)
         --vols-apix 11.5625 \
         --vols-render-level 0.008 \
         --coloring-labels analyze.49/kmeans20/labels.pkl
-# TODO make compatible with warptools outputs
 """
 import argparse
 import os
