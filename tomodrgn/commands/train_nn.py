@@ -14,11 +14,12 @@ import torch.amp
 import torch.utils.data
 
 from tomodrgn import utils, ctf, config
-from tomodrgn.models import VolumeGenerator
+from tomodrgn.models import VolumeGenerator, mlp_ascii
 from tomodrgn.dataset import TiltSeriesMRCData
 from tomodrgn.lattice import Lattice
 from tomodrgn.models import FTPositionalDecoder, DataParallelPassthrough
 from tomodrgn.starfile import TiltSeriesStarfile, KNOWN_STAR_SOURCES
+from tomodrgn.commands.train_vae import preprocess_batch
 
 log = utils.log
 vlog = utils.vlog
@@ -153,6 +154,8 @@ def train_batch(model: FTPositionalDecoder | DataParallelPassthrough,
                 batch_ctf_params: torch.Tensor,
                 batch_recon_error_weights: torch.Tensor,
                 batch_hartley_2d_mask: torch.Tensor,
+                image_ctf_premultiplied: bool,
+                image_dose_weighted: bool,
                 use_amp: bool = False) -> float:
     """
     Train a FTPositionalDecoder model on a batch of tilt series particle images.
@@ -172,6 +175,8 @@ def train_batch(model: FTPositionalDecoder | DataParallelPassthrough,
             May be `torch.zeros((batchsize))` instead to indicate no weighting should be applied to the reconstructed slice error.
     :param batch_hartley_2d_mask: Batch of 2-D masks to be applied per-spatial-frequency.
             Calculated as the intersection of critical dose exposure curves and a Nyquist-limited circular mask in reciprocal space, including masking the DC component.
+    :param image_ctf_premultiplied: Whether images were multiplied by their CTF during particle extraction.
+    :param image_dose_weighted: Whether images were multiplied by their exposure-dependent frequency weighting during particle extraction.
     :param use_amp: If true, use Automatic Mixed Precision to reduce memory consumption and accelerate code execution via `autocast` and `GradScaler`
     :return: generative loss between reconstructed slices and input images
     """
@@ -185,7 +190,8 @@ def train_batch(model: FTPositionalDecoder | DataParallelPassthrough,
         batch_images_preprocessed, batch_ctf_weights = preprocess_batch(lat=lat,
                                                                         batch_images=batch_images,
                                                                         batch_trans=batch_trans,
-                                                                        batch_ctf_params=batch_ctf_params)
+                                                                        batch_ctf_params=batch_ctf_params,
+                                                                        image_ctf_premultiplied=True)  # use image_ctf_premultiplied True to disable phase flipping of input images
         # decode the lattice coordinate positions given the encoder-generated embeddings
         batch_images_recon = decode_batch(model=model,
                                           lat=lat,
@@ -196,7 +202,9 @@ def train_batch(model: FTPositionalDecoder | DataParallelPassthrough,
                                  batch_images_recon=batch_images_recon,
                                  batch_ctf_weights=batch_ctf_weights,
                                  batch_recon_error_weights=batch_recon_error_weights,
-                                 batch_hartley_2d_mask=batch_hartley_2d_mask)
+                                 batch_hartley_2d_mask=batch_hartley_2d_mask,
+                                 image_ctf_premultiplied=image_ctf_premultiplied,
+                                 image_dose_weighted=image_dose_weighted)
 
     # backpropogate the scaled loss and optimize model weights
     scaler.scale(gen_loss).backward()
@@ -204,43 +212,6 @@ def train_batch(model: FTPositionalDecoder | DataParallelPassthrough,
     scaler.update()
 
     return gen_loss.item()
-
-
-def preprocess_batch(*,
-                     lat: Lattice,
-                     batch_images: torch.Tensor,
-                     batch_trans: torch.Tensor,
-                     batch_ctf_params: torch.Tensor) -> tuple[torch.Tensor, Union[torch.Tensor, None]]:
-    """
-    Center images via translation and phase flip for partial CTF correction, as needed
-
-    :param lat: Hartley-transform lattice of points for voxel grid operations
-    :param batch_images: Batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht, boxsize_ht)
-    :param batch_trans: Batch of 2-D translation matrices corresponding to `batch_images` known poses, shape (batchsize, ntilts, 2).
-            May be `torch.zeros((batchsize))` instead to indicate no translations should be applied to the input images.
-    :param batch_ctf_params: Batch of CTF parameters corresponding to `batch_images` known CTF parameters, shape (batchsize, ntilts, 9).
-            May be `torch.zeros((batchsize))` instead to indicate no CTF corruption should be applied to the reconstructed slice.
-    :return batch_images: translationally-centered and phase-flipped batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht**2)
-    :return batch_ctf_weights: CTF evaluated at each spatial frequency corresponding to input images, shape (batchsize, ntilts, boxsize_ht**2) or None if no CTF should be applied
-    """
-
-    # get key dimension sizes
-    batchsize, ntilts, boxsize_ht, boxsize_ht = batch_images.shape
-
-    # translate the image
-    if not torch.all(batch_trans == torch.zeros(*batch_trans.shape, device=batch_trans.device)):
-        batch_images = lat.translate_ht(batch_images.view(batchsize * ntilts, -1), batch_trans.view(batchsize * ntilts, 1, 2))
-
-    # restore separation of batch dim and tilt dim (merged into batch dim during translation)
-    batch_images = batch_images.view(batchsize, ntilts, boxsize_ht * boxsize_ht)
-
-    # phase flip the input CTF-corrupted image and calculate CTF weights to apply later
-    if not torch.all(batch_ctf_params == torch.zeros(*batch_ctf_params.shape, device=batch_ctf_params.device)):
-        batch_ctf_weights = ctf.compute_ctf(lat, *torch.split(batch_ctf_params[:, :, 1:], 1, 2))
-    else:
-        batch_ctf_weights = None
-
-    return batch_images, batch_ctf_weights
 
 
 def decode_batch(*,
@@ -268,9 +239,6 @@ def decode_batch(*,
     # this will eventually be replaceable with pytorch NestedTensor, but as of torch v2.4 this still does not work at backprop (and does not support many common operations we need prior to that)
     batch_images_recon = torch.cat([model(coords=coords_ptcl[mask_ptcl].unsqueeze(0), z=None).squeeze(0)
                                     for coords_ptcl, mask_ptcl in zip(input_coords, batch_hartley_2d_mask, strict=True)], dim=0)
-    # print(f'{batch_images_recon.shape=}')
-    # print(len([model(coords=coords_ptcl[mask_ptcl].unsqueeze(0), z=None).squeeze(0) for coords_ptcl, mask_ptcl in zip(input_coords, batch_hartley_2d_mask, strict=True)]))
-    # print([model.decode(coords=coords_ptcl[mask_ptcl].unsqueeze(0), z=None).squeeze(0) for coords_ptcl, mask_ptcl in zip(input_coords, batch_hartley_2d_mask, strict=True)][0].shape)
 
     return batch_images_recon
 
@@ -280,7 +248,9 @@ def loss_function(*,
                   batch_images_recon: torch.Tensor,
                   batch_ctf_weights: torch.Tensor,
                   batch_recon_error_weights: torch.Tensor,
-                  batch_hartley_2d_mask: torch.Tensor) -> torch.Tensor:
+                  batch_hartley_2d_mask: torch.Tensor,
+                  image_ctf_premultiplied: bool,
+                  image_dose_weighted: bool) -> torch.Tensor:
     """
     Calculate generative loss between reconstructed and input images
 
@@ -291,15 +261,35 @@ def loss_function(*,
             Calculated from critical dose exposure curves and electron beam vs sample tilt geometry.
     :param batch_hartley_2d_mask: Batch of 2-D masks to be applied per-spatial-frequency.
             Calculated as the intersection of critical dose exposure curves and a Nyquist-limited circular mask in reciprocal space, including masking the DC component.
+    :param image_ctf_premultiplied: Whether images were multiplied by their CTF during particle extraction.
+    :param image_dose_weighted: Whether images were multiplied by their exposure-dependent frequency weighting during particle extraction.    :param beta: scaling factor to apply to KLD during loss calculation.
     :return: generative loss between reconstructed slices and input images
     """
-    # reconstruction error
-    batch_images = batch_images[batch_hartley_2d_mask].view(-1)
-    batch_recon_error_weights = batch_recon_error_weights[batch_hartley_2d_mask].view(-1)
-    if batch_ctf_weights is not None:
-        batch_ctf_weights = batch_ctf_weights[batch_hartley_2d_mask].view(-1)
-        batch_images_recon = batch_images_recon * batch_ctf_weights  # apply CTF to reconstructed image
-    gen_loss = torch.mean(batch_recon_error_weights * ((batch_images_recon - batch_images) ** 2))
+    # locally disable autocast for numerical stability in calculating losses, particularly with batch size > 1 or equivalent large denominator for kld or large num pixels for mse
+    with torch.amp.autocast(device_type=batch_images.device.type, enabled=False):
+        # upcast tensors for numerical stability in loss if amp was enabled upstream
+        batch_images = batch_images.to(torch.float32)
+        batch_images_recon = batch_images_recon.to(torch.float32)
+        batch_ctf_weights = batch_ctf_weights.to(torch.float32) if batch_ctf_weights is not None else None
+        batch_recon_error_weights = batch_recon_error_weights.to(torch.float32)
+
+        # reconstruction error
+        batch_images = batch_images[batch_hartley_2d_mask].view(-1)
+        batch_recon_error_weights = batch_recon_error_weights[batch_hartley_2d_mask].view(-1)
+        if batch_ctf_weights is not None:
+            batch_ctf_weights = batch_ctf_weights[batch_hartley_2d_mask].view(-1)
+            batch_images_recon = batch_images_recon * batch_ctf_weights  # apply CTF to reconstructed image
+            if not image_ctf_premultiplied:
+                # undo phase flipping in place from preprocess_batch, this was only applied if images are not ctf premultiplied
+                batch_images = batch_images * batch_ctf_weights.sign()
+            else:
+                # reconstructed image needs to correspond to input ctf_premultiplied images, i.e. images that are doubly convolved with the CTF
+                batch_images_recon = batch_images_recon * batch_ctf_weights  # apply CTF to reconstructed image again
+        if image_dose_weighted:
+            # images may have been extracted with dose weights pre-applied
+            batch_images_recon = batch_images_recon * batch_recon_error_weights
+        gen_loss = torch.mean(batch_recon_error_weights * ((batch_images_recon - batch_images) ** 2))
+
     return gen_loss
 
 
@@ -364,6 +354,9 @@ def main(args):
                              sequential_tilt_sampling=args.sequential_tilt_sampling)
     boxsize_ht = data.boxsize_ht
     nptcls = data.nptcls
+    image_ctf_premultiplied = data.star.image_ctf_premultiplied
+    image_dose_weighted = data.star.image_dose_weighted
+    ctf.print_ctf_params(data.ctf_params[0])
 
     # instantiate lattice
     lat = Lattice(boxsize_ht, extent=args.l_extent, device=device)
@@ -378,6 +371,10 @@ def main(args):
                                 pe_type=args.pe_type,
                                 pe_dim=args.pe_dim,
                                 feat_sigma=args.feat_sigma)
+    for line in mlp_ascii(input_dim=model.in_dim,
+                          hidden_dims=[model.hidden_dim for _ in range(model.hidden_layers)],
+                          output_dim=2):
+        print(line)
 
     # save configuration
     out_config = f'{args.outdir}/config.pkl'
@@ -468,6 +465,8 @@ def main(args):
                                      batch_ctf_params=batch_ctf_params,
                                      batch_recon_error_weights=batch_recon_error_weights,
                                      batch_hartley_2d_mask=batch_hartley_2d_mask,
+                                     image_ctf_premultiplied=image_ctf_premultiplied,
+                                     image_dose_weighted=image_dose_weighted,
                                      use_amp=use_amp)
             loss_accum += loss_batch * len(batch_images)
             if batch_it % args.log_interval == 0:
