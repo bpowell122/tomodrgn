@@ -1440,7 +1440,7 @@ class TomoParticlesStarfile(GenericStarfile):
         self.image_tilt_weighted = False
 
         # note columns added during init, so that we can remove these columns later when writing the star file
-        self.tomodrgn_added_headers = [self.header_pose_tx, self.header_pose_ty, self.header_pose_tz, self.header_ctf_ps, self.header_image_random_split]
+        self.tomodrgn_added_headers = [self.header_pose_tx, self.header_pose_ty, self.header_pose_tz, self.header_ctf_ps]
 
     def _infer_metadata_mapping(self) -> None:
         """
@@ -1782,6 +1782,7 @@ class TomoParticlesStarfile(GenericStarfile):
 
         # store random split in particles dataframe
         self.df[self.header_image_random_split] = train_test_split
+        self.tomodrgn_added_headers.append(self.header_image_random_split)
 
         # provide summary statistics
         if show_summary_stats:

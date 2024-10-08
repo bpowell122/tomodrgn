@@ -13,7 +13,7 @@ import torch
 from tomodrgn import utils, dataset
 from tomodrgn.commands.train_vae import encoder_inference
 from tomodrgn.models import TiltSeriesHetOnlyVAE
-from tomodrgn.starfile import TiltSeriesStarfile, KNOWN_STAR_SOURCES
+from tomodrgn.starfile import load_sta_starfile, KNOWN_STAR_SOURCES
 
 log = utils.log
 
@@ -55,7 +55,6 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     group = parser.add_argument_group('Dataloader arguments')
     group.add_argument('--num-workers', type=int, default=0, help='Number of workers to use when batching particles for training. Has moderate impact on epoch time')
     group.add_argument('--prefetch-factor', type=int, default=2, help='Number of particles to prefetch per worker for training. Has moderate impact on epoch time')
-    group.add_argument('--persistent-workers', action='store_true', help='Whether to persist workers after dataset has been fully consumed. Has minimal impact on run time')
     group.add_argument('--pin-memory', action='store_true', help='Whether to use pinned memory for dataloader. Has large impact on epoch time. Recommended.')
 
     return parser
@@ -102,8 +101,8 @@ def main(args):
         cfg['dataset_args']['invert_data'] = args.invert_data
 
     # load star file
-    ptcls_star = TiltSeriesStarfile(args.particles,
-                                    source_software=args.source_software)
+    ptcls_star = load_sta_starfile(args.particles,
+                                   source_software=args.source_software)
 
     # filter star file
     ptcls_star.filter(ind_imgs=args.ind_imgs,
@@ -128,7 +127,7 @@ def main(args):
 
     # load the particles
     log('Loading the dataset using specified config ...')
-    data = dataset.TiltSeriesMRCData.load(cfg)
+    data = dataset.load_sta_dataset(config=cfg)
 
     # instantiate model and lattice
     log('Loading the model using specified config ...')
@@ -146,8 +145,11 @@ def main(args):
     z_mu, z_logvar = encoder_inference(model=model,
                                        lat=lattice,
                                        data=data,
+                                       num_workers=args.num_workers,
+                                       prefetch_factor=args.prefetch_factor,
+                                       pin_memory=args.pin_memory,
                                        use_amp=use_amp,
-                                       batchsize=args.batch_size)
+                                       batchsize=args.batch_size, )
 
     log(f'Saving latent embeddings to {args.out_z}')
     with open(args.out_z, 'wb') as f:
