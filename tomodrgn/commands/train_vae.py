@@ -363,9 +363,11 @@ def encoder_inference(*,
                       model: TiltSeriesHetOnlyVAE | DataParallelPassthrough,
                       lat: Lattice,
                       data: TiltSeriesMRCData | TomoParticlesMRCData,
+                      num_workers: int = 0,
+                      prefetch_factor: int = None,
+                      pin_memory: bool = False,
                       use_amp: bool = False,
-                      batchsize: int = 1,
-                      **kwargs) -> tuple[np.ndarray, np.ndarray]:
+                      batchsize: int = 1) -> tuple[np.ndarray, np.ndarray]:
     """
     Run inference on the encoder module using the specified data as input to be embedded in latent space.
 
@@ -373,8 +375,10 @@ def encoder_inference(*,
     :param lat: Hartley-transform lattice of points for voxel grid operations
     :param data: TiltSeriesMRCData or TomoParticlesMRCData object for accessing tilt images with known CTF and pose parameters, to be embedded in latent space
     :param use_amp: If true, use Automatic Mixed Precision to reduce memory consumption and accelerate code execution via `torch.autocast`
-    :param batchsize: batch size used in DataLoader for model inference
-    :param kwargs: All other key word arguments are passed to `torch.DataLoader`
+    :param batchsize: batch size used in dataloader for model inference
+    :param num_workers: Number of workers to use with dataloader when batching particles for inference.
+    :param prefetch_factor: Number of particles to prefetch per worker with dataloader for inference.
+    :param pin_memory: Whether to use pinned memory for dataloader.
     :return: Direct output of encoder module parameterizing the mean of the latent embedding for each particle, shape (batchsize, zdim).
             Direct output of encoder module parameterizing the log variance of the latent embedding for each particle, shape (batchsize, zdim)
     """
@@ -397,7 +401,10 @@ def encoder_inference(*,
             data_generator = torch.utils.data.DataLoader(data,
                                                          batch_size=batchsize,
                                                          shuffle=False,
-                                                         **kwargs)
+                                                         num_workers=num_workers,
+                                                         prefetch_factor=prefetch_factor,
+                                                         persistent_workers=False,  # creating this dataloading for a single pass, no need for peristent workers
+                                                         pin_memory=pin_memory)
 
             for batch_images, _, batch_trans, batch_ctf_params, _, _, batch_indices in data_generator:
                 # transfer to GPU
@@ -792,14 +799,20 @@ def main(args):
                                                            lat=lat,
                                                            data=data_train,
                                                            use_amp=use_amp,
-                                                           batchsize=args.batch_size)
+                                                           batchsize=args.batch_size,
+                                                           num_workers=args.num_workers,
+                                                           prefetch_factor=args.prefetch_factor,
+                                                           pin_memory=args.pin_memory)
             if data_test:
                 out_z_test = f'{args.outdir}/z.{epoch}.test.pkl'
                 z_mu_test, z_logvar_test = encoder_inference(model=model,
                                                              lat=lat,
                                                              data=data_test,
                                                              use_amp=use_amp,
-                                                             batchsize=args.batch_size)
+                                                             batchsize=args.batch_size,
+                                                             num_workers=args.num_workers,
+                                                             prefetch_factor=args.prefetch_factor,
+                                                             pin_memory=args.pin_memory)
             else:
                 z_mu_test, z_logvar_test, out_z_test = None, None, None
             save_checkpoint(model=model,
@@ -838,14 +851,20 @@ def main(args):
                                                    lat=lat,
                                                    data=data_train,
                                                    use_amp=use_amp,
-                                                   batchsize=args.batch_size)
+                                                   batchsize=args.batch_size,
+                                                   num_workers=args.num_workers,
+                                                   prefetch_factor=args.prefetch_factor,
+                                                   pin_memory=args.pin_memory)
     if data_test:
         out_z_test = f'{args.outdir}/z.test.pkl'
         z_mu_test, z_logvar_test = encoder_inference(model=model,
                                                      lat=lat,
                                                      data=data_test,
                                                      use_amp=use_amp,
-                                                     batchsize=args.batch_size)
+                                                     batchsize=args.batch_size,
+                                                     num_workers=args.num_workers,
+                                                     prefetch_factor=args.prefetch_factor,
+                                                     pin_memory=args.pin_memory)
     else:
         z_mu_test, z_logvar_test, out_z_test = None, None, None
     save_checkpoint(model=model,
