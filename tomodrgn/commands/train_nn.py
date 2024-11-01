@@ -5,7 +5,7 @@ import argparse
 import os
 import sys
 from datetime import datetime as dt
-from typing import Union, get_args
+from typing import get_args
 
 import numpy as np
 import torch
@@ -15,10 +15,10 @@ import torch.utils.data
 
 from tomodrgn import utils, ctf, config
 from tomodrgn.models import VolumeGenerator, mlp_ascii
-from tomodrgn.dataset import TiltSeriesMRCData
+from tomodrgn.dataset import load_sta_dataset
 from tomodrgn.lattice import Lattice
 from tomodrgn.models import FTPositionalDecoder, DataParallelPassthrough
-from tomodrgn.starfile import TiltSeriesStarfile, KNOWN_STAR_SOURCES
+from tomodrgn.starfile import load_sta_starfile, KNOWN_STAR_SOURCES
 from tomodrgn.commands.train_vae import preprocess_batch
 
 log = utils.log
@@ -69,8 +69,8 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     group.add_argument('--l-dose-mask', action='store_true', help='Do not train on frequencies exposed to > 2.5x critical dose. Training lattice is intersection of this with --l-extent')
 
     group = parser.add_argument_group('Training parameters')
-    group.add_argument('--num-epochs', type=int, default=20, help='Number of training epochs')
-    group.add_argument('--batch-size', type=int, default=1, help='Minibatch size')
+    group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs')
+    group.add_argument('-b', '--batch-size', type=int, default=1, help='Minibatch size')
     group.add_argument('--wd', type=float, default=0, help='Weight decay in Adam optimizer')
     group.add_argument('--lr', type=float, default=0.0002, help='Learning rate in Adam optimizer for batch size 1. Is automatically linearly scaled with batch size.')
     group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: mean, std of dataset)')
@@ -320,8 +320,8 @@ def main(args):
         # https://github.com/pytorch/pytorch/issues/55374
 
     # load star file
-    ptcls_star = TiltSeriesStarfile(args.particles,
-                                    source_software=args.source_software)
+    ptcls_star = load_sta_starfile(star_path=args.particles,
+                                   source_software=args.source_software)
     ptcls_star.plot_particle_uid_ntilt_distribution(outpath=f'{args.outdir}/{os.path.basename(ptcls_star.sourcefile)}_particle_uid_ntilt_distribution.{args.plot_format}')
 
     # filter star file
@@ -339,7 +339,7 @@ def main(args):
     # load the particles
     flog(f'Loading dataset from {args.particles}')
     datadir = args.datadir if args.datadir is not None else os.path.dirname(ptcls_star.sourcefile)
-    data = TiltSeriesMRCData(ptcls_star=ptcls_star,
+    data = load_sta_dataset(ptcls_star=ptcls_star,
                              datadir=datadir,
                              lazy=args.lazy,
                              norm=args.norm,
@@ -352,6 +352,9 @@ def main(args):
                              l_dose_mask=args.l_dose_mask,
                              constant_mintilt_sampling=False,
                              sequential_tilt_sampling=args.sequential_tilt_sampling)
+    if args.batch_size > 1 and (data.ntilts_range[0] != data.ntilts_range[1]):
+        # particles have variable numbers of tilt images; collate_fn will fail when processing multiple particles as a ragged tensor
+        args.batch_size = 1
     boxsize_ht = data.boxsize_ht
     nptcls = data.nptcls
     image_ctf_premultiplied = data.star.image_ctf_premultiplied
