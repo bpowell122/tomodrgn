@@ -256,30 +256,31 @@ def analyze_z_multidimensional(z: np.ndarray,
     plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_pca_hexbin_annotatekmeans.{plot_format}')
     plt.close()
 
-    # scatter plot latent PCA with PCA trajectory annotations
-    analysis.scatter_annotate(x=pc[:, 0],
-                              y=pc[:, 1],
-                              centers_xy=np.vstack([pca.transform(z_trajectories[0])[:, :2],  # trajectory along pc 1, trajectory is pc-dimensional so just take first two dims for plotting
-                                                    pca.transform(z_trajectories[1])[:, :2]]),  # trajectory along pc 2, trajectory is pc-dimensional so just take first two dims for plotting
-                              annotate=True,
-                              labels=[f'l-PC1_{i}' for i in range(len(z_trajectories[0]))] + [f'l-PC2_{i}' for i in range(len(z_trajectories[1]))])
-    plt.xlabel('l-PC1')
-    plt.ylabel('l-PC2')
-    plt.tight_layout()
-    plt.savefig(f'{outdir}/pc1/z_pca_scatter_annotatepca.{plot_format}')
-    plt.close()
+    if num_pcs >= 2:
+        # scatter plot latent PCA with PCA trajectory annotations
+        analysis.scatter_annotate(x=pc[:, 0],
+                                  y=pc[:, 1],
+                                  centers_xy=np.vstack([pca.transform(z_trajectories[0])[:, :2],  # trajectory along pc 1, trajectory is pc-dimensional so just take first two dims for plotting
+                                                        pca.transform(z_trajectories[1])[:, :2]]),  # trajectory along pc 2, trajectory is pc-dimensional so just take first two dims for plotting
+                                  annotate=True,
+                                  labels=[f'l-PC1_{i}' for i in range(len(z_trajectories[0]))] + [f'l-PC2_{i}' for i in range(len(z_trajectories[1]))])
+        plt.xlabel('l-PC1')
+        plt.ylabel('l-PC2')
+        plt.tight_layout()
+        plt.savefig(f'{outdir}/pc1/z_pca_scatter_annotatepca.{plot_format}')
+        plt.close()
 
-    # hexbin plot latent PCA with PCA trajectory annotations
-    g = analysis.scatter_annotate_hex(x=pc[:, 0],
-                                      y=pc[:, 1],
-                                      centers_xy=np.vstack([pca.transform(z_trajectories[0])[:, :2],  # trajectory along pc 1, trajectory is pc-dimensional so just take first two dims for plotting
-                                                            pca.transform(z_trajectories[1])[:, :2]]),  # trajectory along pc 2, trajectory is pc-dimensional so just take first two dims for plotting
-                                      annotate=True,
-                                      labels=[f'l-PC1_{i}' for i in range(len(z_trajectories[0]))] + [f'l-PC2_{i}' for i in range(len(z_trajectories[1]))])
-    g.set_axis_labels('l-PC1', 'l-PC2')
-    plt.tight_layout()
-    plt.savefig(f'{outdir}/pc1/z_pca_hexbin_annotatepca.{plot_format}')
-    plt.close()
+        # hexbin plot latent PCA with PCA trajectory annotations
+        g = analysis.scatter_annotate_hex(x=pc[:, 0],
+                                          y=pc[:, 1],
+                                          centers_xy=np.vstack([pca.transform(z_trajectories[0])[:, :2],  # trajectory along pc 1, trajectory is pc-dimensional so just take first two dims for plotting
+                                                                pca.transform(z_trajectories[1])[:, :2]]),  # trajectory along pc 2, trajectory is pc-dimensional so just take first two dims for plotting
+                                          annotate=True,
+                                          labels=[f'l-PC1_{i}' for i in range(len(z_trajectories[0]))] + [f'l-PC2_{i}' for i in range(len(z_trajectories[1]))])
+        g.set_axis_labels('l-PC1', 'l-PC2')
+        plt.tight_layout()
+        plt.savefig(f'{outdir}/pc1/z_pca_hexbin_annotatepca.{plot_format}')
+        plt.close()
 
     # scatter plot latent PCA colored by k-means clusters
     analysis.plot_by_cluster(x=pc[:, 0],
@@ -354,30 +355,31 @@ def analyze_z_multidimensional(z: np.ndarray,
         plt.savefig(f'{outdir}/kmeans{num_ksamples}/z_umap_hexbin_annotatekmeans.{plot_format}')
         plt.close()
 
-        # scatter plot latent UMAP with PCA trajectory annotations
-        analysis.scatter_annotate(x=umap_emb[:, 0],
-                                  y=umap_emb[:, 1],
-                                  centers_xy=np.vstack([umap_reducer.transform(z_trajectories[0]),  # trajectory in latent space along pc 1, transformed to UMAP space
-                                                        umap_reducer.transform(z_trajectories[1])]),  # trajectory in latent space along pc 2, transformed to UMAP space
-                                  annotate=True,
-                                  labels=[f'l-PC1_{i}' for i in range(len(z_trajectories[0]))] + [f'l-PC2_{i}' for i in range(len(z_trajectories[1]))])
-        plt.xlabel('l-UMAP1')
-        plt.ylabel('l-UMAP2')
-        plt.tight_layout()
-        plt.savefig(f'{outdir}/pc1/z_umap_scatter_annotatepca.{plot_format}')
-        plt.close()
+        if num_pcs >= 2:
+            # scatter plot latent UMAP with PCA trajectory annotations
+            analysis.scatter_annotate(x=umap_emb[:, 0],
+                                      y=umap_emb[:, 1],
+                                      centers_xy=np.vstack([umap_reducer.transform(z_trajectories[0]),  # trajectory in latent space along pc 1, transformed to UMAP space
+                                                            umap_reducer.transform(z_trajectories[1])]),  # trajectory in latent space along pc 2, transformed to UMAP space
+                                      annotate=True,
+                                      labels=[f'l-PC1_{i}' for i in range(len(z_trajectories[0]))] + [f'l-PC2_{i}' for i in range(len(z_trajectories[1]))])
+            plt.xlabel('l-UMAP1')
+            plt.ylabel('l-UMAP2')
+            plt.tight_layout()
+            plt.savefig(f'{outdir}/pc1/z_umap_scatter_annotatepca.{plot_format}')
+            plt.close()
 
-        # hexbin plot latent UMAP with PCA trajectory annotations
-        g = analysis.scatter_annotate_hex(x=umap_emb[:, 0],
-                                          y=umap_emb[:, 1],
-                                          centers_xy=np.vstack([umap_reducer.transform(z_trajectories[0]),  # trajectory in latent space along pc 1, transformed to UMAP space
-                                                                umap_reducer.transform(z_trajectories[1])]),  # trajectory in latent space along pc 2, transformed to UMAP space
-                                          annotate=True,
-                                          labels=[f'l-PC1_{i}' for i in range(len(z_trajectories[0]))] + [f'l-PC2_{i}' for i in range(len(z_trajectories[1]))])
-        g.set_axis_labels('l-UMAP1', 'l-UMAP2')
-        plt.tight_layout()
-        plt.savefig(f'{outdir}/pc1/z_umap_hexbin_annotatepca.{plot_format}')
-        plt.close()
+            # hexbin plot latent UMAP with PCA trajectory annotations
+            g = analysis.scatter_annotate_hex(x=umap_emb[:, 0],
+                                              y=umap_emb[:, 1],
+                                              centers_xy=np.vstack([umap_reducer.transform(z_trajectories[0]),  # trajectory in latent space along pc 1, transformed to UMAP space
+                                                                    umap_reducer.transform(z_trajectories[1])]),  # trajectory in latent space along pc 2, transformed to UMAP space
+                                              annotate=True,
+                                              labels=[f'l-PC1_{i}' for i in range(len(z_trajectories[0]))] + [f'l-PC2_{i}' for i in range(len(z_trajectories[1]))])
+            g.set_axis_labels('l-UMAP1', 'l-UMAP2')
+            plt.tight_layout()
+            plt.savefig(f'{outdir}/pc1/z_umap_hexbin_annotatepca.{plot_format}')
+            plt.close()
 
         # scatter plot latent UMAP colored by k-means clusters
         analysis.plot_by_cluster(x=umap_emb[:, 0],
