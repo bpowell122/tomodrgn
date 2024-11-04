@@ -740,7 +740,7 @@ class TomoParticlesMRCData(data.Dataset):
 
             # get whether this tomogram has positive or negative correlation of z coordinate with defocus
             z_defocus_correlation = global_tomo_row['_rlnTomoHand'].item()
-            if z_defocus_correlation == -1:
+            if z_defocus_correlation != -1:
                 flipz_matrix = np.asarray([[1, 0, 0],
                                            [0, 1, 0],
                                            [0, 0, -1]])
@@ -760,7 +760,7 @@ class TomoParticlesMRCData(data.Dataset):
             ptcl_coords_angst_centered = ptcl_coords_angst - (tomo_dims_angst / 2)
 
             # update z coordinate with whether this tomogram has positive or negative correlation of z with defocus
-            if z_defocus_correlation == -1:
+            if z_defocus_correlation != -1:
                 flipz_coordinate = np.array([1, 1, -1])
                 flipz_coordinate = einops.rearrange(flipz_coordinate, 'i -> 1 i')  # match ndim of ptcl_coords_angst_centered to avoid potential confusion during broadcasting
                 ptcl_coords_angst_centered = ptcl_coords_angst_centered * flipz_coordinate
