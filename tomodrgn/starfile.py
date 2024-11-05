@@ -1917,7 +1917,11 @@ class TomoParticlesStarfile(GenericStarfile):
 
         # need to copy the tomoTomogramsFile to this new location -- can just copy (not starfile.write) because the file contents do not change
         outstar_tomograms = f'{os.path.dirname(outstar)}/{os.path.basename(self.tomograms_star_path)}'
-        shutil.copy(self.tomograms_star_path, outstar_tomograms)
+        try:
+            shutil.copy(self.tomograms_star_path, outstar_tomograms)
+        except shutil.SameFileError:
+            # the file already exists at outstar_tomograms path
+            pass
 
         # also need to update the optimisation set contents and write out the updated optimisation set star file to the same directory
         self.optimisation_set_star.blocks['data_']['_rlnTomoParticlesFile'] = os.path.basename(outstar_particles)
