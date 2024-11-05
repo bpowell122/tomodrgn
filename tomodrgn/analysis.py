@@ -441,7 +441,7 @@ def scatter_annotate(x: np.ndarray,
         assert centers_xy is None
         centers_xy = np.array([[x[center_ind], y[center_ind]] for center_ind in centers_ind])
     if centers_xy is not None:
-        plt.scatter(centers_xy[:, 0], centers_xy[:, 1], c='k')
+        plt.scatter(centers_xy[:, 0], centers_xy[:, 1], color='grey', edgecolor='grey')
 
     # add annotations for cluter center labels
     if annotate:
@@ -457,8 +457,8 @@ def scatter_annotate(x: np.ndarray,
                           va='center')
                  for i, label in enumerate(labels)]
         adjust_text(texts=texts,
-                    expand=(1.3, 1.3),
-                    arrowprops=dict(arrowstyle='->', color='red'))
+                    arrowprops=dict(arrowstyle='->', color='red'),
+                    time_lim=1)
 
     return fig, ax
 
@@ -494,7 +494,7 @@ def scatter_annotate_hex(x: np.ndarray,
         assert centers_xy is None
         centers_xy = np.array([[x[center_ind], y[center_ind]] for center_ind in centers_ind])
     if centers_xy is not None:
-        g.ax_joint.scatter(centers_xy[:, 0], centers_xy[:, 1], color='k', edgecolor='grey')
+        g.ax_joint.scatter(centers_xy[:, 0], centers_xy[:, 1], color='grey', edgecolor='grey')
 
     # add annotations for cluter center labels
     if annotate:
@@ -510,8 +510,8 @@ def scatter_annotate_hex(x: np.ndarray,
                           va='center')
                  for i, label in enumerate(labels)]
         adjust_text(texts=texts,
-                    expand=(1.3, 1.3),
-                    arrowprops=dict(arrowstyle='->', color='red'))
+                    arrowprops=dict(arrowstyle='->', color='red'),
+                    time_lim=1)
 
     return g
 
@@ -616,7 +616,7 @@ def plot_by_cluster(x: np.ndarray,
         assert centers_xy is None
         centers_xy = np.array([[x[center_ind], y[center_ind]] for center_ind in centers_ind])
     if centers_xy is not None:
-        ax.scatter(x=centers_xy[:, 0], y=centers_xy[:, 1], c='k')
+        ax.scatter(centers_xy[:, 0], centers_xy[:, 1], color='grey', edgecolor='grey')
 
     # add annotations for cluter center labels
     if annotate:
@@ -630,8 +630,8 @@ def plot_by_cluster(x: np.ndarray,
                           va='center')
                  for i, label_sel in enumerate(labels_sel)]
         adjust_text(texts=texts,
-                    expand=(1.3, 1.3),
-                    arrowprops=dict(arrowstyle='->', color='red'))
+                    arrowprops=dict(arrowstyle='->', color='red'),
+                    time_lim=1)
 
     return fig, ax
 
@@ -847,11 +847,11 @@ def plot_label_count_distribution(ptcl_star: starfile.TiltSeriesStarfile | starf
 
     fig, ax = plt.subplots(nrows=1,
                            ncols=1,
-                           figsize=(2 * len(ind_ptcls_per_tomo), 2 * len(set(class_labels))),
+                           figsize=(len(ind_ptcls_per_tomo) ** 0.5, len(set(class_labels)) ** 0.5),
                            layout='compressed')
 
     distribution_plot = ax.imshow(label_distribution.T)
-    fig.colorbar(distribution_plot, ax=ax, label='particle count per class')
+    fig.colorbar(distribution_plot, ax=ax, label='particle count')
 
     ax.set_xlabel('tomogram UID')
     ax.set_ylabel('class label')
