@@ -5,6 +5,7 @@ import argparse
 import copy
 import os
 from typing import Literal
+import warnings
 
 import numpy as np
 
@@ -146,7 +147,9 @@ def filter_image_series_starfile(star_path: str,
         ind_imgs = None
 
     else:
-        raise ValueError('One of --ind or --labels must be specified')
+        ind_imgs = None
+        ind_ptcls = None
+        warnings.warn('Neither --ind nor --labels was specified, continuing without filtering to a subset of particles')
 
     # apply filtering
     star.filter(ind_imgs=ind_imgs,
@@ -224,7 +227,8 @@ def filter_volume_series_starfile(star_path: str,
             raise ValueError
 
     else:
-        raise ValueError('One of --ind or --labels must be specified')
+        ind_ptcls_to_drop = np.array([])
+        warnings.warn('Neither --ind nor --labels was specified, continuing without filtering to a subset of particles')
 
     # apply filtering
     df = df.drop(ind_ptcls_to_drop).reset_index(drop=True)
