@@ -677,6 +677,11 @@ class GenericStarfile:
         """
         block_name = None
         for block_name in self.block_names:
+            # ignore any simple data blocks, which are stored as dictionaries
+            if type(self.blocks[block_name]) is dict:
+                block_name = None  # reset to None, as this may be the last element of block_names, in which case the column_substring was not found, and we want to rase the error below
+                continue
+
             # find the dataframe containing particle data
             if any(self.blocks[block_name].columns.str.contains(pat=column_substring)):
                 return block_name
