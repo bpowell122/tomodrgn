@@ -203,9 +203,9 @@ def analyze_z_multidimensional(z: np.ndarray,
                             invert=invert)
 
     # Make some plots using PCA transformation
-    log('Generating PCA plots ...')
 
     # bar plot PCA explained variance ratio
+    log('Plotting latent PCA explained variance ratio')
     plt.bar(np.arange(z.shape[1]) + 1, pca.explained_variance_ratio_)
     plt.xticks(np.arange(z.shape[1]) + 1)
     plt.xlabel('principal components')
@@ -215,6 +215,7 @@ def analyze_z_multidimensional(z: np.ndarray,
     plt.close()
 
     # scatter plot latent PCA
+    log('Plotting latent principal components as scatter')
     g = sns.jointplot(x=pc[:, 0],
                       y=pc[:, 1],
                       alpha=.1,
@@ -225,6 +226,7 @@ def analyze_z_multidimensional(z: np.ndarray,
     plt.close()
 
     # hexbin plot latent PCA
+    log('Plotting latent principal components as hexbin')
     g = sns.jointplot(x=pc[:, 0],
                       y=pc[:, 1],
                       kind='hex')
@@ -234,6 +236,7 @@ def analyze_z_multidimensional(z: np.ndarray,
     plt.close()
 
     # scatter plot latent PCA with kmeans center annotations
+    log('Plotting latent principal components as scatter with latent clustering kmeans-centers annotations')
     analysis.scatter_annotate(x=pc[:, 0],
                               y=pc[:, 1],
                               centers_ind=kmeans_centers_ind,
@@ -246,6 +249,7 @@ def analyze_z_multidimensional(z: np.ndarray,
     plt.close()
 
     # hexbin plot latent PCA with kmeans center annotations
+    log('Plotting latent principal components as hexbin with latent clustering kmeans-centers annotations')
     g = analysis.scatter_annotate_hex(x=pc[:, 0],
                                       y=pc[:, 1],
                                       centers_ind=kmeans_centers_ind,
@@ -258,6 +262,7 @@ def analyze_z_multidimensional(z: np.ndarray,
 
     if num_pcs >= 2:
         # scatter plot latent PCA with PCA trajectory annotations
+        log('Plotting latent principal components as scatter with volume-sampled principal components annotations')
         analysis.scatter_annotate(x=pc[:, 0],
                                   y=pc[:, 1],
                                   centers_xy=np.vstack([pca.transform(z_trajectories[0])[:, :2],  # trajectory along pc 1, trajectory is pc-dimensional so just take first two dims for plotting
@@ -271,6 +276,7 @@ def analyze_z_multidimensional(z: np.ndarray,
         plt.close()
 
         # hexbin plot latent PCA with PCA trajectory annotations
+        log('Plotting latent principal components as hexbin with volume-sampled principal components annotations')
         g = analysis.scatter_annotate_hex(x=pc[:, 0],
                                           y=pc[:, 1],
                                           centers_xy=np.vstack([pca.transform(z_trajectories[0])[:, :2],  # trajectory along pc 1, trajectory is pc-dimensional so just take first two dims for plotting
@@ -283,6 +289,7 @@ def analyze_z_multidimensional(z: np.ndarray,
         plt.close()
 
     # scatter plot latent PCA colored by k-means clusters
+    log('Plotting latent principal components as scatter colored by latent clustering kmeans-centers annotations')
     analysis.plot_by_cluster(x=pc[:, 0],
                              y=pc[:, 1],
                              labels=kmeans_labels,
@@ -296,6 +303,7 @@ def analyze_z_multidimensional(z: np.ndarray,
     plt.close()
 
     # scatter subplots latent PCA colored by k-means clusters
+    log('Plotting latent principal components as scatter subplots colored by latent clustering kmeans-centers annotations')
     analysis.plot_by_cluster_subplot(x=pc[:, 0],
                                      y=pc[:, 1],
                                      labels=kmeans_labels,
@@ -311,9 +319,8 @@ def analyze_z_multidimensional(z: np.ndarray,
         umap_emb, umap_reducer = analysis.run_umap(z)
         utils.save_pkl(umap_emb, f'{outdir}/umap.pkl')
 
-        log('Generating UMAP plots ...')
-
         # scatter plot latent UMAP
+        log('Plotting latent UMAP embeddings as scatter')
         g = sns.jointplot(x=umap_emb[:, 0],
                           y=umap_emb[:, 1],
                           alpha=.1,
@@ -324,6 +331,7 @@ def analyze_z_multidimensional(z: np.ndarray,
         plt.close()
 
         # hexbin plot latent UMAP
+        log('Plotting latent UMAP embeddings as hexbin')
         g = sns.jointplot(x=umap_emb[:, 0],
                           y=umap_emb[:, 1],
                           kind='hex')
@@ -333,6 +341,7 @@ def analyze_z_multidimensional(z: np.ndarray,
         plt.close()
 
         # scatter plot latent UMAP with kmeans center annotations
+        log('Plotting latent UMAP embeddings as scatter with latent clustering kmeans-centers annotations')
         analysis.scatter_annotate(x=umap_emb[:, 0],
                                   y=umap_emb[:, 1],
                                   centers_ind=kmeans_centers_ind,
@@ -345,6 +354,7 @@ def analyze_z_multidimensional(z: np.ndarray,
         plt.close()
 
         # hexbin plot latent UMAP with kmeans center annotations
+        log('Plotting latent UMAP embeddings as hexbin with latent clustering kmeans-centers annotations')
         g = analysis.scatter_annotate_hex(x=umap_emb[:, 0],
                                           y=umap_emb[:, 1],
                                           centers_ind=kmeans_centers_ind,
@@ -357,6 +367,7 @@ def analyze_z_multidimensional(z: np.ndarray,
 
         if num_pcs >= 2:
             # scatter plot latent UMAP with PCA trajectory annotations
+            log('Plotting latent UMAP embeddings as scatter with volume-sampled principal components annotations')
             analysis.scatter_annotate(x=umap_emb[:, 0],
                                       y=umap_emb[:, 1],
                                       centers_xy=np.vstack([umap_reducer.transform(z_trajectories[0]),  # trajectory in latent space along pc 1, transformed to UMAP space
@@ -370,6 +381,7 @@ def analyze_z_multidimensional(z: np.ndarray,
             plt.close()
 
             # hexbin plot latent UMAP with PCA trajectory annotations
+            log('Plotting latent UMAP embeddings as hexbin with volume-sampled principal components annotations')
             g = analysis.scatter_annotate_hex(x=umap_emb[:, 0],
                                               y=umap_emb[:, 1],
                                               centers_xy=np.vstack([umap_reducer.transform(z_trajectories[0]),  # trajectory in latent space along pc 1, transformed to UMAP space
@@ -382,6 +394,7 @@ def analyze_z_multidimensional(z: np.ndarray,
             plt.close()
 
         # scatter plot latent UMAP colored by k-means clusters
+        log('Plotting latent UMAP embeddings as scatter colored by latent clustering kmeans-centers annotations')
         analysis.plot_by_cluster(x=umap_emb[:, 0],
                                  y=umap_emb[:, 1],
                                  labels=kmeans_labels,
@@ -395,6 +408,7 @@ def analyze_z_multidimensional(z: np.ndarray,
         plt.close()
 
         # scatter subplots latent UMAP colored by k-means clusters
+        log('Plotting latent UMAP embeddings as scatter subplots colored by latent clustering kmeans-centers annotations')
         analysis.plot_by_cluster_subplot(x=umap_emb[:, 0],
                                          y=umap_emb[:, 1],
                                          labels=kmeans_labels,
@@ -406,6 +420,8 @@ def analyze_z_multidimensional(z: np.ndarray,
         plt.close()
 
         for i in range(num_pcs):
+            if i == 0:
+                log('Plotting latent UMAP embeddings as scatter colored by each latent principal components')
             analysis.scatter_color(x=umap_emb[:, 0],
                                    y=umap_emb[:, 1],
                                    c=pc[:, i],
@@ -417,6 +433,7 @@ def analyze_z_multidimensional(z: np.ndarray,
             plt.close()
 
     # make plots of first 6 images of each kmeans class
+    log('Plotting (up to) first 6 images of each latent clustering kmeans class')
     s = starfile.load_sta_starfile(star_path=starfile_path,
                                    source_software=source_software)
     star_df_backup = s.df.copy(deep=True)
@@ -442,12 +459,14 @@ def analyze_z_multidimensional(z: np.ndarray,
         s.df = star_df_backup.copy(deep=True)
 
     # make plot of class label distribution versus tomogram / micrograph in star file order
+    log('Plotting distribution of latent clustering kmeans annotations per tomogram')
     analysis.plot_label_count_distribution(ptcl_star=s,
                                            class_labels=kmeans_labels)
     plt.savefig(f'{outdir}/kmeans{num_ksamples}/tomogram_label_distribution.{plot_format}')
     plt.close()
 
     # make plots of numeric columns in star file (e.g. pose, coordinate, ctf) for correlations with UMAP
+    log('Plotting latent principal components or latent UMAP embeddings against numeric columns in input star file for potential correlations')
     os.mkdir(f'{outdir}/controls')
     if zdim > 2 and not skip_umap:
         ref_array = utils.load_pkl(f'{outdir}/umap.pkl')

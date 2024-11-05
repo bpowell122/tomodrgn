@@ -65,9 +65,9 @@ def make_plots(outdir: str,
     num_ksamples = len(set(kmeans_labels))
 
     # Make some plots using PCA transformation
-    log('Generating PCA plots ...')
 
     # bar plot PCA explained variance ratio
+    log('Plotting volume PCA explained variance ratio')
     plt.bar(np.arange(pc.shape[1]) + 1, pca.explained_variance_ratio_)
     plt.xticks(np.arange(pc.shape[1]) + 1)
     plt.xlabel('principal components')
@@ -76,7 +76,8 @@ def make_plots(outdir: str,
     plt.savefig(f'{outdir}/voxel_pca_explainedvariance.{plot_format}')
     plt.close()
 
-    # scatter plot latent PCA
+    # scatter plot volume PCA
+    log('Plotting volume principal components as scatter')
     g = sns.jointplot(x=pc[:, 0],
                       y=pc[:, 1],
                       alpha=.1,
@@ -86,7 +87,8 @@ def make_plots(outdir: str,
     plt.savefig(f'{outdir}/voxel_pca_scatter.{plot_format}')
     plt.close()
 
-    # hexbin plot latent PCA
+    # hexbin plot volume PCA
+    log('Plotting volume principal components as hexbin')
     g = sns.jointplot(x=pc[:, 0],
                       y=pc[:, 1],
                       kind='hex')
@@ -95,8 +97,9 @@ def make_plots(outdir: str,
     plt.savefig(f'{outdir}/voxel_pca_hexbin.{plot_format}')
     plt.close()
 
-    # scatter plot latent PCA with kmeans center annotations
     if kmeans_labels is not None:
+        # scatter plot volume PCA with kmeans center annotations
+        log('Plotting volume principal components as scatter with volume clustering kmeans-centers annotations')
         analysis.scatter_annotate(x=pc[:, 0],
                                   y=pc[:, 1],
                                   centers_ind=kmeans_centers_ind,
@@ -108,7 +111,8 @@ def make_plots(outdir: str,
         plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_pca_scatter_annotatekmeans.{plot_format}')
         plt.close()
 
-        # hexbin plot latent PCA with kmeans center annotations
+        # hexbin plot volume PCA with kmeans center annotations
+        log('Plotting volume principal components as hexbin with volume clustering kmeans-centers annotations')
         g = analysis.scatter_annotate_hex(x=pc[:, 0],
                                           y=pc[:, 1],
                                           centers_ind=kmeans_centers_ind,
@@ -119,33 +123,37 @@ def make_plots(outdir: str,
         plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_pca_hexbin_annotatekmeans.{plot_format}')
         plt.close()
 
-    # scatter plot latent PCA with PCA trajectory annotations
-    analysis.scatter_annotate(x=pc[:, 0],
-                              y=pc[:, 1],
-                              centers_xy=np.vstack([pca.transform(voxel_trajectories[0])[:, :2],  # trajectory along pc 1, trajectory is pc-dimensional so just take first two dims for plotting
-                                                    pca.transform(voxel_trajectories[1])[:, :2]]),  # trajectory along pc 2, trajectory is pc-dimensional so just take first two dims for plotting
-                              annotate=True,
-                              labels=[f'v-PC1_{i}' for i in range(len(voxel_trajectories[0]))] + [f'v-PC2_{i}' for i in range(len(voxel_trajectories[1]))])
-    plt.xlabel('v-PC1')
-    plt.ylabel('v-PC2')
-    plt.tight_layout()
-    plt.savefig(f'{outdir}/pc1/voxel_pca_scatter_annotatepca.{plot_format}')
-    plt.close()
+    if num_pcs_to_sample >= 2:
+        # scatter plot volume PCA with PCA trajectory annotations
+        log('Plotting volume principal components as scatter with volume-sampled principal components annotations')
+        analysis.scatter_annotate(x=pc[:, 0],
+                                  y=pc[:, 1],
+                                  centers_xy=np.vstack([pca.transform(voxel_trajectories[0])[:, :2],  # trajectory along pc 1, trajectory is pc-dimensional so just take first two dims for plotting
+                                                        pca.transform(voxel_trajectories[1])[:, :2]]),  # trajectory along pc 2, trajectory is pc-dimensional so just take first two dims for plotting
+                                  annotate=True,
+                                  labels=[f'v-PC1_{i}' for i in range(len(voxel_trajectories[0]))] + [f'v-PC2_{i}' for i in range(len(voxel_trajectories[1]))])
+        plt.xlabel('v-PC1')
+        plt.ylabel('v-PC2')
+        plt.tight_layout()
+        plt.savefig(f'{outdir}/pc1/voxel_pca_scatter_annotatepca.{plot_format}')
+        plt.close()
 
-    # hexbin plot latent PCA with PCA trajectory annotations
-    g = analysis.scatter_annotate_hex(x=pc[:, 0],
-                                      y=pc[:, 1],
-                                      centers_xy=np.vstack([pca.transform(voxel_trajectories[0])[:, :2],  # trajectory along pc 1, trajectory has pc-dims so just take first two dims for plotting
-                                                            pca.transform(voxel_trajectories[1])[:, :2]]),  # trajectory along pc 2, trajectory has pc-dims so just take first two dims for plotting
-                                      annotate=True,
-                                      labels=[f'v-PC1_{i}' for i in range(len(voxel_trajectories[0]))] + [f'v-PC2_{i}' for i in range(len(voxel_trajectories[1]))])
-    g.set_axis_labels('v-PC1', 'v-PC2')
-    plt.tight_layout()
-    plt.savefig(f'{outdir}/pc1/voxel_pca_hexbin_annotatepca.{plot_format}')
-    plt.close()
+        # hexbin plot volume PCA with PCA trajectory annotations
+        log('Plotting volume principal components as hexbin with volume-sampled principal components annotations')
+        g = analysis.scatter_annotate_hex(x=pc[:, 0],
+                                          y=pc[:, 1],
+                                          centers_xy=np.vstack([pca.transform(voxel_trajectories[0])[:, :2],  # trajectory along pc 1, trajectory has pc-dims so just take first two dims for plotting
+                                                                pca.transform(voxel_trajectories[1])[:, :2]]),  # trajectory along pc 2, trajectory has pc-dims so just take first two dims for plotting
+                                          annotate=True,
+                                          labels=[f'v-PC1_{i}' for i in range(len(voxel_trajectories[0]))] + [f'v-PC2_{i}' for i in range(len(voxel_trajectories[1]))])
+        g.set_axis_labels('v-PC1', 'v-PC2')
+        plt.tight_layout()
+        plt.savefig(f'{outdir}/pc1/voxel_pca_hexbin_annotatepca.{plot_format}')
+        plt.close()
 
     if kmeans_labels is not None:
-        # scatter plot latent PCA colored by k-means clusters
+        # scatter plot volume PCA colored by k-means clusters
+        log('Plotting volume principal components as scatter colored by volume clustering kmeans-centers annotations')
         analysis.plot_by_cluster(x=pc[:, 0],
                                  y=pc[:, 1],
                                  labels=kmeans_labels,
@@ -158,7 +166,8 @@ def make_plots(outdir: str,
         plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_pca_scatter_colorkmeanslabel.{plot_format}')
         plt.close()
 
-        # scatter subplots latent PCA colored by k-means clusters
+        # scatter subplots volume PCA colored by k-means clusters
+        log('Plotting volume principal components as scatter subplots colored by volume clustering kmeans-centers annotations')
         analysis.plot_by_cluster_subplot(x=pc[:, 0],
                                          y=pc[:, 1],
                                          labels=kmeans_labels,
@@ -169,9 +178,9 @@ def make_plots(outdir: str,
         plt.close()
 
     # UMAP dimensionality reduction
-    log('Generating UMAP plots ...')
 
-    # scatter plot latent UMAP
+    # scatter plot volume UMAP
+    log('Plotting volume UMAP embeddings as scatter')
     g = sns.jointplot(x=umap_emb[:, 0],
                       y=umap_emb[:, 1],
                       alpha=.1,
@@ -181,7 +190,8 @@ def make_plots(outdir: str,
     plt.savefig(f'{outdir}/voxel_umap_scatter.{plot_format}')
     plt.close()
 
-    # hexbin plot latent UMAP
+    # hexbin plot volume UMAP
+    log('Plotting volume UMAP embeddings as hexbin')
     g = sns.jointplot(x=umap_emb[:, 0],
                       y=umap_emb[:, 1],
                       kind='hex')
@@ -191,7 +201,8 @@ def make_plots(outdir: str,
     plt.close()
 
     if kmeans_labels is not None:
-        # scatter plot latent UMAP with kmeans center annotations
+        # scatter plot volume UMAP with kmeans center annotations
+        log('Plotting volume UMAP embeddings as scatter with volume clustering kmeans-centers annotations')
         analysis.scatter_annotate(x=umap_emb[:, 0],
                                   y=umap_emb[:, 1],
                                   centers_ind=kmeans_centers_ind,
@@ -203,7 +214,8 @@ def make_plots(outdir: str,
         plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_umap_scatter_annotatekmeans.{plot_format}')
         plt.close()
 
-        # hexbin plot latent UMAP with kmeans center annotations
+        # hexbin plot volume UMAP with kmeans center annotations
+        log('Plotting volume UMAP embeddings as hexbin with volume clustering kmeans-centers annotations')
         g = analysis.scatter_annotate_hex(x=umap_emb[:, 0],
                                           y=umap_emb[:, 1],
                                           centers_ind=kmeans_centers_ind,
@@ -214,33 +226,37 @@ def make_plots(outdir: str,
         plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_umap_hexbin_annotatekmeans.{plot_format}')
         plt.close()
 
-    # scatter plot latent UMAP with PCA trajectory annotations
-    analysis.scatter_annotate(x=umap_emb[:, 0],
-                              y=umap_emb[:, 1],
-                              centers_xy=np.vstack([umap_reducer.transform(pca.transform(voxel_trajectories[0])),  # trajectory in voxel space along pc 1, transform to PC space then to UMAP space
-                                                    umap_reducer.transform(pca.transform(voxel_trajectories[1]))]),  # trajectory in voxel space along pc 2, transform to PC space then to UMAP space
-                              annotate=True,
-                              labels=[f'v-PC1_{i}' for i in range(len(voxel_trajectories[0]))] + [f'v-PC2_{i}' for i in range(len(voxel_trajectories[1]))])
-    plt.xlabel('v-UMAP1')
-    plt.ylabel('v-UMAP2')
-    plt.tight_layout()
-    plt.savefig(f'{outdir}/pc1/voxel_umap_scatter_annotatepca.{plot_format}')
-    plt.close()
+    if num_pcs_to_sample >= 2:
+        # scatter plot volume UMAP with PCA trajectory annotations
+        log('Plotting volume UMAP embeddings as scatter with volume-sampled principal components annotations')
+        analysis.scatter_annotate(x=umap_emb[:, 0],
+                                  y=umap_emb[:, 1],
+                                  centers_xy=np.vstack([umap_reducer.transform(pca.transform(voxel_trajectories[0])),  # trajectory in voxel space along pc 1, transform to PC space then to UMAP space
+                                                        umap_reducer.transform(pca.transform(voxel_trajectories[1]))]),  # trajectory in voxel space along pc 2, transform to PC space then to UMAP space
+                                  annotate=True,
+                                  labels=[f'v-PC1_{i}' for i in range(len(voxel_trajectories[0]))] + [f'v-PC2_{i}' for i in range(len(voxel_trajectories[1]))])
+        plt.xlabel('v-UMAP1')
+        plt.ylabel('v-UMAP2')
+        plt.tight_layout()
+        plt.savefig(f'{outdir}/pc1/voxel_umap_scatter_annotatepca.{plot_format}')
+        plt.close()
 
-    # hexbin plot latent UMAP with PCA trajectory annotations
-    g = analysis.scatter_annotate_hex(x=umap_emb[:, 0],
-                                      y=umap_emb[:, 1],
-                                      centers_xy=np.vstack([umap_reducer.transform(pca.transform(voxel_trajectories[0])),  # trajectory in voxel space along pc 1, transformed to UMAP space
-                                                            umap_reducer.transform(pca.transform(voxel_trajectories[1]))]),  # trajectory in voxel space along pc 2, transformed to UMAP space
-                                      annotate=True,
-                                      labels=[f'v-PC1_{i}' for i in range(len(voxel_trajectories[0]))] + [f'v-PC2_{i}' for i in range(len(voxel_trajectories[1]))])
-    g.set_axis_labels('v-UMAP1', 'v-UMAP2')
-    plt.tight_layout()
-    plt.savefig(f'{outdir}/pc1/voxel_umap_hexbin_annotatepca.{plot_format}')
-    plt.close()
+        # hexbin plot volume UMAP with PCA trajectory annotations
+        log('Plotting volume UMAP embeddings as hexbin with volume-sampled principal components annotations')
+        g = analysis.scatter_annotate_hex(x=umap_emb[:, 0],
+                                          y=umap_emb[:, 1],
+                                          centers_xy=np.vstack([umap_reducer.transform(pca.transform(voxel_trajectories[0])),  # trajectory in voxel space along pc 1, transformed to UMAP space
+                                                                umap_reducer.transform(pca.transform(voxel_trajectories[1]))]),  # trajectory in voxel space along pc 2, transformed to UMAP space
+                                          annotate=True,
+                                          labels=[f'v-PC1_{i}' for i in range(len(voxel_trajectories[0]))] + [f'v-PC2_{i}' for i in range(len(voxel_trajectories[1]))])
+        g.set_axis_labels('v-UMAP1', 'v-UMAP2')
+        plt.tight_layout()
+        plt.savefig(f'{outdir}/pc1/voxel_umap_hexbin_annotatepca.{plot_format}')
+        plt.close()
 
     if kmeans_labels is not None:
-        # scatter plot latent UMAP colored by k-means clusters
+        # scatter plot volume UMAP colored by k-means clusters
+        log('Plotting volume UMAP embeddings as scatter colored by volume clustering kmeans-centers annotations')
         analysis.plot_by_cluster(x=umap_emb[:, 0],
                                  y=umap_emb[:, 1],
                                  labels=kmeans_labels,
@@ -253,7 +269,8 @@ def make_plots(outdir: str,
         plt.savefig(f'{outdir}/kmeans{num_ksamples}/voxel_umap_scatter_colorkmeanslabel.{plot_format}')
         plt.close()
 
-        # scatter subplots latent UMAP colored by k-means clusters
+        # scatter subplots volume UMAP colored by k-means clusters
+        log('Plotting volume UMAP embeddings as scatter subplots colored by volume clustering kmeans-centers annotations')
         analysis.plot_by_cluster_subplot(x=umap_emb[:, 0],
                                          y=umap_emb[:, 1],
                                          labels=kmeans_labels,
@@ -265,6 +282,8 @@ def make_plots(outdir: str,
         plt.close()
 
     for i in range(num_pcs_to_sample):
+        if i == 0:
+            log('Plotting volume UMAP embeddings as scatter colored by each volume principal components')
         analysis.scatter_color(x=umap_emb[:, 0],
                                y=umap_emb[:, 1],
                                c=pc[:, i],
@@ -278,11 +297,12 @@ def make_plots(outdir: str,
     cfg = utils.load_pkl(config_path)
     starfile_path = cfg['starfile_args']['sourcefile_filtered']
     datadir = cfg['dataset_args']['datadir']
-    s = starfile.TiltSeriesStarfile(starfile=starfile_path)
+    s = starfile.load_sta_starfile(star_path=starfile_path, source_software=cfg['starfile_args']['source_software'])
     star_df_backup = s.df.copy(deep=True)
 
     if kmeans_labels is not None:
         # make plots of first 6 images of each kmeans class
+        log('Plotting (up to) first 6 images of each volume clustering kmeans class')
         for label in range(num_ksamples):
             # get indices of particles within this kmeans class
             ptcl_inds_this_label = np.nonzero(kmeans_labels == label)[0]
@@ -305,12 +325,14 @@ def make_plots(outdir: str,
             s.df = star_df_backup.copy(deep=True)
 
         # make plot of class label distribution versus tomogram / micrograph in star file order
+        log('Plotting distribution of volume clustering kmeans annotations per tomogram')
         analysis.plot_label_count_distribution(ptcl_star=s,
                                                class_labels=kmeans_labels)
         plt.savefig(f'{outdir}/kmeans{num_ksamples}/tomogram_label_distribution.{plot_format}')
         plt.close()
 
     # make plots of numeric columns in star file (e.g. pose, coordinate, ctf) for correlations with UMAP
+    log('Plotting volume principal components or volume UMAP embeddings against numeric columns in input star file for potential correlations')
     os.mkdir(f'{outdir}/controls')
     ref_array = utils.load_pkl(f'{outdir}/voxel_pc_umap.pkl')
     ref_names = ['v-UMAP1', 'v-UMAP2']
