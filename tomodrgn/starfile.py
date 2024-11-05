@@ -1689,9 +1689,9 @@ class TomoParticlesStarfile(GenericStarfile):
             particles_to_drop_insufficient_tilts = []
             masked_visible_frames = []
             for ind_ptcl, ptcl_visible_frames in enumerate(self.df[self.header_ptcl_visible_frames]):
-                # preserve the first use_first_ntilts frames that are already marked include (1); set the remaineder to not include (0)
+                # preserve the first use_first_ntilts frames that are already marked include (1); set the remainder to not include (0)
                 cumulative_ptcl_visible_frames = np.cumsum(ptcl_visible_frames)
-                masked_ptcl_visible_frames = np.where(cumulative_ptcl_visible_frames < use_first_ntilts,
+                masked_ptcl_visible_frames = np.where(cumulative_ptcl_visible_frames <= use_first_ntilts,
                                                       ptcl_visible_frames,
                                                       0)
 
