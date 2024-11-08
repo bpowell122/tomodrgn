@@ -72,7 +72,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs')
     group.add_argument('-b', '--batch-size', type=int, default=1, help='Minibatch size')
     group.add_argument('--wd', type=float, default=0, help='Weight decay in Adam optimizer')
-    group.add_argument('--lr', type=float, default=0.0002, help='Learning rate in Adam optimizer for batch size 1. Is automatically linearly scaled with batch size.')
+    group.add_argument('--lr', type=float, default=0.0001, help='Learning rate in Adam optimizer for batch size 1. Is automatically further scaled as square-root of batch size.')
     group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: mean, std of dataset)')
     group.add_argument('--no-amp', action='store_true', help='Disable use of mixed-precision training')
     group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs. Specify GPUs i,j via `export CUDA_VISIBLE_DEVICES=i,j` before tomodrgn train_vae')
@@ -389,8 +389,13 @@ def main(args):
                        out_config=out_config)
 
     # optimizer
+    args.lr = args.lr * (args.batch_size ** 0.5)
+    if not args.sequential_tilt_sampling:
+        log('Scaling learning rate larger by 2 due to using random tilt sampling')
+        args.lr = args.lr * 2
+    log(f'Final learning rate after scaling by square root of batch size: {args.lr}')
     optim = torch.optim.AdamW(model.parameters(),
-                              lr=args.lr * args.batch_size,
+                              lr=args.lr,
                               weight_decay=args.wd,
                               eps=1e-4)  # https://github.com/pytorch/pytorch/issues/40497#issuecomment-1084807134
 
