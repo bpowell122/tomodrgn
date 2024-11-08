@@ -343,10 +343,10 @@ def loss_function(*,
         if image_dose_weighted:
             # images may have been extracted with dose weights pre-applied
             batch_images_recon = batch_images_recon * batch_recon_error_weights
-        gen_loss = torch.mean(batch_recon_error_weights * ((batch_images_recon - batch_images) ** 2))
+        gen_loss = torch.nanmean(batch_recon_error_weights * ((batch_images_recon - batch_images) ** 2))
 
         # latent loss
-        kld = torch.mean(-0.5 * torch.sum(1 + z_logvar.float() - z_mu.float().pow(2) - z_logvar.float().exp(), dim=1), dim=0)
+        kld = torch.nanmean(-0.5 * torch.sum(1 + z_logvar.float() - z_mu.float().pow(2) - z_logvar.float().exp(), dim=1), dim=0)
         if beta_control is None:
             # denominator is the largest number of pixels included in single particle of any particle in batch
             kld_loss = beta * kld / torch.max(torch.sum(batch_hartley_2d_mask.view(z_mu.shape[0], -1), dtype=kld.dtype, dim=-1))
