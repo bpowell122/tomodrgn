@@ -58,6 +58,8 @@ class TiltSeriesStarfileStarHeaders(Enum):
             '_rlnAngleRot',
             '_rlnAngleTilt',
             '_rlnAnglePsi',
+            '_rlnOriginX',
+            '_rlnOriginY',
             '_rlnCtfBfactor',
             '_rlnCtfScalefactor',
             '_rlnGroupName',
