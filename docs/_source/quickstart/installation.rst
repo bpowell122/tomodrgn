@@ -90,6 +90,7 @@ Also serves as a useful reference for commonly used command syntax.
 
     cd $TOMODRGN_SOURCE_DIR/testing
     pytest --script-launch-mode=subprocess ./commandtest.py
+    pytest --script-launch-mode=subprocess ./commandtest_warptools.py
 
 Some useful arguments that can be supplied to the pytest commands above:
 

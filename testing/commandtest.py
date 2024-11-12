@@ -17,57 +17,57 @@ def test_version(script_runner, output_dir):
 # tomodrgn downsample #
 #######################
 def test_downsample(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn downsample data/10076_classE_32_sim.star --downsample 16 --batch-size 50 --output {output_dir}/10076_classE_16_sim.mrcs --write-tiltseries-starfile')
+    run_assert_no_error(script_runner, command=f'tomodrgn downsample data/10076_classE_32_sim.star --source-software cryosrpnt --downsample 16 --batch-size 50 --output {output_dir}/10076_classE_16_sim.mrcs --write-tiltseries-starfile')
 
 
 def test_downsample_lazy(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn downsample data/10076_classE_32_sim.star --downsample 16 --batch-size 50 --output {output_dir}/10076_classE_16_sim.mrcs --write-tiltseries-starfile --lazy')
+    run_assert_no_error(script_runner, command=f'tomodrgn downsample data/10076_classE_32_sim.star --source-software cryosrpnt --downsample 16 --batch-size 50 --output {output_dir}/10076_classE_16_sim.mrcs --write-tiltseries-starfile --lazy')
 
 
 def test_downsample_chunk(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn downsample data/10076_classE_32_sim.star --downsample 16 --batch-size 50 --output {output_dir}/10076_classE_16_sim.mrcs --write-tiltseries-starfile --chunk 100')
+    run_assert_no_error(script_runner, command=f'tomodrgn downsample data/10076_classE_32_sim.star --source-software cryosrpnt --downsample 16 --batch-size 50 --output {output_dir}/10076_classE_16_sim.mrcs --write-tiltseries-starfile --chunk 100')
 
 
 ##############################
 # tomodrgn backproject_voxel #
 ##############################
 def test_backproject(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn backproject_voxel data/10076_classE_32_sim.star --output {output_dir}/backproject/classE_sim.mrc --uninvert-data')
+    run_assert_no_error(script_runner, command=f'tomodrgn backproject_voxel data/10076_classE_32_sim.star --source-software cryosrpnt --output {output_dir}/backproject/classE_sim.mrc --uninvert-data')
 
 
 def test_backproject_dose_weight(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn backproject_voxel data/10076_classE_32_sim.star --output {output_dir}/backproject/classE_sim_doseweight.mrc --uninvert-data --recon-dose-weight')
+    run_assert_no_error(script_runner, command=f'tomodrgn backproject_voxel data/10076_classE_32_sim.star --source-software cryosrpnt --output {output_dir}/backproject/classE_sim_doseweight.mrc --uninvert-data --recon-dose-weight')
 
 
 def test_backproject_tilt_weight(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn backproject_voxel data/10076_classE_32_sim.star --output {output_dir}/backproject/classE_sim_tiltweight.mrc --uninvert-data --recon-tilt-weight')
+    run_assert_no_error(script_runner, command=f'tomodrgn backproject_voxel data/10076_classE_32_sim.star --source-software cryosrpnt --output {output_dir}/backproject/classE_sim_tiltweight.mrc --uninvert-data --recon-tilt-weight')
 
 
 def test_backproject_lazy(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn backproject_voxel data/10076_classE_32_sim.star --output {output_dir}/backproject/classE_sim_lazy.mrc --uninvert-data --lazy')
+    run_assert_no_error(script_runner, command=f'tomodrgn backproject_voxel data/10076_classE_32_sim.star --source-software cryosrpnt --output {output_dir}/backproject/classE_sim_lazy.mrc --uninvert-data --lazy')
 
 
 def test_backproject_lowpass(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn backproject_voxel data/10076_classE_32_sim.star --output {output_dir}/backproject/classE_sim_lowpass60.mrc --uninvert-data --lowpass 60')
+    run_assert_no_error(script_runner, command=f'tomodrgn backproject_voxel data/10076_classE_32_sim.star --source-software cryosrpnt --output {output_dir}/backproject/classE_sim_lowpass60.mrc --uninvert-data --lowpass 60')
 
 
 #####################
 # tomodrgn train_nn #
 #####################
 def test_train_nn(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn train_nn data/10076_classE_32_sim.star --outdir {output_dir}/nn_classE_sim --uninvert-data --seed 42 --layers 3 --dim 256 --num-epochs 40')
+    run_assert_no_error(script_runner, command=f'tomodrgn train_nn data/10076_classE_32_sim.star --source-software cryosrpnt --outdir {output_dir}/nn_classE_sim --uninvert-data --seed 42 --layers 3 --dim 256 --num-epochs 40')
 
 
 def test_train_nn_lazy(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn train_nn data/10076_classE_32_sim.star --outdir {output_dir}/nn_classE_sim_lazy --uninvert-data --seed 42 --layers 3 --dim 256 --num-epochs 1 --lazy')
+    run_assert_no_error(script_runner, command=f'tomodrgn train_nn data/10076_classE_32_sim.star --source-software cryosrpnt --outdir {output_dir}/nn_classE_sim_lazy --uninvert-data --seed 42 --layers 3 --dim 256 --num-epochs 1 --lazy')
 
 
 def test_train_nn_dose_tilt_weight_dose_mask(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn train_nn data/10076_classE_32_sim.star --outdir {output_dir}/nn_classE_sim_dosetiltweightmask --uninvert-data --seed 42 --layers 3 --dim 256 --num-epochs 40 --l-dose-mask --recon-dose-weight --recon-tilt-weight')
+    run_assert_no_error(script_runner, command=f'tomodrgn train_nn data/10076_classE_32_sim.star --source-software cryosrpnt --outdir {output_dir}/nn_classE_sim_dosetiltweightmask --uninvert-data --seed 42 --layers 3 --dim 256 --num-epochs 40 --l-dose-mask --recon-dose-weight --recon-tilt-weight')
 
 
 def test_train_nn_dose_tilt_weight_dose_mask_batchsize8(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn train_nn data/10076_classE_32_sim.star --outdir {output_dir}/nn_classE_sim_dosetiltweightmask_batchsize8 --uninvert-data --seed 42 --layers 3 --dim 256 --num-epochs 1 --l-dose-mask --recon-dose-weight --recon-tilt-weight --batch-size 8')
+    run_assert_no_error(script_runner, command=f'tomodrgn train_nn data/10076_classE_32_sim.star --source-software cryosrpnt --outdir {output_dir}/nn_classE_sim_dosetiltweightmask_batchsize8 --uninvert-data --seed 42 --layers 3 --dim 256 --num-epochs 1 --l-dose-mask --recon-dose-weight --recon-tilt-weight --batch-size 8')
 
 
 #####################
@@ -97,47 +97,47 @@ def test_convergence_nn_dose_tilt_weight_dose_mask_mask_soft(script_runner, outp
 # tomodrgn train_vae #
 ######################
 def test_train_vae(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --outdir {output_dir}/vae_both_sim_zdim2 --zdim 2 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 --num-epochs 40')
+    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --source-software cryosrpnt --outdir {output_dir}/vae_both_sim_zdim2 --zdim 2 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 --num-epochs 40')
 
 
 def test_train_vae_zdim8(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --outdir {output_dir}/vae_both_sim_zdim8 --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 -n 1')
+    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --source-software cryosrpnt --outdir {output_dir}/vae_both_sim_zdim8 --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 -n 1')
 
 
 def test_train_vae_dose_tilt_weight_dose_mask(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --outdir {output_dir}/vae_both_sim_zdim8_dosetiltweightmask --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 -n 1 --l-dose-mask --recon-dose-weight --recon-tilt-weight')
+    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --source-software cryosrpnt --outdir {output_dir}/vae_both_sim_zdim8_dosetiltweightmask --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 -n 1 --l-dose-mask --recon-dose-weight --recon-tilt-weight')
 
 
 def test_train_vae_dose_tilt_weight_dose_mask_lazy(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --outdir {output_dir}/vae_both_sim_zdim8_dosetiltweightmask_lazy --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 -n 1 --lazy --l-dose-mask --recon-dose-weight --recon-tilt-weight')
+    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --source-software cryosrpnt --outdir {output_dir}/vae_both_sim_zdim8_dosetiltweightmask_lazy --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 -n 1 --lazy --l-dose-mask --recon-dose-weight --recon-tilt-weight')
 
 
 def test_train_vae_dose_tilt_weight_dose_mask_batchsize8(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --outdir {output_dir}/vae_both_sim_zdim8_dosetiltweightmask_batchsize8 --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 --num-epochs 40 --l-dose-mask --recon-dose-weight --recon-tilt-weight --batch-size 8')
+    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --source-software cryosrpnt --outdir {output_dir}/vae_both_sim_zdim8_dosetiltweightmask_batchsize8 --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 --num-epochs 40 --l-dose-mask --recon-dose-weight --recon-tilt-weight --batch-size 8')
 
 
 def test_train_vae_nohet(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_classE_32_sim.star --outdir {output_dir}/vae_classE_sim_zdim8 --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 --num-epochs 40')
+    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_classE_32_sim.star --source-software cryosrpnt --outdir {output_dir}/vae_classE_sim_zdim8 --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 --num-epochs 40')
 
 
 def test_train_vae_pooling_concatenate(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --outdir {output_dir}/vae_both_sim_zdim8_concatenate --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --pooling-function concatenate --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 -n 1')
+    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --source-software cryosrpnt --outdir {output_dir}/vae_both_sim_zdim8_concatenate --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --pooling-function concatenate --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 -n 1')
 
 
 def test_train_vae_pooling_max(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --outdir {output_dir}/vae_both_sim_zdim8_max --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --pooling-function max --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 -n 1')
+    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --source-software cryosrpnt --outdir {output_dir}/vae_both_sim_zdim8_max --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --pooling-function max --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 -n 1')
 
 
 def test_train_vae_pooling_mean(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --outdir {output_dir}/vae_both_sim_zdim8_mean --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --pooling-function mean --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 -n 1')
+    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --source-software cryosrpnt --outdir {output_dir}/vae_both_sim_zdim8_mean --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --pooling-function mean --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 -n 1')
 
 
 def test_train_vae_pooling_median(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --outdir {output_dir}/vae_both_sim_zdim8_median --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --pooling-function median --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 -n 1')
+    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --source-software cryosrpnt --outdir {output_dir}/vae_both_sim_zdim8_median --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --pooling-function median --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 -n 1')
 
 
 def test_train_vae_pooling_setencoder(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --outdir {output_dir}/vae_both_sim_zdim8_setencoder --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --pooling-function set_encoder --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 --num-seeds 1 --num-heads 2 --layer-norm -n 1')
+    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --source-software cryosrpnt --outdir {output_dir}/vae_both_sim_zdim8_setencoder --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --pooling-function set_encoder --enc-dim-B 32 --enc-layers-B 4 --dec-dim 256 --dec-layers 3 --num-seeds 1 --num-heads 2 --layer-norm -n 1')
 
 
 ############################
@@ -230,7 +230,7 @@ def test_filter_star_volumeseriesstarfile_labels(script_runner, output_dir):
 # tomodrgn eval_images #
 ########################
 def test_eval_images(script_runner, output_dir):
-    run_assert_no_error(script_runner, command=f'tomodrgn eval_images data/10076_classE_32_sim.star --weights {output_dir}/vae_classE_sim_zdim8/weights.pkl -c {output_dir}/vae_classE_sim_zdim8/config.pkl --out-z {output_dir}/vae_classE_sim_zdim8/eval_images/z_all.pkl')
+    run_assert_no_error(script_runner, command=f'tomodrgn eval_images data/10076_classE_32_sim.star --source-software cryosrpnt --weights {output_dir}/vae_classE_sim_zdim8/weights.pkl -c {output_dir}/vae_classE_sim_zdim8/config.pkl --out-z {output_dir}/vae_classE_sim_zdim8/eval_images/z_all.pkl')
 
 
 ############################
