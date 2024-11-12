@@ -71,7 +71,7 @@ Running tests requires installation of testing dependencies.
 .. code-block:: bash
 
     cd $TOMODRGN_SOURCE_DIR
-    python -m pip install .[tests]
+    python -m pip install ".[tests]"
 
 Run a quick test of the most essential and frequently used commands, ``tomodrgn train_vae`` and ``tomodrgn analyze``.
 Takes about 1 minute.
@@ -106,7 +106,7 @@ Documentation is built with sphinx in the ``tomodrgn`` environment:
 .. code-block:: bash
 
     CD $TOMODRGN_SOURCE_DIR
-    python -m pip install .[docs]
+    python -m pip install ".[docs]"
     cd docs
     make clean
     rm -rfv docs/_source/api/_autosummary  # this ensures all files from previous builds are removed, including autosummary API files missed by make clean
