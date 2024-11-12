@@ -401,7 +401,7 @@ def main(args):
     # PROCESSING: run PCA, keep first num_pcs, save pkl
     log('Running PCA ...')
     assert args.num_pcs <= vols.shape[1]
-    pca = PCA(n_components=args.num_pcs, random_state=42, copy=False)
+    pca = PCA(n_components=min(args.num_pcs, len(vols_list)), random_state=42, copy=False)
     pc = pca.fit_transform(vols)
     utils.save_pkl(data=pc,
                    out_pkl=os.path.join(args.outdir, 'voxel_pc.pkl'))
