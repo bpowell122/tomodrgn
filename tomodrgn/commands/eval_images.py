@@ -54,7 +54,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
 
     group = parser.add_argument_group('Dataloader arguments')
     group.add_argument('--num-workers', type=int, default=0, help='Number of workers to use when batching particles for training. Has moderate impact on epoch time')
-    group.add_argument('--prefetch-factor', type=int, default=2, help='Number of particles to prefetch per worker for training. Has moderate impact on epoch time')
+    group.add_argument('--prefetch-factor', type=int, default=None, help='Number of particles to prefetch per worker. Has moderate impact on epoch time')
     group.add_argument('--pin-memory', action='store_true', help='Whether to use pinned memory for dataloader. Has large impact on epoch time. Recommended.')
 
     return parser
