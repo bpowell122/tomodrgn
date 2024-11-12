@@ -191,7 +191,7 @@ class TiltSeriesMRCData(data.Dataset):
 
         # load and preprocess the images to be returned
         if self.lazy:
-            images = np.asarray([self.ptcls[i].get(low_memory=True) for i in ptcl_img_ind])
+            images = np.asarray([self.ptcls[i].get() for i in ptcl_img_ind])
             if self.window:
                 images *= self.real_space_2d_mask
             for (i, img) in enumerate(images):
@@ -356,7 +356,7 @@ class TiltSeriesMRCData(data.Dataset):
         """
         n = min(10000, self.nimgs)
         random_imgs_for_normalization = np.random.choice(self.nimgs, size=n, replace=False)
-        imgs = np.asarray([self.ptcls[i].get(low_memory=True) for i in random_imgs_for_normalization])
+        imgs = np.asarray([self.ptcls[i].get() for i in random_imgs_for_normalization])
         if self.window:
             imgs *= self.real_space_2d_mask
         for (i, img) in enumerate(imgs):
