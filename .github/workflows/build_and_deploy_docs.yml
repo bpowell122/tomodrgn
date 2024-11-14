@@ -1,28 +1,40 @@
 name: documentation
 
-on: push
-
-permissions:
-  contents: write
+on:
+  push:
+    branches:
+      - dev
 
 jobs:
   docs:
+    permissions:
+      contents: write
+
     runs-on: ubuntu-latest
-    container:
-      image: python:3.11.5
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get git tags
+        run: git fetch --tags origin/dev
+
+      - name: Set up python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
       - name: Install dependencies
         run: |
           python -mpip install .
           python -mpip install ".[docs]"
+
       - name: Sphinx build
         run: |
           sphinx-build docs/_source docs/_build
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/dev' }}
         with:
           publish_branch: gh-pages
           github_token: ${{ secrets.GITHUB_TOKEN }}
