@@ -16,23 +16,11 @@
       :nosignatures:
    
       add_args
-      check_z_inputs
       main
-      postprocess_vols
    
    
 
    
-   
-   .. rubric:: Classes
-
-   .. autosummary::
-      :toctree:
-      :template: custom-class-template.rst
-      :nosignatures:
-   
-      DummyModel
-      ZDataset
    
    
 

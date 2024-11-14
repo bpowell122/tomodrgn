@@ -7,27 +7,23 @@ Evaluate convergence of a ``train_vae`` model by stability of latent space and r
 
 Sample usage
 ------------
-The examples below are taken from ``tomodrgn/testing/commandtest.py``, and rely on other outputs from ``commandtest.py`` to execute successfully.
+The examples below are adapted from ``tomodrgn/testing/commandtest*.py``, and rely on other outputs from ``commandtest.py`` to execute successfully.
 
 .. code-block:: bash
 
-    # baseline, 2 class heterogeneity, zdim 2
-    tomodrgn \
-        convergence_vae \
-        output/vae_both_sim_zdim2 \
-        latest \
-        --random-seed 42 \
-        --final-maxima 2 \
-        --ground-truth data/10076_class*_32.mrc
-
-    # 2 class heterogeneity, zdim 8, dose weight, tilt wieght, recon dose mask, batchsize 8
+    # Warp v1 style inputs
     tomodrgn \
         convergence_vae \
         output/vae_both_sim_zdim8_dosetiltweightmask_batchsize8 \
-        latest \
-        --random-seed 42 \
         --final-maxima 2 \
         --ground-truth data/10076_class*_32.mrc
+
+    # WarpTools style inputs
+    tomodrgn \
+        convergence_vae \
+        output/vae_warptools_70S_zdim8_dosetiltweightmask_batchsize8 \
+        --final-maxima 2 \
+        --ground-truth data/warptools_test_box-32_angpix-12_reconstruct.mrc
 
 Arguments
 ---------

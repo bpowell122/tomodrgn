@@ -22,15 +22,14 @@ Example usage: volumes mode (places unique tomoDRGN volumes per particle)
 
     python tomodrgn/commands/subtomo2chimerax.py \
         ../m_output_starfiles/10499_22k_box64_angpix6_volumeseries.star \
-        -output test_subtomo2chimerax_volumes \
+        --outdir test_subtomo2chimerax_volumes \
         --ind ../27_vae_box96_256x3_128_256x3_128_256x3_b1_gaussian/ind_keep.20981_particles.pkl \
         --mode volumes \
         --weights weights.49.pkl \
         --config config.pkl \
         --zfile z.49.pkl \
         --downsample 64 \
-        --vols-apix 11.5625 \
-        --vols-render-level 0.008 \
+        --vol-render-level 0.008 \
         --coloring-labels analyze.49/kmeans20/labels.pkl
 """
 import argparse
@@ -54,7 +53,8 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
 
     parser.add_argument('starfile',
                         type=os.path.abspath,
-                        help='Input volumeseries starfile from subtomogram export; used to specify particle XYZ coordinates and rotational pose.')
+                        help='Input volumeseries starfile from subtomogram export; used to specify particle XYZ coordinates and rotational pose.'
+                             'Can also pass in an optimisation_set star file; otherwise pass in the associated rlnTomoParticlesStarfile.')
 
     group = parser.add_argument_group('Core arguments')
     group.add_argument('--outdir',
@@ -153,7 +153,7 @@ def validate_volume_mode_arguments(args: argparse.Namespace) -> None:
         assert args.marker_radius_angstrom is not None
 
 
-def validate_starfile(ptcl_star: starfile.GenericStarfile,
+def validate_starfile(ptcl_star: starfile.GenericStarfile | starfile.TomoParticlesStarfile,
                       ptcl_block_name: str,
                       star_angpix_override: float | None = None,
                       tomo_id_col_override: str | None = None) -> tuple[list[str], list[str], float, str]:
@@ -173,7 +173,10 @@ def validate_starfile(ptcl_star: starfile.GenericStarfile,
         rots_cols = ['_rlnAngleRot', '_rlnAngleTilt', '_rlnAnglePsi']
         coords_cols = ['_rlnCoordinateX', '_rlnCoordinateY', '_rlnCoordinateZ']
         if tomo_id_col_override is None:
-            tomo_id_col_override = '_rlnMicrographName'
+            if type(ptcl_star) is starfile.TomoParticlesStarfile:
+                tomo_id_col_override = '_rlnTomoName'
+            else:
+                tomo_id_col_override = '_rlnMicrographName'
     elif any(ptcl_star.blocks[ptcl_block_name].columns.str.contains(pat='_wrpCoordinate')):
         # columns use warp/m naming
         m_coords_cols = [col_name for col_name in ptcl_star.blocks[ptcl_block_name].columns if '_wrpCoordinate' in col_name]
@@ -424,8 +427,12 @@ def main(args):
     validate_volume_mode_arguments(args)
 
     # load the star file
-    ptcl_star = starfile.GenericStarfile(args.starfile)
-    ptcl_block_name = ptcl_star.identify_particles_data_block()
+    if starfile.is_starfile_optimisation_set(args.starfile):
+        ptcl_star = starfile.TomoParticlesStarfile(args.starfile)
+        ptcl_block_name = ptcl_star.block_particles
+    else:
+        ptcl_star = starfile.GenericStarfile(args.starfile)
+        ptcl_block_name = ptcl_star.identify_particles_data_block()
 
     # validate star file metadata
     rots_cols, coords_cols, star_angpix, tomo_id_col = validate_starfile(ptcl_star=ptcl_star,

@@ -5,6 +5,7 @@ import argparse
 import copy
 import os
 from typing import Literal
+import warnings
 
 import numpy as np
 
@@ -24,13 +25,14 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     parser.add_argument('input', help='Input .star file')
 
     group = parser.add_argument_group('Core arguments')
-    group.add_argument('--starfile-type', type=str, default='imageseries', choices=('imageseries', 'volumeseries'), help='Type of star file to filter. '
-                                                                                                                         'Select imageseries if rows correspond to particle images; '
-                                                                                                                         'select volumeseries if rows correspond to particle volumes')
+    group.add_argument('--starfile-type', type=str, default='imageseries', choices=('imageseries', 'volumeseries', 'optimisation_set'),
+                       help='Type of star file to filter. Select imageseries if rows correspond to particle images. Select volumeseries if rows correspond to particle volumes. '
+                            'Select optimisation_set if passing in an optimisation set star file.')
     group.add_argument('--action', choices=('keep', 'drop'), default='keep', help='keep or remove particles associated with ind.pkl')
     group.add_argument('--tomogram', type=str, help='optionally select by individual tomogram name (if `all` then writes individual star files per tomogram')
     group.add_argument('--tomo-id-col', type=str, default='_rlnMicrographName', help='Name of column in input starfile with unique values per tomogram')
-    group.add_argument('-o', required=True, help='Output .star file (treated as output base name suffixed by tomogram name if specifying `--tomogram`)')
+    group.add_argument('-o', required=True, help='Output .star file (treated as output base name suffixed by tomogram name if specifying `--tomogram`).'
+                                                 'The output star file name must contain the string `_optimisation_set` if the input star file is of --starfile-type optimisation_set')
 
     group = parser.add_argument_group('Index-based filtering arguments')
     group.add_argument('--ind', help='selected indices array (.pkl)')
@@ -145,7 +147,9 @@ def filter_image_series_starfile(star_path: str,
         ind_imgs = None
 
     else:
-        raise ValueError('One of --ind or --labels must be specified')
+        ind_imgs = None
+        ind_ptcls = None
+        warnings.warn('Neither --ind nor --labels was specified, continuing without filtering to a subset of particles')
 
     # apply filtering
     star.filter(ind_imgs=ind_imgs,
@@ -172,9 +176,14 @@ def filter_volume_series_starfile(star_path: str,
     :return: filtered GenericStarfile object
     """
     # load the star file
-    star = starfile.GenericStarfile(star_path)
-    ptcl_block_name = star.identify_particles_data_block()
-    df = star.blocks[ptcl_block_name]
+    if starfile.is_starfile_optimisation_set(star_path):
+        star = starfile.TomoParticlesStarfile(star_path)
+        ptcl_block_name = star.block_particles
+        df = star.df
+    else:
+        star = starfile.GenericStarfile(star_path)
+        ptcl_block_name = star.identify_particles_data_block()
+        df = star.blocks[ptcl_block_name]
     log(f'Input star file contains {len(df)} particles.')
 
     # establish indices to drop
@@ -218,7 +227,8 @@ def filter_volume_series_starfile(star_path: str,
             raise ValueError
 
     else:
-        raise ValueError('One of --ind or --labels must be specified')
+        ind_ptcls_to_drop = np.array([])
+        warnings.warn('Neither --ind nor --labels was specified, continuing without filtering to a subset of particles')
 
     # apply filtering
     df = df.drop(ind_ptcls_to_drop).reset_index(drop=True)
@@ -244,7 +254,7 @@ def main(args):
                                             labels_path=args.labels,
                                             labels_sel=args.labels_sel,
                                             ind_action=args.action, )
-    elif args.starfile_type == 'volumeseries':
+    elif args.starfile_type == 'volumeseries' or args.starfile_type == 'optimisation_set':
         star = filter_volume_series_starfile(star_path=args.input,
                                              ind_path=args.ind,
                                              labels_path=args.labels,

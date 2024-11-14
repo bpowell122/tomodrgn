@@ -7,7 +7,7 @@ import os
 import pickle
 import sys
 from datetime import datetime as dt
-from typing import Union
+from typing import Union, get_args
 
 import numpy as np
 import torch
@@ -17,10 +17,10 @@ import torch.utils.data
 
 from tomodrgn import utils, ctf, config, convergence
 from tomodrgn.beta_schedule import get_beta_schedule
-from tomodrgn.dataset import TiltSeriesMRCData
+from tomodrgn.dataset import load_sta_dataset, TiltSeriesMRCData, TomoParticlesMRCData
 from tomodrgn.lattice import Lattice
 from tomodrgn.models import TiltSeriesHetOnlyVAE, DataParallelPassthrough, print_tiltserieshetonlyvae_ascii
-from tomodrgn.starfile import TiltSeriesStarfile
+from tomodrgn.starfile import load_sta_starfile, KNOWN_STAR_SOURCES
 
 log = utils.log
 vlog = utils.vlog
@@ -34,7 +34,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
         # this script is called from tomodrgn.__main__ entry point, in which case a parser is already created
         pass
 
-    parser.add_argument('particles', type=os.path.abspath, help='Input particles (.mrcs, .star, or .txt)')
+    parser.add_argument('particles', type=os.path.abspath, help='Input particles_imageseries.star (if using Warp/M or NextPYP), or optimisation set star file (if using WarpTools or RELION v5)')
 
     group = parser.add_argument_group('Core arguments')
     group.add_argument('-o', '--outdir', type=os.path.abspath, required=True, help='Output directory to save model')
@@ -47,7 +47,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     group.add_argument('--plot-format', type=str, choices=['png', 'svgz'], default='png', help='File format with which to save plots')
 
     group = parser.add_argument_group('Particle starfile loading and filtering')
-    group.add_argument('--source-software', type=str, choices=('auto', 'warp_v1', 'nextpyp', 'relion_v5', 'warp_v2'), default='auto',
+    group.add_argument('--source-software', type=str, choices=get_args(KNOWN_STAR_SOURCES), default='auto',
                        help='Manually set the software used to extract particles. Default is to auto-detect.')
     group.add_argument('--ind-ptcls', type=os.path.abspath, metavar='PKL', help='Filter starfile by particles (unique rlnGroupName values) using np array pkl as indices')
     group.add_argument('--ind-imgs', type=os.path.abspath, help='Filter starfile by particle images (star file rows) using np array pkl as indices')
@@ -63,8 +63,8 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     group = parser.add_argument_group('Dataset loading and preprocessing')
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
     group.add_argument('--no-window', dest='window', action='store_false', help='Turn off real space windowing of dataset')
-    group.add_argument('--window-r', type=float, default=.8, help='Real space inner windowing radius for cosine falloff to radius 1')
-    group.add_argument('--window-r-outer', type=float, default=.9, help='Real space outer windowing radius for cosine falloff to radius 1')
+    group.add_argument('--window-r', type=float, default=.8, help='Real space inner windowing radius to begin cosine falloff')
+    group.add_argument('--window-r-outer', type=float, default=.9, help='Real space outer windowing radius to end cosine falloff')
     group.add_argument('--datadir', type=os.path.abspath, default=None, help='Path prefix to particle stack if loading relative paths from a .star file')
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
     group.add_argument('--sequential-tilt-sampling', action='store_true', help='Supply particle images of one particle to encoder in filtered starfile order')
@@ -78,7 +78,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs')
     group.add_argument('-b', '--batch-size', type=int, default=1, help='Minibatch size')
     group.add_argument('--wd', type=float, default=0, help='Weight decay in Adam optimizer')
-    group.add_argument('--lr', type=float, default=0.0002, help='Learning rate in Adam optimizer for batch size 1. Is automatically linearly scaled with batch size.')
+    group.add_argument('--lr', type=float, default=0.0001, help='Learning rate in Adam optimizer for batch size 1. Is automatically further scaled as square-root of batch size.')
     group.add_argument('--beta', default=None, help='Choice of beta schedule or a constant for KLD weight')
     group.add_argument('--beta-control', type=float, help='KL-Controlled VAE gamma. Beta is KL target')
     group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: 0, std of dataset)')
@@ -90,7 +90,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     group.add_argument('--enc-dim-A', dest='qdimA', type=int, default=256, help='Number of nodes in hidden layers for each tilt')
     group.add_argument('--out-dim-A', type=int, default=128, help='Number of nodes in output layer of encA == ntilts * number of nodes input to encB')
     group.add_argument('--enc-layers-B', dest='qlayersB', type=int, default=3, help='Number of hidden layers encoding merged tilts')
-    group.add_argument('--enc-dim-B', dest='qdimB', type=int, default=512, help='Number of nodes in hidden layers encoding merged tilts')
+    group.add_argument('--enc-dim-B', dest='qdimB', type=int, default=256, help='Number of nodes in hidden layers encoding merged tilts')
     group.add_argument('--enc-mask', type=int, help='Diameter of circular mask of image for encoder in pixels (default: boxsize+1 to use up to Nyquist; -1 for no mask)')
     group.add_argument('--pooling-function', type=str, choices=('concatenate', 'max', 'mean', 'median', 'set_encoder'), default='concatenate',
                        help='Function used to pool features along ntilts dimension after encA')
@@ -127,6 +127,8 @@ def train_batch(*,
                 batch_ctf_params: torch.Tensor,
                 batch_recon_error_weights: torch.Tensor,
                 batch_hartley_2d_mask: torch.Tensor,
+                image_ctf_premultiplied: bool,
+                image_dose_weighted: bool,
                 beta: float,
                 beta_control: float | None = None,
                 use_amp: bool = False) -> np.ndarray:
@@ -148,6 +150,8 @@ def train_batch(*,
             May be `torch.zeros((batchsize))` instead to indicate no weighting should be applied to the reconstructed slice error.
     :param batch_hartley_2d_mask: Batch of 2-D masks to be applied per-spatial-frequency.
             Calculated as the intersection of critical dose exposure curves and a Nyquist-limited circular mask in reciprocal space, including masking the DC component.
+    :param image_ctf_premultiplied: Whether images were multiplied by their CTF during particle extraction.
+    :param image_dose_weighted: Whether images were multiplied by their exposure-dependent frequency weighting during particle extraction.
     :param beta: scaling factor to apply to KLD during loss calculation.
     :param beta_control: KL-Controlled VAE gamma. Beta is KL target.
     :param use_amp: If true, use Automatic Mixed Precision to reduce memory consumption and accelerate code execution via `autocast` and `GradScaler`
@@ -163,7 +167,8 @@ def train_batch(*,
         batch_images_preprocessed, batch_ctf_weights = preprocess_batch(lat=lat,
                                                                         batch_images=batch_images,
                                                                         batch_trans=batch_trans,
-                                                                        batch_ctf_params=batch_ctf_params)
+                                                                        batch_ctf_params=batch_ctf_params,
+                                                                        image_ctf_premultiplied=image_ctf_premultiplied)
         # encode the translated and CTF-phase-flipped images
         z_mu, z_logvar, z = encode_batch(model=model,
                                          batch_images=batch_images_preprocessed)
@@ -181,6 +186,8 @@ def train_batch(*,
                                                  batch_ctf_weights=batch_ctf_weights,
                                                  batch_recon_error_weights=batch_recon_error_weights,
                                                  batch_hartley_2d_mask=batch_hartley_2d_mask,
+                                                 image_ctf_premultiplied=image_ctf_premultiplied,
+                                                 image_dose_weighted=image_dose_weighted,
                                                  beta=beta,
                                                  beta_control=beta_control)
 
@@ -197,7 +204,8 @@ def preprocess_batch(*,
                      lat: Lattice,
                      batch_images: torch.Tensor,
                      batch_trans: torch.Tensor,
-                     batch_ctf_params: torch.Tensor) -> tuple[torch.Tensor, Union[torch.Tensor, None]]:
+                     batch_ctf_params: torch.Tensor,
+                     image_ctf_premultiplied: bool) -> tuple[torch.Tensor, Union[torch.Tensor, None]]:
     """
     Center images via translation and phase flip for partial CTF correction, as needed
 
@@ -207,6 +215,7 @@ def preprocess_batch(*,
             May be `torch.zeros((batchsize))` instead to indicate no translations should be applied to the input images.
     :param batch_ctf_params: Batch of CTF parameters corresponding to `batch_images` known CTF parameters, shape (batchsize, ntilts, 9).
             May be `torch.zeros((batchsize))` instead to indicate no CTF corruption should be applied to the reconstructed slice.
+    :param image_ctf_premultiplied: Whether images were multiplied by their CTF during particle extraction.
     :return batch_images: translationally-centered and phase-flipped batch of images to be used for training, shape (batchsize, ntilts, boxsize_ht**2)
     :return batch_ctf_weights: CTF evaluated at each spatial frequency corresponding to input images, shape (batchsize, ntilts, boxsize_ht**2) or None if no CTF should be applied
     """
@@ -224,7 +233,8 @@ def preprocess_batch(*,
     # phase flip the input CTF-corrupted image and calculate CTF weights to apply later
     if not torch.all(batch_ctf_params == torch.zeros(*batch_ctf_params.shape, device=batch_ctf_params.device)):
         batch_ctf_weights = ctf.compute_ctf(lat, *torch.split(batch_ctf_params[:, :, 1:], 1, 2))
-        batch_images = batch_images * batch_ctf_weights.sign()  # phase flip by CTF to be all positive amplitudes
+        if not image_ctf_premultiplied:
+            batch_images = batch_images * batch_ctf_weights.sign()  # phase flip by CTF to be all positive amplitudes
     else:
         batch_ctf_weights = None
 
@@ -288,6 +298,8 @@ def loss_function(*,
                   batch_ctf_weights: torch.Tensor,
                   batch_recon_error_weights: torch.Tensor,
                   batch_hartley_2d_mask: torch.Tensor,
+                  image_ctf_premultiplied: bool,
+                  image_dose_weighted: bool,
                   beta: float,
                   beta_control: float | None = None) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
@@ -302,23 +314,39 @@ def loss_function(*,
             Calculated from critical dose exposure curves and electron beam vs sample tilt geometry.
     :param batch_hartley_2d_mask: Batch of 2-D masks to be applied per-spatial-frequency.
             Calculated as the intersection of critical dose exposure curves and a Nyquist-limited circular mask in reciprocal space, including masking the DC component.
+    :param image_ctf_premultiplied: Whether images were multiplied by their CTF during particle extraction.
+    :param image_dose_weighted: Whether images were multiplied by their exposure-dependent frequency weighting during particle extraction.    :param beta: scaling factor to apply to KLD during loss calculation.
     :param beta: scaling factor to apply to KLD during loss calculation.
     :param beta_control: KL-Controlled VAE gamma. Beta is KL target.
     :return: total summed loss, generative loss between reconstructed slices and input images, and beta-weighted kld loss between latent embeddings and standard normal
     """
-    # reconstruction error
-    batch_images = batch_images[batch_hartley_2d_mask].view(-1)
-    batch_recon_error_weights = batch_recon_error_weights[batch_hartley_2d_mask].view(-1)
-    if batch_ctf_weights is not None:
-        batch_ctf_weights = batch_ctf_weights[batch_hartley_2d_mask].view(-1)
-        batch_images_recon = batch_images_recon * batch_ctf_weights  # apply CTF to reconstructed image
-        batch_images = batch_images * batch_ctf_weights.sign()  # undo phase flipping in place from preprocess_batch
-    gen_loss = torch.mean(batch_recon_error_weights * ((batch_images_recon - batch_images) ** 2))
-
-    # latent loss
+    # locally disable autocast for numerical stability in calculating losses, particularly with batch size > 1 or equivalent large denominator for kld or large num pixels for mse
     with torch.amp.autocast(device_type=batch_images.device.type, enabled=False):
-        # locally disable autocast for numerical stability in calculating KLD, particularly with batch size > 1 or equivalent large denominator
-        kld = torch.mean(-0.5 * torch.sum(1 + z_logvar.float() - z_mu.float().pow(2) - z_logvar.float().exp(), dim=1), dim=0)
+        # upcast tensors for numerical stability in loss if amp was enabled upstream
+        batch_images = batch_images.to(torch.float32)
+        batch_images_recon = batch_images_recon.to(torch.float32)
+        batch_ctf_weights = batch_ctf_weights.to(torch.float32) if batch_ctf_weights is not None else None
+        batch_recon_error_weights = batch_recon_error_weights.to(torch.float32)
+
+        # reconstruction error
+        batch_images = batch_images[batch_hartley_2d_mask].view(-1)
+        batch_recon_error_weights = batch_recon_error_weights[batch_hartley_2d_mask].view(-1)
+        if batch_ctf_weights is not None:
+            batch_ctf_weights = batch_ctf_weights[batch_hartley_2d_mask].view(-1)
+            batch_images_recon = batch_images_recon * batch_ctf_weights  # apply CTF to reconstructed image
+            if not image_ctf_premultiplied:
+                # undo phase flipping in place from preprocess_batch, this was only applied if images are not ctf premultiplied
+                batch_images = batch_images * batch_ctf_weights.sign()
+            else:
+                # reconstructed image needs to correspond to input ctf_premultiplied images, i.e. images that are doubly convolved with the CTF
+                batch_images_recon = batch_images_recon * batch_ctf_weights  # apply CTF to reconstructed image again
+        if image_dose_weighted:
+            # images may have been extracted with dose weights pre-applied
+            batch_images_recon = batch_images_recon * batch_recon_error_weights
+        gen_loss = torch.nanmean(batch_recon_error_weights * ((batch_images_recon - batch_images) ** 2))
+
+        # latent loss
+        kld = torch.nanmean(-0.5 * torch.sum(1 + z_logvar.float() - z_mu.float().pow(2) - z_logvar.float().exp(), dim=1), dim=0)
         if beta_control is None:
             # denominator is the largest number of pixels included in single particle of any particle in batch
             kld_loss = beta * kld / torch.max(torch.sum(batch_hartley_2d_mask.view(z_mu.shape[0], -1), dtype=kld.dtype, dim=-1))
@@ -334,19 +362,23 @@ def loss_function(*,
 def encoder_inference(*,
                       model: TiltSeriesHetOnlyVAE | DataParallelPassthrough,
                       lat: Lattice,
-                      data: TiltSeriesMRCData,
+                      data: TiltSeriesMRCData | TomoParticlesMRCData,
+                      num_workers: int = 0,
+                      prefetch_factor: int = None,
+                      pin_memory: bool = False,
                       use_amp: bool = False,
-                      batchsize: int = 1,
-                      **kwargs) -> tuple[np.ndarray, np.ndarray]:
+                      batchsize: int = 1) -> tuple[np.ndarray, np.ndarray]:
     """
     Run inference on the encoder module using the specified data as input to be embedded in latent space.
 
     :param model: TiltSeriesHetOnlyVAE object to be used for encoder module inference. Informs device on which to run inference.
     :param lat: Hartley-transform lattice of points for voxel grid operations
-    :param data: TiltSeriesMRCData object for accessing tilt images with known CTF and pose parameters, to be embedded in latent space
+    :param data: TiltSeriesMRCData or TomoParticlesMRCData object for accessing tilt images with known CTF and pose parameters, to be embedded in latent space
     :param use_amp: If true, use Automatic Mixed Precision to reduce memory consumption and accelerate code execution via `torch.autocast`
-    :param batchsize: batch size used in DataLoader for model inference
-    :param kwargs: All other key word arguments are passed to `torch.DataLoader`
+    :param batchsize: batch size used in dataloader for model inference
+    :param num_workers: Number of workers to use with dataloader when batching particles for inference.
+    :param prefetch_factor: Number of particles to prefetch per worker with dataloader for inference.
+    :param pin_memory: Whether to use pinned memory for dataloader.
     :return: Direct output of encoder module parameterizing the mean of the latent embedding for each particle, shape (batchsize, zdim).
             Direct output of encoder module parameterizing the log variance of the latent embedding for each particle, shape (batchsize, zdim)
     """
@@ -369,7 +401,10 @@ def encoder_inference(*,
             data_generator = torch.utils.data.DataLoader(data,
                                                          batch_size=batchsize,
                                                          shuffle=False,
-                                                         **kwargs)
+                                                         num_workers=num_workers,
+                                                         prefetch_factor=prefetch_factor,
+                                                         persistent_workers=False,  # creating this dataloading for a single pass, no need for peristent workers
+                                                         pin_memory=pin_memory)
 
             for batch_images, _, batch_trans, batch_ctf_params, _, _, batch_indices in data_generator:
                 # transfer to GPU
@@ -381,7 +416,8 @@ def encoder_inference(*,
                 batch_images, ctf_weights = preprocess_batch(lat=lat,
                                                              batch_images=batch_images,
                                                              batch_trans=batch_trans,
-                                                             batch_ctf_params=batch_ctf_params)
+                                                             batch_ctf_params=batch_ctf_params,
+                                                             image_ctf_premultiplied=data.star.image_ctf_premultiplied)
 
                 # decode the lattice coordinate positions given the encoder-generated embeddings
                 z_mu, z_logvar, z = encode_batch(model=model,
@@ -480,8 +516,8 @@ def main(args):
         # https://github.com/pytorch/pytorch/issues/55374
 
     # load star file
-    ptcls_star = TiltSeriesStarfile(args.particles,
-                                    source_software=args.source_software)
+    ptcls_star = load_sta_starfile(star_path=args.particles,
+                                   source_software=args.source_software)
     ptcls_star.plot_particle_uid_ntilt_distribution(outpath=f'{args.outdir}/{os.path.basename(ptcls_star.sourcefile)}_particle_uid_ntilt_distribution.{args.plot_format}')
 
     # filter star file
@@ -503,39 +539,42 @@ def main(args):
     # load the particles + poses + ctf from input starfile
     flog(f'Loading dataset from {args.particles}')
     datadir = args.datadir if args.datadir is not None else os.path.dirname(ptcls_star.sourcefile)
-    data_train = TiltSeriesMRCData(ptcls_star=ptcls_star,
-                                   star_random_subset=1,
-                                   datadir=datadir,
-                                   lazy=args.lazy,
-                                   norm=args.norm,
-                                   invert_data=args.invert_data,
-                                   window=args.window,
-                                   window_r=args.window_r,
-                                   window_r_outer=args.window_r_outer,
-                                   recon_dose_weight=args.recon_dose_weight,
-                                   recon_tilt_weight=args.recon_tilt_weight,
-                                   l_dose_mask=args.l_dose_mask,
-                                   constant_mintilt_sampling=True,
-                                   sequential_tilt_sampling=args.sequential_tilt_sampling)
+    data_train = load_sta_dataset(ptcls_star=ptcls_star,
+                                  star_random_subset=1,
+                                  datadir=datadir,
+                                  lazy=args.lazy,
+                                  norm=args.norm,
+                                  invert_data=args.invert_data,
+                                  window=args.window,
+                                  window_r=args.window_r,
+                                  window_r_outer=args.window_r_outer,
+                                  recon_dose_weight=args.recon_dose_weight,
+                                  recon_tilt_weight=args.recon_tilt_weight,
+                                  l_dose_mask=args.l_dose_mask,
+                                  constant_mintilt_sampling=True,
+                                  sequential_tilt_sampling=args.sequential_tilt_sampling)
     if args.fraction_train < 1:
-        data_test = TiltSeriesMRCData(ptcls_star,
-                                      star_random_subset=2,
-                                      datadir=datadir,
-                                      lazy=args.lazy,
-                                      norm=data_train.norm,
-                                      invert_data=args.invert_data,
-                                      window=args.window,
-                                      window_r=args.window_r,
-                                      window_r_outer=args.window_r_outer,
-                                      recon_dose_weight=args.recon_dose_weight,
-                                      recon_tilt_weight=args.recon_tilt_weight,
-                                      l_dose_mask=args.l_dose_mask,
-                                      constant_mintilt_sampling=True,
-                                      sequential_tilt_sampling=args.sequential_tilt_sampling)
+        data_test = load_sta_dataset(ptcls_star=ptcls_star,
+                                     star_random_subset=2,
+                                     datadir=datadir,
+                                     lazy=args.lazy,
+                                     norm=data_train.norm,
+                                     invert_data=args.invert_data,
+                                     window=args.window,
+                                     window_r=args.window_r,
+                                     window_r_outer=args.window_r_outer,
+                                     recon_dose_weight=args.recon_dose_weight,
+                                     recon_tilt_weight=args.recon_tilt_weight,
+                                     l_dose_mask=args.l_dose_mask,
+                                     constant_mintilt_sampling=True,
+                                     sequential_tilt_sampling=args.sequential_tilt_sampling)
     else:
         data_test = None
     boxsize_ht = data_train.boxsize_ht
     nptcls = data_train.nptcls
+    image_ctf_premultiplied = data_train.star.image_ctf_premultiplied
+    image_dose_weighted = data_train.star.image_dose_weighted
+    ctf.print_ctf_params(data_train.ctf_params[0])
 
     # instantiate lattice
     lat = Lattice(boxsize_ht, extent=args.l_extent, device=device)
@@ -640,11 +679,13 @@ def main(args):
     beta_schedule = get_beta_schedule(args.beta, n_iterations=args.num_epochs * nptcls + args.batch_size)
 
     # instantiate optimizer
+    args.lr = args.lr * (args.batch_size ** 0.5)
     if not args.sequential_tilt_sampling:
         log('Scaling learning rate larger by 2 due to using random tilt sampling')
         args.lr = args.lr * 2
+    log(f'Final learning rate after scaling by square root of batch size: {args.lr}')
     optim = torch.optim.AdamW(model.parameters(),
-                              lr=args.lr * args.batch_size,
+                              lr=args.lr,
                               weight_decay=args.wd,
                               eps=1e-4)  # https://github.com/pytorch/pytorch/issues/40497#issuecomment-1084807134
 
@@ -731,6 +772,8 @@ def main(args):
                                        batch_ctf_params=batch_ctf_params,
                                        batch_recon_error_weights=batch_recon_error_weights,
                                        batch_hartley_2d_mask=batch_hartley_2d_mask,
+                                       image_ctf_premultiplied=image_ctf_premultiplied,
+                                       image_dose_weighted=image_dose_weighted,
                                        beta=beta,
                                        beta_control=args.beta_control,
                                        use_amp=use_amp)
@@ -758,14 +801,20 @@ def main(args):
                                                            lat=lat,
                                                            data=data_train,
                                                            use_amp=use_amp,
-                                                           batchsize=args.batch_size)
+                                                           batchsize=args.batch_size,
+                                                           num_workers=args.num_workers,
+                                                           prefetch_factor=args.prefetch_factor,
+                                                           pin_memory=args.pin_memory)
             if data_test:
                 out_z_test = f'{args.outdir}/z.{epoch}.test.pkl'
                 z_mu_test, z_logvar_test = encoder_inference(model=model,
                                                              lat=lat,
                                                              data=data_test,
                                                              use_amp=use_amp,
-                                                             batchsize=args.batch_size)
+                                                             batchsize=args.batch_size,
+                                                             num_workers=args.num_workers,
+                                                             prefetch_factor=args.prefetch_factor,
+                                                             pin_memory=args.pin_memory)
             else:
                 z_mu_test, z_logvar_test, out_z_test = None, None, None
             save_checkpoint(model=model,
@@ -804,14 +853,20 @@ def main(args):
                                                    lat=lat,
                                                    data=data_train,
                                                    use_amp=use_amp,
-                                                   batchsize=args.batch_size)
+                                                   batchsize=args.batch_size,
+                                                   num_workers=args.num_workers,
+                                                   prefetch_factor=args.prefetch_factor,
+                                                   pin_memory=args.pin_memory)
     if data_test:
         out_z_test = f'{args.outdir}/z.test.pkl'
         z_mu_test, z_logvar_test = encoder_inference(model=model,
                                                      lat=lat,
                                                      data=data_test,
                                                      use_amp=use_amp,
-                                                     batchsize=args.batch_size)
+                                                     batchsize=args.batch_size,
+                                                     num_workers=args.num_workers,
+                                                     prefetch_factor=args.prefetch_factor,
+                                                     pin_memory=args.pin_memory)
     else:
         z_mu_test, z_logvar_test, out_z_test = None, None, None
     save_checkpoint(model=model,

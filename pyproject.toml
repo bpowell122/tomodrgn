@@ -11,7 +11,7 @@ dynamic = ["version"]
 description = "tomoDRGN heterogeneity training and analysis"
 readme = "README.md"
 license = {file = "LICENSE.txt"}
-requires-python = ">=3.10"
+requires-python = ">=3.10, <3.13"
 authors = [
     { name = "Barrett Powell", email = "bmp@mit.edu" },
 ]
@@ -90,5 +90,5 @@ matrix-name-format = "{variable}_{value}"
 python = ["3.10", "3.11", "3.12"]
 
 [tool.hatch.envs.test.scripts]
-test = 'cd testing && pytest --script-launch-mode=subprocess --capture=tee-sys commandtest.py'
+test = 'cd testing && pytest --script-launch-mode=subprocess --capture=tee-sys commandtest.py pytest --script-launch-mode=subprocess --capture=tee-sys commandtest_warptools.py'
 

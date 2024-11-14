@@ -20,7 +20,6 @@
       combine_ind
       convert_angstroms_to_voxels
       convert_original_indices
-      gen_volumes
       get_colors_chimerax
       get_colors_matplotlib
       get_ind_for_cluster
@@ -50,15 +49,6 @@
    
 
    
-   
-   .. rubric:: Classes
-
-   .. autosummary::
-      :toctree:
-      :template: custom-class-template.rst
-      :nosignatures:
-   
-      VolumeGenerator
    
    
 

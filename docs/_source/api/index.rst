@@ -1,13 +1,15 @@
 API Reference
 =============
 
+For users simply looking to analyze their datasets with tomoDRGN, we recommend just using the :doc:`CLI commands <../command_usage/index>`.
+Should you wish to dive deeper into tomoDRGN's source code, this section details the Python API of each tomoDRGN core module and command script.
 
 TomoDRGN core
 -------------
 .. autosummary::
    :toctree: _autosummary
    :template: custom-module-template.rst
-   :caption: TomoDRGN core
+   :caption: TomoDRGN core modules
 
    tomodrgn.analysis
    tomodrgn.beta_schedule

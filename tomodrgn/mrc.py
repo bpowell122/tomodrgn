@@ -381,80 +381,124 @@ class LazyImageStack:
     Minimizes calls to file opening, file seeking, and file reading in single-process context.
     """
 
-    def __init__(self, fname, indices_image):
+    def __init__(self,
+                 fname: str,
+                 indices_image: list[int],
+                 representative_header: MRCHeader = None):
+        """
+        Create a LazyImageStack object from a file on disk.
+
+        :param fname: path to the .mrc(s) file on disk.
+        :param indices_image: list of integer indices of which sections (slow axis in the array) to load from the file.
+        :param representative_header: pre-existing MRCHeader object. Skips disk access during object creation that would otherwise be required to parse this file's header.
+                Causes the ``fname`` file to be loaded using values from ``representative_header`` for extended header bytes, array dtype, array shape in X,Y.
+        """
         # store the input file name
         self.fname = fname
 
-        # load the input file header as an MRCHeader object
-        header = MRCHeader.parse(fname)
-        self.header = header
-
-        # store the indices of images to load from this file and group the indices into continuous blocks for contiguous reads
-        self.indices_image = indices_image
-        self.indices_image_contiguous = self._group_contiguous_indices()
+        if representative_header is None:
+            # load the input file header as an MRCHeader object
+            header = MRCHeader.parse(fname)
+        else:
+            # use a pre-existing MRCHeader object (skips disk access in parsing this file's header)
+            assert type(representative_header) is MRCHeader
+            header = representative_header
 
         # calculate information used in determining which bytes to load as each image
-        self.header_offset = self.header.total_header_bytes
-        self.dtype_image = self.header.dtype
-        self.shape_image = (self.header.fields['ny'], self.header.fields['nx'])
+        self.header_offset = header.total_header_bytes
+        self.n_images = len(indices_image)
+        self.dtype_image = header.dtype
+        self.shape_image = (header.fields['ny'], header.fields['nx'])
         self.stride_image = self.dtype_image.itemsize * self.shape_image[0] * self.shape_image[1]
 
-    def _group_contiguous_indices(self) -> list[np.ndarray[int]]:
+        # group the indices of images to load from this file into continuous blocks for contiguous reads and store the grouped indices
+        self.indices_image = self._group_contiguous_indices(indices_image)
+
+    @staticmethod
+    def _group_contiguous_indices(indices_image: list[int]) -> list[list[int]]:
         """
-        Groups a flat array of input indices by which indices are immediately contiguous.
+        Groups a flat list of input indices by which indices are sequentially contiguous.
         For example, input of [0, 1, 2, 4, 5] would return [[0, 1, 2], [4, 5]].
 
-        :return: list of arrays of contiguous indices
+        :param indices_image: flat list of sorted, non-redundant, potentially non-contiguous input indices.
+        :return: list of lists of contiguous indices.
         """
         # create list to store contiguous indices
         contiguous_indices = []
         # determine which indices (`j`) are contiguous by virtue of sharing the same offset from natural numbers starting from 0 (`i`)
-        contiguous_labels = [j - i for i, j in enumerate(self.indices_image)]
+        contiguous_labels = [j - i for i, j in enumerate(indices_image)]
 
         image_count = 0
         for _, elements in groupby(contiguous_labels):
             length_contiguous_subset = len(list(elements))
-            contiguous_indices.append(self.indices_image[image_count: image_count + length_contiguous_subset])
+            contiguous_indices.append(indices_image[image_count: image_count + length_contiguous_subset])
             image_count += length_contiguous_subset
 
         return contiguous_indices
 
-    def get(self) -> np.ndarray:
+    def get(self,
+            low_memory: bool = True) -> np.ndarray:
         """
         Load the image data from disk to a numpy array
 
+        :param low_memory: if True, only load selected slices into memory via multiple disk accesses of sequentially grouped slices (slower, but uses less RAM).
+                If False, load the whole file in one disk access and then return selected slices (faster on slow filesystems but uses more RAM).
         :return: the numpy array of data
         """
 
         with open(self.fname, 'rb') as f:
-            # preallocate an array to be populated by the loaded images
-            stack = np.zeros((len(self.indices_image), *self.shape_image), dtype=self.dtype_image)
 
-            # calculate and apply the offset from the start of the file to the beginning of the first image to be loaded
-            f.seek(self.header_offset + self.indices_image[0] * self.stride_image, 0)
+            if low_memory:
+                # only read selected indices into memory via reading multiple sequentially grouped slices from the file
 
-            image_count = 0
-            for i, inds_contiguous in enumerate(self.indices_image_contiguous):
+                # calculate and apply the offset from the start of the file to the beginning of the first image to be loaded
+                f.seek(self.header_offset + self.indices_image[0][0] * self.stride_image, 0)
 
-                if (i > 0) and (inds_contiguous[0] != previous_ind + 1):
-                    # np.fromfile advances file pointer by length_contiguous_subset * stride_image bytes on the previous loop
-                    # we need to seek the file pointer ahead to the start of the next image to be loaded
-                    # by definition of the contiguous indices, this seeking is needed every iteration but the first
-                    offset_from_previous_image = (inds_contiguous[0] - (previous_ind + 1)) * self.stride_image
-                    # offset by the number of bytes of skipped images, relative to the file pointer's position after reading the previous contiguous images
-                    f.seek(offset_from_previous_image, 1)
+                # preallocate an array to be populated by the loaded images
+                stack = np.zeros((self.n_images, *self.shape_image), dtype=self.dtype_image)
 
-                length_contiguous_subset = len(inds_contiguous)
-                stack[image_count: image_count + length_contiguous_subset] = np.fromfile(f,
-                                                                                         dtype=self.dtype_image,
-                                                                                         count=self.shape_image[0] * self.shape_image[1] * length_contiguous_subset
-                                                                                         ).reshape(length_contiguous_subset,
-                                                                                                   self.shape_image[0],
-                                                                                                   self.shape_image[1])
-                image_count += length_contiguous_subset
+                image_count = 0
+                for i, inds_contiguous in enumerate(self.indices_image):
 
-                # track the last image loaded of the contiguous block, to be used in adjusting file pointer offset at next iteration
-                previous_ind = inds_contiguous[-1]
+                    if (i > 0) and (inds_contiguous[0] != previous_ind + 1):
+                        # np.fromfile advances file pointer by length_contiguous_subset * stride_image bytes on the previous loop
+                        # we need to seek the file pointer ahead to the start of the next image to be loaded
+                        # by definition of the contiguous indices, this seeking is needed every iteration but the first
+                        offset_from_previous_image = (inds_contiguous[0] - (previous_ind + 1)) * self.stride_image
+                        # offset by the number of bytes of skipped images, relative to the file pointer's position after reading the previous contiguous images
+                        f.seek(offset_from_previous_image, 1)
+
+                    length_contiguous_subset = len(inds_contiguous)
+                    stack[image_count: image_count + length_contiguous_subset] = np.fromfile(f,
+                                                                                             dtype=self.dtype_image,
+                                                                                             count=self.shape_image[0] * self.shape_image[1] * length_contiguous_subset
+                                                                                             ).reshape(length_contiguous_subset,
+                                                                                                       self.shape_image[0],
+                                                                                                       self.shape_image[1])
+                    image_count += length_contiguous_subset
+
+                    # track the last image loaded of the contiguous block, to be used in adjusting file pointer offset at next iteration
+                    previous_ind = inds_contiguous[-1]
+            else:
+                # read most of the entire file (spanning the first to the last index to preserve) into memory in one file access, then mask to selected images
+
+                # calculate and apply the offset from the start of the file to the beginning of the first image to be loaded
+                f.seek(self.header_offset + self.indices_image[0][0] * self.stride_image, 0)
+
+                # index -1,-1 is largest 0-indexed image, index[0][0] is the smallest 0-indexed image
+                n_images_to_read = self.indices_image[-1][-1] - self.indices_image[0][0] + 1
+
+                # read all data from disk in one call
+                stack = np.fromfile(f,
+                                    dtype=self.dtype_image,
+                                    count=self.shape_image[0] * self.shape_image[1] * n_images_to_read
+                                    ).reshape(n_images_to_read,
+                                              self.shape_image[0],
+                                              self.shape_image[1])
+
+                # get the indices of the images to preserve, offset relative to the number of images in the loaded array
+                indices_image_flat = np.asarray([ind_img - self.indices_image[0][0] for ind_img_contiguous in self.indices_image for ind_img in ind_img_contiguous])
+                stack = stack[indices_image_flat]
 
         return stack
 

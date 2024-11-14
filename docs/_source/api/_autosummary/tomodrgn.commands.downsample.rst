@@ -16,6 +16,7 @@
       :nosignatures:
    
       add_args
+      collate_particle_tilts
       downsample_images
       main
       mkbasedir

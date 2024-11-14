@@ -36,6 +36,7 @@
       ResidLinearMLP
       TiltSeriesEncoder
       TiltSeriesHetOnlyVAE
+      VolumeGenerator
    
    
 

@@ -8,48 +8,40 @@ Train a heterogeneous tomoDRGN network (i.e. encoder and decoder modules) to lea
 
 Sample usage
 ------------
-The examples below are taken from ``tomodrgn/testing/commandtest.py``, and rely on other outputs from ``commandtest.py`` to execute successfully.
+The examples below are adapted from ``tomodrgn/testing/commandtest*.py``, and rely on other outputs from ``commandtest.py`` to execute successfully.
 
 .. code-block:: bash
 
-    # baseline, 2 class heterogeneity, zdim 2
+    # Warp v1 style inputs
     tomodrgn \
         train_vae \
         data/10076_both_32_sim.star \
-        --outdir output/vae_both_sim_zdim2 \
-        --zdim 2 \
-        --uninvert-data \
-        --seed 42 \
-        --log-interval 100 \
-        --enc-dim-A 64 \
-        --enc-layers-A 2 \
-        --out-dim-A 64 \
-        --enc-dim-B 32 \
-        --enc-layers-B 4 \
-        --dec-dim 256 \
-        --dec-layers 3 \
-        --num-epochs 40
-
-    # 2 class heterogeneity, zdim 8, dose weight, tilt wieght, recon dose mask
-    tomodrgn \
-        train_vae \
-        data/10076_both_32_sim.star \
-        --outdir output/vae_both_sim_zdim8_dosetiltweightmask \
+        --source-software cryosrpnt \  # tomoDRGN tries to automatically infer the software used to export particles, but allows this value to be set explicitly
+        --outdir output/vae_both_sim_zdim8_dosetiltweightmask_batchsize8 \
         --zdim 8 \
         --uninvert-data \
-        --seed 42 \
-        --log-interval 100 \
-        --enc-dim-A 64 \
-        --enc-layers-A 2 \
-        --out-dim-A 64 \
-        --enc-dim-B 32 \
-        --enc-layers-B 4 \
-        --dec-dim 256 \
-        --dec-layers 3 \
-        -n 1 \
+        --num-epochs 40 \
         --l-dose-mask \
         --recon-dose-weight \
-        --recon-tilt-weight
+        --recon-tilt-weight \
+        --batch-size 8
+
+    # WarpTools style inputs
+    tomodrgn \
+        train_vae \
+        data/warptools_test_4-tomos_10-ptcls_box-32_angpix-12_optimisation_set.star \
+        --outdir output/vae_warptools_70S_zdim8_dosetiltweightmask_batchsize8 \
+        --zdim 8 \
+        --uninvert-data
+        --num-epochs 40 \
+        --l-dose-mask \
+        --recon-dose-weight \
+        --recon-tilt-weight \
+        --batch-size 8 \
+        --lazy \  # note: lazy is used because the separate .mrcs file per particle, as used by WarpTools, is well suited to lazy loading
+        --num-workers 2 \  # note: num-workers, prefetch-factor, and persistent-workers are best used only if lazy is enabled to avoid excessive memory utilization
+        --prefetch-factor 2 \
+        --persistent-workers
 
 Arguments
 ---------

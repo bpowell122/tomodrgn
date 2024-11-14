@@ -1,10 +1,12 @@
-Command usage
+Command Usage
 ==============
 
-Here we present descriptions of all tomoDRGN commands, including for each command:
+Here we present descriptions of all tomoDRGN CLI commands, including for each command:
 
 * the goal or motivation
-* example usage
+* example usage given different upstream STA software
+  - "Warp v1 style inputs" which includes Warp v1, RELION v3, NextPYP, and cryoSRPNT
+  - "WarpTools style inputs" which includes WarpTools
 * an explanation of all arguments
 * common next steps
 

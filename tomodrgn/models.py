@@ -458,6 +458,9 @@ class FTPositionalDecoder(nn.Module):
 
             # only evaluate coords within `extent` radius (if extent==0.5, nyquist limit in reciprocal space)
             slice_mask = xy_coords.pow(2).sum(dim=-1) <= extent ** 2
+            if torch.sum(slice_mask) == 0:
+                # no coords left to evaluate after masking, skip to next zslice in next loop iteration
+                continue
             xy_coords = xy_coords[slice_mask]
 
             # expand coords to batch size

@@ -5,29 +5,39 @@ tomodrgn cleanup
 Purpose
 --------
 Clean an analyzed ``train_vae`` output directory of various types of outputs.
+Any model outputs that have been analyzed (i.e., those for which an ``analyze.EPOCH`` or ``convergence.EPOCH`` directory exist) will not be removed.
 
 Sample usage
 ------------
-The examples below are taken from ``tomodrgn/testing/commandtest.py``, and rely on other outputs from ``commandtest.py`` to execute successfully.
+The examples below are adapted from ``tomodrgn/testing/commandtest*.py``, and rely on other outputs from ``commandtest.py`` to execute successfully.
 
 .. code-block:: bash
 
-    # baseline
+    # Warp v1 style inputs -- dry run
     tomodrgn \
         cleanup \
-        output/vae_both_sim_zdim2_copy_cleaned \
+        output/vae_classE_sim_zdim8 \
         --weights \
         --zfiles \
         --volumes \
         --test
 
-    # actually remove files
+    # Warp v1 style inputs -- actually remove files
     tomodrgn \
         cleanup \
-        output/vae_both_sim_zdim2_copy_cleaned \
+        output/vae_classE_sim_zdim8 \
         --weights \
         --zfiles \
-        --volumes
+        --volumes \
+        --test
+
+    # WarpTools style inputs -- dry run
+    tomodrgn \
+        cleanup output/vae_warptools_70S_zdim8 \
+        --weights \
+        --zfiles \
+        --volumes \
+        --test
 
 Arguments
 ---------
@@ -41,4 +51,4 @@ Arguments
 Common next steps
 ------------------
 
-* Upload the resulting cleaned directory to Zenodo (or another data sharing service) as a routine element of data availability for publications
+* Share the resulting cleaned directory with collaborators, or upload to Zenodo (or another data sharing service) as a component of data availability for publications
