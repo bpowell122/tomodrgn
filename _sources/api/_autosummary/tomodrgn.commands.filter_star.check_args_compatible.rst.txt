@@ -1,0 +1,6 @@
+﻿tomodrgn.commands.filter\_star.check\_args\_compatible
+======================================================
+
+.. currentmodule:: tomodrgn.commands.filter_star
+
+.. autofunction:: check_args_compatible

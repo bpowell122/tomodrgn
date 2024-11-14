@@ -1,0 +1,950 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tomodrgn.commands.subtomo2chimerax &#8212; tomoDRGN 0.2.3.dev328 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!-- 
+    this give us a css class that will be invisible only if js is disabled 
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../_static/scripts/fontawesome.js?digest=26a4bc78f4c0ddb94549"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549" />
+
+    <script src="../../../_static/documentation_options.js?v=d6c7774d"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/tomodrgn/commands/subtomo2chimerax';</script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">tomoDRGN v0.2.3.dev328</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../overview/index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../command_usage/index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../overview/index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../command_usage/index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">tomodrgn.commands.subtomo2chimerax</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for tomodrgn.commands.subtomo2chimerax</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Create a ChimeraX command script (.cxc) to map particles back to their source positions within a tomogram.</span>
+<span class="sd">Particles may be rendered as ChimeraX spherical markers, as a consensus .mrc volume, or as unique-per-particle volumes generated by tomoDRGN on-the-fly.</span>
+<span class="sd">Particles may be colored by an array of numeric values per particle, colormapped by a Matplotlib colormap.</span>
+<span class="sd">Script adapted from relionsubtomo2ChimeraX.py, written by Huy Bui, McGill University, doi: https://doi.org/10.5281/zenodo.6820119.</span>
+
+<span class="sd">Example usage: marker mode (places chimerax markers only)</span>
+
+<span class="sd">.. code-block:: bash</span>
+
+<span class="sd">    python tomodrgn/commands/subtomo2chimerax.py \</span>
+<span class="sd">        ../m_output_starfiles/10499_22k_box64_angpix6_volumeseries.star \</span>
+<span class="sd">        --output test_subtomo2chimerax \</span>
+<span class="sd">        --ind ../27_vae_box96_256x3_128_256x3_128_256x3_b1_gaussian/ind_keep.20981_particles.pkl \</span>
+<span class="sd">        --mode markers \</span>
+<span class="sd">        --marker-radius-angstrom 150 \</span>
+<span class="sd">        --coloring-labels analyze.49/kmeans20/labels.pkl</span>
+
+<span class="sd">Example usage: volumes mode (places unique tomoDRGN volumes per particle)</span>
+
+<span class="sd">.. code-block:: bash</span>
+
+<span class="sd">    python tomodrgn/commands/subtomo2chimerax.py \</span>
+<span class="sd">        ../m_output_starfiles/10499_22k_box64_angpix6_volumeseries.star \</span>
+<span class="sd">        --outdir test_subtomo2chimerax_volumes \</span>
+<span class="sd">        --ind ../27_vae_box96_256x3_128_256x3_128_256x3_b1_gaussian/ind_keep.20981_particles.pkl \</span>
+<span class="sd">        --mode volumes \</span>
+<span class="sd">        --weights weights.49.pkl \</span>
+<span class="sd">        --config config.pkl \</span>
+<span class="sd">        --zfile z.49.pkl \</span>
+<span class="sd">        --downsample 64 \</span>
+<span class="sd">        --vol-render-level 0.008 \</span>
+<span class="sd">        --coloring-labels analyze.49/kmeans20/labels.pkl</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Literal</span>
+
+<span class="kn">from</span> <span class="nn">tomodrgn</span> <span class="kn">import</span> <span class="n">starfile</span><span class="p">,</span> <span class="n">utils</span><span class="p">,</span> <span class="n">mrc</span><span class="p">,</span> <span class="n">analysis</span><span class="p">,</span> <span class="n">models</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">log</span>
+
+
+<div class="viewcode-block" id="add_args">
+<a class="viewcode-back" href="../../../api/_autosummary/tomodrgn.commands.subtomo2chimerax.add_args.html#tomodrgn.commands.subtomo2chimerax.add_args">[docs]</a>
+<span class="k">def</span> <span class="nf">add_args</span><span class="p">(</span><span class="n">parser</span><span class="p">:</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">parser</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># this script is called directly; need to create a parser</span>
+        <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="vm">__doc__</span><span class="p">,</span> <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentDefaultsHelpFormatter</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># this script is called from tomodrgn.__main__ entry point, in which case a parser is already created</span>
+        <span class="k">pass</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;starfile&#39;</span><span class="p">,</span>
+                        <span class="nb">type</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Input volumeseries starfile from subtomogram export; used to specify particle XYZ coordinates and rotational pose.&#39;</span>
+                             <span class="s1">&#39;Can also pass in an optimisation_set star file; otherwise pass in the associated rlnTomoParticlesStarfile.&#39;</span><span class="p">)</span>
+
+    <span class="n">group</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Core arguments&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--outdir&#39;</span><span class="p">,</span>
+                       <span class="nb">type</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">,</span>
+                       <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Path to directory to store ouptut script(s) and volume(s).&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--mode&#39;</span><span class="p">,</span>
+                       <span class="n">choices</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;volumes&#39;</span><span class="p">,</span> <span class="s1">&#39;volume&#39;</span><span class="p">,</span> <span class="s1">&#39;markers&#39;</span><span class="p">),</span>
+                       <span class="n">default</span><span class="o">=</span><span class="s1">&#39;markers&#39;</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Choice of particle rendering mode: unique volume per particle, a single consensus volume for all particles, or ChimeraX spherical markers for all particle&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--ind&#39;</span><span class="p">,</span>
+                       <span class="nb">type</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Ind.pkl specified when training tomodrgn model (if applicable). &#39;</span>
+                            <span class="s1">&#39;Must be specified if either `--zfile`, `--coloring-labels` are specified and the number of values in these pkl files does not match the number of rows in `--starfile`.&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--tomoname&#39;</span><span class="p">,</span>
+                       <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Name of a single tomogram in input starfile for which to write mapback script. If blank, default is to prepare scripts and volumes for all tomograms.&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--tomo-id-col-override&#39;</span><span class="p">,</span>
+                       <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Name of column in input starfile to filter by --tomoname&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--star-angpix-override&#39;</span><span class="p">,</span>
+                       <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Override pixel size of input particle_volumeseries starfile (units Å/px)&#39;</span><span class="p">)</span>
+
+    <span class="n">group</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Volume specification options - generate unique-per-particle tomoDRGN volumes. Required if `--mode volumes`.&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--weights&#39;</span><span class="p">,</span>
+                       <span class="nb">type</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Tomodrgn train_vae model weights to use for generating unique-per-particle volumes.&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--config&#39;</span><span class="p">,</span>
+                       <span class="nb">type</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Tomodrgn train_vae config.pkl file.&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--zfile&#39;</span><span class="p">,</span>
+                       <span class="nb">type</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Tomodrgn train_vae latent embeddings .pkl/.txt file with z-values to decode to volumes.&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--flip&#39;</span><span class="p">,</span>
+                       <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Optionally flip handedness of output volumes relative to trained model.&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--invert&#39;</span><span class="p">,</span>
+                       <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Optionally invert contrast of output volumes relative to trained model.&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--downsample&#39;</span><span class="p">,</span>
+                       <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Optionally downsample decoded volumes to this box size (pixels). Recommeneded to if model was trained with box size &gt; 128.&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--lowpass&#39;</span><span class="p">,</span>
+                       <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Optionally lowpass filter volumes to this resolution in Å.&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--skip-vol&#39;</span><span class="p">,</span>
+                       <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Skip generation of volumes. Should only be used if volmes have been previously generated by this script. &#39;</span>
+                            <span class="s1">&#39;Useful for tweaking coloring_labels or colormap. Is not valid if any volume generation parameters or outdir are changed.&#39;</span><span class="p">)</span>
+
+    <span class="n">group</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Volume specification options - single pregenerated volume. Required if `--mode volume`.&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--vol-path&#39;</span><span class="p">,</span>
+                       <span class="nb">type</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Path to single consensus volume to map back at each particle location in tomogram.&#39;</span><span class="p">)</span>
+
+    <span class="n">group</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Volume specification options - ChimeraX spherical markers. Required if `--mode markers`.&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--marker-radius-angstrom&#39;</span><span class="p">,</span>
+                       <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                       <span class="n">default</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Radius of ChimeraX markers (units: Å).&#39;</span><span class="p">)</span>
+
+    <span class="n">group</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;ChimeraX rendering options&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--vol-render-level&#39;</span><span class="p">,</span>
+                       <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+                       <span class="n">default</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Isosurface level to render all volumes in ChimeraX&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--coloring-labels&#39;</span><span class="p">,</span>
+                       <span class="nb">type</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Path to a .pkl file containing a unique value for each particle (e.g. kmeans class label, continuous scalar).&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--colormap&#39;</span><span class="p">,</span>
+                       <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Matplotlib colormap to apply to --coloring-labels (default = ChimeraX color scheme per label value). &#39;</span>
+                            <span class="s1">&#39;See https://matplotlib.org/stable/tutorials/colors/colormaps.html (e.g. tab20)&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">parser</span></div>
+
+
+
+<div class="viewcode-block" id="validate_volume_mode_arguments">
+<a class="viewcode-back" href="../../../api/_autosummary/tomodrgn.commands.subtomo2chimerax.validate_volume_mode_arguments.html#tomodrgn.commands.subtomo2chimerax.validate_volume_mode_arguments">[docs]</a>
+<span class="k">def</span> <span class="nf">validate_volume_mode_arguments</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="n">argparse</span><span class="o">.</span><span class="n">Namespace</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check that required inputs are present depending on the volume rendering mode selected.</span>
+
+<span class="sd">    :param args: argparse namespace</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;volumes&#39;</span><span class="p">:</span>
+        <span class="c1"># need to be able to generate volumes given a trained model, model config, and z values to evaluate</span>
+        <span class="k">assert</span> <span class="n">args</span><span class="o">.</span><span class="n">weights</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="k">assert</span> <span class="n">args</span><span class="o">.</span><span class="n">config</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="k">assert</span> <span class="n">args</span><span class="o">.</span><span class="n">zfile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;volume&#39;</span><span class="p">:</span>
+        <span class="c1"># need to be able to reference volume</span>
+        <span class="k">assert</span> <span class="n">args</span><span class="o">.</span><span class="n">vol_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;markers&#39;</span><span class="p">:</span>
+        <span class="c1"># need to know size to render marker spheres</span>
+        <span class="k">assert</span> <span class="n">args</span><span class="o">.</span><span class="n">marker_radius_angstrom</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="validate_starfile">
+<a class="viewcode-back" href="../../../api/_autosummary/tomodrgn.commands.subtomo2chimerax.validate_starfile.html#tomodrgn.commands.subtomo2chimerax.validate_starfile">[docs]</a>
+<span class="k">def</span> <span class="nf">validate_starfile</span><span class="p">(</span><span class="n">ptcl_star</span><span class="p">:</span> <span class="n">starfile</span><span class="o">.</span><span class="n">GenericStarfile</span> <span class="o">|</span> <span class="n">starfile</span><span class="o">.</span><span class="n">TomoParticlesStarfile</span><span class="p">,</span>
+                      <span class="n">ptcl_block_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                      <span class="n">star_angpix_override</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                      <span class="n">tomo_id_col_override</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Identify the star file particles data block and relevant columns within it which specify particle coordinates, angle, pixel size, and tomogram name.</span>
+
+<span class="sd">    :param ptcl_star: volume-series star file (each row refers to a unique particle)</span>
+<span class="sd">    :param ptcl_block_name: name of the star file data block containing per-particle data (e.g. `data_particles`)</span>
+<span class="sd">    :param star_angpix_override: optional override to pixel size detected in star file (default identified as first column containing `Pixel` substring)</span>
+<span class="sd">    :param tomo_id_col_override: optional override to column name specifying source tomogram for each particle (default: `_rlnMicrographName`)</span>
+<span class="sd">    :return: list of column names describing particle rotations, list of column names describing particle coordinates, pixel size of subtomogram coordinates, column name which names source tomogram</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Identify star file type, and make assumptions about columns names accordingly for required tomogram coordinate, rotational pose, and tomogram name columns</span>
+    <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Checking requisite metadata in star file&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">ptcl_block_name</span><span class="p">]</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">pat</span><span class="o">=</span><span class="s1">&#39;_rlnCoordinate&#39;</span><span class="p">)):</span>
+        <span class="c1"># column headers use relion/nextpyp naming</span>
+        <span class="n">rots_cols</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;_rlnAngleRot&#39;</span><span class="p">,</span> <span class="s1">&#39;_rlnAngleTilt&#39;</span><span class="p">,</span> <span class="s1">&#39;_rlnAnglePsi&#39;</span><span class="p">]</span>
+        <span class="n">coords_cols</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;_rlnCoordinateX&#39;</span><span class="p">,</span> <span class="s1">&#39;_rlnCoordinateY&#39;</span><span class="p">,</span> <span class="s1">&#39;_rlnCoordinateZ&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">tomo_id_col_override</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">ptcl_star</span><span class="p">)</span> <span class="ow">is</span> <span class="n">starfile</span><span class="o">.</span><span class="n">TomoParticlesStarfile</span><span class="p">:</span>
+                <span class="n">tomo_id_col_override</span> <span class="o">=</span> <span class="s1">&#39;_rlnTomoName&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">tomo_id_col_override</span> <span class="o">=</span> <span class="s1">&#39;_rlnMicrographName&#39;</span>
+    <span class="k">elif</span> <span class="nb">any</span><span class="p">(</span><span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">ptcl_block_name</span><span class="p">]</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">pat</span><span class="o">=</span><span class="s1">&#39;_wrpCoordinate&#39;</span><span class="p">)):</span>
+        <span class="c1"># columns use warp/m naming</span>
+        <span class="n">m_coords_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">col_name</span> <span class="k">for</span> <span class="n">col_name</span> <span class="ow">in</span> <span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">ptcl_block_name</span><span class="p">]</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="s1">&#39;_wrpCoordinate&#39;</span> <span class="ow">in</span> <span class="n">col_name</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">m_coords_cols</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="c1"># m temporal sampling == 1</span>
+            <span class="n">rots_cols</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;_wrpAngleRot&#39;</span><span class="p">,</span> <span class="s1">&#39;_wrpAngleTilt&#39;</span><span class="p">,</span> <span class="s1">&#39;_wrpAnglePsi&#39;</span><span class="p">]</span>
+            <span class="n">coords_cols</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;_wrpCoordinateX&#39;</span><span class="p">,</span> <span class="s1">&#39;_wrpCoordinateY&#39;</span><span class="p">,</span> <span class="s1">&#39;_wrpCoordinateZ&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># m temporal sampling &gt; 1, have 3*temporal_sampling pose columns</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">m_coords_cols</span><span class="p">)</span> <span class="o">%</span> <span class="mi">3</span> <span class="o">==</span> <span class="mi">0</span>
+            <span class="n">rots_cols</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;_wrpAngleRot1&#39;</span><span class="p">,</span> <span class="s1">&#39;_wrpAngleTilt1&#39;</span><span class="p">,</span> <span class="s1">&#39;_wrpAnglePsi1&#39;</span><span class="p">]</span>
+            <span class="n">coords_cols</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;_wrpCoordinateX1&#39;</span><span class="p">,</span> <span class="s1">&#39;_wrpCoordinateY1&#39;</span><span class="p">,</span> <span class="s1">&#39;_wrpCoordinateZ1&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">tomo_id_col_override</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">tomo_id_col_override</span> <span class="o">=</span> <span class="s1">&#39;_wrpSourceName&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Could not identify star file columns containing particle tomogram-level XYZ coordinates from columns: </span><span class="si">{</span><span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">ptcl_block_name</span><span class="p">]</span><span class="o">.</span><span class="n">columns</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="c1"># check that these assumed column names actually exist in the star file</span>
+    <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">([</span><span class="n">col</span> <span class="ow">in</span> <span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">ptcl_block_name</span><span class="p">]</span><span class="o">.</span><span class="n">columns</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">rots_cols</span><span class="p">]),</span> <span class="sa">f</span><span class="s1">&#39;`</span><span class="si">{</span><span class="n">rots_cols</span><span class="si">}</span><span class="s1"> columns not found in starfile `data_` block&#39;</span>
+    <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">([</span><span class="n">col</span> <span class="ow">in</span> <span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">ptcl_block_name</span><span class="p">]</span><span class="o">.</span><span class="n">columns</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">coords_cols</span><span class="p">]),</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">coords_cols</span><span class="si">}</span><span class="s1"> columns not found in starfile `data_` block&#39;</span>
+    <span class="k">assert</span> <span class="n">tomo_id_col_override</span> <span class="ow">in</span> <span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">ptcl_block_name</span><span class="p">]</span><span class="o">.</span><span class="n">columns</span>
+
+    <span class="c1"># get the pixel size used in star file to later scale particle coordinates and translations</span>
+    <span class="k">if</span> <span class="n">star_angpix_override</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">pixel_size_block</span> <span class="o">=</span> <span class="n">ptcl_star</span><span class="o">.</span><span class="n">identify_particles_data_block</span><span class="p">(</span><span class="n">column_substring</span><span class="o">=</span><span class="s1">&#39;Pixel&#39;</span><span class="p">)</span>
+        <span class="c1"># possibility that multiple columns contain the substring Pixel, therefore we take the largest pixel size value</span>
+        <span class="c1"># assumption is that star file might contain original micrograph pixel size + extracted particle (binned) pixel size; we want the latter to correctly position particles</span>
+        <span class="n">potential_pixel_columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">pixel_size_block</span><span class="p">]</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="s1">&#39;Pixel&#39;</span> <span class="ow">in</span> <span class="n">col</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">potential_pixel_columns</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">star_angpix</span> <span class="o">=</span> <span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">pixel_size_block</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">potential_pixel_columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">star_angpix</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">pixel_size_block</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">potential_pixel_columns</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">star_angpix</span> <span class="o">=</span> <span class="n">star_angpix_override</span>
+
+    <span class="k">return</span> <span class="n">rots_cols</span><span class="p">,</span> <span class="n">coords_cols</span><span class="p">,</span> <span class="n">star_angpix</span><span class="p">,</span> <span class="n">tomo_id_col_override</span></div>
+
+
+
+<div class="viewcode-block" id="generate_color_per_particle">
+<a class="viewcode-back" href="../../../api/_autosummary/tomodrgn.commands.subtomo2chimerax.generate_color_per_particle.html#tomodrgn.commands.subtomo2chimerax.generate_color_per_particle">[docs]</a>
+<span class="k">def</span> <span class="nf">generate_color_per_particle</span><span class="p">(</span><span class="n">ptcl_star</span><span class="p">:</span> <span class="n">starfile</span><span class="o">.</span><span class="n">GenericStarfile</span><span class="p">,</span>
+                                <span class="n">ptcl_block_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                                <span class="n">labels_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                                <span class="n">colormap</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate an RGBA color for each particle&#39;s unique label and store both labels and RGBA tuples in the particles star dataframe.</span>
+
+<span class="sd">    :param ptcl_star: volume-series star file (each row refers to a unique particle)</span>
+<span class="sd">    :param ptcl_block_name: name of the star file data block containing per-particle data (e.g. `data_particles`)</span>
+<span class="sd">    :param labels_path: path to array of coloring labels from which to derive each particle&#39;s color, shape (nptcls, 1)</span>
+<span class="sd">    :param colormap: matplotlib colormap to translate labels to RGBA tuples. If None, uses ChimeraX color palette (repeated as necessary)</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># load labels per particle</span>
+    <span class="k">if</span> <span class="n">labels_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Loading labels for volume coloring in ChimeraX from </span><span class="si">{</span><span class="n">labels_path</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">load_pkl</span><span class="p">(</span><span class="n">labels_path</span><span class="p">)</span>
+        <span class="c1"># check number of labels matches total number of particles</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">ptcl_block_name</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">log</span><span class="p">(</span><span class="s1">&#39;No coloring labels were provided; each particle will be assigned a unique random label&#39;</span><span class="p">)</span>
+        <span class="c1"># assign a unique label per particle</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">a</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">ptcl_block_name</span><span class="p">]),</span>
+                                  <span class="n">size</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">ptcl_block_name</span><span class="p">]),</span>
+                                  <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1"># ensure labels are dtype int</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">labels</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">):</span>
+        <span class="c1"># assign a unique numeric label for each unique value in labels in order</span>
+        <span class="n">mapping</span> <span class="o">=</span> <span class="p">{</span><span class="n">label</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">labels</span><span class="p">))}</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">mapping</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">])</span>
+    <span class="n">labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+    <span class="c1"># prepare colormap of per-particle labels</span>
+    <span class="n">labels_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">colormap</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">log</span><span class="p">(</span><span class="s1">&#39;No colormap was provided; using Chimerax color scheme (10 colors) mapped to each class label (with repitition modulo 10 as necessary)&#39;</span><span class="p">)</span>
+        <span class="n">cmap</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">get_colors_chimerax</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">labels_set</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Using matplotlib color scheme </span><span class="si">{</span><span class="n">colormap</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">cmap</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">get_colors_matplotlib</span><span class="p">(</span><span class="n">num_colors</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">labels_set</span><span class="p">),</span>
+                                              <span class="n">cmap</span><span class="o">=</span><span class="n">colormap</span><span class="p">)</span>
+    <span class="n">labels_rgba</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cmap</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">])</span>
+    <span class="n">labels_rgba</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*=</span> <span class="mi">100</span>  <span class="c1"># normalize RGB 0-100 for chimerax, leava alpha 0-1 for chimerax</span>
+    <span class="n">labels_rgba</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">around</span><span class="p">(</span><span class="n">labels_rgba</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>  <span class="c1"># convert to int for chimerax</span>
+
+    <span class="c1"># save colors per particle in df</span>
+    <span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">ptcl_block_name</span><span class="p">][</span><span class="s1">&#39;labels&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">labels</span>
+    <span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">ptcl_block_name</span><span class="p">][</span><span class="s1">&#39;labels_colors_rgba&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">labels_rgba</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="validate_particles_for_rendering">
+<a class="viewcode-back" href="../../../api/_autosummary/tomodrgn.commands.subtomo2chimerax.validate_particles_for_rendering.html#tomodrgn.commands.subtomo2chimerax.validate_particles_for_rendering">[docs]</a>
+<span class="k">def</span> <span class="nf">validate_particles_for_rendering</span><span class="p">(</span><span class="n">mode</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;volumes&#39;</span><span class="p">,</span> <span class="s1">&#39;volume&#39;</span><span class="p">,</span> <span class="s1">&#39;markers&#39;</span><span class="p">],</span>
+                                     <span class="n">vols_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                                     <span class="n">vol_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                                     <span class="n">num_ptcls_this_tomo</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Validate that particle volumes can be found for volume-based rendering modes.</span>
+<span class="sd">    Also sets box size and pixel size of particles for mapback.</span>
+
+<span class="sd">    :param mode: particle rendering mode for mapback</span>
+<span class="sd">    :param vols_dir: if mode == &#39;volumes&#39;, should point to directory containing pre-generated volumes for only one tomogram&#39;s particles</span>
+<span class="sd">    :param vol_path: if mode == &#39;volume&#39;, should point to pre-generated single consensus volume</span>
+<span class="sd">    :param num_ptcls_this_tomo: number of particles to be mapped back in this tomogram. Should match the number of .mrc files found within vols_dir.</span>
+<span class="sd">    :return: box size of rendered particles (units: px), pixel size of rendered particles (units: Å/px), list of particle volumes to load from disk for mapback</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;volumes&#39;</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="n">vols_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Enumerating volumes in </span><span class="si">{</span><span class="n">vols_dir</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">vol_paths</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">vols_dir</span><span class="p">))</span>
+        <span class="n">vol_paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">vols_dir</span><span class="p">,</span> <span class="n">vol</span><span class="p">)</span> <span class="k">for</span> <span class="n">vol</span> <span class="ow">in</span> <span class="n">vol_paths</span> <span class="k">if</span> <span class="n">vol</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.mrc&#39;</span><span class="p">)]</span>
+        <span class="n">vol_paths</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.mrc&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]))</span>  <span class="c1"># assumes naming format `vol_001.mrc`</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">vol_paths</span><span class="p">)</span> <span class="o">==</span> <span class="n">num_ptcls_this_tomo</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">vol_paths</span><span class="p">)</span><span class="si">}</span><span class="s1"> volumes in </span><span class="si">{</span><span class="n">vols_dir</span><span class="si">}</span><span class="s1"> but expected </span><span class="si">{</span><span class="n">num_ptcls_this_tomo</span><span class="si">}</span><span class="s1"> to exist&#39;</span>
+        <span class="n">vol</span><span class="p">,</span> <span class="n">header</span> <span class="o">=</span> <span class="n">mrc</span><span class="o">.</span><span class="n">parse_mrc</span><span class="p">(</span><span class="n">vol_paths</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">vol_box</span> <span class="o">=</span> <span class="n">vol</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">vol_angpix</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">get_apix</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;volume&#39;</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="n">vol_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="k">assert</span> <span class="n">vol_path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.mrc&#39;</span><span class="p">)</span>
+        <span class="n">vol_paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">vol_path</span><span class="p">)]</span>
+        <span class="n">vol</span><span class="p">,</span> <span class="n">header</span> <span class="o">=</span> <span class="n">mrc</span><span class="o">.</span><span class="n">parse_mrc</span><span class="p">(</span><span class="n">vol_paths</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">vol_box</span> <span class="o">=</span> <span class="n">vol</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">vol_angpix</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">get_apix</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;markers&#39;</span><span class="p">:</span>
+        <span class="c1"># required for rotations to be about the origin with rotation approach used below</span>
+        <span class="n">vol_box</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">vol_angpix</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">vol_paths</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Unknown mode specified: </span><span class="si">{</span><span class="n">mode</span><span class="si">=}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">vol_box</span><span class="p">,</span> <span class="n">vol_angpix</span><span class="p">,</span> <span class="n">vol_paths</span></div>
+
+
+
+<div class="viewcode-block" id="write_labels_rgba_by_model">
+<a class="viewcode-back" href="../../../api/_autosummary/tomodrgn.commands.subtomo2chimerax.write_labels_rgba_by_model.html#tomodrgn.commands.subtomo2chimerax.write_labels_rgba_by_model">[docs]</a>
+<span class="k">def</span> <span class="nf">write_labels_rgba_by_model</span><span class="p">(</span><span class="n">df_one_tomo</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+                               <span class="n">outdir_one_tomo</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Write a text file specifying the mapping between label value - RGBA color - ChimeraX models associated with this label, for the current tomogram&#39;</span>
+
+<span class="sd">    :param df_one_tomo: volumeseries star file particles dataframe containing label value and label color metadata for only one tomogram&#39;s particles</span>
+<span class="sd">    :param outdir_one_tomo: output directory to save text file</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># organize models by shared label for ease of selection in chimerax</span>
+    <span class="n">labels_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">df_one_tomo</span><span class="p">[</span><span class="s1">&#39;labels&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
+
+    <span class="c1"># save text mapping of label : rgba specification</span>
+    <span class="n">labels_outfile</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir_one_tomo</span><span class="si">}</span><span class="s1">/rgba_labels.txt&#39;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">labels_outfile</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;Mapping of unique labels : RGBA specification : chimerax models </span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">labels_set</span><span class="p">):</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Label : </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s1"> </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+            <span class="n">rgba</span> <span class="o">=</span> <span class="n">df_one_tomo</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df_one_tomo</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">label</span><span class="p">,</span> <span class="s2">&quot;labels_colors_rgba&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;RGBa % : </span><span class="si">{</span><span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">rgba</span><span class="p">])</span><span class="si">}</span><span class="s1"> </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;models : </span><span class="si">{</span><span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="nb">enumerate</span><span class="p">(</span><span class="n">df_one_tomo</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">l</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">label</span><span class="p">])</span><span class="si">}</span><span class="s1"> </span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="write_mapback_script">
+<a class="viewcode-back" href="../../../api/_autosummary/tomodrgn.commands.subtomo2chimerax.write_mapback_script.html#tomodrgn.commands.subtomo2chimerax.write_mapback_script">[docs]</a>
+<span class="k">def</span> <span class="nf">write_mapback_script</span><span class="p">(</span><span class="n">df_one_tomo</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+                         <span class="n">outdir_one_tomo</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                         <span class="n">vol_paths</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+                         <span class="n">rots_cols</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+                         <span class="n">coords_cols</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+                         <span class="n">mode</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;volumes&#39;</span><span class="p">,</span> <span class="s1">&#39;volume&#39;</span><span class="p">,</span> <span class="s1">&#39;markers&#39;</span><span class="p">],</span>
+                         <span class="n">vol_boxsize</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                         <span class="n">vol_angpix</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                         <span class="n">vol_render_level</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                         <span class="n">marker_radius_angstrom</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                         <span class="n">star_angpix</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Write a .cxc ChimeraX command file to map back all particles specified in df_one_tomo to source tomogram positions using the specified rendering mode and coloring scheme.</span>
+
+<span class="sd">    :param df_one_tomo: volumeseries star file particles dataframe containing metadata for only one tomogram&#39;s particles</span>
+<span class="sd">    :param outdir_one_tomo: output directory to save .cxc file</span>
+<span class="sd">    :param vol_paths: list of paths to particle volumes to be loaded and mapped back to tomogram positions</span>
+<span class="sd">    :param rots_cols: list of column headers specifying Euler angles for how to orient particles in tomogram</span>
+<span class="sd">    :param coords_cols: list of column headers specifying tomogram-level coordinates for how to place particles in tomogram</span>
+<span class="sd">    :param mode: particle rendering mode for mapback</span>
+<span class="sd">    :param vol_boxsize: box size of particle volumes (units: px). If mode == &#39;markers&#39;, treated as box size 1 px.</span>
+<span class="sd">    :param vol_angpix: pixel size of particle volumes (units: Å/px). If mode == &#39;markers&#39;, treated as vol_angpix 0</span>
+<span class="sd">    :param vol_render_level: isosurface threshold to render volumes in ChimeraX</span>
+<span class="sd">    :param marker_radius_angstrom: if mode == &#39;markers&#39;, sets ChimeraX marker radius in Ångstrom</span>
+<span class="sd">    :param star_angpix: pixel size (Å/px) in star file when referencing particle tomogram coordinates or particle translations</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># write commands for each volume</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir_one_tomo</span><span class="si">}</span><span class="s1">/mapback.cxc&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df_one_tomo</span><span class="p">)):</span>
+            <span class="c1"># write volume opening command</span>
+            <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;volumes&#39;</span><span class="p">:</span>
+                <span class="c1"># generating each volume in --outdir, so can just use basename</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;open &quot;</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">vol_paths</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="si">}</span><span class="s1">&quot;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;volume&#39;</span><span class="p">:</span>
+                <span class="c1"># referencing volume at path external to --outdir, so need full path (absolute or relative)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">vol_paths</span><span class="p">)</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;open &quot;</span><span class="si">{</span><span class="n">vol_paths</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">&quot;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;markers&#39;</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;marker #</span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1"> position 0,0,0 radius </span><span class="si">{</span><span class="n">marker_radius_angstrom</span><span class="si">}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+            <span class="c1"># prepare rotation matrix</span>
+            <span class="n">eulers_relion</span> <span class="o">=</span> <span class="n">df_one_tomo</span><span class="p">[</span><span class="n">rots_cols</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+            <span class="n">rot</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">rot_3d_from_relion</span><span class="p">(</span><span class="n">eulers_relion</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">eulers_relion</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">eulers_relion</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+
+            <span class="c1"># prepare tomogram-scale translations</span>
+            <span class="n">coord_px</span> <span class="o">=</span> <span class="n">df_one_tomo</span><span class="p">[</span><span class="n">coords_cols</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+            <span class="n">coord_ang</span> <span class="o">=</span> <span class="n">coord_px</span> <span class="o">*</span> <span class="n">star_angpix</span>
+
+            <span class="c1"># incorporate translations due to refinement</span>
+            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">axis</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">([</span><span class="s1">&#39;X&#39;</span><span class="p">,</span> <span class="s1">&#39;Y&#39;</span><span class="p">,</span> <span class="s1">&#39;Z&#39;</span><span class="p">]):</span>
+                <span class="k">if</span> <span class="sa">f</span><span class="s1">&#39;_rlnOrigin</span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s1">Angst&#39;</span> <span class="ow">in</span> <span class="n">df_one_tomo</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                    <span class="n">shift_ang</span> <span class="o">=</span> <span class="n">df_one_tomo</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;_rlnOrigin</span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s1">Angst&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="n">coord_ang</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">-=</span> <span class="n">shift_ang</span>
+                <span class="k">elif</span> <span class="sa">f</span><span class="s1">&#39;_rlnOrigin</span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s1">&#39;</span> <span class="ow">in</span> <span class="n">df_one_tomo</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                    <span class="n">shift</span> <span class="o">=</span> <span class="n">df_one_tomo</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;_rlnOrigin</span><span class="si">{</span><span class="n">axis</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                    <span class="n">shift_ang</span> <span class="o">=</span> <span class="n">shift</span> <span class="o">*</span> <span class="n">star_angpix</span>
+                    <span class="n">coord_ang</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">-=</span> <span class="n">shift_ang</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">pass</span>
+
+            <span class="c1"># incorporate translations due to box rotation</span>
+            <span class="n">vol_radius_ang</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">vol_boxsize</span><span class="p">,</span> <span class="n">vol_boxsize</span><span class="p">,</span> <span class="n">vol_boxsize</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">vol_angpix</span>
+            <span class="n">shift_volrot_ang</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">rot</span><span class="p">,</span> <span class="o">-</span><span class="n">vol_radius_ang</span><span class="o">.</span><span class="n">transpose</span><span class="p">())</span>
+            <span class="n">coord_ang</span> <span class="o">+=</span> <span class="n">shift_volrot_ang</span>
+
+            <span class="c1"># write volume positioning command</span>
+            <span class="n">chimerax_view_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">rot</span><span class="p">,</span> <span class="n">coord_ang</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;view matrix mod #</span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">:</span><span class="s1">d</span><span class="si">}{</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="sa">f</span><span class="s2">&quot;,</span><span class="si">{</span><span class="n">i</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">chimerax_view_matrix</span><span class="o">.</span><span class="n">flatten</span><span class="p">()])</span><span class="si">}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+            <span class="c1"># write volume coloring command</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;color #</span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">:</span><span class="s1">d</span><span class="si">}</span><span class="s1"> rgba(</span><span class="si">{</span><span class="s2">&quot;%,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">channel</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">df_one_tomo</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;labels_colors_rgba&quot;</span><span class="p">]])</span><span class="si">}</span><span class="s1">)</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;volumes&#39;</span> <span class="ow">or</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;volume&#39;</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;volume #</span><span class="si">{</span><span class="mi">1</span><span class="si">:</span><span class="s1">d</span><span class="si">}</span><span class="s1">-</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">df_one_tomo</span><span class="p">)</span><span class="si">:</span><span class="s1">d</span><span class="si">}</span><span class="s1"> step 1 level </span><span class="si">{</span><span class="n">vol_render_level</span><span class="si">:</span><span class="s1">f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;view orient&#39;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="main">
+<a class="viewcode-back" href="../../../api/_autosummary/tomodrgn.commands.subtomo2chimerax.main.html#tomodrgn.commands.subtomo2chimerax.main">[docs]</a>
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+    <span class="c1"># document all arguments</span>
+    <span class="n">log</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="c1"># check required arguments are satisfied</span>
+    <span class="n">validate_volume_mode_arguments</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="c1"># load the star file</span>
+    <span class="k">if</span> <span class="n">starfile</span><span class="o">.</span><span class="n">is_starfile_optimisation_set</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">starfile</span><span class="p">):</span>
+        <span class="n">ptcl_star</span> <span class="o">=</span> <span class="n">starfile</span><span class="o">.</span><span class="n">TomoParticlesStarfile</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">starfile</span><span class="p">)</span>
+        <span class="n">ptcl_block_name</span> <span class="o">=</span> <span class="n">ptcl_star</span><span class="o">.</span><span class="n">block_particles</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ptcl_star</span> <span class="o">=</span> <span class="n">starfile</span><span class="o">.</span><span class="n">GenericStarfile</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">starfile</span><span class="p">)</span>
+        <span class="n">ptcl_block_name</span> <span class="o">=</span> <span class="n">ptcl_star</span><span class="o">.</span><span class="n">identify_particles_data_block</span><span class="p">()</span>
+
+    <span class="c1"># validate star file metadata</span>
+    <span class="n">rots_cols</span><span class="p">,</span> <span class="n">coords_cols</span><span class="p">,</span> <span class="n">star_angpix</span><span class="p">,</span> <span class="n">tomo_id_col</span> <span class="o">=</span> <span class="n">validate_starfile</span><span class="p">(</span><span class="n">ptcl_star</span><span class="o">=</span><span class="n">ptcl_star</span><span class="p">,</span>
+                                                                         <span class="n">ptcl_block_name</span><span class="o">=</span><span class="n">ptcl_block_name</span><span class="p">,</span>
+                                                                         <span class="n">star_angpix_override</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">star_angpix_override</span><span class="p">,</span>
+                                                                         <span class="n">tomo_id_col_override</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">tomo_id_col_override</span><span class="p">)</span>
+
+    <span class="c1"># filter by indices used during training (if used)</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">ind</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Filtering starfile by indices </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">ind</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">ind</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">load_pkl</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">ind</span><span class="p">)</span>
+        <span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">ptcl_block_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">ptcl_block_name</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+        <span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">ptcl_block_name</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># populate colormap, add labels and colors to ind-filtered df</span>
+    <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Calculating colors for each particle based on colormap </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">colormap</span><span class="si">}</span><span class="s1"> and labels </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">coloring_labels</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">generate_color_per_particle</span><span class="p">(</span><span class="n">ptcl_star</span><span class="o">=</span><span class="n">ptcl_star</span><span class="p">,</span>
+                                <span class="n">ptcl_block_name</span><span class="o">=</span><span class="n">ptcl_block_name</span><span class="p">,</span>
+                                <span class="n">labels_path</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">coloring_labels</span><span class="p">,</span>
+                                <span class="n">colormap</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">colormap</span><span class="p">)</span>
+
+    <span class="c1"># get list of all tomograms in star file, optionally filtered to tomo of choice</span>
+    <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Finding list of all tomograms in star file&#39;</span><span class="p">)</span>
+    <span class="n">tomo_names</span> <span class="o">=</span> <span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">ptcl_block_name</span><span class="p">][</span><span class="n">tomo_id_col</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">tomoname</span><span class="p">:</span>
+        <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Filtering list of all tomograms to specified tomogram: </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">tomoname</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">args</span><span class="o">.</span><span class="n">tomoname</span> <span class="ow">in</span> <span class="n">tomo_names</span>
+        <span class="n">tomo_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">tomoname</span><span class="p">]</span>
+
+    <span class="c1"># make output directory</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">outdir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># loop over all tomograms</span>
+    <span class="k">for</span> <span class="n">tomo_name</span> <span class="ow">in</span> <span class="n">tomo_names</span><span class="p">:</span>
+        <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Working on tomogram: </span><span class="si">{</span><span class="n">tomo_name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">df_one_tomo</span> <span class="o">=</span> <span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">ptcl_block_name</span><span class="p">][</span><span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">ptcl_block_name</span><span class="p">][</span><span class="n">tomo_id_col</span><span class="p">]</span> <span class="o">==</span> <span class="n">tomo_name</span><span class="p">]</span>
+        <span class="n">df_one_tomo</span> <span class="o">=</span> <span class="n">df_one_tomo</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># create output dir for this tomogram</span>
+        <span class="n">outdir_one_tomo</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/tomo_</span><span class="si">{</span><span class="n">tomo_name</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">outdir_one_tomo</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;volumes&#39;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">skip_vol</span><span class="p">:</span>
+            <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Generating tomoDRGN volumes associated with this tomogram&#39;</span><span class="p">)</span>
+            <span class="c1"># load z file and assert same length as df</span>
+            <span class="n">z_all</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">load_pkl</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">zfile</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">z_all</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">ptcl_star</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">ptcl_block_name</span><span class="p">]),</span> <span class="s1">&#39;Mismatch in number of particles referenced in z file versus in star file. Check that `--ind` is set correctly.&#39;</span>
+
+            <span class="c1"># filter z to just this tomogram&#39;s inds; write to disk</span>
+            <span class="n">z_one_tomo</span> <span class="o">=</span> <span class="n">z_all</span><span class="p">[</span><span class="n">df_one_tomo</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()]</span>
+            <span class="n">utils</span><span class="o">.</span><span class="n">save_pkl</span><span class="p">(</span><span class="n">z_one_tomo</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir_one_tomo</span><span class="si">}</span><span class="s1">/z_values.pkl&#39;</span><span class="p">)</span>
+
+            <span class="c1"># generate all volumes in this tomogram by args and z_values.pkl, store in outdir_one_tomo</span>
+            <span class="n">vg</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">VolumeGenerator</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">config</span><span class="p">,</span>
+                                        <span class="n">weights_path</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span>
+            <span class="n">vg</span><span class="o">.</span><span class="n">generate_volumes</span><span class="p">(</span><span class="n">z</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir_one_tomo</span><span class="si">}</span><span class="s1">/z_values.pkl&#39;</span><span class="p">,</span>
+                                <span class="n">out_dir</span><span class="o">=</span><span class="n">outdir_one_tomo</span><span class="p">,</span>
+                                <span class="n">downsample</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">downsample</span><span class="p">,</span>
+                                <span class="n">lowpass</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">lowpass</span><span class="p">,</span>
+                                <span class="n">flip</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">flip</span><span class="p">,</span>
+                                <span class="n">invert</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">invert</span><span class="p">,</span>
+                                <span class="n">batch_size</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># load the first tomodrgn vol to get boxsize and pixel size, check that all vols can be found</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">vols_dir</span> <span class="o">=</span> <span class="n">outdir_one_tomo</span> <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;volumes&#39;</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">vol_boxsize</span><span class="p">,</span> <span class="n">vol_angpix</span><span class="p">,</span> <span class="n">vol_paths</span> <span class="o">=</span> <span class="n">validate_particles_for_rendering</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span>
+                                                                              <span class="n">vols_dir</span><span class="o">=</span><span class="n">outdir_one_tomo</span><span class="p">,</span>
+                                                                              <span class="n">vol_path</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">vol_path</span><span class="p">,</span>
+                                                                              <span class="n">num_ptcls_this_tomo</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">df_one_tomo</span><span class="p">))</span>
+
+        <span class="c1"># write labels/RGBa in this tomogram</span>
+        <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Saving key of unique labels : RGBA specification : ChimeraX models&#39;</span><span class="p">)</span>
+        <span class="n">write_labels_rgba_by_model</span><span class="p">(</span><span class="n">df_one_tomo</span><span class="o">=</span><span class="n">df_one_tomo</span><span class="p">,</span>
+                                   <span class="n">outdir_one_tomo</span><span class="o">=</span><span class="n">outdir_one_tomo</span><span class="p">)</span>
+
+        <span class="c1"># write mapback cxc for this tomogram</span>
+        <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Saving .cxc file to view subtomogram map-back&#39;</span><span class="p">)</span>
+        <span class="n">write_mapback_script</span><span class="p">(</span><span class="n">df_one_tomo</span><span class="o">=</span><span class="n">df_one_tomo</span><span class="p">,</span>
+                             <span class="n">outdir_one_tomo</span><span class="o">=</span><span class="n">outdir_one_tomo</span><span class="p">,</span>
+                             <span class="n">vol_paths</span><span class="o">=</span><span class="n">vol_paths</span><span class="p">,</span>
+                             <span class="n">rots_cols</span><span class="o">=</span><span class="n">rots_cols</span><span class="p">,</span>
+                             <span class="n">coords_cols</span><span class="o">=</span><span class="n">coords_cols</span><span class="p">,</span>
+                             <span class="n">mode</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span>
+                             <span class="n">vol_boxsize</span><span class="o">=</span><span class="n">vol_boxsize</span><span class="p">,</span>
+                             <span class="n">vol_angpix</span><span class="o">=</span><span class="n">vol_angpix</span><span class="p">,</span>
+                             <span class="n">vol_render_level</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">vol_render_level</span><span class="p">,</span>
+                             <span class="n">marker_radius_angstrom</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">marker_radius_angstrom</span><span class="p">,</span>
+                             <span class="n">star_angpix</span><span class="o">=</span><span class="n">star_angpix</span><span class="p">)</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">(</span><span class="n">add_args</span><span class="p">()</span><span class="o">.</span><span class="n">parse_args</span><span class="p">())</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, Barrett M Powell, Joseph H Davis.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,2978 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Index &#8212; tomoDRGN 0.2.3.dev328 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!-- 
+    this give us a css class that will be invisible only if js is disabled 
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="_static/scripts/fontawesome.js?digest=26a4bc78f4c0ddb94549"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549" />
+
+    <script src="_static/documentation_options.js?v=d6c7774d"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'genindex';</script>
+    <link rel="index" title="Index" href="#" />
+    <link rel="search" title="Search" href="search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">tomoDRGN v0.2.3.dev328</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="overview/index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="command_usage/index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api/index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="overview/index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="command_usage/index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api/index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none"></div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+
+<h1 id="index">Index</h1>
+
+<div class="genindex-jumpbox">
+ <a href="#_"><strong>_</strong></a>
+ | <a href="#A"><strong>A</strong></a>
+ | <a href="#B"><strong>B</strong></a>
+ | <a href="#C"><strong>C</strong></a>
+ | <a href="#D"><strong>D</strong></a>
+ | <a href="#E"><strong>E</strong></a>
+ | <a href="#F"><strong>F</strong></a>
+ | <a href="#G"><strong>G</strong></a>
+ | <a href="#H"><strong>H</strong></a>
+ | <a href="#I"><strong>I</strong></a>
+ | <a href="#L"><strong>L</strong></a>
+ | <a href="#M"><strong>M</strong></a>
+ | <a href="#N"><strong>N</strong></a>
+ | <a href="#P"><strong>P</strong></a>
+ | <a href="#Q"><strong>Q</strong></a>
+ | <a href="#R"><strong>R</strong></a>
+ | <a href="#S"><strong>S</strong></a>
+ | <a href="#T"><strong>T</strong></a>
+ | <a href="#U"><strong>U</strong></a>
+ | <a href="#V"><strong>V</strong></a>
+ | <a href="#W"><strong>W</strong></a>
+ | <a href="#X"><strong>X</strong></a>
+ | <a href="#Y"><strong>Y</strong></a>
+ | <a href="#Z"><strong>Z</strong></a>
+ 
+</div>
+<h2 id="_">_</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.beta_schedule.ConstantSchedule.html#tomodrgn.beta_schedule.ConstantSchedule.__call__">__call__() (ConstantSchedule method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.beta_schedule.CyclicalSchedule.html#tomodrgn.beta_schedule.CyclicalSchedule.__call__">(CyclicalSchedule method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.__call__">(DataParallelPassthrough method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.__call__">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.__call__">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.beta_schedule.LinearSchedule.html#tomodrgn.beta_schedule.LinearSchedule.__call__">(LinearSchedule method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.__call__">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.__call__">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.utils.Memoized.html#tomodrgn.utils.Memoized.__call__">(Memoized method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.__call__">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.__call__">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.__call__">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.__call__">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.__call__">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.__call__">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.__call__">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.__call__">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="A">A</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.commands.analyze.add_args.html#tomodrgn.commands.analyze.add_args">add_args() (in module tomodrgn.commands.analyze)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.analyze_volumes.add_args.html#tomodrgn.commands.analyze_volumes.add_args">(in module tomodrgn.commands.analyze_volumes)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.backproject_voxel.add_args.html#tomodrgn.commands.backproject_voxel.add_args">(in module tomodrgn.commands.backproject_voxel)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.cleanup.add_args.html#tomodrgn.commands.cleanup.add_args">(in module tomodrgn.commands.cleanup)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.convergence_nn.add_args.html#tomodrgn.commands.convergence_nn.add_args">(in module tomodrgn.commands.convergence_nn)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.convergence_vae.add_args.html#tomodrgn.commands.convergence_vae.add_args">(in module tomodrgn.commands.convergence_vae)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.downsample.add_args.html#tomodrgn.commands.downsample.add_args">(in module tomodrgn.commands.downsample)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.eval_images.add_args.html#tomodrgn.commands.eval_images.add_args">(in module tomodrgn.commands.eval_images)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.eval_vol.add_args.html#tomodrgn.commands.eval_vol.add_args">(in module tomodrgn.commands.eval_vol)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.filter_star.add_args.html#tomodrgn.commands.filter_star.add_args">(in module tomodrgn.commands.filter_star)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.graph_traversal.add_args.html#tomodrgn.commands.graph_traversal.add_args">(in module tomodrgn.commands.graph_traversal)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.pc_traversal.add_args.html#tomodrgn.commands.pc_traversal.add_args">(in module tomodrgn.commands.pc_traversal)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.subtomo2chimerax.add_args.html#tomodrgn.commands.subtomo2chimerax.add_args">(in module tomodrgn.commands.subtomo2chimerax)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.train_nn.add_args.html#tomodrgn.commands.train_nn.add_args">(in module tomodrgn.commands.train_nn)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.train_vae.add_args.html#tomodrgn.commands.train_vae.add_args">(in module tomodrgn.commands.train_vae)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.view_config.add_args.html#tomodrgn.commands.view_config.add_args">(in module tomodrgn.commands.view_config)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.add_module">add_module() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.add_module">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.add_module">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.add_module">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.add_module">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.add_module">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.add_module">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.add_module">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.add_module">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.add_module">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.add_module">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.add_module">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.add_module">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.commands.backproject_voxel.add_slice.html#tomodrgn.commands.backproject_voxel.add_slice">add_slice() (in module tomodrgn.commands.backproject_voxel)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.pc_traversal.analyze_data_support.html#tomodrgn.commands.pc_traversal.analyze_data_support">analyze_data_support() (in module tomodrgn.commands.pc_traversal)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.analyze.analyze_z_multidimensional.html#tomodrgn.commands.analyze.analyze_z_multidimensional">analyze_z_multidimensional() (in module tomodrgn.commands.analyze)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.analyze.analyze_z_onedimensional.html#tomodrgn.commands.analyze.analyze_z_onedimensional">analyze_z_onedimensional() (in module tomodrgn.commands.analyze)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.apply">apply() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.apply">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.apply">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.apply">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.apply">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.apply">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.apply">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.apply">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.apply">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.apply">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.apply">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.apply">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.apply">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="B">B</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.commands.backproject_voxel.backproject_dataset.html#tomodrgn.commands.backproject_voxel.backproject_dataset">backproject_dataset() (in module tomodrgn.commands.backproject_voxel)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.so3_grid.base_SO3_grid.html#tomodrgn.so3_grid.base_SO3_grid">base_SO3_grid() (in module tomodrgn.so3_grid)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.bfloat16">bfloat16() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.bfloat16">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.bfloat16">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.bfloat16">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.bfloat16">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.bfloat16">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.bfloat16">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.bfloat16">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.bfloat16">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.bfloat16">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.bfloat16">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.bfloat16">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.bfloat16">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.buffers">buffers() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.buffers">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.buffers">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.buffers">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.buffers">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.buffers">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.buffers">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.buffers">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.buffers">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.buffers">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.buffers">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.buffers">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.buffers">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="C">C</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.utils.calc_cc.html#tomodrgn.utils.calc_cc">calc_cc() (in module tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.convergence.calc_ccs_alltoall_intraepoch.html#tomodrgn.convergence.calc_ccs_alltoall_intraepoch">calc_ccs_alltoall_intraepoch() (in module tomodrgn.convergence)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.convergence.calc_ccs_alltogroundtruth.html#tomodrgn.convergence.calc_ccs_alltogroundtruth">calc_ccs_alltogroundtruth() (in module tomodrgn.convergence)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.convergence.calc_ccs_pairwise_epochs.html#tomodrgn.convergence.calc_ccs_pairwise_epochs">calc_ccs_pairwise_epochs() (in module tomodrgn.convergence)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.utils.calc_fsc.html#tomodrgn.utils.calc_fsc">calc_fsc() (in module tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.convergence.calc_fscs_pairwise_epochs.html#tomodrgn.convergence.calc_fscs_pairwise_epochs">calc_fscs_pairwise_epochs() (in module tomodrgn.convergence)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.convergence.calc_kld_two_gaussians.html#tomodrgn.convergence.calc_kld_two_gaussians">calc_kld_two_gaussians() (in module tomodrgn.convergence)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.utils.calc_lowpass_filter_mask.html#tomodrgn.utils.calc_lowpass_filter_mask">calc_lowpass_filter_mask() (in module tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.utils.calc_real_space_mask.html#tomodrgn.utils.calc_real_space_mask">calc_real_space_mask() (in module tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.convergence.calc_test_train_pair_volumes_cc_complement.html#tomodrgn.convergence.calc_test_train_pair_volumes_cc_complement">calc_test_train_pair_volumes_cc_complement() (in module tomodrgn.convergence)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.convergence.calc_test_train_pair_volumes_fscs.html#tomodrgn.convergence.calc_test_train_pair_volumes_fscs">calc_test_train_pair_volumes_fscs() (in module tomodrgn.convergence)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.dose.calculate_critical_dose_per_frequency.html#tomodrgn.dose.calculate_critical_dose_per_frequency">calculate_critical_dose_per_frequency() (in module tomodrgn.dose)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.dose.calculate_dose_mask.html#tomodrgn.dose.calculate_dose_mask">calculate_dose_mask() (in module tomodrgn.dose)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.dose.calculate_dose_weights.html#tomodrgn.dose.calculate_dose_weights">calculate_dose_weights() (in module tomodrgn.dose)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.dose.calculate_spatial_frequencies.html#tomodrgn.dose.calculate_spatial_frequencies">calculate_spatial_frequencies() (in module tomodrgn.dose)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.dose.calculate_tilt_weights.html#tomodrgn.dose.calculate_tilt_weights">calculate_tilt_weights() (in module tomodrgn.dose)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.cat_z">cat_z() (FTPositionalDecoder static method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.filter_star.check_args_compatible.html#tomodrgn.commands.filter_star.check_args_compatible">check_args_compatible() (in module tomodrgn.commands.filter_star)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.utils.check_git_revision_hash.html#tomodrgn.utils.check_git_revision_hash">check_git_revision_hash() (in module tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.utils.check_memory_usage.html#tomodrgn.utils.check_memory_usage">check_memory_usage() (in module tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.children">children() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.children">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.children">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.children">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.children">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.children">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.children">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.children">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.children">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.children">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.children">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.children">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.children">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.cluster_gmm.html#tomodrgn.analysis.cluster_gmm">cluster_gmm() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.cluster_kmeans.html#tomodrgn.analysis.cluster_kmeans">cluster_kmeans() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.downsample.collate_particle_tilts.html#tomodrgn.commands.downsample.collate_particle_tilts">collate_particle_tilts() (in module tomodrgn.commands.downsample)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.dose.combine_dose_tilt_weights.html#tomodrgn.dose.combine_dose_tilt_weights">combine_dose_tilt_weights() (in module tomodrgn.dose)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.combine_ind.html#tomodrgn.analysis.combine_ind">combine_ind() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.compile">compile() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.compile">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.compile">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.compile">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.compile">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.compile">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.compile">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.compile">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.compile">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.compile">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.compile">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.compile">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.compile">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.ctf.compute_ctf.html#tomodrgn.ctf.compute_ctf">compute_ctf() (in module tomodrgn.ctf)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.beta_schedule.ConstantSchedule.html#tomodrgn.beta_schedule.ConstantSchedule">ConstantSchedule (class in tomodrgn.beta_schedule)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.graph_traversal.LatentGraph.html#tomodrgn.commands.graph_traversal.LatentGraph.construct_from_array">construct_from_array() (LatentGraph class method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.convert_angstroms_to_voxels.html#tomodrgn.analysis.convert_angstroms_to_voxels">convert_angstroms_to_voxels() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.convert_original_indices.html#tomodrgn.analysis.convert_original_indices">convert_original_indices() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.cpu">cpu() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.cpu">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.cpu">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.cpu">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.cpu">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.cpu">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.cpu">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.cpu">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.cpu">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.cpu">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.cpu">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.cpu">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.cpu">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.cuda">cuda() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.cuda">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.cuda">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.cuda">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.cuda">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.cuda">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.cuda">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.cuda">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.cuda">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.cuda">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.cuda">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.cuda">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.cuda">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.beta_schedule.CyclicalSchedule.html#tomodrgn.beta_schedule.CyclicalSchedule">CyclicalSchedule (class in tomodrgn.beta_schedule)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="D">D</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough">DataParallelPassthrough (class in tomodrgn.models)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.decode">decode() (FTPositionalDecoder method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.decode">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.commands.train_nn.decode_batch.html#tomodrgn.commands.train_nn.decode_batch">decode_batch() (in module tomodrgn.commands.train_nn)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.train_vae.decode_batch.html#tomodrgn.commands.train_vae.decode_batch">(in module tomodrgn.commands.train_vae)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.starfile.TiltSeriesStarfile.html#tomodrgn.starfile.TiltSeriesStarfile.df">df (TiltSeriesStarfile property)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.starfile.TomoParticlesStarfile.html#tomodrgn.starfile.TomoParticlesStarfile.df">(TomoParticlesStarfile property)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.double">double() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.double">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.double">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.double">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.double">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.double">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.double">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.double">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.double">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.double">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.double">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.double">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.double">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.commands.downsample.downsample_images.html#tomodrgn.commands.downsample.downsample_images">downsample_images() (in module tomodrgn.commands.downsample)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="E">E</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.encode">encode() (TiltSeriesHetOnlyVAE method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.train_vae.encode_batch.html#tomodrgn.commands.train_vae.encode_batch">encode_batch() (in module tomodrgn.commands.train_vae)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.train_vae.encoder_inference.html#tomodrgn.commands.train_vae.encoder_inference">encoder_inference() (in module tomodrgn.commands.train_vae)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.convergence.encoder_latent_shifts.html#tomodrgn.convergence.encoder_latent_shifts">encoder_latent_shifts() (in module tomodrgn.convergence)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss">EquivarianceLoss (class in tomodrgn.losses)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.eval">eval() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.eval">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.eval">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.eval">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.eval">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.eval">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.eval">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.eval">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.eval">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.eval">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.eval">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.eval">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.eval">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.eval_volume_batch">eval_volume_batch() (FTPositionalDecoder method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.lattice.EvenLattice.html#tomodrgn.lattice.EvenLattice">EvenLattice (class in tomodrgn.lattice)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.lie_tools.expmap.html#tomodrgn.lie_tools.expmap">expmap() (in module tomodrgn.lie_tools)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.extra_repr">extra_repr() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.extra_repr">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.extra_repr">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.extra_repr">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.extra_repr">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.extra_repr">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.extra_repr">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.extra_repr">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.extra_repr">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.extra_repr">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.extra_repr">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.extra_repr">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.extra_repr">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="F">F</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.fft.fft2_center.html#tomodrgn.fft.fft2_center">fft2_center() (in module tomodrgn.fft)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.fft.fft2_center_torch.html#tomodrgn.fft.fft2_center_torch">fft2_center_torch() (in module tomodrgn.fft)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.fft.fft3_center.html#tomodrgn.fft.fft3_center">fft3_center() (in module tomodrgn.fft)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.fft.fft3_center_torch.html#tomodrgn.fft.fft3_center_torch">fft3_center_torch() (in module tomodrgn.fft)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.starfile.TiltSeriesStarfile.html#tomodrgn.starfile.TiltSeriesStarfile.filter">filter() (TiltSeriesStarfile method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.starfile.TomoParticlesStarfile.html#tomodrgn.starfile.TomoParticlesStarfile.filter">(TomoParticlesStarfile method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.commands.filter_star.filter_image_series_starfile.html#tomodrgn.commands.filter_star.filter_image_series_starfile">filter_image_series_starfile() (in module tomodrgn.commands.filter_star)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.filter_star.filter_volume_series_starfile.html#tomodrgn.commands.filter_star.filter_volume_series_starfile">filter_volume_series_starfile() (in module tomodrgn.commands.filter_star)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.graph_traversal.LatentGraph.html#tomodrgn.commands.graph_traversal.LatentGraph.find_path_dijkstra">find_path_dijkstra() (LatentGraph method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.utils.first_n_factors.html#tomodrgn.utils.first_n_factors">first_n_factors() (in module tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.float">float() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.float">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.float">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.float">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.float">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.float">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.float">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.float">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.float">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.float">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.float">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.float">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.float">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.utils.flog.html#tomodrgn.utils.flog">flog() (in module tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.convergence.follow_candidate_particles.html#tomodrgn.convergence.follow_candidate_particles">follow_candidate_particles() (in module tomodrgn.convergence)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.forward">forward() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.forward">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.forward">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.forward">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.forward">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.forward">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.forward">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.forward">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.forward">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.forward">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.forward">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.forward">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.forward">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.convergence.fsc_referencevol_to_manyvols.html#tomodrgn.convergence.fsc_referencevol_to_manyvols">fsc_referencevol_to_manyvols() (in module tomodrgn.convergence)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder">FTPositionalDecoder (class in tomodrgn.models)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="G">G</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.commands.subtomo2chimerax.generate_color_per_particle.html#tomodrgn.commands.subtomo2chimerax.generate_color_per_particle">generate_color_per_particle() (in module tomodrgn.commands.subtomo2chimerax)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.convergence.generate_test_train_pair_volumes.html#tomodrgn.convergence.generate_test_train_pair_volumes">generate_test_train_pair_volumes() (in module tomodrgn.convergence)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.VolumeGenerator.html#tomodrgn.models.VolumeGenerator.generate_volumes">generate_volumes() (VolumeGenerator method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.starfile.GenericStarfile.html#tomodrgn.starfile.GenericStarfile">GenericStarfile (class in tomodrgn.starfile)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.mrc.LazyImage.html#tomodrgn.mrc.LazyImage.get">get() (LazyImage method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.mrc.LazyImageStack.html#tomodrgn.mrc.LazyImageStack.get">(LazyImageStack method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.mrc.MRCHeader.html#tomodrgn.mrc.MRCHeader.get_apix">get_apix() (MRCHeader method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.so3_grid.get_base_ind.html#tomodrgn.so3_grid.get_base_ind">get_base_ind() (in module tomodrgn.so3_grid)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.beta_schedule.get_beta_schedule.html#tomodrgn.beta_schedule.get_beta_schedule">get_beta_schedule() (in module tomodrgn.beta_schedule)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.get_buffer">get_buffer() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.get_buffer">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.get_buffer">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.get_buffer">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.get_buffer">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.get_buffer">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.get_buffer">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.get_buffer">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.get_buffer">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.get_buffer">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.get_buffer">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.get_buffer">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.get_buffer">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.lattice.Lattice.html#tomodrgn.lattice.Lattice.get_circular_mask">get_circular_mask() (Lattice method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.get_colors_chimerax.html#tomodrgn.analysis.get_colors_chimerax">get_colors_chimerax() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.get_colors_matplotlib.html#tomodrgn.analysis.get_colors_matplotlib">get_colors_matplotlib() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.utils.get_default_device.html#tomodrgn.utils.get_default_device">get_default_device() (in module tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.lattice.Lattice.html#tomodrgn.lattice.Lattice.get_downsample_coords">get_downsample_coords() (Lattice method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.get_extra_state">get_extra_state() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.get_extra_state">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.get_extra_state">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.get_extra_state">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.get_extra_state">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.get_extra_state">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.get_extra_state">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.get_extra_state">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.get_extra_state">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.get_extra_state">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.get_extra_state">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.get_extra_state">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.get_extra_state">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.starfile.TiltSeriesStarfile.html#tomodrgn.starfile.TiltSeriesStarfile.get_image_size">get_image_size() (TiltSeriesStarfile method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.get_ind_for_cluster.html#tomodrgn.analysis.get_ind_for_cluster">get_ind_for_cluster() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.utils.get_latest_epoch.html#tomodrgn.utils.get_latest_epoch">get_latest_epoch() (in module tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.get_nearest_point.html#tomodrgn.analysis.get_nearest_point">get_nearest_point() (in module tomodrgn.analysis)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.so3_grid.get_neighbor.html#tomodrgn.so3_grid.get_neighbor">get_neighbor() (in module tomodrgn.so3_grid)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.mrc.MRCHeader.html#tomodrgn.mrc.MRCHeader.get_origin">get_origin() (MRCHeader method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.get_parameter">get_parameter() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.get_parameter">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.get_parameter">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.get_parameter">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.get_parameter">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.get_parameter">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.get_parameter">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.get_parameter">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.get_parameter">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.get_parameter">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.get_parameter">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.get_parameter">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.get_parameter">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.starfile.GenericStarfile.html#tomodrgn.starfile.GenericStarfile.get_particles_stack">get_particles_stack() (GenericStarfile method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.starfile.TiltSeriesStarfile.html#tomodrgn.starfile.TiltSeriesStarfile.get_particles_stack">(TiltSeriesStarfile method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.starfile.TomoParticlesStarfile.html#tomodrgn.starfile.TomoParticlesStarfile.get_particles_stack">(TomoParticlesStarfile method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.get_pc_traj.html#tomodrgn.analysis.get_pc_traj">get_pc_traj() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.get_pose">get_pose() (PoseTracker method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.starfile.TiltSeriesStarfile.html#tomodrgn.starfile.TiltSeriesStarfile.get_ptcl_img_indices">get_ptcl_img_indices() (TiltSeriesStarfile method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.starfile.TomoParticlesStarfile.html#tomodrgn.starfile.TomoParticlesStarfile.get_ptcl_img_indices">(TomoParticlesStarfile method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.so3_grid.get_s1_neighbor.html#tomodrgn.so3_grid.get_s1_neighbor">get_s1_neighbor() (in module tomodrgn.so3_grid)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.so3_grid.get_s2_neighbor.html#tomodrgn.so3_grid.get_s2_neighbor">get_s2_neighbor() (in module tomodrgn.so3_grid)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.lattice.Lattice.html#tomodrgn.lattice.Lattice.get_square_mask">get_square_mask() (Lattice method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.get_submodule">get_submodule() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.get_submodule">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.get_submodule">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.get_submodule">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.get_submodule">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.get_submodule">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.get_submodule">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.get_submodule">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.get_submodule">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.get_submodule">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.get_submodule">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.get_submodule">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.get_submodule">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.starfile.TiltSeriesStarfile.html#tomodrgn.starfile.TiltSeriesStarfile.get_tiltseries_pixelsize">get_tiltseries_pixelsize() (TiltSeriesStarfile method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.starfile.TomoParticlesStarfile.html#tomodrgn.starfile.TomoParticlesStarfile.get_tiltseries_pixelsize">(TomoParticlesStarfile method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.starfile.TiltSeriesStarfile.html#tomodrgn.starfile.TiltSeriesStarfile.get_tiltseries_voltage">get_tiltseries_voltage() (TiltSeriesStarfile method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.starfile.TomoParticlesStarfile.html#tomodrgn.starfile.TomoParticlesStarfile.get_tiltseries_voltage">(TomoParticlesStarfile method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.so3_grid.grid_s1.html#tomodrgn.so3_grid.grid_s1">grid_s1() (in module tomodrgn.so3_grid)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.so3_grid.grid_s2.html#tomodrgn.so3_grid.grid_s2">grid_s2() (in module tomodrgn.so3_grid)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.so3_grid.grid_SO3.html#tomodrgn.so3_grid.grid_SO3">grid_SO3() (in module tomodrgn.so3_grid)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="H">H</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.half">half() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.half">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.half">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.half">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.half">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.half">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.half">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.half">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.half">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.half">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.half">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.half">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.half">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.starfile.TiltSeriesStarfile.html#tomodrgn.starfile.TiltSeriesStarfile.headers_ctf">headers_ctf (TiltSeriesStarfile property)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.starfile.TomoParticlesStarfile.html#tomodrgn.starfile.TomoParticlesStarfile.headers_ctf">(TomoParticlesStarfile property)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.starfile.TiltSeriesStarfile.html#tomodrgn.starfile.TiltSeriesStarfile.headers_rot">headers_rot (TiltSeriesStarfile property)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.starfile.TomoParticlesStarfile.html#tomodrgn.starfile.TomoParticlesStarfile.headers_rot">(TomoParticlesStarfile property)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.starfile.TiltSeriesStarfile.html#tomodrgn.starfile.TiltSeriesStarfile.headers_trans">headers_trans (TiltSeriesStarfile property)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.starfile.TomoParticlesStarfile.html#tomodrgn.starfile.TomoParticlesStarfile.headers_trans">(TomoParticlesStarfile property)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.so3_grid.hopf_to_quat.html#tomodrgn.so3_grid.hopf_to_quat">hopf_to_quat() (in module tomodrgn.so3_grid)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.fft.ht2_center.html#tomodrgn.fft.ht2_center">ht2_center() (in module tomodrgn.fft)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.fft.ht2_center_torch.html#tomodrgn.fft.ht2_center_torch">ht2_center_torch() (in module tomodrgn.fft)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.fft.ht3_center.html#tomodrgn.fft.ht3_center">ht3_center() (in module tomodrgn.fft)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.fft.ht3_center_torch.html#tomodrgn.fft.ht3_center_torch">ht3_center_torch() (in module tomodrgn.fft)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="I">I</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.starfile.GenericStarfile.html#tomodrgn.starfile.GenericStarfile.identify_particles_data_block">identify_particles_data_block() (GenericStarfile method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.starfile.TiltSeriesStarfile.html#tomodrgn.starfile.TiltSeriesStarfile.identify_particles_data_block">(TiltSeriesStarfile method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.starfile.TomoParticlesStarfile.html#tomodrgn.starfile.TomoParticlesStarfile.identify_particles_data_block">(TomoParticlesStarfile method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.fft.ifft2_center.html#tomodrgn.fft.ifft2_center">ifft2_center() (in module tomodrgn.fft)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.fft.ifft2_center_torch.html#tomodrgn.fft.ifft2_center_torch">ifft2_center_torch() (in module tomodrgn.fft)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.fft.ifft3_center.html#tomodrgn.fft.ifft3_center">ifft3_center() (in module tomodrgn.fft)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.fft.ifft3_center_torch.html#tomodrgn.fft.ifft3_center_torch">ifft3_center_torch() (in module tomodrgn.fft)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.fft.iht2_center.html#tomodrgn.fft.iht2_center">iht2_center() (in module tomodrgn.fft)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.fft.iht2_center_torch.html#tomodrgn.fft.iht2_center_torch">iht2_center_torch() (in module tomodrgn.fft)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.fft.iht3_center.html#tomodrgn.fft.iht3_center">iht3_center() (in module tomodrgn.fft)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.fft.iht3_center_torch.html#tomodrgn.fft.iht3_center_torch">iht3_center_torch() (in module tomodrgn.fft)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.downsample.ImageDataset.html#tomodrgn.commands.downsample.ImageDataset">ImageDataset (class in tomodrgn.commands.downsample)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.ipu">ipu() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.ipu">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.ipu">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.ipu">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.ipu">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.ipu">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.ipu">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.ipu">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.ipu">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.ipu">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.ipu">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.ipu">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.ipu">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.analysis.ipy_plot_interactive.html#tomodrgn.analysis.ipy_plot_interactive">ipy_plot_interactive() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.ipy_tomo_ptcl_viewer.html#tomodrgn.analysis.ipy_tomo_ptcl_viewer">ipy_tomo_ptcl_viewer() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.starfile.is_starfile_optimisation_set.html#tomodrgn.starfile.is_starfile_optimisation_set">is_starfile_optimisation_set() (in module tomodrgn.starfile)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="L">L</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.commands.graph_traversal.LatentGraph.html#tomodrgn.commands.graph_traversal.LatentGraph">LatentGraph (class in tomodrgn.commands.graph_traversal)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.lattice.Lattice.html#tomodrgn.lattice.Lattice">Lattice (class in tomodrgn.lattice)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.dataset.TiltSeriesMRCData.html#tomodrgn.dataset.TiltSeriesMRCData.lazy_particles_estimate_normalization">lazy_particles_estimate_normalization() (TiltSeriesMRCData method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.dataset.TomoParticlesMRCData.html#tomodrgn.dataset.TomoParticlesMRCData.lazy_particles_estimate_normalization">(TomoParticlesMRCData method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.mrc.LazyImage.html#tomodrgn.mrc.LazyImage">LazyImage (class in tomodrgn.mrc)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.mrc.LazyImageStack.html#tomodrgn.mrc.LazyImageStack">LazyImageStack (class in tomodrgn.mrc)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.beta_schedule.LinearSchedule.html#tomodrgn.beta_schedule.LinearSchedule">LinearSchedule (class in tomodrgn.beta_schedule)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.load">load() (FTPositionalDecoder class method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.load">(PoseTracker class method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.load">(TiltSeriesHetOnlyVAE class method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.dataset.TiltSeriesMRCData.html#tomodrgn.dataset.TiltSeriesMRCData.load">(TiltSeriesMRCData class method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.dataset.TomoParticlesMRCData.html#tomodrgn.dataset.TomoParticlesMRCData.load">(TomoParticlesMRCData class method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.load_dataframe.html#tomodrgn.analysis.load_dataframe">load_dataframe() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.dataset.load_particles.html#tomodrgn.dataset.load_particles">load_particles() (in module tomodrgn.dataset)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.utils.load_pkl.html#tomodrgn.utils.load_pkl">load_pkl() (in module tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.dataset.load_sta_dataset.html#tomodrgn.dataset.load_sta_dataset">load_sta_dataset() (in module tomodrgn.dataset)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.starfile.load_sta_starfile.html#tomodrgn.starfile.load_sta_starfile">load_sta_starfile() (in module tomodrgn.starfile)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.load_state_dict">load_state_dict() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.load_state_dict">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.load_state_dict">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.load_state_dict">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.load_state_dict">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.load_state_dict">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.load_state_dict">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.load_state_dict">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.load_state_dict">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.load_state_dict">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.load_state_dict">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.load_state_dict">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.load_state_dict">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.utils.log.html#tomodrgn.utils.log">log() (in module tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.lie_tools.logsumexp.html#tomodrgn.lie_tools.logsumexp">logsumexp() (in module tomodrgn.lie_tools)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.train_nn.loss_function.html#tomodrgn.commands.train_nn.loss_function">loss_function() (in module tomodrgn.commands.train_nn)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.train_vae.loss_function.html#tomodrgn.commands.train_vae.loss_function">(in module tomodrgn.commands.train_vae)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.utils.lowpass_filter.html#tomodrgn.utils.lowpass_filter">lowpass_filter() (in module tomodrgn.utils)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="M">M</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB">MAB (class in tomodrgn.set_transformer)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.analyze.main.html#tomodrgn.commands.analyze.main">main() (in module tomodrgn.commands.analyze)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.analyze_volumes.main.html#tomodrgn.commands.analyze_volumes.main">(in module tomodrgn.commands.analyze_volumes)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.backproject_voxel.main.html#tomodrgn.commands.backproject_voxel.main">(in module tomodrgn.commands.backproject_voxel)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.cleanup.main.html#tomodrgn.commands.cleanup.main">(in module tomodrgn.commands.cleanup)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.convergence_nn.main.html#tomodrgn.commands.convergence_nn.main">(in module tomodrgn.commands.convergence_nn)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.convergence_vae.main.html#tomodrgn.commands.convergence_vae.main">(in module tomodrgn.commands.convergence_vae)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.downsample.main.html#tomodrgn.commands.downsample.main">(in module tomodrgn.commands.downsample)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.eval_images.main.html#tomodrgn.commands.eval_images.main">(in module tomodrgn.commands.eval_images)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.eval_vol.main.html#tomodrgn.commands.eval_vol.main">(in module tomodrgn.commands.eval_vol)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.filter_star.main.html#tomodrgn.commands.filter_star.main">(in module tomodrgn.commands.filter_star)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.graph_traversal.main.html#tomodrgn.commands.graph_traversal.main">(in module tomodrgn.commands.graph_traversal)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.pc_traversal.main.html#tomodrgn.commands.pc_traversal.main">(in module tomodrgn.commands.pc_traversal)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.subtomo2chimerax.main.html#tomodrgn.commands.subtomo2chimerax.main">(in module tomodrgn.commands.subtomo2chimerax)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.train_nn.main.html#tomodrgn.commands.train_nn.main">(in module tomodrgn.commands.train_nn)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.train_vae.main.html#tomodrgn.commands.train_vae.main">(in module tomodrgn.commands.train_vae)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.view_config.main.html#tomodrgn.commands.view_config.main">(in module tomodrgn.commands.view_config)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.mrc.MRCHeader.html#tomodrgn.mrc.MRCHeader.make_default_header">make_default_header() (MRCHeader class method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.analyze_volumes.make_plots.html#tomodrgn.commands.analyze_volumes.make_plots">make_plots() (in module tomodrgn.commands.analyze_volumes)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.convergence_nn.make_plots.html#tomodrgn.commands.convergence_nn.make_plots">(in module tomodrgn.commands.convergence_nn)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.starfile.TiltSeriesStarfile.html#tomodrgn.starfile.TiltSeriesStarfile.make_test_train_split">make_test_train_split() (TiltSeriesStarfile method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.starfile.TomoParticlesStarfile.html#tomodrgn.starfile.TomoParticlesStarfile.make_test_train_split">(TomoParticlesStarfile method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.lie_tools.map_to_lie_algebra.html#tomodrgn.lie_tools.map_to_lie_algebra">map_to_lie_algebra() (in module tomodrgn.lie_tools)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d">MedianPool1d (class in tomodrgn.models)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.utils.Memoized.html#tomodrgn.utils.Memoized">Memoized (class in tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.downsample.mkbasedir.html#tomodrgn.commands.downsample.mkbasedir">mkbasedir() (in module tomodrgn.commands.downsample)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.mlp_ascii.html#tomodrgn.models.mlp_ascii">mlp_ascii() (in module tomodrgn.models)</a>
+</li>
+      <li>
+    module
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.analysis.html#module-tomodrgn.analysis">tomodrgn.analysis</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.beta_schedule.html#module-tomodrgn.beta_schedule">tomodrgn.beta_schedule</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.analyze.html#module-tomodrgn.commands.analyze">tomodrgn.commands.analyze</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.analyze_volumes.html#module-tomodrgn.commands.analyze_volumes">tomodrgn.commands.analyze_volumes</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.backproject_voxel.html#module-tomodrgn.commands.backproject_voxel">tomodrgn.commands.backproject_voxel</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.cleanup.html#module-tomodrgn.commands.cleanup">tomodrgn.commands.cleanup</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.convergence_nn.html#module-tomodrgn.commands.convergence_nn">tomodrgn.commands.convergence_nn</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.convergence_vae.html#module-tomodrgn.commands.convergence_vae">tomodrgn.commands.convergence_vae</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.downsample.html#module-tomodrgn.commands.downsample">tomodrgn.commands.downsample</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.eval_images.html#module-tomodrgn.commands.eval_images">tomodrgn.commands.eval_images</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.eval_vol.html#module-tomodrgn.commands.eval_vol">tomodrgn.commands.eval_vol</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.filter_star.html#module-tomodrgn.commands.filter_star">tomodrgn.commands.filter_star</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.graph_traversal.html#module-tomodrgn.commands.graph_traversal">tomodrgn.commands.graph_traversal</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.pc_traversal.html#module-tomodrgn.commands.pc_traversal">tomodrgn.commands.pc_traversal</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.subtomo2chimerax.html#module-tomodrgn.commands.subtomo2chimerax">tomodrgn.commands.subtomo2chimerax</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.train_nn.html#module-tomodrgn.commands.train_nn">tomodrgn.commands.train_nn</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.train_vae.html#module-tomodrgn.commands.train_vae">tomodrgn.commands.train_vae</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.commands.view_config.html#module-tomodrgn.commands.view_config">tomodrgn.commands.view_config</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.config.html#module-tomodrgn.config">tomodrgn.config</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.convergence.html#module-tomodrgn.convergence">tomodrgn.convergence</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.ctf.html#module-tomodrgn.ctf">tomodrgn.ctf</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.dataset.html#module-tomodrgn.dataset">tomodrgn.dataset</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.dose.html#module-tomodrgn.dose">tomodrgn.dose</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.fft.html#module-tomodrgn.fft">tomodrgn.fft</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.lattice.html#module-tomodrgn.lattice">tomodrgn.lattice</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.lie_tools.html#module-tomodrgn.lie_tools">tomodrgn.lie_tools</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.losses.html#module-tomodrgn.losses">tomodrgn.losses</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.html#module-tomodrgn.models">tomodrgn.models</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.mrc.html#module-tomodrgn.mrc">tomodrgn.mrc</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.html#module-tomodrgn.pose">tomodrgn.pose</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.html#module-tomodrgn.set_transformer">tomodrgn.set_transformer</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.so3_grid.html#module-tomodrgn.so3_grid">tomodrgn.so3_grid</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.starfile.html#module-tomodrgn.starfile">tomodrgn.starfile</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.utils.html#module-tomodrgn.utils">tomodrgn.utils</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.modules">modules() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.modules">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.modules">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.modules">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.modules">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.modules">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.modules">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.modules">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.modules">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.modules">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.modules">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.modules">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.modules">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.mrc.MRCHeader.html#tomodrgn.mrc.MRCHeader">MRCHeader (class in tomodrgn.mrc)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.mtia">mtia() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.mtia">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.mtia">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.mtia">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.mtia">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.mtia">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.mtia">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.mtia">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.mtia">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.mtia">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.mtia">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.mtia">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.mtia">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="N">N</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.named_buffers">named_buffers() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.named_buffers">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.named_buffers">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.named_buffers">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.named_buffers">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.named_buffers">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.named_buffers">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.named_buffers">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.named_buffers">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.named_buffers">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.named_buffers">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.named_buffers">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.named_buffers">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.named_children">named_children() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.named_children">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.named_children">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.named_children">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.named_children">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.named_children">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.named_children">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.named_children">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.named_children">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.named_children">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.named_children">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.named_children">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.named_children">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.named_modules">named_modules() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.named_modules">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.named_modules">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.named_modules">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.named_modules">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.named_modules">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.named_modules">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.named_modules">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.named_modules">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.named_modules">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.named_modules">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.named_modules">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.named_modules">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.named_parameters">named_parameters() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.named_parameters">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.named_parameters">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.named_parameters">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.named_parameters">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.named_parameters">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.named_parameters">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.named_parameters">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.named_parameters">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.named_parameters">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.named_parameters">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.named_parameters">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.named_parameters">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="P">P</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.parameters">parameters() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.parameters">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.parameters">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.parameters">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.parameters">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.parameters">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.parameters">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.parameters">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.parameters">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.parameters">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.parameters">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.parameters">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.parameters">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.mrc.MRCHeader.html#tomodrgn.mrc.MRCHeader.parse">parse() (MRCHeader class method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.parse_all_losses.html#tomodrgn.analysis.parse_all_losses">parse_all_losses() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.mrc.parse_header.html#tomodrgn.mrc.parse_header">parse_header() (in module tomodrgn.mrc)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.parse_loss.html#tomodrgn.analysis.parse_loss">parse_loss() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.mrc.parse_mrc.html#tomodrgn.mrc.parse_mrc">parse_mrc() (in module tomodrgn.mrc)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.mrc.parse_mrc_list.html#tomodrgn.mrc.parse_mrc_list">parse_mrc_list() (in module tomodrgn.mrc)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.plot_by_cluster.html#tomodrgn.analysis.plot_by_cluster">plot_by_cluster() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.plot_by_cluster_subplot.html#tomodrgn.analysis.plot_by_cluster_subplot">plot_by_cluster_subplot() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.plot_euler.html#tomodrgn.analysis.plot_euler">plot_euler() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.graph_traversal.LatentGraph.html#tomodrgn.commands.graph_traversal.LatentGraph.plot_graph">plot_graph() (LatentGraph method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.analysis.plot_label_count_distribution.html#tomodrgn.analysis.plot_label_count_distribution">plot_label_count_distribution() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.convergence.plot_latent_pca.html#tomodrgn.convergence.plot_latent_pca">plot_latent_pca() (in module tomodrgn.convergence)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.convergence.plot_latent_umap.html#tomodrgn.convergence.plot_latent_umap">plot_latent_umap() (in module tomodrgn.convergence)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.convergence.plot_loss.html#tomodrgn.convergence.plot_loss">plot_loss() (in module tomodrgn.convergence)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.plot_losses.html#tomodrgn.analysis.plot_losses">plot_losses() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.starfile.TiltSeriesStarfile.html#tomodrgn.starfile.TiltSeriesStarfile.plot_particle_uid_ntilt_distribution">plot_particle_uid_ntilt_distribution() (TiltSeriesStarfile method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.starfile.TomoParticlesStarfile.html#tomodrgn.starfile.TomoParticlesStarfile.plot_particle_uid_ntilt_distribution">(TomoParticlesStarfile method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.commands.graph_traversal.LatentGraph.html#tomodrgn.commands.graph_traversal.LatentGraph.plot_path">plot_path() (LatentGraph method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.plot_projections.html#tomodrgn.analysis.plot_projections">plot_projections() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.plot_three_column_correlation.html#tomodrgn.analysis.plot_three_column_correlation">plot_three_column_correlation() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.plot_translations.html#tomodrgn.analysis.plot_translations">plot_translations() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.dose.plot_weight_distribution.html#tomodrgn.dose.plot_weight_distribution">plot_weight_distribution() (in module tomodrgn.dose)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA">PMA (class in tomodrgn.set_transformer)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker">PoseTracker (class in tomodrgn.pose)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.positional_encoding">positional_encoding() (FTPositionalDecoder method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.postprocess_volume_batch">postprocess_volume_batch() (FTPositionalDecoder static method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.utils.prefix_paths.html#tomodrgn.utils.prefix_paths">prefix_paths() (in module tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.train_vae.preprocess_batch.html#tomodrgn.commands.train_vae.preprocess_batch">preprocess_batch() (in module tomodrgn.commands.train_vae)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.config.print_config.html#tomodrgn.config.print_config">print_config() (in module tomodrgn.config)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.ctf.print_ctf_params.html#tomodrgn.ctf.print_ctf_params">print_ctf_params() (in module tomodrgn.ctf)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.print_model_info">print_model_info() (TiltSeriesHetOnlyVAE method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.utils.print_progress_bar.html#tomodrgn.utils.print_progress_bar">print_progress_bar() (in module tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.print_tiltserieshetonlyvae_ascii.html#tomodrgn.models.print_tiltserieshetonlyvae_ascii">print_tiltserieshetonlyvae_ascii() (in module tomodrgn.models)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="Q">Q</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.lie_tools.quaternions_to_SO3.html#tomodrgn.lie_tools.quaternions_to_SO3">quaternions_to_SO3() (in module tomodrgn.lie_tools)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="R">R</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.lie_tools.random_quaternions.html#tomodrgn.lie_tools.random_quaternions">random_quaternions() (in module tomodrgn.lie_tools)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.lie_tools.random_SO3.html#tomodrgn.lie_tools.random_SO3">random_SO3() (in module tomodrgn.lie_tools)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.recursive_load_dataframe.html#tomodrgn.analysis.recursive_load_dataframe">recursive_load_dataframe() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.register_backward_hook">register_backward_hook() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.register_backward_hook">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.register_backward_hook">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.register_backward_hook">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.register_backward_hook">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.register_backward_hook">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.register_backward_hook">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.register_backward_hook">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.register_backward_hook">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.register_backward_hook">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.register_backward_hook">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.register_backward_hook">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.register_backward_hook">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.register_buffer">register_buffer() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.register_buffer">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.register_buffer">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.register_buffer">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.register_buffer">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.register_buffer">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.register_buffer">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.register_buffer">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.register_buffer">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.register_buffer">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.register_buffer">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.register_buffer">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.register_buffer">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.register_forward_hook">register_forward_hook() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.register_forward_hook">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.register_forward_hook">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.register_forward_hook">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.register_forward_hook">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.register_forward_hook">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.register_forward_hook">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.register_forward_hook">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.register_forward_hook">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.register_forward_hook">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.register_forward_hook">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.register_forward_hook">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.register_forward_hook">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.register_forward_pre_hook">register_forward_pre_hook() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.register_forward_pre_hook">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.register_forward_pre_hook">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.register_forward_pre_hook">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.register_forward_pre_hook">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.register_forward_pre_hook">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.register_forward_pre_hook">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.register_forward_pre_hook">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.register_forward_pre_hook">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.register_forward_pre_hook">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.register_forward_pre_hook">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.register_forward_pre_hook">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.register_forward_pre_hook">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.register_full_backward_hook">register_full_backward_hook() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.register_full_backward_hook">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.register_full_backward_hook">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.register_full_backward_hook">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.register_full_backward_hook">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.register_full_backward_hook">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.register_full_backward_hook">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.register_full_backward_hook">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.register_full_backward_hook">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.register_full_backward_hook">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.register_full_backward_hook">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.register_full_backward_hook">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.register_full_backward_hook">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.register_full_backward_pre_hook">register_full_backward_pre_hook() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.register_full_backward_pre_hook">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.register_full_backward_pre_hook">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.register_full_backward_pre_hook">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.register_full_backward_pre_hook">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.register_full_backward_pre_hook">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.register_full_backward_pre_hook">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.register_full_backward_pre_hook">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.register_full_backward_pre_hook">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.register_full_backward_pre_hook">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.register_full_backward_pre_hook">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.register_full_backward_pre_hook">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.register_full_backward_pre_hook">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.register_load_state_dict_post_hook">register_load_state_dict_post_hook() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.register_load_state_dict_post_hook">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.register_load_state_dict_post_hook">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.register_load_state_dict_post_hook">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.register_load_state_dict_post_hook">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.register_load_state_dict_post_hook">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.register_load_state_dict_post_hook">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.register_load_state_dict_post_hook">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.register_load_state_dict_post_hook">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.register_load_state_dict_post_hook">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.register_load_state_dict_post_hook">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.register_load_state_dict_post_hook">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.register_load_state_dict_post_hook">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.register_load_state_dict_pre_hook">register_load_state_dict_pre_hook() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.register_load_state_dict_pre_hook">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.register_load_state_dict_pre_hook">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.register_load_state_dict_pre_hook">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.register_load_state_dict_pre_hook">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.register_load_state_dict_pre_hook">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.register_load_state_dict_pre_hook">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.register_load_state_dict_pre_hook">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.register_load_state_dict_pre_hook">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.register_load_state_dict_pre_hook">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.register_load_state_dict_pre_hook">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.register_load_state_dict_pre_hook">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.register_load_state_dict_pre_hook">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.register_module">register_module() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.register_module">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.register_module">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.register_module">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.register_module">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.register_module">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.register_module">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.register_module">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.register_module">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.register_module">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.register_module">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.register_module">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.register_module">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.register_parameter">register_parameter() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.register_parameter">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.register_parameter">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.register_parameter">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.register_parameter">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.register_parameter">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.register_parameter">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.register_parameter">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.register_parameter">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.register_parameter">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.register_parameter">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.register_parameter">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.register_parameter">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.register_state_dict_post_hook">register_state_dict_post_hook() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.register_state_dict_post_hook">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.register_state_dict_post_hook">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.register_state_dict_post_hook">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.register_state_dict_post_hook">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.register_state_dict_post_hook">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.register_state_dict_post_hook">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.register_state_dict_post_hook">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.register_state_dict_post_hook">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.register_state_dict_post_hook">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.register_state_dict_post_hook">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.register_state_dict_post_hook">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.register_state_dict_post_hook">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.register_state_dict_pre_hook">register_state_dict_pre_hook() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.register_state_dict_pre_hook">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.register_state_dict_pre_hook">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.register_state_dict_pre_hook">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.register_state_dict_pre_hook">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.register_state_dict_pre_hook">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.register_state_dict_pre_hook">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.register_state_dict_pre_hook">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.register_state_dict_pre_hook">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.register_state_dict_pre_hook">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.register_state_dict_pre_hook">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.register_state_dict_pre_hook">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.register_state_dict_pre_hook">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.reparameterize">reparameterize() (TiltSeriesEncoder method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.requires_grad_">requires_grad_() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.requires_grad_">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.requires_grad_">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.requires_grad_">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.requires_grad_">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.requires_grad_">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.requires_grad_">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.requires_grad_">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.requires_grad_">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.requires_grad_">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.requires_grad_">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.requires_grad_">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.requires_grad_">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear">ResidLinear (class in tomodrgn.models)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP">ResidLinearMLP (class in tomodrgn.models)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.utils.rot_3d_from_eman.html#tomodrgn.utils.rot_3d_from_eman">rot_3d_from_eman() (in module tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.utils.rot_3d_from_relion.html#tomodrgn.utils.rot_3d_from_relion">rot_3d_from_relion() (in module tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.utils.rot_3d_from_relion_scipy.html#tomodrgn.utils.rot_3d_from_relion_scipy">rot_3d_from_relion_scipy() (in module tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.utils.rot_3d_to_relion_scipy.html#tomodrgn.utils.rot_3d_to_relion_scipy">rot_3d_to_relion_scipy() (in module tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.rotate">rotate() (EquivarianceLoss method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.lattice.Lattice.html#tomodrgn.lattice.Lattice.rotate">(Lattice method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.run_pca.html#tomodrgn.analysis.run_pca">run_pca() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.run_tsne.html#tomodrgn.analysis.run_tsne">run_tsne() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.run_umap.html#tomodrgn.analysis.run_umap">run_umap() (in module tomodrgn.analysis)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="S">S</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.lie_tools.s2s1rodrigues.html#tomodrgn.lie_tools.s2s1rodrigues">s2s1rodrigues() (in module tomodrgn.lie_tools)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.lie_tools.s2s2_to_SO3.html#tomodrgn.lie_tools.s2s2_to_SO3">s2s2_to_SO3() (in module tomodrgn.lie_tools)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB">SAB (class in tomodrgn.set_transformer)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.save">save() (PoseTracker method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.train_nn.save_checkpoint.html#tomodrgn.commands.train_nn.save_checkpoint">save_checkpoint() (in module tomodrgn.commands.train_nn)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.train_vae.save_checkpoint.html#tomodrgn.commands.train_vae.save_checkpoint">(in module tomodrgn.commands.train_vae)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.config.save_config.html#tomodrgn.config.save_config">save_config() (in module tomodrgn.config)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.backproject_voxel.save_map.html#tomodrgn.commands.backproject_voxel.save_map">save_map() (in module tomodrgn.commands.backproject_voxel)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.utils.save_pkl.html#tomodrgn.utils.save_pkl">save_pkl() (in module tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.scatter_annotate.html#tomodrgn.analysis.scatter_annotate">scatter_annotate() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.scatter_annotate_hex.html#tomodrgn.analysis.scatter_annotate_hex">scatter_annotate_hex() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.analysis.scatter_color.html#tomodrgn.analysis.scatter_color">scatter_color() (in module tomodrgn.analysis)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.set_extra_state">set_extra_state() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.set_extra_state">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.set_extra_state">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.set_extra_state">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.set_extra_state">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.set_extra_state">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.set_extra_state">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.set_extra_state">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.set_extra_state">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.set_extra_state">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.set_extra_state">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.set_extra_state">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.set_extra_state">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.set_submodule">set_submodule() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.set_submodule">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.set_submodule">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.set_submodule">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.set_submodule">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.set_submodule">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.set_submodule">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.set_submodule">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.set_submodule">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.set_submodule">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.set_submodule">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.set_submodule">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.set_submodule">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer">SetTransformer (class in tomodrgn.set_transformer)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.share_memory">share_memory() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.share_memory">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.share_memory">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.share_memory">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.share_memory">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.share_memory">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.share_memory">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.share_memory">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.share_memory">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.share_memory">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.share_memory">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.share_memory">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.share_memory">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.convergence.sketch_via_umap_local_maxima.html#tomodrgn.convergence.sketch_via_umap_local_maxima">sketch_via_umap_local_maxima() (in module tomodrgn.convergence)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.lie_tools.so3_entropy.html#tomodrgn.lie_tools.so3_entropy">so3_entropy() (in module tomodrgn.lie_tools)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.lie_tools.so3_entropy_old.html#tomodrgn.lie_tools.so3_entropy_old">so3_entropy_old() (in module tomodrgn.lie_tools)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.lie_tools.SO3_to_quaternions.html#tomodrgn.lie_tools.SO3_to_quaternions">SO3_to_quaternions() (in module tomodrgn.lie_tools)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.lie_tools.SO3_to_s2s2.html#tomodrgn.lie_tools.SO3_to_s2s2">SO3_to_s2s2() (in module tomodrgn.lie_tools)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.state_dict">state_dict() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.state_dict">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.state_dict">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.state_dict">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.state_dict">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.state_dict">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.state_dict">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.state_dict">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.state_dict">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.state_dict">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.state_dict">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.state_dict">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.state_dict">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.fft.symmetrize_ht.html#tomodrgn.fft.symmetrize_ht">symmetrize_ht() (in module tomodrgn.fft)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="T">T</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder">TiltSeriesEncoder (class in tomodrgn.models)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE">TiltSeriesHetOnlyVAE (class in tomodrgn.models)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.dataset.TiltSeriesMRCData.html#tomodrgn.dataset.TiltSeriesMRCData">TiltSeriesMRCData (class in tomodrgn.dataset)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.starfile.TiltSeriesStarfile.html#tomodrgn.starfile.TiltSeriesStarfile">TiltSeriesStarfile (class in tomodrgn.starfile)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.starfile.TiltSeriesStarfileStarHeaders.html#tomodrgn.starfile.TiltSeriesStarfileStarHeaders">TiltSeriesStarfileStarHeaders (class in tomodrgn.starfile)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.to">to() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.to">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.to">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.to">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.to">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.to">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.to">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.to">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.to">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.to">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.to">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.to">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.to">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.to_empty">to_empty() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.to_empty">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.to_empty">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.to_empty">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.to_empty">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.to_empty">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.to_empty">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.to_empty">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.to_empty">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.to_empty">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.to_empty">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.to_empty">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.to_empty">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.analysis
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.analysis.html#module-tomodrgn.analysis">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.beta_schedule
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.beta_schedule.html#module-tomodrgn.beta_schedule">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.commands.analyze
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.analyze.html#module-tomodrgn.commands.analyze">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.commands.analyze_volumes
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.analyze_volumes.html#module-tomodrgn.commands.analyze_volumes">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.commands.backproject_voxel
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.backproject_voxel.html#module-tomodrgn.commands.backproject_voxel">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.commands.cleanup
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.cleanup.html#module-tomodrgn.commands.cleanup">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.commands.convergence_nn
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.convergence_nn.html#module-tomodrgn.commands.convergence_nn">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.commands.convergence_vae
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.convergence_vae.html#module-tomodrgn.commands.convergence_vae">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.commands.downsample
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.downsample.html#module-tomodrgn.commands.downsample">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.commands.eval_images
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.eval_images.html#module-tomodrgn.commands.eval_images">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.commands.eval_vol
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.eval_vol.html#module-tomodrgn.commands.eval_vol">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.commands.filter_star
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.filter_star.html#module-tomodrgn.commands.filter_star">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.commands.graph_traversal
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.graph_traversal.html#module-tomodrgn.commands.graph_traversal">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.commands.pc_traversal
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.pc_traversal.html#module-tomodrgn.commands.pc_traversal">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.commands.subtomo2chimerax
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.subtomo2chimerax.html#module-tomodrgn.commands.subtomo2chimerax">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.commands.train_nn
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.train_nn.html#module-tomodrgn.commands.train_nn">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.commands.train_vae
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.train_vae.html#module-tomodrgn.commands.train_vae">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.commands.view_config
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.view_config.html#module-tomodrgn.commands.view_config">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    tomodrgn.config
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.config.html#module-tomodrgn.config">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.convergence
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.convergence.html#module-tomodrgn.convergence">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.ctf
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.ctf.html#module-tomodrgn.ctf">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.dataset
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.dataset.html#module-tomodrgn.dataset">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.dose
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.dose.html#module-tomodrgn.dose">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.fft
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.fft.html#module-tomodrgn.fft">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.lattice
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.lattice.html#module-tomodrgn.lattice">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.lie_tools
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.lie_tools.html#module-tomodrgn.lie_tools">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.losses
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.html#module-tomodrgn.losses">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.models
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.models.html#module-tomodrgn.models">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.mrc
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.mrc.html#module-tomodrgn.mrc">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.pose
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.pose.html#module-tomodrgn.pose">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.set_transformer
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.html#module-tomodrgn.set_transformer">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.so3_grid
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.so3_grid.html#module-tomodrgn.so3_grid">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.starfile
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.starfile.html#module-tomodrgn.starfile">module</a>
+</li>
+      </ul></li>
+      <li>
+    tomodrgn.utils
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.utils.html#module-tomodrgn.utils">module</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.dataset.TomoParticlesMRCData.html#tomodrgn.dataset.TomoParticlesMRCData">TomoParticlesMRCData (class in tomodrgn.dataset)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.starfile.TomoParticlesStarfile.html#tomodrgn.starfile.TomoParticlesStarfile">TomoParticlesStarfile (class in tomodrgn.starfile)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.starfile.TomoParticlesStarfileStarHeaders.html#tomodrgn.starfile.TomoParticlesStarfileStarHeaders">TomoParticlesStarfileStarHeaders (class in tomodrgn.starfile)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.mrc.MRCHeader.html#tomodrgn.mrc.MRCHeader.total_header_bytes">total_header_bytes (MRCHeader property)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.train">train() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.train">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.train">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.train">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.train">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.train">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.train">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.train">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.train">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.train">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.train">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.train">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.train">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.commands.train_nn.train_batch.html#tomodrgn.commands.train_nn.train_batch">train_batch() (in module tomodrgn.commands.train_nn)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.commands.train_vae.train_batch.html#tomodrgn.commands.train_vae.train_batch">(in module tomodrgn.commands.train_vae)</a>
+</li>
+      </ul></li>
+      <li><a href="api/_autosummary/tomodrgn.lattice.Lattice.html#tomodrgn.lattice.Lattice.translate_ft">translate_ft() (Lattice method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.lattice.Lattice.html#tomodrgn.lattice.Lattice.translate_ht">translate_ht() (Lattice method)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.type">type() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.type">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.type">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.type">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.type">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.type">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.type">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.type">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.type">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.type">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.type">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.type">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.type">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="U">U</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.mrc.MRCHeader.html#tomodrgn.mrc.MRCHeader.update_apix">update_apix() (MRCHeader method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.mrc.MRCHeader.html#tomodrgn.mrc.MRCHeader.update_origin">update_origin() (MRCHeader method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="V">V</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.commands.subtomo2chimerax.validate_particles_for_rendering.html#tomodrgn.commands.subtomo2chimerax.validate_particles_for_rendering">validate_particles_for_rendering() (in module tomodrgn.commands.subtomo2chimerax)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.subtomo2chimerax.validate_starfile.html#tomodrgn.commands.subtomo2chimerax.validate_starfile">validate_starfile() (in module tomodrgn.commands.subtomo2chimerax)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.commands.subtomo2chimerax.validate_volume_mode_arguments.html#tomodrgn.commands.subtomo2chimerax.validate_volume_mode_arguments">validate_volume_mode_arguments() (in module tomodrgn.commands.subtomo2chimerax)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.utils.vlog.html#tomodrgn.utils.vlog">vlog() (in module tomodrgn.utils)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.models.VolumeGenerator.html#tomodrgn.models.VolumeGenerator">VolumeGenerator (class in tomodrgn.models)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="W">W</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.commands.downsample.warnexists.html#tomodrgn.commands.downsample.warnexists">warnexists() (in module tomodrgn.commands.downsample)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.dataset.window_mask.html#tomodrgn.dataset.window_mask">window_mask() (in module tomodrgn.dataset)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.starfile.GenericStarfile.html#tomodrgn.starfile.GenericStarfile.write">write() (GenericStarfile method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.mrc.write.html#tomodrgn.mrc.write">(in module tomodrgn.mrc)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.mrc.MRCHeader.html#tomodrgn.mrc.MRCHeader.write">(MRCHeader method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.starfile.TiltSeriesStarfile.html#tomodrgn.starfile.TiltSeriesStarfile.write">(TiltSeriesStarfile method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.starfile.TomoParticlesStarfile.html#tomodrgn.starfile.TomoParticlesStarfile.write">(TomoParticlesStarfile method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.commands.downsample.write_downsampled_starfile.html#tomodrgn.commands.downsample.write_downsampled_starfile">write_downsampled_starfile() (in module tomodrgn.commands.downsample)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.subtomo2chimerax.write_labels_rgba_by_model.html#tomodrgn.commands.subtomo2chimerax.write_labels_rgba_by_model">write_labels_rgba_by_model() (in module tomodrgn.commands.subtomo2chimerax)</a>
+</li>
+      <li><a href="api/_autosummary/tomodrgn.commands.subtomo2chimerax.write_mapback_script.html#tomodrgn.commands.subtomo2chimerax.write_mapback_script">write_mapback_script() (in module tomodrgn.commands.subtomo2chimerax)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="X">X</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.xpu">xpu() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.xpu">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.xpu">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.xpu">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.xpu">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.xpu">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.xpu">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.xpu">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.xpu">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.xpu">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.xpu">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.xpu">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.xpu">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.utils.xrot.html#tomodrgn.utils.xrot">xrot() (in module tomodrgn.utils)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="Y">Y</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.utils.yrot.html#tomodrgn.utils.yrot">yrot() (in module tomodrgn.utils)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="Z">Z</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.models.DataParallelPassthrough.html#tomodrgn.models.DataParallelPassthrough.zero_grad">zero_grad() (DataParallelPassthrough method)</a>
+
+      <ul>
+        <li><a href="api/_autosummary/tomodrgn.losses.EquivarianceLoss.html#tomodrgn.losses.EquivarianceLoss.zero_grad">(EquivarianceLoss method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.FTPositionalDecoder.html#tomodrgn.models.FTPositionalDecoder.zero_grad">(FTPositionalDecoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.MAB.html#tomodrgn.set_transformer.MAB.zero_grad">(MAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.MedianPool1d.html#tomodrgn.models.MedianPool1d.zero_grad">(MedianPool1d method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.PMA.html#tomodrgn.set_transformer.PMA.zero_grad">(PMA method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.pose.PoseTracker.html#tomodrgn.pose.PoseTracker.zero_grad">(PoseTracker method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinear.html#tomodrgn.models.ResidLinear.zero_grad">(ResidLinear method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.ResidLinearMLP.html#tomodrgn.models.ResidLinearMLP.zero_grad">(ResidLinearMLP method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SAB.html#tomodrgn.set_transformer.SAB.zero_grad">(SAB method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.set_transformer.SetTransformer.html#tomodrgn.set_transformer.SetTransformer.zero_grad">(SetTransformer method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesEncoder.html#tomodrgn.models.TiltSeriesEncoder.zero_grad">(TiltSeriesEncoder method)</a>
+</li>
+        <li><a href="api/_autosummary/tomodrgn.models.TiltSeriesHetOnlyVAE.html#tomodrgn.models.TiltSeriesHetOnlyVAE.zero_grad">(TiltSeriesHetOnlyVAE method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/_autosummary/tomodrgn.utils.zero_sphere.html#tomodrgn.utils.zero_sphere">zero_sphere() (in module tomodrgn.utils)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, Barrett M Powell, Joseph H Davis.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

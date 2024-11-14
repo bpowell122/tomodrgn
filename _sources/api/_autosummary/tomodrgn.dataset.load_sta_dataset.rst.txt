@@ -1,0 +1,6 @@
+﻿tomodrgn.dataset.load\_sta\_dataset
+===================================
+
+.. currentmodule:: tomodrgn.dataset
+
+.. autofunction:: load_sta_dataset

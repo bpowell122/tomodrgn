@@ -1,0 +1,6 @@
+﻿tomodrgn.commands.downsample.collate\_particle\_tilts
+=====================================================
+
+.. currentmodule:: tomodrgn.commands.downsample
+
+.. autofunction:: collate_particle_tilts

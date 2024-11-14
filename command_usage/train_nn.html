@@ -1,0 +1,767 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>tomodrgn train_nn &#8212; tomoDRGN 0.2.3.dev328 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!-- 
+    this give us a css class that will be invisible only if js is disabled 
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=26a4bc78f4c0ddb94549"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549" />
+
+    <script src="../_static/documentation_options.js?v=d6c7774d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'command_usage/train_nn';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="tomodrgn convergence_nn" href="convergence_nn.html" />
+    <link rel="prev" title="tomodrgn backproject_voxel" href="backproject_voxel.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">tomoDRGN v0.2.3.dev328</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../overview/index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../overview/index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Commonly used commands</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="backproject_voxel.html">tomodrgn backproject_voxel</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">tomodrgn train_nn</a></li>
+<li class="toctree-l1"><a class="reference internal" href="convergence_nn.html">tomodrgn convergence_nn</a></li>
+<li class="toctree-l1"><a class="reference internal" href="train_vae.html">tomodrgn train_vae</a></li>
+<li class="toctree-l1"><a class="reference internal" href="convergence_vae.html">tomodrgn convergence_vae</a></li>
+<li class="toctree-l1"><a class="reference internal" href="analyze.html">tomodrgn analyze</a></li>
+<li class="toctree-l1"><a class="reference internal" href="analyze_volumes.html">tomodrgn analyze_volumes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="filter_star.html">tomodrgn filter_star</a></li>
+<li class="toctree-l1"><a class="reference internal" href="subtomo2chimerax.html">tomodrgn subtomo2chimerax</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cleanup.html">tomodrgn cleanup</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Infrequently / indirectly used commands</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="downsample.html">tomodrgn downsample</a></li>
+<li class="toctree-l1"><a class="reference internal" href="eval_images.html">tomodrgn eval_images</a></li>
+<li class="toctree-l1"><a class="reference internal" href="eval_vol.html">tomodrgn eval_vol</a></li>
+<li class="toctree-l1"><a class="reference internal" href="graph_traversal.html">tomodrgn graph_traversal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pc_traversal.html">tomodrgn pc_traversal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="view_config.html">tomodrgn view_config</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Command Usage</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">tomodrgn train_nn</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="tomodrgn-train-nn">
+<h1>tomodrgn train_nn<a class="headerlink" href="#tomodrgn-train-nn" title="Link to this heading">#</a></h1>
+<section id="purpose">
+<h2>Purpose<a class="headerlink" href="#purpose" title="Link to this heading">#</a></h2>
+<p>Train a homogeneous tomoDRGN network (i.e. decoder-only) to generate a “consensus” 3-D reconstruction from pre-aligned 2-D tilt-series projections.</p>
+</section>
+<section id="sample-usage">
+<h2>Sample usage<a class="headerlink" href="#sample-usage" title="Link to this heading">#</a></h2>
+<p>The examples below are adapted from <code class="docutils literal notranslate"><span class="pre">tomodrgn/testing/commandtest*.py</span></code>, and rely on other outputs from <code class="docutils literal notranslate"><span class="pre">commandtest.py</span></code> to execute successfully.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Warp v1 style inputs</span>
+tomodrgn<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>train_nn<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>data/10076_classE_32_sim.star<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--source-software<span class="w"> </span>cryosrpnt<span class="w"> </span><span class="se">\ </span><span class="w"> </span><span class="c1"># tomoDRGN tries to automatically infer the software used to export particles, but allows this value to be set explicitly</span>
+<span class="w">    </span>--outdir<span class="w"> </span>output/nn_classE_sim<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--uninvert-data<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--num-epochs<span class="w"> </span><span class="m">40</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--l-dose-mask<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--recon-dose-weight<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--recon-tilt-weight
+
+<span class="c1"># WarpTools style inputs</span>
+tomodrgn<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>train_nn<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>data/warptools_test_4-tomos_10-ptcls_box-32_angpix-12_optimisation_set.star<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--outdir<span class="w"> </span>output/nn_warptools_70S_dosetiltweightmask<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--uninvert-data<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--num-epochs<span class="w"> </span><span class="m">40</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--l-dose-mask<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--recon-dose-weight<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--recon-tilt-weight<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--lazy<span class="w"> </span><span class="se">\ </span><span class="w"> </span><span class="c1"># note: lazy is used because the separate .mrcs file per particle, as used by WarpTools, is well suited to lazy loading</span>
+<span class="w">    </span>--num-workers<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\ </span><span class="w"> </span><span class="c1"># note: num-workers, prefetch-factor, and persistent-workers are best used only if lazy is enabled to avoid excessive memory utilization</span>
+<span class="w">    </span>--prefetch-factor<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--persistent-workers
+</pre></div>
+</div>
+</section>
+<section id="arguments">
+<h2>Arguments<a class="headerlink" href="#arguments" title="Link to this heading">#</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">usage</span><span class="p">:</span> <span class="n">train_nn</span> <span class="p">[</span><span class="o">-</span><span class="n">h</span><span class="p">]</span> <span class="o">--</span><span class="n">outdir</span> <span class="n">OUTDIR</span> <span class="p">[</span><span class="o">--</span><span class="n">load</span> <span class="n">WEIGHTS</span><span class="o">.</span><span class="n">PKL</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">checkpoint</span> <span class="n">CHECKPOINT</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">log</span><span class="o">-</span><span class="n">interval</span> <span class="n">LOG_INTERVAL</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">verbose</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">seed</span> <span class="n">SEED</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">plot</span><span class="o">-</span><span class="nb">format</span> <span class="p">{</span><span class="n">png</span><span class="p">,</span><span class="n">svgz</span><span class="p">}]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">source</span><span class="o">-</span><span class="n">software</span> <span class="p">{</span><span class="n">auto</span><span class="p">,</span><span class="n">warp</span><span class="p">,</span><span class="n">cryosrpnt</span><span class="p">,</span><span class="n">nextpyp</span><span class="p">,</span><span class="n">cistem</span><span class="p">,</span><span class="n">warptools</span><span class="p">,</span><span class="n">relion</span><span class="p">}]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">ind</span><span class="o">-</span><span class="n">ptcls</span> <span class="n">PKL</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">ind</span><span class="o">-</span><span class="n">imgs</span> <span class="n">IND_IMGS</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">sort</span><span class="o">-</span><span class="n">ptcl</span><span class="o">-</span><span class="n">imgs</span> <span class="p">{</span><span class="n">unsorted</span><span class="p">,</span><span class="n">dose_ascending</span><span class="p">,</span><span class="n">random</span><span class="p">}]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">use</span><span class="o">-</span><span class="n">first</span><span class="o">-</span><span class="n">ntilts</span> <span class="n">USE_FIRST_NTILTS</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">use</span><span class="o">-</span><span class="n">first</span><span class="o">-</span><span class="n">nptcls</span> <span class="n">USE_FIRST_NPTCLS</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">uninvert</span><span class="o">-</span><span class="n">data</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">window</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">window</span><span class="o">-</span><span class="n">r</span> <span class="n">WINDOW_R</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">window</span><span class="o">-</span><span class="n">r</span><span class="o">-</span><span class="n">outer</span> <span class="n">WINDOW_R_OUTER</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">datadir</span> <span class="n">DATADIR</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">lazy</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">sequential</span><span class="o">-</span><span class="n">tilt</span><span class="o">-</span><span class="n">sampling</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">recon</span><span class="o">-</span><span class="n">tilt</span><span class="o">-</span><span class="n">weight</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">recon</span><span class="o">-</span><span class="n">dose</span><span class="o">-</span><span class="n">weight</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">l</span><span class="o">-</span><span class="n">dose</span><span class="o">-</span><span class="n">mask</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">n</span> <span class="n">NUM_EPOCHS</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">-</span><span class="n">b</span> <span class="n">BATCH_SIZE</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">wd</span> <span class="n">WD</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">lr</span> <span class="n">LR</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">norm</span> <span class="n">NORM</span> <span class="n">NORM</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">amp</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">multigpu</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">layers</span> <span class="n">LAYERS</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">dim</span> <span class="n">DIM</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">l</span><span class="o">-</span><span class="n">extent</span> <span class="n">L_EXTENT</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">pe</span><span class="o">-</span><span class="nb">type</span> <span class="p">{</span><span class="n">geom_ft</span><span class="p">,</span><span class="n">geom_full</span><span class="p">,</span><span class="n">geom_lowf</span><span class="p">,</span><span class="n">geom_nohighf</span><span class="p">,</span><span class="n">linear_lowf</span><span class="p">,</span><span class="n">gaussian</span><span class="p">,</span><span class="n">none</span><span class="p">}]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">pe</span><span class="o">-</span><span class="n">dim</span> <span class="n">PE_DIM</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">activation</span> <span class="p">{</span><span class="n">relu</span><span class="p">,</span><span class="n">leaky_relu</span><span class="p">}]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">feat</span><span class="o">-</span><span class="n">sigma</span> <span class="n">FEAT_SIGMA</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">num</span><span class="o">-</span><span class="n">workers</span> <span class="n">NUM_WORKERS</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">prefetch</span><span class="o">-</span><span class="n">factor</span> <span class="n">PREFETCH_FACTOR</span><span class="p">]</span> <span class="p">[</span><span class="o">--</span><span class="n">persistent</span><span class="o">-</span><span class="n">workers</span><span class="p">]</span>
+                <span class="p">[</span><span class="o">--</span><span class="n">pin</span><span class="o">-</span><span class="n">memory</span><span class="p">]</span>
+                <span class="n">particles</span>
+</pre></div>
+</div>
+<section id="tomodrgn.commands.train_nn-add_args-positional-arguments">
+<h3>Positional Arguments<a class="headerlink" href="#tomodrgn.commands.train_nn-add_args-positional-arguments" title="Link to this heading">#</a></h3>
+<dl class="option-list">
+<dt><kbd>particles</kbd></dt>
+<dd><p>Input particles (.mrcs, .star, or .txt)</p>
+</dd>
+</dl>
+</section>
+<section id="tomodrgn.commands.train_nn-add_args-core-arguments">
+<h3>Core arguments<a class="headerlink" href="#tomodrgn.commands.train_nn-add_args-core-arguments" title="Link to this heading">#</a></h3>
+<dl class="option-list">
+<dt><kbd>--outdir</kbd></dt>
+<dd><p>Output directory to save model</p>
+</dd>
+<dt><kbd>--load</kbd></dt>
+<dd><p>Initialize training from a checkpoint</p>
+</dd>
+<dt><kbd>--checkpoint</kbd></dt>
+<dd><p>Checkpointing interval in N_EPOCHS (default: 1)</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">1</span></code></p>
+</dd>
+<dt><kbd>--log-interval</kbd></dt>
+<dd><p>Logging interval in N_PTCLS (default: 200)</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">200</span></code></p>
+</dd>
+<dt><kbd>--verbose</kbd></dt>
+<dd><p>Increases verbosity</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p>
+</dd>
+<dt><kbd>--seed</kbd></dt>
+<dd><p>Random seed</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">81645</span></code></p>
+</dd>
+<dt><kbd>--plot-format</kbd></dt>
+<dd><p>Possible choices: png, svgz</p>
+<p>File format with which to save plots</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">'png'</span></code></p>
+</dd>
+</dl>
+</section>
+<section id="tomodrgn.commands.train_nn-add_args-particle-starfile-loading-and-filtering">
+<h3>Particle starfile loading and filtering<a class="headerlink" href="#tomodrgn.commands.train_nn-add_args-particle-starfile-loading-and-filtering" title="Link to this heading">#</a></h3>
+<dl class="option-list">
+<dt><kbd>--source-software</kbd></dt>
+<dd><p>Possible choices: auto, warp, cryosrpnt, nextpyp, cistem, warptools, relion</p>
+<p>Manually set the software used to extract particles. Default is to auto-detect.</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">'auto'</span></code></p>
+</dd>
+<dt><kbd>--ind-ptcls</kbd></dt>
+<dd><p>Filter starfile by particles (unique rlnGroupName values) using np array pkl as indices</p>
+</dd>
+<dt><kbd>--ind-imgs</kbd></dt>
+<dd><p>Filter starfile by particle images (star file rows) using np array pkl as indices</p>
+</dd>
+<dt><kbd>--sort-ptcl-imgs</kbd></dt>
+<dd><p>Possible choices: unsorted, dose_ascending, random</p>
+<p>Sort the star file images on a per-particle basis by the specified criteria</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">'unsorted'</span></code></p>
+</dd>
+<dt><kbd>--use-first-ntilts</kbd></dt>
+<dd><p>Keep the first <cite>use_first_ntilts</cite> images of each particle in the sorted star file.Default -1 means to use all. Will drop particles with fewer than this many tilt images.</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">-1</span></code></p>
+</dd>
+<dt><kbd>--use-first-nptcls</kbd></dt>
+<dd><p>Keep the first <cite>use_first_nptcls</cite> particles in the sorted star file. Default -1 means to use all.</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">-1</span></code></p>
+</dd>
+</dl>
+</section>
+<section id="tomodrgn.commands.train_nn-add_args-dataset-loading-and-preprocessing">
+<h3>Dataset loading and preprocessing<a class="headerlink" href="#tomodrgn.commands.train_nn-add_args-dataset-loading-and-preprocessing" title="Link to this heading">#</a></h3>
+<dl class="option-list">
+<dt><kbd>--uninvert-data</kbd></dt>
+<dd><p>Do not invert data sign</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">True</span></code></p>
+</dd>
+<dt><kbd>--no-window</kbd></dt>
+<dd><p>Turn off real space windowing of dataset</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">True</span></code></p>
+</dd>
+<dt><kbd>--window-r</kbd></dt>
+<dd><p>Real space inner windowing radius to begin cosine falloff</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">0.8</span></code></p>
+</dd>
+<dt><kbd>--window-r-outer</kbd></dt>
+<dd><p>Real space outer windowing radius to end cosine falloff</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">0.9</span></code></p>
+</dd>
+<dt><kbd>--datadir</kbd></dt>
+<dd><p>Path prefix to particle stack if loading relative paths from a .star file</p>
+</dd>
+<dt><kbd>--lazy</kbd></dt>
+<dd><p>Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p>
+</dd>
+<dt><kbd>--sequential-tilt-sampling</kbd></dt>
+<dd><p>Supply particle images of one particle to encoder in filtered starfile order</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p>
+</dd>
+</dl>
+</section>
+<section id="tomodrgn.commands.train_nn-add_args-weighting-and-masking">
+<h3>Weighting and masking<a class="headerlink" href="#tomodrgn.commands.train_nn-add_args-weighting-and-masking" title="Link to this heading">#</a></h3>
+<dl class="option-list">
+<dt><kbd>--recon-tilt-weight</kbd></dt>
+<dd><p>Weight reconstruction loss by cosine(tilt_angle)</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p>
+</dd>
+<dt><kbd>--recon-dose-weight</kbd></dt>
+<dd><p>Weight reconstruction loss per tilt per pixel by dose dependent amplitude attenuation</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p>
+</dd>
+<dt><kbd>--l-dose-mask</kbd></dt>
+<dd><p>Do not train on frequencies exposed to &gt; 2.5x critical dose. Training lattice is intersection of this with –l-extent</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p>
+</dd>
+</dl>
+</section>
+<section id="tomodrgn.commands.train_nn-add_args-training-parameters">
+<h3>Training parameters<a class="headerlink" href="#tomodrgn.commands.train_nn-add_args-training-parameters" title="Link to this heading">#</a></h3>
+<dl class="option-list">
+<dt><kbd>-n, --num-epochs</kbd></dt>
+<dd><p>Number of training epochs</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">20</span></code></p>
+</dd>
+<dt><kbd>-b, --batch-size</kbd></dt>
+<dd><p>Minibatch size</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">1</span></code></p>
+</dd>
+<dt><kbd>--wd</kbd></dt>
+<dd><p>Weight decay in Adam optimizer</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">0</span></code></p>
+</dd>
+<dt><kbd>--lr</kbd></dt>
+<dd><p>Learning rate in Adam optimizer for batch size 1. Is automatically further scaled as square-root of batch size.</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">0.0001</span></code></p>
+</dd>
+<dt><kbd>--norm</kbd></dt>
+<dd><p>Data normalization as shift, 1/scale (default: mean, std of dataset)</p>
+</dd>
+<dt><kbd>--no-amp</kbd></dt>
+<dd><p>Disable use of mixed-precision training</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p>
+</dd>
+<dt><kbd>--multigpu</kbd></dt>
+<dd><p>Parallelize training across all detected GPUs. Specify GPUs i,j via <cite>export CUDA_VISIBLE_DEVICES=i,j</cite> before tomodrgn train_vae</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p>
+</dd>
+</dl>
+</section>
+<section id="tomodrgn.commands.train_nn-add_args-network-architecture">
+<h3>Network Architecture<a class="headerlink" href="#tomodrgn.commands.train_nn-add_args-network-architecture" title="Link to this heading">#</a></h3>
+<dl class="option-list">
+<dt><kbd>--layers</kbd></dt>
+<dd><p>Number of hidden layers</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">3</span></code></p>
+</dd>
+<dt><kbd>--dim</kbd></dt>
+<dd><p>Number of nodes in hidden layers</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">512</span></code></p>
+</dd>
+<dt><kbd>--l-extent</kbd></dt>
+<dd><p>Coordinate lattice size (if not using positional encoding)</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">0.5</span></code></p>
+</dd>
+<dt><kbd>--pe-type</kbd></dt>
+<dd><p>Possible choices: geom_ft, geom_full, geom_lowf, geom_nohighf, linear_lowf, gaussian, none</p>
+<p>Type of positional encoding</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">'gaussian'</span></code></p>
+</dd>
+<dt><kbd>--pe-dim</kbd></dt>
+<dd><p>Num sinusoid features in positional encoding (default: D/2)</p>
+</dd>
+<dt><kbd>--activation</kbd></dt>
+<dd><p>Possible choices: relu, leaky_relu</p>
+<p>Activation</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">'relu'</span></code></p>
+</dd>
+<dt><kbd>--feat-sigma</kbd></dt>
+<dd><p>Scale for random Gaussian features</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">0.5</span></code></p>
+</dd>
+</dl>
+</section>
+<section id="tomodrgn.commands.train_nn-add_args-dataloader-arguments">
+<h3>Dataloader arguments<a class="headerlink" href="#tomodrgn.commands.train_nn-add_args-dataloader-arguments" title="Link to this heading">#</a></h3>
+<dl class="option-list">
+<dt><kbd>--num-workers</kbd></dt>
+<dd><p>Number of workers to use when batching particles for training. Has moderate impact on epoch time</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">0</span></code></p>
+</dd>
+<dt><kbd>--prefetch-factor</kbd></dt>
+<dd><p>Number of particles to prefetch per worker for training. Has moderate impact on epoch time</p>
+</dd>
+<dt><kbd>--persistent-workers</kbd></dt>
+<dd><p>Whether to persist workers after dataset has been fully consumed. Has minimal impact on run time</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p>
+</dd>
+<dt><kbd>--pin-memory</kbd></dt>
+<dd><p>Whether to use pinned memory for dataloader. Has large impact on epoch time. Recommended.</p>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">False</span></code></p>
+</dd>
+</dl>
+</section>
+</section>
+<section id="common-next-steps">
+<h2>Common next steps<a class="headerlink" href="#common-next-steps" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Assess model convergence with <code class="docutils literal notranslate"><span class="pre">tomodrgn</span> <span class="pre">convergence_nn</span></code></p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="backproject_voxel.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">tomodrgn backproject_voxel</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="convergence_nn.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">tomodrgn convergence_nn</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#purpose">Purpose</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#sample-usage">Sample usage</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#arguments">Arguments</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tomodrgn.commands.train_nn-add_args-positional-arguments">Positional Arguments</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tomodrgn.commands.train_nn-add_args-core-arguments">Core arguments</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tomodrgn.commands.train_nn-add_args-particle-starfile-loading-and-filtering">Particle starfile loading and filtering</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tomodrgn.commands.train_nn-add_args-dataset-loading-and-preprocessing">Dataset loading and preprocessing</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tomodrgn.commands.train_nn-add_args-weighting-and-masking">Weighting and masking</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tomodrgn.commands.train_nn-add_args-training-parameters">Training parameters</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tomodrgn.commands.train_nn-add_args-network-architecture">Network Architecture</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#tomodrgn.commands.train_nn-add_args-dataloader-arguments">Dataloader arguments</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#common-next-steps">Common next steps</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/command_usage/train_nn.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, Barrett M Powell, Joseph H Davis.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,812 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>tomodrgn.analysis.parse_loss &#8212; tomoDRGN 0.2.3.dev328 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!-- 
+    this give us a css class that will be invisible only if js is disabled 
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../_static/scripts/fontawesome.js?digest=26a4bc78f4c0ddb94549"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549" />
+
+    <script src="../../_static/documentation_options.js?v=d6c7774d"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/_autosummary/tomodrgn.analysis.parse_loss';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="tomodrgn.analysis.plot_by_cluster" href="tomodrgn.analysis.plot_by_cluster.html" />
+    <link rel="prev" title="tomodrgn.analysis.parse_all_losses" href="tomodrgn.analysis.parse_all_losses.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">tomoDRGN v0.2.3.dev328</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../overview/index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../command_usage/index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../overview/index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../command_usage/index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">TomoDRGN core modules</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="tomodrgn.analysis.html">tomodrgn.analysis</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.cluster_gmm.html">tomodrgn.analysis.cluster_gmm</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.cluster_kmeans.html">tomodrgn.analysis.cluster_kmeans</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.combine_ind.html">tomodrgn.analysis.combine_ind</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.convert_angstroms_to_voxels.html">tomodrgn.analysis.convert_angstroms_to_voxels</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.convert_original_indices.html">tomodrgn.analysis.convert_original_indices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.get_colors_chimerax.html">tomodrgn.analysis.get_colors_chimerax</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.get_colors_matplotlib.html">tomodrgn.analysis.get_colors_matplotlib</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.get_ind_for_cluster.html">tomodrgn.analysis.get_ind_for_cluster</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.get_nearest_point.html">tomodrgn.analysis.get_nearest_point</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.get_pc_traj.html">tomodrgn.analysis.get_pc_traj</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.ipy_plot_interactive.html">tomodrgn.analysis.ipy_plot_interactive</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.ipy_tomo_ptcl_viewer.html">tomodrgn.analysis.ipy_tomo_ptcl_viewer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.load_dataframe.html">tomodrgn.analysis.load_dataframe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.parse_all_losses.html">tomodrgn.analysis.parse_all_losses</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">tomodrgn.analysis.parse_loss</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.plot_by_cluster.html">tomodrgn.analysis.plot_by_cluster</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.plot_by_cluster_subplot.html">tomodrgn.analysis.plot_by_cluster_subplot</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.plot_euler.html">tomodrgn.analysis.plot_euler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.plot_label_count_distribution.html">tomodrgn.analysis.plot_label_count_distribution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.plot_losses.html">tomodrgn.analysis.plot_losses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.plot_projections.html">tomodrgn.analysis.plot_projections</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.plot_three_column_correlation.html">tomodrgn.analysis.plot_three_column_correlation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.plot_translations.html">tomodrgn.analysis.plot_translations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.recursive_load_dataframe.html">tomodrgn.analysis.recursive_load_dataframe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.run_pca.html">tomodrgn.analysis.run_pca</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.run_tsne.html">tomodrgn.analysis.run_tsne</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.run_umap.html">tomodrgn.analysis.run_umap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.scatter_annotate.html">tomodrgn.analysis.scatter_annotate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.scatter_annotate_hex.html">tomodrgn.analysis.scatter_annotate_hex</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.analysis.scatter_color.html">tomodrgn.analysis.scatter_color</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.beta_schedule.html">tomodrgn.beta_schedule</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.beta_schedule.get_beta_schedule.html">tomodrgn.beta_schedule.get_beta_schedule</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.beta_schedule.ConstantSchedule.html">tomodrgn.beta_schedule.ConstantSchedule</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.beta_schedule.CyclicalSchedule.html">tomodrgn.beta_schedule.CyclicalSchedule</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.beta_schedule.LinearSchedule.html">tomodrgn.beta_schedule.LinearSchedule</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.config.html">tomodrgn.config</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.config.print_config.html">tomodrgn.config.print_config</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.config.save_config.html">tomodrgn.config.save_config</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.convergence.html">tomodrgn.convergence</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.convergence.calc_ccs_alltoall_intraepoch.html">tomodrgn.convergence.calc_ccs_alltoall_intraepoch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.convergence.calc_ccs_alltogroundtruth.html">tomodrgn.convergence.calc_ccs_alltogroundtruth</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.convergence.calc_ccs_pairwise_epochs.html">tomodrgn.convergence.calc_ccs_pairwise_epochs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.convergence.calc_fscs_pairwise_epochs.html">tomodrgn.convergence.calc_fscs_pairwise_epochs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.convergence.calc_kld_two_gaussians.html">tomodrgn.convergence.calc_kld_two_gaussians</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.convergence.calc_test_train_pair_volumes_cc_complement.html">tomodrgn.convergence.calc_test_train_pair_volumes_cc_complement</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.convergence.calc_test_train_pair_volumes_fscs.html">tomodrgn.convergence.calc_test_train_pair_volumes_fscs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.convergence.encoder_latent_shifts.html">tomodrgn.convergence.encoder_latent_shifts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.convergence.follow_candidate_particles.html">tomodrgn.convergence.follow_candidate_particles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.convergence.fsc_referencevol_to_manyvols.html">tomodrgn.convergence.fsc_referencevol_to_manyvols</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.convergence.generate_test_train_pair_volumes.html">tomodrgn.convergence.generate_test_train_pair_volumes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.convergence.plot_latent_pca.html">tomodrgn.convergence.plot_latent_pca</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.convergence.plot_latent_umap.html">tomodrgn.convergence.plot_latent_umap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.convergence.plot_loss.html">tomodrgn.convergence.plot_loss</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.convergence.sketch_via_umap_local_maxima.html">tomodrgn.convergence.sketch_via_umap_local_maxima</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.ctf.html">tomodrgn.ctf</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.ctf.compute_ctf.html">tomodrgn.ctf.compute_ctf</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.ctf.print_ctf_params.html">tomodrgn.ctf.print_ctf_params</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.dataset.html">tomodrgn.dataset</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.dataset.load_particles.html">tomodrgn.dataset.load_particles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.dataset.load_sta_dataset.html">tomodrgn.dataset.load_sta_dataset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.dataset.window_mask.html">tomodrgn.dataset.window_mask</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.dataset.TiltSeriesMRCData.html">tomodrgn.dataset.TiltSeriesMRCData</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.dataset.TomoParticlesMRCData.html">tomodrgn.dataset.TomoParticlesMRCData</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.dose.html">tomodrgn.dose</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.dose.calculate_critical_dose_per_frequency.html">tomodrgn.dose.calculate_critical_dose_per_frequency</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.dose.calculate_dose_mask.html">tomodrgn.dose.calculate_dose_mask</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.dose.calculate_dose_weights.html">tomodrgn.dose.calculate_dose_weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.dose.calculate_spatial_frequencies.html">tomodrgn.dose.calculate_spatial_frequencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.dose.calculate_tilt_weights.html">tomodrgn.dose.calculate_tilt_weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.dose.combine_dose_tilt_weights.html">tomodrgn.dose.combine_dose_tilt_weights</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.dose.plot_weight_distribution.html">tomodrgn.dose.plot_weight_distribution</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.fft.html">tomodrgn.fft</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.fft.fft2_center.html">tomodrgn.fft.fft2_center</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.fft.fft2_center_torch.html">tomodrgn.fft.fft2_center_torch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.fft.fft3_center.html">tomodrgn.fft.fft3_center</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.fft.fft3_center_torch.html">tomodrgn.fft.fft3_center_torch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.fft.ht2_center.html">tomodrgn.fft.ht2_center</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.fft.ht2_center_torch.html">tomodrgn.fft.ht2_center_torch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.fft.ht3_center.html">tomodrgn.fft.ht3_center</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.fft.ht3_center_torch.html">tomodrgn.fft.ht3_center_torch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.fft.ifft2_center.html">tomodrgn.fft.ifft2_center</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.fft.ifft2_center_torch.html">tomodrgn.fft.ifft2_center_torch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.fft.ifft3_center.html">tomodrgn.fft.ifft3_center</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.fft.ifft3_center_torch.html">tomodrgn.fft.ifft3_center_torch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.fft.iht2_center.html">tomodrgn.fft.iht2_center</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.fft.iht2_center_torch.html">tomodrgn.fft.iht2_center_torch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.fft.iht3_center.html">tomodrgn.fft.iht3_center</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.fft.iht3_center_torch.html">tomodrgn.fft.iht3_center_torch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.fft.symmetrize_ht.html">tomodrgn.fft.symmetrize_ht</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.lattice.html">tomodrgn.lattice</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.lattice.EvenLattice.html">tomodrgn.lattice.EvenLattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.lattice.Lattice.html">tomodrgn.lattice.Lattice</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.lie_tools.html">tomodrgn.lie_tools</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.lie_tools.SO3_to_quaternions.html">tomodrgn.lie_tools.SO3_to_quaternions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.lie_tools.SO3_to_s2s2.html">tomodrgn.lie_tools.SO3_to_s2s2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.lie_tools.expmap.html">tomodrgn.lie_tools.expmap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.lie_tools.logsumexp.html">tomodrgn.lie_tools.logsumexp</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.lie_tools.map_to_lie_algebra.html">tomodrgn.lie_tools.map_to_lie_algebra</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.lie_tools.quaternions_to_SO3.html">tomodrgn.lie_tools.quaternions_to_SO3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.lie_tools.random_SO3.html">tomodrgn.lie_tools.random_SO3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.lie_tools.random_quaternions.html">tomodrgn.lie_tools.random_quaternions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.lie_tools.s2s1rodrigues.html">tomodrgn.lie_tools.s2s1rodrigues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.lie_tools.s2s2_to_SO3.html">tomodrgn.lie_tools.s2s2_to_SO3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.lie_tools.so3_entropy.html">tomodrgn.lie_tools.so3_entropy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.lie_tools.so3_entropy_old.html">tomodrgn.lie_tools.so3_entropy_old</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.losses.html">tomodrgn.losses</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.losses.EquivarianceLoss.html">tomodrgn.losses.EquivarianceLoss</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.models.html">tomodrgn.models</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.models.mlp_ascii.html">tomodrgn.models.mlp_ascii</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.models.print_tiltserieshetonlyvae_ascii.html">tomodrgn.models.print_tiltserieshetonlyvae_ascii</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.models.DataParallelPassthrough.html">tomodrgn.models.DataParallelPassthrough</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.models.FTPositionalDecoder.html">tomodrgn.models.FTPositionalDecoder</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.models.MedianPool1d.html">tomodrgn.models.MedianPool1d</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.models.ResidLinear.html">tomodrgn.models.ResidLinear</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.models.ResidLinearMLP.html">tomodrgn.models.ResidLinearMLP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.models.TiltSeriesEncoder.html">tomodrgn.models.TiltSeriesEncoder</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.models.TiltSeriesHetOnlyVAE.html">tomodrgn.models.TiltSeriesHetOnlyVAE</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.models.VolumeGenerator.html">tomodrgn.models.VolumeGenerator</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.mrc.html">tomodrgn.mrc</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.mrc.parse_header.html">tomodrgn.mrc.parse_header</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.mrc.parse_mrc.html">tomodrgn.mrc.parse_mrc</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.mrc.parse_mrc_list.html">tomodrgn.mrc.parse_mrc_list</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.mrc.write.html">tomodrgn.mrc.write</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.mrc.LazyImage.html">tomodrgn.mrc.LazyImage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.mrc.LazyImageStack.html">tomodrgn.mrc.LazyImageStack</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.mrc.MRCHeader.html">tomodrgn.mrc.MRCHeader</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.pose.html">tomodrgn.pose</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.pose.PoseTracker.html">tomodrgn.pose.PoseTracker</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.set_transformer.html">tomodrgn.set_transformer</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.set_transformer.MAB.html">tomodrgn.set_transformer.MAB</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.set_transformer.PMA.html">tomodrgn.set_transformer.PMA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.set_transformer.SAB.html">tomodrgn.set_transformer.SAB</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.set_transformer.SetTransformer.html">tomodrgn.set_transformer.SetTransformer</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.so3_grid.html">tomodrgn.so3_grid</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.so3_grid.base_SO3_grid.html">tomodrgn.so3_grid.base_SO3_grid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.so3_grid.get_base_ind.html">tomodrgn.so3_grid.get_base_ind</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.so3_grid.get_neighbor.html">tomodrgn.so3_grid.get_neighbor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.so3_grid.get_s1_neighbor.html">tomodrgn.so3_grid.get_s1_neighbor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.so3_grid.get_s2_neighbor.html">tomodrgn.so3_grid.get_s2_neighbor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.so3_grid.grid_SO3.html">tomodrgn.so3_grid.grid_SO3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.so3_grid.grid_s1.html">tomodrgn.so3_grid.grid_s1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.so3_grid.grid_s2.html">tomodrgn.so3_grid.grid_s2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.so3_grid.hopf_to_quat.html">tomodrgn.so3_grid.hopf_to_quat</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.starfile.html">tomodrgn.starfile</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.starfile.is_starfile_optimisation_set.html">tomodrgn.starfile.is_starfile_optimisation_set</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.starfile.load_sta_starfile.html">tomodrgn.starfile.load_sta_starfile</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.starfile.GenericStarfile.html">tomodrgn.starfile.GenericStarfile</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.starfile.TiltSeriesStarfile.html">tomodrgn.starfile.TiltSeriesStarfile</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.starfile.TiltSeriesStarfileStarHeaders.html">tomodrgn.starfile.TiltSeriesStarfileStarHeaders</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.starfile.TomoParticlesStarfile.html">tomodrgn.starfile.TomoParticlesStarfile</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.starfile.TomoParticlesStarfileStarHeaders.html">tomodrgn.starfile.TomoParticlesStarfileStarHeaders</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.utils.html">tomodrgn.utils</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.calc_cc.html">tomodrgn.utils.calc_cc</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.calc_fsc.html">tomodrgn.utils.calc_fsc</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.calc_lowpass_filter_mask.html">tomodrgn.utils.calc_lowpass_filter_mask</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.calc_real_space_mask.html">tomodrgn.utils.calc_real_space_mask</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.check_git_revision_hash.html">tomodrgn.utils.check_git_revision_hash</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.check_memory_usage.html">tomodrgn.utils.check_memory_usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.first_n_factors.html">tomodrgn.utils.first_n_factors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.flog.html">tomodrgn.utils.flog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.get_default_device.html">tomodrgn.utils.get_default_device</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.get_latest_epoch.html">tomodrgn.utils.get_latest_epoch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.load_pkl.html">tomodrgn.utils.load_pkl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.log.html">tomodrgn.utils.log</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.lowpass_filter.html">tomodrgn.utils.lowpass_filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.prefix_paths.html">tomodrgn.utils.prefix_paths</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.print_progress_bar.html">tomodrgn.utils.print_progress_bar</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.rot_3d_from_eman.html">tomodrgn.utils.rot_3d_from_eman</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.rot_3d_from_relion.html">tomodrgn.utils.rot_3d_from_relion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.rot_3d_from_relion_scipy.html">tomodrgn.utils.rot_3d_from_relion_scipy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.rot_3d_to_relion_scipy.html">tomodrgn.utils.rot_3d_to_relion_scipy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.save_pkl.html">tomodrgn.utils.save_pkl</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.vlog.html">tomodrgn.utils.vlog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.xrot.html">tomodrgn.utils.xrot</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.yrot.html">tomodrgn.utils.yrot</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.zero_sphere.html">tomodrgn.utils.zero_sphere</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.utils.Memoized.html">tomodrgn.utils.Memoized</a></li>
+</ul>
+</details></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">TomoDRGN commands</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.commands.analyze.html">tomodrgn.commands.analyze</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.analyze.add_args.html">tomodrgn.commands.analyze.add_args</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.analyze.analyze_z_multidimensional.html">tomodrgn.commands.analyze.analyze_z_multidimensional</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.analyze.analyze_z_onedimensional.html">tomodrgn.commands.analyze.analyze_z_onedimensional</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.analyze.main.html">tomodrgn.commands.analyze.main</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.commands.analyze_volumes.html">tomodrgn.commands.analyze_volumes</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.analyze_volumes.add_args.html">tomodrgn.commands.analyze_volumes.add_args</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.analyze_volumes.main.html">tomodrgn.commands.analyze_volumes.main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.analyze_volumes.make_plots.html">tomodrgn.commands.analyze_volumes.make_plots</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.commands.backproject_voxel.html">tomodrgn.commands.backproject_voxel</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.backproject_voxel.add_args.html">tomodrgn.commands.backproject_voxel.add_args</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.backproject_voxel.add_slice.html">tomodrgn.commands.backproject_voxel.add_slice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.backproject_voxel.backproject_dataset.html">tomodrgn.commands.backproject_voxel.backproject_dataset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.backproject_voxel.main.html">tomodrgn.commands.backproject_voxel.main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.backproject_voxel.save_map.html">tomodrgn.commands.backproject_voxel.save_map</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.commands.cleanup.html">tomodrgn.commands.cleanup</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.cleanup.add_args.html">tomodrgn.commands.cleanup.add_args</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.cleanup.main.html">tomodrgn.commands.cleanup.main</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.commands.convergence_nn.html">tomodrgn.commands.convergence_nn</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.convergence_nn.add_args.html">tomodrgn.commands.convergence_nn.add_args</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.convergence_nn.main.html">tomodrgn.commands.convergence_nn.main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.convergence_nn.make_plots.html">tomodrgn.commands.convergence_nn.make_plots</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.commands.convergence_vae.html">tomodrgn.commands.convergence_vae</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.convergence_vae.add_args.html">tomodrgn.commands.convergence_vae.add_args</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.convergence_vae.main.html">tomodrgn.commands.convergence_vae.main</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.commands.downsample.html">tomodrgn.commands.downsample</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.downsample.add_args.html">tomodrgn.commands.downsample.add_args</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.downsample.collate_particle_tilts.html">tomodrgn.commands.downsample.collate_particle_tilts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.downsample.downsample_images.html">tomodrgn.commands.downsample.downsample_images</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.downsample.main.html">tomodrgn.commands.downsample.main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.downsample.mkbasedir.html">tomodrgn.commands.downsample.mkbasedir</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.downsample.warnexists.html">tomodrgn.commands.downsample.warnexists</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.downsample.write_downsampled_starfile.html">tomodrgn.commands.downsample.write_downsampled_starfile</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.downsample.ImageDataset.html">tomodrgn.commands.downsample.ImageDataset</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.commands.eval_images.html">tomodrgn.commands.eval_images</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.eval_images.add_args.html">tomodrgn.commands.eval_images.add_args</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.eval_images.main.html">tomodrgn.commands.eval_images.main</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.commands.eval_vol.html">tomodrgn.commands.eval_vol</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.eval_vol.add_args.html">tomodrgn.commands.eval_vol.add_args</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.eval_vol.main.html">tomodrgn.commands.eval_vol.main</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.commands.filter_star.html">tomodrgn.commands.filter_star</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.filter_star.add_args.html">tomodrgn.commands.filter_star.add_args</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.filter_star.check_args_compatible.html">tomodrgn.commands.filter_star.check_args_compatible</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.filter_star.filter_image_series_starfile.html">tomodrgn.commands.filter_star.filter_image_series_starfile</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.filter_star.filter_volume_series_starfile.html">tomodrgn.commands.filter_star.filter_volume_series_starfile</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.filter_star.main.html">tomodrgn.commands.filter_star.main</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.commands.graph_traversal.html">tomodrgn.commands.graph_traversal</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.graph_traversal.add_args.html">tomodrgn.commands.graph_traversal.add_args</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.graph_traversal.main.html">tomodrgn.commands.graph_traversal.main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.graph_traversal.LatentGraph.html">tomodrgn.commands.graph_traversal.LatentGraph</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.commands.pc_traversal.html">tomodrgn.commands.pc_traversal</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.pc_traversal.add_args.html">tomodrgn.commands.pc_traversal.add_args</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.pc_traversal.analyze_data_support.html">tomodrgn.commands.pc_traversal.analyze_data_support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.pc_traversal.main.html">tomodrgn.commands.pc_traversal.main</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.commands.subtomo2chimerax.html">tomodrgn.commands.subtomo2chimerax</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.subtomo2chimerax.add_args.html">tomodrgn.commands.subtomo2chimerax.add_args</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.subtomo2chimerax.generate_color_per_particle.html">tomodrgn.commands.subtomo2chimerax.generate_color_per_particle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.subtomo2chimerax.main.html">tomodrgn.commands.subtomo2chimerax.main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.subtomo2chimerax.validate_particles_for_rendering.html">tomodrgn.commands.subtomo2chimerax.validate_particles_for_rendering</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.subtomo2chimerax.validate_starfile.html">tomodrgn.commands.subtomo2chimerax.validate_starfile</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.subtomo2chimerax.validate_volume_mode_arguments.html">tomodrgn.commands.subtomo2chimerax.validate_volume_mode_arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.subtomo2chimerax.write_labels_rgba_by_model.html">tomodrgn.commands.subtomo2chimerax.write_labels_rgba_by_model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.subtomo2chimerax.write_mapback_script.html">tomodrgn.commands.subtomo2chimerax.write_mapback_script</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.commands.train_nn.html">tomodrgn.commands.train_nn</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.train_nn.add_args.html">tomodrgn.commands.train_nn.add_args</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.train_nn.decode_batch.html">tomodrgn.commands.train_nn.decode_batch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.train_nn.loss_function.html">tomodrgn.commands.train_nn.loss_function</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.train_nn.main.html">tomodrgn.commands.train_nn.main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.train_nn.save_checkpoint.html">tomodrgn.commands.train_nn.save_checkpoint</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.train_nn.train_batch.html">tomodrgn.commands.train_nn.train_batch</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.commands.train_vae.html">tomodrgn.commands.train_vae</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.train_vae.add_args.html">tomodrgn.commands.train_vae.add_args</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.train_vae.decode_batch.html">tomodrgn.commands.train_vae.decode_batch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.train_vae.encode_batch.html">tomodrgn.commands.train_vae.encode_batch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.train_vae.encoder_inference.html">tomodrgn.commands.train_vae.encoder_inference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.train_vae.loss_function.html">tomodrgn.commands.train_vae.loss_function</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.train_vae.main.html">tomodrgn.commands.train_vae.main</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.train_vae.preprocess_batch.html">tomodrgn.commands.train_vae.preprocess_batch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.train_vae.save_checkpoint.html">tomodrgn.commands.train_vae.save_checkpoint</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.train_vae.train_batch.html">tomodrgn.commands.train_vae.train_batch</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tomodrgn.commands.view_config.html">tomodrgn.commands.view_config</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.view_config.add_args.html">tomodrgn.commands.view_config.add_args</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tomodrgn.commands.view_config.main.html">tomodrgn.commands.view_config.main</a></li>
+</ul>
+</details></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">API Reference</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="tomodrgn.analysis.html" class="nav-link">tomodrgn.analysis</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">tomodrgn.analysis.parse_loss</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="tomodrgn-analysis-parse-loss">
+<h1>tomodrgn.analysis.parse_loss<a class="headerlink" href="#tomodrgn-analysis-parse-loss" title="Link to this heading">#</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="tomodrgn.analysis.parse_loss">
+<span class="sig-name descname"><span class="pre">parse_loss</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">run_log</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="../../_modules/tomodrgn/analysis.html#parse_loss"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#tomodrgn.analysis.parse_loss" title="Link to this definition">#</a></dt>
+<dd><p>Parse total loss at each epoch from run.log output.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>run_log</strong> – Path to run.log output file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>array of total loss at each epoch.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="tomodrgn.analysis.parse_all_losses.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">tomodrgn.analysis.parse_all_losses</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="tomodrgn.analysis.plot_by_cluster.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">tomodrgn.analysis.plot_by_cluster</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tomodrgn.analysis.parse_loss"><code class="docutils literal notranslate"><span class="pre">parse_loss()</span></code></a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../../_sources/api/_autosummary/tomodrgn.analysis.parse_loss.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, Barrett M Powell, Joseph H Davis.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

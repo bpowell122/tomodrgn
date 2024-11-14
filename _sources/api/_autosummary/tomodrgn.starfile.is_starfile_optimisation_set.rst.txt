@@ -1,0 +1,6 @@
+﻿tomodrgn.starfile.is\_starfile\_optimisation\_set
+=================================================
+
+.. currentmodule:: tomodrgn.starfile
+
+.. autofunction:: is_starfile_optimisation_set

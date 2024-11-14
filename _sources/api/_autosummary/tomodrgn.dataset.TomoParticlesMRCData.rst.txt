@@ -1,0 +1,27 @@
+﻿tomodrgn.dataset.TomoParticlesMRCData
+=====================================
+
+.. currentmodule:: tomodrgn.dataset
+
+.. autoclass:: TomoParticlesMRCData
+   :members:
+   :show-inheritance:
+   :inherited-members:
+   :special-members: __call__, __add__, __mul__
+
+   
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :nosignatures:
+   
+      ~TomoParticlesMRCData.get
+      ~TomoParticlesMRCData.lazy_particles_estimate_normalization
+      ~TomoParticlesMRCData.load
+   
+   
+
+   
+   
+   

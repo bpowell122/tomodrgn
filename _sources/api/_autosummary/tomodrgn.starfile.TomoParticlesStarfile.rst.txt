@@ -1,0 +1,43 @@
+﻿tomodrgn.starfile.TomoParticlesStarfile
+=======================================
+
+.. currentmodule:: tomodrgn.starfile
+
+.. autoclass:: TomoParticlesStarfile
+   :members:
+   :show-inheritance:
+   :inherited-members:
+   :special-members: __call__, __add__, __mul__
+
+   
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+      :nosignatures:
+   
+      ~TomoParticlesStarfile.filter
+      ~TomoParticlesStarfile.get_image_size
+      ~TomoParticlesStarfile.get_particles_stack
+      ~TomoParticlesStarfile.get_ptcl_img_indices
+      ~TomoParticlesStarfile.get_tiltseries_pixelsize
+      ~TomoParticlesStarfile.get_tiltseries_voltage
+      ~TomoParticlesStarfile.identify_particles_data_block
+      ~TomoParticlesStarfile.make_test_train_split
+      ~TomoParticlesStarfile.plot_particle_uid_ntilt_distribution
+      ~TomoParticlesStarfile.write
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~TomoParticlesStarfile.df
+      ~TomoParticlesStarfile.headers_ctf
+      ~TomoParticlesStarfile.headers_rot
+      ~TomoParticlesStarfile.headers_trans
+   
+   

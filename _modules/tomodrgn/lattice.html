@@ -1,0 +1,698 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tomodrgn.lattice &#8212; tomoDRGN 0.2.3.dev328 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!-- 
+    this give us a css class that will be invisible only if js is disabled 
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../_static/scripts/fontawesome.js?digest=26a4bc78f4c0ddb94549"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549" />
+
+    <script src="../../_static/documentation_options.js?v=d6c7774d"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/tomodrgn/lattice';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">tomoDRGN v0.2.3.dev328</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../overview/index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../command_usage/index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../overview/index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../command_usage/index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">tomodrgn.lattice</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for tomodrgn.lattice</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Classes and functions for interfacing with 2-D voxel grids representing a lattice of voxel coordinates.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
+
+
+<div class="viewcode-block" id="Lattice">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.lattice.Lattice.html#tomodrgn.lattice.Lattice">[docs]</a>
+<span class="k">class</span> <span class="nc">Lattice</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">boxsize</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">extent</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+                 <span class="n">ignore_dc</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                 <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Class for handling a 2-D voxel grid with an odd number of points along each dimension.</span>
+<span class="sd">        Grid is centered at `(0,0)` and runs from `-extent` to `+extent` with `boxsize` points.</span>
+<span class="sd">        Frequently used to in the context of a symmetrized Hartley transform in units of 1/px where DC is at the center of the lattice.</span>
+
+<span class="sd">        :param boxsize: number of grid points along each dimension. Should be odd.</span>
+<span class="sd">        :param extent: maximum value of the grid along each dimension, typically &lt;= 0.5</span>
+<span class="sd">        :param ignore_dc: whether to exclude the DC component (0, 0) when generating masks via methods of this class.</span>
+<span class="sd">        :param device: torch device on which to store tensor attributes and return tensors from methods of this class.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># sanity check inputs</span>
+        <span class="k">assert</span> <span class="n">boxsize</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Lattice size must be odd&quot;</span>
+
+        <span class="c1"># create the lattice of 2-D points along the X-Y plane in 3-D space</span>
+        <span class="n">x0</span><span class="p">,</span> <span class="n">x1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">extent</span><span class="p">,</span> <span class="n">extent</span><span class="p">,</span> <span class="n">boxsize</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                             <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">extent</span><span class="p">,</span> <span class="n">extent</span><span class="p">,</span> <span class="n">boxsize</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+        <span class="n">coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">x0</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">x1</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">boxsize</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)],</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coords</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="c1"># additional attributes about the lattice</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extent</span> <span class="o">=</span> <span class="n">extent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">boxsize</span> <span class="o">=</span> <span class="n">boxsize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">boxcenter</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">boxsize</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># coords center in 0-indexed space, boxsize=65 should give boxcenter of 32</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">center</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>  <span class="c1"># coords center in coordinate space</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ignore_dc</span> <span class="o">=</span> <span class="n">ignore_dc</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span>
+
+        <span class="c1"># create dictionaries to cache computation of masks with given radius / sidelength</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">square_mask</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">circle_mask</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># precalculate values used each time we compute the CTF for an image</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">freqs2d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coords</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">extent</span> <span class="o">/</span> <span class="mi">2</span>  <span class="c1"># spatial frequencies at each lattice point normalized to scale from -0.5 to 0.5 (Nyquist)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">freqs2d_s2</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">freqs2d</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">freqs2d</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># spatial frequency magnitude at each lattice point, dim0 and dim1 of length 1 for broadcasting</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">freqs2d_angle</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">atan2</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">freqs2d</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">freqs2d</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># spatial frequency angle from x axis at each lattice point</span>
+
+<div class="viewcode-block" id="Lattice.get_downsample_coords">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.lattice.Lattice.html#tomodrgn.lattice.Lattice.get_downsample_coords">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_downsample_coords</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                              <span class="n">boxsize_new</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a 2-D lattice of coordinates representing a downsampled (fourier-cropped) copy of the original lattice.</span>
+
+<span class="sd">        :param boxsize_new: number of grid points along each dimension in the downsampled lattice. Should be odd.</span>
+<span class="sd">        :return: coordinates of the downsampled lattice, shape (boxsize_new ** 2, 3)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># sanity check inputs</span>
+        <span class="k">assert</span> <span class="n">boxsize_new</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="k">assert</span> <span class="n">boxsize_new</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">boxsize</span>
+
+        <span class="c1"># calculate the range of the original lattice to keep after cropping</span>
+        <span class="n">ind_low</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">boxcenter</span> <span class="o">-</span> <span class="n">boxsize_new</span> <span class="o">//</span> <span class="mi">2</span>
+        <span class="n">ind_high</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">boxcenter</span> <span class="o">+</span> <span class="n">boxsize_new</span> <span class="o">//</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="c1"># crop the lattice</span>
+        <span class="n">downsample_coords</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coords</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">boxsize</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">boxsize</span><span class="p">,</span> <span class="mi">3</span><span class="p">)[</span><span class="n">ind_low</span><span class="p">:</span><span class="n">ind_high</span><span class="p">,</span> <span class="n">ind_low</span><span class="p">:</span> <span class="n">ind_high</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">contiguous</span><span class="p">()</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">downsample_coords</span></div>
+
+
+<div class="viewcode-block" id="Lattice.get_square_mask">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.lattice.Lattice.html#tomodrgn.lattice.Lattice.get_square_mask">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_square_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                        <span class="n">sidelength</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a binary mask for self.coords which restricts coordinates to a centered square lattice</span>
+
+<span class="sd">        :param sidelength: number of grid points to include in the mask along each dimension</span>
+<span class="sd">        :return: binary mask, shape (lattice.boxsize ** 2)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># return precomputed result if cached</span>
+        <span class="k">if</span> <span class="n">sidelength</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">square_mask</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">square_mask</span><span class="p">[</span><span class="n">sidelength</span><span class="p">]</span>
+
+        <span class="c1"># sanity check inputs</span>
+        <span class="k">assert</span> <span class="n">sidelength</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">boxsize</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;Square mask with side length (</span><span class="si">{</span><span class="n">sidelength</span><span class="si">=}</span><span class="s1">) too large for lattice with size </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">boxsize</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="k">assert</span> <span class="n">sidelength</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;Square mask with side length (</span><span class="si">{</span><span class="n">sidelength</span><span class="si">=}</span><span class="s1">) must be an odd integer to be centered on odd-length lattice&#39;</span>
+
+        <span class="c1"># calculate the range of the original lattice to keep after masking</span>
+        <span class="n">ind_low</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">boxcenter</span> <span class="o">-</span> <span class="n">sidelength</span> <span class="o">//</span> <span class="mi">2</span>
+        <span class="n">ind_high</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">boxcenter</span> <span class="o">+</span> <span class="n">sidelength</span> <span class="o">//</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="c1"># create the mask as a flattened array</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">boxsize</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">boxsize</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">mask</span><span class="p">[:,</span> <span class="p">:</span><span class="n">ind_low</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">mask</span><span class="p">[:,</span> <span class="n">ind_high</span><span class="p">:]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">mask</span><span class="p">[:</span><span class="n">ind_low</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">mask</span><span class="p">[</span><span class="n">ind_high</span><span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># ignore the DC coordinate which is the center in the coords array</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_dc</span><span class="p">:</span>
+            <span class="n">ind_dc_flattened_coords</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">boxsize</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">//</span> <span class="mi">2</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="n">ind_dc_flattened_coords</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">==</span> <span class="mf">0.0</span>
+            <span class="n">mask</span><span class="p">[</span><span class="n">ind_dc_flattened_coords</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># cache the result</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">square_mask</span><span class="p">[</span><span class="n">sidelength</span><span class="p">]</span> <span class="o">=</span> <span class="n">mask</span>
+
+        <span class="k">return</span> <span class="n">mask</span></div>
+
+
+<div class="viewcode-block" id="Lattice.get_circular_mask">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.lattice.Lattice.html#tomodrgn.lattice.Lattice.get_circular_mask">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_circular_mask</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                          <span class="n">diameter</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a binary mask for self.coords which restricts coordinates to a centered circular lattice</span>
+
+<span class="sd">        :param diameter: number of grid points to include in the mask along each dimension</span>
+<span class="sd">        :return: binary mask, shape (lattice.boxsize ** 2)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># return precomputed result if cached</span>
+        <span class="k">if</span> <span class="n">diameter</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">circle_mask</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">circle_mask</span><span class="p">[</span><span class="n">diameter</span><span class="p">]</span>
+
+        <span class="c1"># sanity check inputs</span>
+        <span class="k">assert</span> <span class="n">diameter</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">boxsize</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;Circular mask with diameter </span><span class="si">{</span><span class="n">diameter</span><span class="si">}</span><span class="s1"> too large for lattice with size </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">boxsize</span><span class="si">}</span><span class="s1">&#39;</span>
+
+        <span class="c1"># calculate the range of the original lattice to keep after masking</span>
+        <span class="n">mask_radius</span> <span class="o">=</span> <span class="p">((</span><span class="n">diameter</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">extent</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">boxcenter</span><span class="p">)</span>
+
+        <span class="c1"># create the mask as a flattened array</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coords</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">mask_radius</span> <span class="o">**</span> <span class="mi">2</span>
+
+        <span class="c1"># ignore the DC coordinate which is the center in the coords array</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_dc</span><span class="p">:</span>
+            <span class="n">ind_dc_flattened_coords</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">boxsize</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">//</span> <span class="mi">2</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="n">ind_dc_flattened_coords</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">==</span> <span class="mf">0.0</span>
+            <span class="n">mask</span><span class="p">[</span><span class="n">ind_dc_flattened_coords</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># cache the result</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">circle_mask</span><span class="p">[</span><span class="n">diameter</span><span class="p">]</span> <span class="o">=</span> <span class="n">mask</span>
+
+        <span class="k">return</span> <span class="n">mask</span></div>
+
+
+<div class="viewcode-block" id="Lattice.rotate">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.lattice.Lattice.html#tomodrgn.lattice.Lattice.rotate">[docs]</a>
+    <span class="k">def</span> <span class="nf">rotate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+               <span class="n">images</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+               <span class="n">theta</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Resample a stack of images on the lattice grid rotated in-plane counterclockwise by a batch of theta angles.</span>
+
+<span class="sd">        :param images: stack of images to rotate, shape (B,Y,X)</span>
+<span class="sd">        :param theta: batch of angles in radians, shape (Q)</span>
+<span class="sd">        :return: rotated images, shape (B,Q,Y,X)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># prepare the (transposed) rotation matrix for multiplication from the right</span>
+        <span class="n">cos</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
+        <span class="n">sin</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
+        <span class="n">rot</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">cos</span><span class="p">,</span> <span class="n">sin</span><span class="p">,</span> <span class="o">-</span><span class="n">sin</span><span class="p">,</span> <span class="n">cos</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="c1"># rotate all lattice points counterclockwise by theta radians</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coords</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span> <span class="o">@</span> <span class="n">rot</span>  <span class="c1"># shape (Q, Y*X, 2)</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">rot</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">boxsize</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">boxsize</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># shape (Q, Y, X, 2)</span>
+
+        <span class="c1"># correct for translational offsets</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">center</span> <span class="o">-</span> <span class="n">grid</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">boxcenter</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">boxcenter</span><span class="p">]</span>  <span class="c1"># shape (Q, 2)</span>
+        <span class="n">grid</span> <span class="o">+=</span> <span class="n">offset</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:]</span>
+
+        <span class="c1"># resample the images on the rotated grids</span>
+        <span class="n">images</span> <span class="o">=</span> <span class="n">images</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">theta</span><span class="p">),</span> <span class="o">*</span><span class="n">images</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>  <span class="c1"># shape (Q, B, Y, X)</span>
+        <span class="c1"># use &quot;border&quot; padding rather than &quot;0&quot; padding to avoid introducing abrupt level transitions for grid corners that are rotated out of input range (-1, 1)</span>
+        <span class="n">rotated</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">grid_sample</span><span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">padding_mode</span><span class="o">=</span><span class="s1">&#39;border&#39;</span><span class="p">)</span>  <span class="c1"># shape (Q, B, Y, X)</span>
+
+        <span class="k">return</span> <span class="n">rotated</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># shape (B, Q, Y, X)</span></div>
+
+
+<div class="viewcode-block" id="Lattice.translate_ft">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.lattice.Lattice.html#tomodrgn.lattice.Lattice.translate_ft">[docs]</a>
+    <span class="k">def</span> <span class="nf">translate_ft</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                     <span class="n">images</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                     <span class="n">trans</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                     <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Translate an image by phase shifting its Fourier transform.</span>
+<span class="sd">        `F&#39;(k) = exp(-2*pi*k*x0)*F(k)`</span>
+<span class="sd">        Note: shape img_dims below can either be 2D or 1D (unraveled image)</span>
+
+<span class="sd">        :param images: fourier transform of image, shape (B, img_dims, 2)</span>
+<span class="sd">        :param trans: shift in pixels, shape (B, T, 2)</span>
+<span class="sd">        :param mask: optional mask for lattice coords (img_dims, 1)</span>
+<span class="sd">        :return: translated images, shape (B, T, img_dims, 2)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># if input images are masked, the same mask must be applied to associated grid coordinates</span>
+        <span class="n">coords</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">freqs2d</span> <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">freqs2d</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+
+        <span class="c1"># apply the translations to the grid coordinates via batched matrix multiplication of the translation matrices</span>
+        <span class="n">trans</span> <span class="o">=</span> <span class="n">trans</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># BxTx2x1 to be able to do bmm</span>
+        <span class="n">tfilt</span> <span class="o">=</span> <span class="n">coords</span> <span class="o">@</span> <span class="n">trans</span> <span class="o">*</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>  <span class="c1"># BxTxNx1</span>
+        <span class="n">tfilt</span> <span class="o">=</span> <span class="n">tfilt</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># BxTxN</span>
+
+        <span class="c1"># calculate and apply phase shift to the images</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">tfilt</span><span class="p">)</span>  <span class="c1"># BxTxN</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">tfilt</span><span class="p">)</span>  <span class="c1"># BxTxN</span>
+        <span class="n">images_flattened</span> <span class="o">=</span> <span class="n">images</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># Bx1xNx2</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">images_flattened</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">c</span> <span class="o">-</span> <span class="n">images_flattened</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">s</span><span class="p">,</span>
+                            <span class="n">images_flattened</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">s</span> <span class="o">+</span> <span class="n">images_flattened</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">c</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Lattice.translate_ht">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.lattice.Lattice.html#tomodrgn.lattice.Lattice.translate_ht">[docs]</a>
+    <span class="k">def</span> <span class="nf">translate_ht</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                     <span class="n">images</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                     <span class="n">trans</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                     <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Translate an image by phase shifting its Hartley transform</span>
+<span class="sd">        `H&#39;(k) = cos(2*pi*k*t0)H(k) + sin(2*pi*k*t0)H(-k)`</span>
+<span class="sd">        img must be 1D unraveled image, symmetric around DC component</span>
+
+<span class="sd">        :param images: hartley transform of image, shape (B, boxsize_ht)</span>
+<span class="sd">        :param trans: shift in pixels, shape (B, T, 2)</span>
+<span class="sd">        :param mask: mask for lattice coords, shape (boxsize_ht, 1)</span>
+<span class="sd">        :return: translated images, shape (B, T, boxsize_ht**2)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># if input images are masked, the same mask must be applied to associated grid coordinates</span>
+        <span class="n">coords</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">freqs2d</span> <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">freqs2d</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+
+        <span class="c1"># apply the translations to the grid coordinates via batched matrix multiplication of the translation matrices</span>
+        <span class="n">trans</span> <span class="o">=</span> <span class="n">trans</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># BxTx2x1 to be able to do bmm</span>
+        <span class="n">tfilt</span> <span class="o">=</span> <span class="n">coords</span> <span class="o">@</span> <span class="n">trans</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>  <span class="c1"># BxTxNx1</span>
+        <span class="n">tfilt</span> <span class="o">=</span> <span class="n">tfilt</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># BxTxN</span>
+
+        <span class="c1"># calculate and apply phase shift to the images</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">tfilt</span><span class="p">)</span>  <span class="c1"># BxTxN</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">tfilt</span><span class="p">)</span>  <span class="c1"># BxTxN</span>
+        <span class="n">images</span> <span class="o">=</span> <span class="n">images</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># Bx1xN</span>
+        <span class="k">return</span> <span class="n">c</span> <span class="o">*</span> <span class="n">images</span> <span class="o">+</span> <span class="n">s</span> <span class="o">*</span> <span class="n">images</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)]</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="EvenLattice">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.lattice.EvenLattice.html#tomodrgn.lattice.EvenLattice">[docs]</a>
+<span class="k">class</span> <span class="nc">EvenLattice</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">boxsize</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">extent</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+                 <span class="n">ignore_dc</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                 <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Class for handling a 2-D voxel grid with an even number of points along each dimension.</span>
+<span class="sd">        Grid is centered at `(0,0)` and runs from `-extent` (inclusive) to `+extent` (exclusive) with `boxsize` points.</span>
+
+<span class="sd">        :param boxsize: number of grid points along each dimension. Should be even.</span>
+<span class="sd">        :param extent: maximum value of the grid along each dimension, typically &lt;= 0.5</span>
+<span class="sd">        :param ignore_dc: whether to exclude the DC component (0, 0) when generating masks via methods of this class.</span>
+<span class="sd">        :param device: torch device on which to store tensor attributes and return tensors from methods of this class.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># sanity check inputs</span>
+        <span class="k">assert</span> <span class="n">boxsize</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;Lattice size must be even&quot;</span>
+        <span class="k">if</span> <span class="n">ignore_dc</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+
+        <span class="c1"># create the lattice of 2-D points along the X-Y plane in 3-D space</span>
+        <span class="c1"># centered and scaled xy plane, values between -1 and 1</span>
+        <span class="c1"># endpoint=False since FT is not symmetric around origin</span>
+        <span class="n">x0</span><span class="p">,</span> <span class="n">x1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">boxsize</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+                             <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">boxsize</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+        <span class="n">coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">x0</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">x1</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">boxsize</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)],</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coords</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="c1"># additional attributes about the lattice</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extent</span> <span class="o">=</span> <span class="n">extent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">boxsize</span> <span class="o">=</span> <span class="n">boxsize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">boxcenter</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">boxsize</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># coords center in 0-indexed space, boxsize=64 should give boxcenter of 32</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">center</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>  <span class="c1"># coords center in coordinate space</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ignore_dc</span> <span class="o">=</span> <span class="n">ignore_dc</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span>
+
+        <span class="c1"># create dictionaries to cache computation of masks with given radius / sidelength</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">square_mask</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">circle_mask</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="nf">get_downsampled_coords</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, Barrett M Powell, Joseph H Davis.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

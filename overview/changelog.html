@@ -1,0 +1,587 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Changelog &#8212; tomoDRGN 0.2.3.dev328 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!-- 
+    this give us a css class that will be invisible only if js is disabled 
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=26a4bc78f4c0ddb94549"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549" />
+
+    <script src="../_static/documentation_options.js?v=d6c7774d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'overview/changelog';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Tutorial: EMPIAR-10499 70S ribosomes" href="../tutorials/index.html" />
+    <link rel="prev" title="Optional: build documentation" href="build_documentation.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">tomoDRGN v0.2.3.dev328</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../command_usage/index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../command_usage/index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="run_tests.html">Optional: run tests</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build_documentation.html">Optional: build documentation</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Changelog</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Overview</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Changelog</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="changelog">
+<h1>Changelog<a class="headerlink" href="#changelog" title="Link to this heading">#</a></h1>
+<section id="v1-0-0">
+<h2>v1.0.0<a class="headerlink" href="#v1-0-0" title="Link to this heading">#</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This release introduces breaking changes.
+Models trained using older versions of tomoDRGN are not compatible with this release; new models should be trained instead.
+Models trained using this release of tomoDRGN are not compatible with the older versions of tomoDRGN; the latest tomoDRGN version should be used instead.</p>
+</div>
+<p>Major release! Expanded upstream software compatibility, added documentation and tutorials, new analyses and plots, improved performance, reduced bugs, and more.</p>
+<ul class="simple">
+<li><p>New features</p>
+<ul>
+<li><p>Added compatibility with upstream STA software: NextPYP and WarpTools (including metadata formats and float16 images)</p></li>
+<li><p>Added documentation, including software overview, installation guide, function API, script usage and common next steps / pitfalls, and tutorials</p></li>
+<li><p>Added end-to-end test suites for toy datasets from different upstream STA software (<code class="docutils literal notranslate"><span class="pre">tomodrgn/testing/commandtest*.py</span></code>)</p></li>
+<li><p>Added a new <code class="docutils literal notranslate"><span class="pre">tomodrgn</span> <span class="pre">analyze_volumes</span></code> command to perform analysis of a volume ensemble in real space (complementary to latent space analysis with <code class="docutils literal notranslate"><span class="pre">tomodrgn</span> <span class="pre">analyze</span></code>)</p></li>
+<li><p>Added a new jupyter notebook template that is streamlined to interactive analysis of (1) dataset-wide property correlations via 2-D scatter plot, and (2) per-tomogram spatially contextualized properties via 3-D scatter plot and optional tomogram overlay</p></li>
+</ul>
+</li>
+<li><p>Changes</p>
+<ul>
+<li><p>Simplified installation process, and removed some dependencies</p></li>
+<li><p>Faster and more flexible star file parsing and dataset loading</p></li>
+<li><p>Faster and lower memory dataset processing and model training / inference</p></li>
+<li><p>Standardized and expanded set of static plots generated by <code class="docutils literal notranslate"><span class="pre">tomodrgn</span> <span class="pre">analyze</span></code> and <code class="docutils literal notranslate"><span class="pre">tomodrgn</span> <span class="pre">analyze_volumes</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tomodrgn</span> <span class="pre">filter_star</span></code> now supports directly passing a list of selected classes and the per-particle class labels</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tomodrgn</span> <span class="pre">subtomo2chimerax</span></code> now automatically evaluates the trained tomoDRGN model to produce required volumes for the specified tomogram(s)</p></li>
+<li><p>Refactored the full analysis jupyter notebook template to and renamed to _legacy</p></li>
+<li><p>Volume generation via model decoding now uses a <code class="docutils literal notranslate"><span class="pre">models.VolumeGenerator</span></code> instance instead of subprocess calls to <code class="docutils literal notranslate"><span class="pre">tomodrgn</span> <span class="pre">eval_vol</span></code> for faster and more robust execution</p></li>
+<li><p>Updated dependency compatibility (python &gt;= 3.10, pytorch &gt;= 2.3, numpy &lt; 2.0)</p></li>
+<li><p>Uniform command options and reasonable defaults across different scripts</p></li>
+<li><p>Consolidated redundant code and removed unused code</p></li>
+</ul>
+</li>
+<li><p>Bugfixes</p>
+<ul>
+<li><p>Many! And probably also introduced many bugs at the same time. Please let us know if you come across a potential bug by filing an issue on Github</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="v0-2-1">
+<h2>v0.2.1<a class="headerlink" href="#v0-2-1" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>New features</p>
+<ul>
+<li><p>Added <code class="docutils literal notranslate"><span class="pre">--dose-override</span></code> option when loading images to manually specify dose in e-/A2/image</p></li>
+<li><p>Added <code class="docutils literal notranslate"><span class="pre">--starfile-source</span></code> option to <code class="docutils literal notranslate"><span class="pre">filter_star.py</span></code> to allow filtering RELION3.1-format star files from RELION</p></li>
+<li><p>Added <code class="docutils literal notranslate"><span class="pre">--write-tiltseries-starfile</span></code> option to <code class="docutils literal notranslate"><span class="pre">downsample.py</span></code> to write RELION3.0-format star file to downsampled images</p></li>
+<li><p>Added multiple options for pooling tilt images between <code class="docutils literal notranslate"><span class="pre">train_vae.py</span></code> encoder A and encoder B per particle</p></li>
+<li><p>Exposed pytorch dataloader options to user in <code class="docutils literal notranslate"><span class="pre">train_vae.py</span></code>, <code class="docutils literal notranslate"><span class="pre">train_nn.py</span></code>, <code class="docutils literal notranslate"><span class="pre">eval_images.py</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">convergence_nn.py</span></code> saves FSCs calculated per epoch to pkl file</p></li>
+<li><p>Added <code class="docutils literal notranslate"><span class="pre">--batch-size</span></code> to <code class="docutils literal notranslate"><span class="pre">eval_vol.py</span></code> calling parallelized <code class="docutils literal notranslate"><span class="pre">models.FTPositionalDecoder.gen_volume_batch</span></code> for accelerated volume generation</p></li>
+<li><p>Added <code class="docutils literal notranslate"><span class="pre">--vol-path</span></code> to <code class="docutils literal notranslate"><span class="pre">subtomo2chimerax.py</span></code> allowing use of consensus reconstruction instead of unique tomodrgn volumes</p></li>
+<li><p>Added new <code class="docutils literal notranslate"><span class="pre">quicktest.py</span></code> and <code class="docutils literal notranslate"><span class="pre">unittest.py</span></code> interface</p></li>
+<li><p>Added <code class="docutils literal notranslate"><span class="pre">load</span></code> method using <code class="docutils literal notranslate"><span class="pre">config.pkl</span></code> file to easily create <code class="docutils literal notranslate"><span class="pre">dataset.TiltSeriesMRCData</span></code> object</p></li>
+</ul>
+</li>
+<li><p>Changes</p>
+<ul>
+<li><p>Faster dataset loading with improved file I/O</p></li>
+<li><p>Dataset preprocessing refactored to numpy arrays</p></li>
+<li><p>Decreased memory utilization in <code class="docutils literal notranslate"><span class="pre">dataset.TiltSeriesMRCData</span></code> preprocessing</p></li>
+<li><p>Decreased memory utilization in <code class="docutils literal notranslate"><span class="pre">starfile.TiltSeriesStarfile</span></code> initialization</p></li>
+<li><p>Decreased memory utilization by gaussian positional encoding</p></li>
+<li><p>Changed default positional encoding to <code class="docutils literal notranslate"><span class="pre">gaussian</span></code></p></li>
+<li><p>Changed default latent dimensionality to <code class="docutils literal notranslate"><span class="pre">--zdim</span> <span class="pre">128</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">train_vae.py</span></code> checks for NaN/inf during checkpoint evaluation</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">utils.calc_fsc</span></code> allows input volumes to be either paths to .mrc files or direct numpy arrays</p></li>
+<li><p>New plots in <code class="docutils literal notranslate"><span class="pre">convergence_vae.py</span></code> including all loss types, all-to-all volumetric correlation coefficients among tomodrgn (and optionally ground truth) volumes</p></li>
+<li><p>Changed default <code class="docutils literal notranslate"><span class="pre">subtomo2chimerax.py</span></code> color map to ChimeraX color scheme</p></li>
+<li><p>Added requirement for pytorch&gt;=1.11</p></li>
+</ul>
+</li>
+<li><p>Bugfixes</p>
+<ul>
+<li><p>Fixed syntax of internal calls to <code class="docutils literal notranslate"><span class="pre">eval_vol.py</span></code></p></li>
+<li><p>Fixed dataset index filtering of pre-filtered datasets</p></li>
+<li><p>Added assert for convergence scripts that requisite input files exist</p></li>
+<li><p>Fixed bug where <code class="docutils literal notranslate"><span class="pre">config.pkl</span></code> containing CUDA tensors could not be loaded on cpu</p></li>
+<li><p>Fixed bug where precalculated <code class="docutils literal notranslate"><span class="pre">norm</span></code> would be ignored when loading dataset from <code class="docutils literal notranslate"><span class="pre">config.pkl</span></code> with <code class="docutils literal notranslate"><span class="pre">--lazy</span></code></p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="v0-2-0">
+<h2>v0.2.0<a class="headerlink" href="#v0-2-0" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>Features</p>
+<ul>
+<li><p>added support for datasets with variable tilts per tomogram (tilt counts/schemes/etc)</p></li>
+<li><p>new scripts <code class="docutils literal notranslate"><span class="pre">subtomo2chimerax</span></code> and <code class="docutils literal notranslate"><span class="pre">filter_star</span></code></p></li>
+<li><p>additional features and checks in <code class="docutils literal notranslate"><span class="pre">tomoDRGN_viz+filt.ipynb</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">eval_images</span></code> supports <code class="docutils literal notranslate"><span class="pre">z.pkl</span></code> output; <code class="docutils literal notranslate"><span class="pre">eval_vol</span></code> supports <code class="docutils literal notranslate"><span class="pre">z.pkl</span></code> input</p></li>
+<li><p>new tests <code class="docutils literal notranslate"><span class="pre">unittest.sh</span></code> and <code class="docutils literal notranslate"><span class="pre">quicktest.sh</span></code></p></li>
+<li><p>validated compatibility with python 3.7 - 3.10 and pytorch 1.8 - 1.12</p></li>
+</ul>
+</li>
+<li><p>Changes</p>
+<ul>
+<li><p>refactored the majority of codebase for explicit internal tomoDRGN compatibility and some performance improvements</p></li>
+<li><p>updated tomoDRGN install requirements and changed to <code class="docutils literal notranslate"><span class="pre">pip</span></code>-based installation</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--amp</span></code> is now enabled by default and can be disabled with <code class="docutils literal notranslate"><span class="pre">--no-amp</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--do-dose-weighting</span></code>, <code class="docutils literal notranslate"><span class="pre">--do-tilt-weighting</span></code>, <code class="docutils literal notranslate"><span class="pre">--dose-mask</span></code> have been renamed to <code class="docutils literal notranslate"><span class="pre">--recon-dose-weight</span></code>, <code class="docutils literal notranslate"><span class="pre">--recon-tilt-weight</span></code>, <code class="docutils literal notranslate"><span class="pre">--l-dose-mask</span></code>, respectively</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">tomodrgn</span> <span class="pre">downsample</span></code> now benefits from pytorch-based GPU acceleration</p></li>
+<li><p>updated training hyperparameter defaults</p></li>
+<li><p>(many) various bugfixes</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="v0-1-0">
+<h2>v0.1.0<a class="headerlink" href="#v0-1-0" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>initial tomoDRGN release</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="build_documentation.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Optional: build documentation</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../tutorials/index.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Tutorial: EMPIAR-10499 70S ribosomes</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#v1-0-0">v1.0.0</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#v0-2-1">v0.2.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#v0-2-0">v0.2.0</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#v0-1-0">v0.1.0</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/overview/changelog.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, Barrett M Powell, Joseph H Davis.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,1157 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tomodrgn.utils &#8212; tomoDRGN 0.2.3.dev328 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!-- 
+    this give us a css class that will be invisible only if js is disabled 
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../_static/scripts/fontawesome.js?digest=26a4bc78f4c0ddb94549"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549" />
+
+    <script src="../../_static/documentation_options.js?v=d6c7774d"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/tomodrgn/utils';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">tomoDRGN v0.2.3.dev328</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../overview/index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../command_usage/index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../overview/index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../command_usage/index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">tomodrgn.utils</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for tomodrgn.utils</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Common utility functions pertaining to both data processing and script execution</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">collections</span>
+<span class="kn">import</span> <span class="nn">functools</span>
+<span class="kn">import</span> <span class="nn">glob</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span> <span class="k">as</span> <span class="n">dt</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">ndimage</span>
+<span class="kn">from</span> <span class="nn">scipy.spatial.transform</span> <span class="kn">import</span> <span class="n">Rotation</span>
+
+<span class="kn">from</span> <span class="nn">tomodrgn</span> <span class="kn">import</span> <span class="n">mrc</span><span class="p">,</span> <span class="n">fft</span>
+
+<span class="n">_verbose</span> <span class="o">=</span> <span class="kc">False</span>
+
+
+<div class="viewcode-block" id="prefix_paths">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.prefix_paths.html#tomodrgn.utils.prefix_paths">[docs]</a>
+<span class="k">def</span> <span class="nf">prefix_paths</span><span class="p">(</span><span class="n">mrcs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+                 <span class="n">datadir</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Test which of various modifications to the image .mrcs files correctly locates the files on disk.</span>
+<span class="sd">    Tries no modification; prepending `datadir` to the basename of each image; prepending `datadir` to the full path of each image.</span>
+
+<span class="sd">    :param mrcs: list of strings corresponding to the path to each image file specified in the star file (expected format: the `path_to_mrc` part of `index@path_to_mrc`)</span>
+<span class="sd">    :param datadir: str corresponding to absolute or relative path to prepend to `mrcs`</span>
+<span class="sd">    :return: list of strings corresponding to the confirmed path to each image file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">filename_patterns</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">mrcs</span><span class="p">,</span>
+        <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">datadir</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">mrcs</span><span class="p">],</span>
+        <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">datadir</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">mrcs</span><span class="p">],</span>
+        <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">datadir</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">x</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">x</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">mrcs</span><span class="p">]</span>
+    <span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">filename_pattern</span> <span class="ow">in</span> <span class="n">filename_patterns</span><span class="p">:</span>
+        <span class="c1"># loop through all defined filename patterns</span>
+        <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">filename_pattern</span><span class="p">):</span>
+            <span class="c1"># loop through all non-redundant files</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+                <span class="c1"># the moment any file is not found with this filename pattern, we can stop trying this pattern</span>
+                <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># all files have been found with this filename pattern</span>
+            <span class="k">return</span> <span class="n">filename_pattern</span>
+
+    <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Not all files (or possibly no files) could be found using any of the filename patterns: </span><span class="si">{</span><span class="p">[</span><span class="n">filename_pattern</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">filename_pattern</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">filename_patterns</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="log">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.log.html#tomodrgn.utils.log">[docs]</a>
+<span class="k">def</span> <span class="nf">log</span><span class="p">(</span><span class="n">msg</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Write a string to STDOUT with a standardized datetime format.</span>
+
+<span class="sd">    :param msg: Text to write to STDOUT.</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">     </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1"> %H:%M:%S&#39;</span><span class="p">),</span> <span class="n">msg</span><span class="p">))</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="vlog">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.vlog.html#tomodrgn.utils.vlog">[docs]</a>
+<span class="k">def</span> <span class="nf">vlog</span><span class="p">(</span><span class="n">msg</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Write a string to STDOUT with a standardized datetime format only if `_verbose` is True.</span>
+
+<span class="sd">    :param msg: Text to write to STDOUT.</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">_verbose</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">     </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1"> %H:%M:%S&#39;</span><span class="p">),</span> <span class="n">msg</span><span class="p">))</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="flog">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.flog.html#tomodrgn.utils.flog">[docs]</a>
+<span class="k">def</span> <span class="nf">flog</span><span class="p">(</span><span class="n">msg</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+         <span class="n">outfile</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Write a string to `outfile` with a standardized datetime format.</span>
+
+<span class="sd">    :param msg: Text to write to `outfile`.</span>
+<span class="sd">    :param outfile: Name of log file to write.</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">     </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1"> %H:%M:%S&#39;</span><span class="p">),</span> <span class="n">msg</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">outfile</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">msg</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">log</span><span class="p">(</span><span class="n">e</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="Memoized">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.Memoized.html#tomodrgn.utils.Memoized">[docs]</a>
+<span class="k">class</span> <span class="nc">Memoized</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Decorator. Caches a function&#39;s return value each time it is called.</span>
+<span class="sd">    If called later with the same arguments, the cached value is returned</span>
+<span class="sd">    (not reevaluated).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">func</span> <span class="o">=</span> <span class="n">func</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache</span> <span class="o">=</span> <span class="p">{}</span>
+
+<div class="viewcode-block" id="Memoized.__call__">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.Memoized.html#tomodrgn.utils.Memoized.__call__">[docs]</a>
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">collections</span><span class="o">.</span><span class="n">abc</span><span class="o">.</span><span class="n">Hashable</span><span class="p">):</span>
+            <span class="c1"># uncacheable. a list, for instance.</span>
+            <span class="c1"># better to not cache than blow up.</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">args</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">[</span><span class="n">args</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">[</span><span class="n">args</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+            <span class="k">return</span> <span class="n">value</span></div>
+
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the function&#39;s docstring.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="vm">__doc__</span>
+
+    <span class="k">def</span> <span class="fm">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">objtype</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Support instance methods.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="fm">__call__</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="load_pkl">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.load_pkl.html#tomodrgn.utils.load_pkl">[docs]</a>
+<span class="k">def</span> <span class="nf">load_pkl</span><span class="p">(</span><span class="n">pkl</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convenience function to read a binary pickle file.</span>
+<span class="sd">    Only performs one read of the pickle file (so will not return multiple values if the file was created with repeated calls to `pickle.dump`)</span>
+
+<span class="sd">    :param pkl: Path to file to load from disk.</span>
+<span class="sd">    :return: Unpickled object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">pkl</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">x</span></div>
+
+
+
+<div class="viewcode-block" id="save_pkl">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.save_pkl.html#tomodrgn.utils.save_pkl">[docs]</a>
+<span class="k">def</span> <span class="nf">save_pkl</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+             <span class="n">out_pkl</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convenience function to write `data` to a binary pickle file.</span>
+
+<span class="sd">    :param data: Data to be written to disk.</span>
+<span class="sd">    :param out_pkl: Path to file to write to disk.</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">out_pkl</span><span class="p">):</span>
+        <span class="n">vlog</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Warning: </span><span class="si">{</span><span class="n">out_pkl</span><span class="si">}</span><span class="s1"> already exists. Overwriting.&#39;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">out_pkl</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="rot_3d_from_eman">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.rot_3d_from_eman.html#tomodrgn.utils.rot_3d_from_eman">[docs]</a>
+<span class="k">def</span> <span class="nf">rot_3d_from_eman</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                     <span class="n">b</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                     <span class="n">y</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert Euler angles from EMAN to a 3-D rotation matrix.</span>
+
+<span class="sd">    :param a: Rotation angle A in degrees.</span>
+<span class="sd">    :param b: Rotation angle B in degrees.</span>
+<span class="sd">    :param y: Rotation angle Y in degrees.</span>
+<span class="sd">    :return: 3-D rotation matrix, shape (3, 3)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">a</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">180.</span>
+    <span class="n">b</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">180.</span>
+    <span class="n">y</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">180.</span>
+    <span class="n">ca</span><span class="p">,</span> <span class="n">sa</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+    <span class="n">cb</span><span class="p">,</span> <span class="n">sb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">b</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+    <span class="n">cy</span><span class="p">,</span> <span class="n">sy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">rot_a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">ca</span><span class="p">,</span> <span class="o">-</span><span class="n">sa</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="n">sa</span><span class="p">,</span> <span class="n">ca</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]])</span>
+    <span class="n">rot_b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">cb</span><span class="p">,</span> <span class="o">-</span><span class="n">sb</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">sb</span><span class="p">,</span> <span class="n">cb</span><span class="p">]])</span>
+    <span class="n">rot_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(([</span><span class="n">cy</span><span class="p">,</span> <span class="o">-</span><span class="n">sy</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="n">sy</span><span class="p">,</span> <span class="n">cy</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
+    <span class="n">rot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">rot_y</span><span class="p">,</span> <span class="n">rot_b</span><span class="p">),</span> <span class="n">rot_a</span><span class="p">)</span>
+    <span class="c1"># handling EMAN convention mismatch for where the origin of an image is (bottom right vs top right)</span>
+    <span class="n">rot</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">rot</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">rot</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">rot</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="k">return</span> <span class="n">rot</span></div>
+
+
+
+<div class="viewcode-block" id="rot_3d_from_relion">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.rot_3d_from_relion.html#tomodrgn.utils.rot_3d_from_relion">[docs]</a>
+<span class="k">def</span> <span class="nf">rot_3d_from_relion</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                       <span class="n">b</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                       <span class="n">y</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert Euler angles from RELION to a 3-D rotation matrix.</span>
+
+<span class="sd">    :param a: Rotation angle A in degrees (typically _rlnAngleRot).</span>
+<span class="sd">    :param b: Rotation angle B in degrees (typically _rlnAngleTilt).</span>
+<span class="sd">    :param y: Rotation angle Y in degrees (typically _rlnAnglePsi).</span>
+<span class="sd">    :return: 3-D rotation matrix, shape (3, 3)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">a</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">180.</span>
+    <span class="n">b</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">180.</span>
+    <span class="n">y</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">180.</span>
+    <span class="n">ca</span><span class="p">,</span> <span class="n">sa</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+    <span class="n">cb</span><span class="p">,</span> <span class="n">sb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">b</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+    <span class="n">cy</span><span class="p">,</span> <span class="n">sy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">y</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">rot_a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">ca</span><span class="p">,</span> <span class="o">-</span><span class="n">sa</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="n">sa</span><span class="p">,</span> <span class="n">ca</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]])</span>
+    <span class="n">rot_b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">cb</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="n">sb</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="n">sb</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">cb</span><span class="p">]])</span>
+    <span class="n">rot_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(([</span><span class="n">cy</span><span class="p">,</span> <span class="o">-</span><span class="n">sy</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="n">sy</span><span class="p">,</span> <span class="n">cy</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]))</span>
+    <span class="n">rot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">rot_y</span><span class="p">,</span> <span class="n">rot_b</span><span class="p">),</span> <span class="n">rot_a</span><span class="p">)</span>
+    <span class="n">rot</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">rot</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">rot</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">rot</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="k">return</span> <span class="n">rot</span></div>
+
+
+
+<div class="viewcode-block" id="rot_3d_from_relion_scipy">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.rot_3d_from_relion_scipy.html#tomodrgn.utils.rot_3d_from_relion_scipy">[docs]</a>
+<span class="k">def</span> <span class="nf">rot_3d_from_relion_scipy</span><span class="p">(</span><span class="n">euler_</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                             <span class="n">degrees</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert a Nx3 array of RELION euler angles to rotation matrices using Scipy Rotations class.</span>
+
+<span class="sd">    :param euler_: Array of Euler angles to convert to rotation matrices.</span>
+<span class="sd">    :param degrees: Whether angles in `euler_` are expressed in degrees.</span>
+<span class="sd">    :return: Nx3x3 array of rotation matrices.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">euler</span> <span class="o">=</span> <span class="n">euler_</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">euler</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">3</span><span class="p">,):</span>
+        <span class="n">euler</span> <span class="o">=</span> <span class="n">euler</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">euler</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">90</span>
+    <span class="n">euler</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">-=</span> <span class="mi">90</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="n">f</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">f</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">f</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">f</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">rot</span> <span class="o">=</span> <span class="n">Rotation</span><span class="o">.</span><span class="n">from_euler</span><span class="p">(</span><span class="s1">&#39;zxz&#39;</span><span class="p">,</span> <span class="n">euler</span><span class="p">,</span> <span class="n">degrees</span><span class="o">=</span><span class="n">degrees</span><span class="p">)</span><span class="o">.</span><span class="n">as_matrix</span><span class="p">()</span> <span class="o">*</span> <span class="n">f</span>
+    <span class="k">return</span> <span class="n">rot</span></div>
+
+
+
+<div class="viewcode-block" id="rot_3d_to_relion_scipy">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.rot_3d_to_relion_scipy.html#tomodrgn.utils.rot_3d_to_relion_scipy">[docs]</a>
+<span class="k">def</span> <span class="nf">rot_3d_to_relion_scipy</span><span class="p">(</span><span class="n">rot</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                           <span class="n">degrees</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert an array of Nx3x3 rotation matrices to RELION euler angles using Scipy Rotations class.</span>
+
+<span class="sd">    :param rot: Nx3x3 array of rotation matrices.</span>
+<span class="sd">    :param degrees: Whether to express the output Euler angles in degrees</span>
+<span class="sd">    :return: Nx3 array of RELION euler angles</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">rot</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">):</span>
+        <span class="n">rot</span> <span class="o">=</span> <span class="n">rot</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">rot</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">,</span> <span class="s2">&quot;Input must have dim Nx3x3&quot;</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="n">f</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">f</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">f</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">f</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">euler</span> <span class="o">=</span> <span class="n">Rotation</span><span class="o">.</span><span class="n">from_matrix</span><span class="p">(</span><span class="n">rot</span> <span class="o">*</span> <span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">as_euler</span><span class="p">(</span><span class="s1">&#39;zxz&#39;</span><span class="p">,</span> <span class="n">degrees</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">euler</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-=</span> <span class="mi">90</span>
+    <span class="n">euler</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">90</span>
+    <span class="n">euler</span> <span class="o">+=</span> <span class="mi">180</span>
+    <span class="n">euler</span> <span class="o">%=</span> <span class="mi">360</span>
+    <span class="n">euler</span> <span class="o">-=</span> <span class="mi">180</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">degrees</span><span class="p">:</span>
+        <span class="n">euler</span> <span class="o">*=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span>
+    <span class="k">return</span> <span class="n">euler</span></div>
+
+
+
+<div class="viewcode-block" id="xrot">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.xrot.html#tomodrgn.utils.xrot">[docs]</a>
+<span class="k">def</span> <span class="nf">xrot</span><span class="p">(</span><span class="n">tilt_deg</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return rotation matrix associated with rotation over the x-axis.</span>
+
+<span class="sd">    :param tilt_deg: Rotation angle in degrees.</span>
+<span class="sd">    :return: 3x3 rotation matrix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">tilt_deg</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span>
+    <span class="n">tilt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span>
+                     <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">),</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)],</span>
+                     <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)]])</span>
+    <span class="k">return</span> <span class="n">tilt</span></div>
+
+
+
+<div class="viewcode-block" id="yrot">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.yrot.html#tomodrgn.utils.yrot">[docs]</a>
+<span class="k">def</span> <span class="nf">yrot</span><span class="p">(</span><span class="n">tilt_deg</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return rotation matrix associated with rotation over the y-axis</span>
+
+<span class="sd">    :param tilt_deg: Rotation angle in degrees.</span>
+<span class="sd">    :return: 3x3 rotation matrix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">tilt_deg</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">180</span>
+    <span class="n">tilt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">),</span> <span class="mf">0.</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">)],</span>
+                     <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">],</span>
+                     <span class="p">[</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">theta</span><span class="p">),</span> <span class="mf">0.</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">theta</span><span class="p">)]])</span>
+    <span class="k">return</span> <span class="n">tilt</span></div>
+
+
+
+<span class="nd">@Memoized</span>
+<span class="k">def</span> <span class="nf">_zero_sphere_helper</span><span class="p">(</span><span class="n">boxsize</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate a mask of coordinates corresponding to a sphere inscribed within a cube.</span>
+
+<span class="sd">    :param boxsize: The number of discrete points along each cube edge</span>
+<span class="sd">    :return: mask array corresponding to values within the sphere, shape (boxsize, boxsize, boxsize)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">xx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">boxsize</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">True</span> <span class="k">if</span> <span class="n">boxsize</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="kc">False</span><span class="p">)</span>
+    <span class="n">z</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">xx</span><span class="p">,</span> <span class="n">xx</span><span class="p">,</span> <span class="n">xx</span><span class="p">)</span>
+    <span class="n">coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">((</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">coords</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="mf">.5</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">r</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="zero_sphere">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.zero_sphere.html#tomodrgn.utils.zero_sphere">[docs]</a>
+<span class="k">def</span> <span class="nf">zero_sphere</span><span class="p">(</span><span class="n">vol</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Set volume values outside of a sphere inscribed within a cube to zero.</span>
+
+<span class="sd">    :param vol: Volume array to be modified, shape (boxsize, boxsize, boxsize).</span>
+<span class="sd">    :return: Volume array after setting corner values to zero, shape (boxsize, boxsize, boxsize).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">vol</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;volume must be a cube&#39;</span>
+    <span class="n">boxsize</span> <span class="o">=</span> <span class="n">vol</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">tmp</span> <span class="o">=</span> <span class="n">_zero_sphere_helper</span><span class="p">(</span><span class="n">boxsize</span><span class="p">)</span>
+    <span class="n">vlog</span><span class="p">(</span><span class="s1">&#39;Zeroing </span><span class="si">{}</span><span class="s1"> pixels&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tmp</span><span class="p">)))</span>
+    <span class="n">vol</span> <span class="o">*=</span> <span class="n">tmp</span>
+    <span class="k">return</span> <span class="n">vol</span></div>
+
+
+
+<div class="viewcode-block" id="calc_real_space_mask">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.calc_real_space_mask.html#tomodrgn.utils.calc_real_space_mask">[docs]</a>
+<span class="k">def</span> <span class="nf">calc_real_space_mask</span><span class="p">(</span><span class="n">vol1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                         <span class="n">vol2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                         <span class="n">mask</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                         <span class="n">thresh</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                         <span class="n">dilate</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                         <span class="n">dist</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generate a real space mask generated from up to two volumes</span>
+
+<span class="sd">    :param vol1: array of volume 1, shape (boxsize, boxsize, boxsize)</span>
+<span class="sd">    :param vol2: array of volume 2, shape (boxsize, boxsize, boxsize)</span>
+<span class="sd">    :param mask: mask to calculate from volumes, one of [None, &#39;sphere&#39;, &#39;tight&#39;, &#39;soft&#39;]</span>
+<span class="sd">    :param thresh: data percentile threshold at which to binarize mask when calculating &#39;tight&#39; or initializing &#39;soft&#39; masks</span>
+<span class="sd">    :param dilate: for soft mask, number of pixels to expand auto-determined tight mask</span>
+<span class="sd">    :param dist: for soft mask, number of pixels over which to apply soft edge</span>
+<span class="sd">    :return: array of mask, values in interval [0,1], shape (boxsize, boxsize, boxsize)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># copy volume1 as volume2 if volume2 not provided</span>
+    <span class="k">if</span> <span class="n">vol2</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">vol2</span> <span class="o">=</span> <span class="n">vol1</span>
+    <span class="n">boxsize</span> <span class="o">=</span> <span class="n">vol1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">mask</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">mask</span> <span class="o">==</span> <span class="s1">&#39;none&#39;</span><span class="p">:</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">vol1</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">mask</span> <span class="o">==</span> <span class="s1">&#39;sphere&#39;</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="n">boxsize</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="n">boxsize</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">x0</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s1">&#39;ij&#39;</span><span class="p">)</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">x0</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">x1</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">x2</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">r</span> <span class="o">&lt;=</span> <span class="n">boxsize</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">mask</span> <span class="o">==</span> <span class="s1">&#39;tight&#39;</span><span class="p">:</span>
+        <span class="n">thresh</span> <span class="o">=</span> <span class="mi">99</span> <span class="k">if</span> <span class="n">thresh</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">thresh</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">vol1</span> <span class="o">&gt;=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">vol1</span><span class="p">,</span> <span class="n">thresh</span><span class="p">),</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">vol2</span> <span class="o">&gt;=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">vol2</span><span class="p">,</span> <span class="n">thresh</span><span class="p">),</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">mask</span> <span class="o">==</span> <span class="s1">&#39;soft&#39;</span><span class="p">:</span>
+        <span class="n">thresh</span> <span class="o">=</span> <span class="mi">99</span> <span class="k">if</span> <span class="n">thresh</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">thresh</span>
+        <span class="n">dilate</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">boxsize</span> <span class="o">/</span> <span class="mi">30</span><span class="p">))</span> <span class="k">if</span> <span class="n">dilate</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">dilate</span>
+        <span class="n">dist</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">boxsize</span> <span class="o">/</span> <span class="mi">30</span><span class="p">))</span> <span class="k">if</span> <span class="n">dist</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">dist</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">vol1</span> <span class="o">&gt;=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">vol1</span><span class="p">,</span> <span class="n">thresh</span><span class="p">),</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">vol2</span> <span class="o">&gt;=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">vol2</span><span class="p">,</span> <span class="n">thresh</span><span class="p">),</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">binary_dilation</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">iterations</span><span class="o">=</span><span class="n">dilate</span><span class="p">)</span>
+        <span class="n">distance_to_mask</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">distance_transform_edt</span><span class="p">(</span><span class="o">~</span><span class="n">mask</span><span class="p">)</span>
+        <span class="n">distance_to_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">distance_to_mask</span> <span class="o">&gt;</span> <span class="n">dist</span><span class="p">,</span> <span class="n">dist</span><span class="p">,</span> <span class="n">distance_to_mask</span><span class="p">)</span> <span class="o">/</span> <span class="n">dist</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">distance_to_mask</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;mask must be one of [None, &quot;sphere&quot;, &quot;tight&quot;, &quot;soft&quot;], got </span><span class="si">{</span><span class="n">mask</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="c1"># check that mask is in range [0,1]</span>
+    <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">mask</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">mask</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">mask</span></div>
+
+
+
+<div class="viewcode-block" id="calc_fsc">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.calc_fsc.html#tomodrgn.utils.calc_fsc">[docs]</a>
+<span class="k">def</span> <span class="nf">calc_fsc</span><span class="p">(</span><span class="n">vol1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+             <span class="n">vol2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+             <span class="n">mask</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="n">thresh</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">99</span><span class="p">,</span>
+             <span class="n">dilate</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="n">dist</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the FSC between two volumes with optional masking.</span>
+
+<span class="sd">    :param vol1: path to volume1.mrc, boxsize D,D,D, or ndarray of vol1 voxels</span>
+<span class="sd">    :param vol2: path to volume2.mrc, boxsize D,D,D, or ndarray of vol2 voxels</span>
+<span class="sd">    :param mask: mask to calculate from volumes, one of [None, &#39;sphere&#39;, &#39;tight&#39;, &#39;soft&#39;]</span>
+<span class="sd">    :param thresh: data percentile threshold at which to binarize mask when calculating &#39;tight&#39; or initializing &#39;soft&#39; masks</span>
+<span class="sd">    :param dilate: for soft mask, number of pixels to expand auto-determined tight mask</span>
+<span class="sd">    :param dist: for soft mask, number of pixels over which to apply soft edge</span>
+<span class="sd">    :return: x: spatial resolution in units of (1/px). fsc: the Fourier Shell Correlation at each resolution shell specified by `x`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># load masked volumes in real space</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">vol1</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">pass</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">vol1</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">mrc</span><span class="o">.</span><span class="n">parse_mrc</span><span class="p">(</span><span class="n">vol1</span><span class="p">)</span>
+        <span class="n">vol2</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">mrc</span><span class="o">.</span><span class="n">parse_mrc</span><span class="p">(</span><span class="n">vol2</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">vol1</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">vol2</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="c1"># define fourier grid and label into shells</span>
+    <span class="n">boxsize</span> <span class="o">=</span> <span class="n">vol1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="n">boxsize</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="n">boxsize</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">x0</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">x2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s1">&#39;ij&#39;</span><span class="p">)</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">x0</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">x1</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">x2</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">r_max</span> <span class="o">=</span> <span class="n">boxsize</span> <span class="o">//</span> <span class="mi">2</span>  <span class="c1"># sphere inscribed within volume box</span>
+    <span class="n">r_step</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1"># int(np.min(r[r&gt;0]))</span>
+    <span class="n">bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">r_max</span> <span class="o">+</span> <span class="n">r_step</span><span class="p">,</span> <span class="n">r_step</span><span class="p">)</span>  <span class="c1"># since np.arange does not include final point `D//2`, need one more shell to calculate FSC at Nyquist</span>
+    <span class="n">bin_labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">bins</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>  <span class="c1"># bin_label=0 is DC, bin_label=r_max+r_step is highest included freq, bin_label=r_max+2*r_step is frequencies excluded by D//2 spherical mask</span>
+
+    <span class="c1"># prepare mask</span>
+    <span class="k">if</span> <span class="n">mask</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.mrc&#39;</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">mask</span><span class="p">))</span>
+        <span class="n">mask</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">mrc</span><span class="o">.</span><span class="n">parse_mrc</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">calc_real_space_mask</span><span class="p">(</span><span class="n">vol1</span><span class="o">=</span><span class="n">vol1</span><span class="p">,</span>
+                                    <span class="n">vol2</span><span class="o">=</span><span class="n">vol2</span><span class="p">,</span>
+                                    <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span>
+                                    <span class="n">thresh</span><span class="o">=</span><span class="n">thresh</span><span class="p">,</span>
+                                    <span class="n">dilate</span><span class="o">=</span><span class="n">dilate</span><span class="p">,</span>
+                                    <span class="n">dist</span><span class="o">=</span><span class="n">dist</span><span class="p">)</span>
+
+    <span class="c1"># apply mask in real space</span>
+    <span class="k">assert</span> <span class="n">mask</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">vol1</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;Mask shape </span><span class="si">{</span><span class="n">mask</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s1"> does not match volume shape </span><span class="si">{</span><span class="n">vol1</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="n">vol1</span> <span class="o">*=</span> <span class="n">mask</span>
+    <span class="n">vol2</span> <span class="o">*=</span> <span class="n">mask</span>
+
+    <span class="c1"># FFT volumes</span>
+    <span class="n">vol1_ft</span> <span class="o">=</span> <span class="n">fft</span><span class="o">.</span><span class="n">fft3_center</span><span class="p">(</span><span class="n">vol1</span><span class="p">)</span>
+    <span class="n">vol2_ft</span> <span class="o">=</span> <span class="n">fft</span><span class="o">.</span><span class="n">fft3_center</span><span class="p">(</span><span class="n">vol2</span><span class="p">)</span>
+
+    <span class="c1"># calculate the FSC via labeled shells (frequencies &gt; Nyquist share a bin_label that is excluded by `index=bins`)</span>
+    <span class="n">num</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">real</span><span class="p">(</span><span class="n">vol1_ft</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">conjugate</span><span class="p">(</span><span class="n">vol2_ft</span><span class="p">)),</span> <span class="n">labels</span><span class="o">=</span><span class="n">bin_labels</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">bins</span><span class="p">)</span>
+    <span class="n">den1</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">vol1_ft</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">bin_labels</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">bins</span><span class="p">)</span>
+    <span class="n">den2</span> <span class="o">=</span> <span class="n">ndimage</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">vol2_ft</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">bin_labels</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">bins</span><span class="p">)</span>
+    <span class="n">fsc</span> <span class="o">=</span> <span class="n">num</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">den1</span> <span class="o">*</span> <span class="n">den2</span><span class="p">)</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">bins</span> <span class="o">/</span> <span class="n">boxsize</span>  <span class="c1"># x axis should be spatial frequency in 1/px</span>
+    <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">fsc</span></div>
+
+
+
+<div class="viewcode-block" id="calc_cc">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.calc_cc.html#tomodrgn.utils.calc_cc">[docs]</a>
+<span class="k">def</span> <span class="nf">calc_cc</span><span class="p">(</span><span class="n">vol1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+            <span class="n">vol2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+            <span class="n">mask</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">thresh</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">99</span><span class="p">,</span>
+            <span class="n">dilate</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">dist</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Helper function to calculate the zero-mean correlation coefficient as defined in eq 2 in https://journals.iucr.org/d/issues/2018/09/00/kw5139/index.html</span>
+<span class="sd">    vol1 and vol2 should be maps of the same box size, shape (boxsize, boxsize, boxsize)</span>
+
+<span class="sd">    :param vol1: path to volume1.mrc, boxsize D,D,D, or ndarray of vol1 voxels</span>
+<span class="sd">    :param vol2: path to volume2.mrc, boxsize D,D,D, or ndarray of vol2 voxels</span>
+<span class="sd">    :param mask: mask to calculate from volumes, one of [None, &#39;sphere&#39;, &#39;tight&#39;, &#39;soft&#39;]</span>
+<span class="sd">    :param thresh: data percentile threshold at which to binarize mask when calculating &#39;tight&#39; or initializing &#39;soft&#39; masks</span>
+<span class="sd">    :param dilate: for soft mask, number of pixels to expand auto-determined tight mask</span>
+<span class="sd">    :param dist: for soft mask, number of pixels over which to apply soft edge</span>
+<span class="sd">    :return: correlation coefficient</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># load masked volumes in real space</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">vol1</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">pass</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">vol1</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">mrc</span><span class="o">.</span><span class="n">parse_mrc</span><span class="p">(</span><span class="n">vol1</span><span class="p">)</span>
+        <span class="n">vol2</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">mrc</span><span class="o">.</span><span class="n">parse_mrc</span><span class="p">(</span><span class="n">vol2</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">vol1</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">vol2</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="c1"># prepare mask</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span> <span class="ow">and</span> <span class="n">mask</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.mrc&#39;</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">mask</span><span class="p">))</span>
+        <span class="n">mask</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">mrc</span><span class="o">.</span><span class="n">parse_mrc</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">calc_real_space_mask</span><span class="p">(</span><span class="n">vol1</span><span class="o">=</span><span class="n">vol1</span><span class="p">,</span>
+                                    <span class="n">vol2</span><span class="o">=</span><span class="n">vol2</span><span class="p">,</span>
+                                    <span class="n">mask</span><span class="o">=</span><span class="n">mask</span><span class="p">,</span>
+                                    <span class="n">thresh</span><span class="o">=</span><span class="n">thresh</span><span class="p">,</span>
+                                    <span class="n">dilate</span><span class="o">=</span><span class="n">dilate</span><span class="p">,</span>
+                                    <span class="n">dist</span><span class="o">=</span><span class="n">dist</span><span class="p">)</span>
+
+    <span class="c1"># apply mask in real space</span>
+    <span class="k">assert</span> <span class="n">mask</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">vol1</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;Mask shape </span><span class="si">{</span><span class="n">mask</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s1"> does not match volume shape </span><span class="si">{</span><span class="n">vol1</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="n">vol1</span> <span class="o">*=</span> <span class="n">mask</span>
+    <span class="n">vol2</span> <span class="o">*=</span> <span class="n">mask</span>
+
+    <span class="n">zmean1</span> <span class="o">=</span> <span class="p">(</span><span class="n">vol1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">vol1</span><span class="p">))</span>
+    <span class="n">zmean2</span> <span class="o">=</span> <span class="p">(</span><span class="n">vol2</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">vol2</span><span class="p">))</span>
+    <span class="n">cc</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">zmean1</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">zmean2</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">zmean1</span> <span class="o">*</span> <span class="n">zmean2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">cc</span></div>
+
+
+
+<div class="viewcode-block" id="calc_lowpass_filter_mask">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.calc_lowpass_filter_mask.html#tomodrgn.utils.calc_lowpass_filter_mask">[docs]</a>
+<span class="k">def</span> <span class="nf">calc_lowpass_filter_mask</span><span class="p">(</span><span class="n">boxsize</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                             <span class="n">angpix</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                             <span class="n">lowpass</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                             <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate a binary mask to later be multiplied into a fourier space volume to lowpass filter said volume.</span>
+<span class="sd">    Useful to pre-cache a lowpass filter mask that will be used repeatedly (e.g. evaluating many volumes with `eval_vol.py`)</span>
+
+<span class="sd">    :param boxsize: number of voxels along one side of the Fourier space symmetrized (DC is box center) volume</span>
+<span class="sd">    :param angpix: Pixel size of the volume in Ångstroms per pixel.</span>
+<span class="sd">    :param lowpass: Resolution to filter volume in Ångstroms.</span>
+<span class="sd">    :param device: device of the volume to be lowpass filtered. None corresponds to a numpy array, otherwise specify a torch.Tensor device to produce a Tensor mask on said device.</span>
+<span class="sd">    :return: Volume binary mask as a numpy array or torch tensor, shape (boxsize, boxsize, boxsize)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># calculate frequencies along one axis in units of 1/px</span>
+    <span class="k">if</span> <span class="n">boxsize</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c1"># even-sized fourier space box</span>
+        <span class="n">lowest_freq</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">boxsize</span>
+        <span class="n">freqs_1d_px</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">start</span><span class="o">=-</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">lowest_freq</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># odd-sized box (from fft.symmetrize_ht)</span>
+        <span class="n">lowest_freq</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">boxsize</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">freqs_1d_px</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">start</span><span class="o">=-</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">lowest_freq</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">lowest_freq</span><span class="p">)</span>
+
+    <span class="c1"># calculate frequencies along one axis in units of 1/Å</span>
+    <span class="n">freqs_1d_angstrom</span> <span class="o">=</span> <span class="n">freqs_1d_px</span> <span class="o">/</span> <span class="n">angpix</span>
+
+    <span class="c1"># create 3D mask binarized at lowpass frequency</span>
+    <span class="n">freqs_x</span><span class="p">,</span> <span class="n">freqs_y</span><span class="p">,</span> <span class="n">freqs_z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">freqs_1d_angstrom</span><span class="p">,</span> <span class="n">freqs_1d_angstrom</span><span class="p">,</span> <span class="n">freqs_1d_angstrom</span><span class="p">)</span>
+    <span class="n">lowpass_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">freqs_x</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">freqs_y</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">freqs_z</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">lowpass</span><span class="p">,</span>
+                            <span class="kc">True</span><span class="p">,</span>
+                            <span class="kc">False</span><span class="p">)</span>
+
+    <span class="c1"># move mask to the correct device</span>
+    <span class="k">if</span> <span class="n">device</span><span class="p">:</span>
+        <span class="n">lowpass_mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">lowpass_mask</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">lowpass_mask</span></div>
+
+
+
+<div class="viewcode-block" id="lowpass_filter">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.lowpass_filter.html#tomodrgn.utils.lowpass_filter">[docs]</a>
+<span class="k">def</span> <span class="nf">lowpass_filter</span><span class="p">(</span><span class="n">vol_ft</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                   <span class="n">angpix</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                   <span class="n">lowpass</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Lowpass-filters a volume in reciprocal space.</span>
+
+<span class="sd">    :param vol_ft: Fourier space symmetrized (DC is box center) volume as numpy array or torch tensor, shape (boxsize, boxsize, boxsize)</span>
+<span class="sd">    :param angpix: Pixel size of the volume in Ångstroms per pixel.</span>
+<span class="sd">    :param lowpass: Resolution to filter volume in Ångstroms.</span>
+<span class="sd">    :return: Lowpass filtered fourier space symmetrized volume, shape (boxsize, boxsize, boxsize).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># calculate the binary mask corresponding to the desired lowpass filter</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">vol_ft</span><span class="o">.</span><span class="n">device</span> <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">vol_ft</span><span class="p">)</span> <span class="ow">is</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">lowpass_mask</span> <span class="o">=</span> <span class="n">calc_lowpass_filter_mask</span><span class="p">(</span><span class="n">boxsize</span><span class="o">=</span><span class="n">vol_ft</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                            <span class="n">angpix</span><span class="o">=</span><span class="n">angpix</span><span class="p">,</span>
+                                            <span class="n">lowpass</span><span class="o">=</span><span class="n">lowpass</span><span class="p">,</span>
+                                            <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+    <span class="c1"># multiply the binary mask into the volume</span>
+    <span class="n">vol_ft</span> <span class="o">=</span> <span class="n">vol_ft</span> <span class="o">*</span> <span class="n">lowpass_mask</span>
+    <span class="k">return</span> <span class="n">vol_ft</span></div>
+
+
+
+<div class="viewcode-block" id="check_memory_usage">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.check_memory_usage.html#tomodrgn.utils.check_memory_usage">[docs]</a>
+<span class="k">def</span> <span class="nf">check_memory_usage</span><span class="p">(</span><span class="n">device</span><span class="p">:</span>  <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the current memory usage of the specified device_type.</span>
+
+<span class="sd">    :param device: the (class of) hardware device for which to report memory usage. Allowable device types include `cuda` and `cpu`</span>
+<span class="sd">    :return: List of VRAM or RAM usage of each visible instance of the specified device_type.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span><span class="p">:</span>
+        <span class="n">usage</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">mem_get_info</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">device_count</span><span class="p">())]</span>
+        <span class="k">return</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="p">(</span><span class="n">total</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">free</span><span class="p">)</span><span class="w"> </span><span class="o">//</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">**</span><span class="w"> </span><span class="mi">2</span><span class="si">}</span><span class="s1"> MiB / </span><span class="si">{</span><span class="n">total</span><span class="w"> </span><span class="o">//</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">**</span><span class="w"> </span><span class="mi">2</span><span class="si">}</span><span class="s1"> MiB&#39;</span> <span class="k">for</span> <span class="n">free</span><span class="p">,</span> <span class="n">total</span> <span class="ow">in</span> <span class="n">usage</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;cpu&#39;</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">psutil</span>
+        <span class="n">usage</span> <span class="o">=</span> <span class="n">psutil</span><span class="o">.</span><span class="n">virtual_memory</span><span class="p">()</span>
+        <span class="k">return</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="p">(</span><span class="n">usage</span><span class="o">.</span><span class="n">total</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">usage</span><span class="o">.</span><span class="n">free</span><span class="p">)</span><span class="w"> </span><span class="o">//</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">**</span><span class="w"> </span><span class="mi">2</span><span class="si">}</span><span class="s1"> MiB / </span><span class="si">{</span><span class="n">usage</span><span class="o">.</span><span class="n">total</span><span class="w"> </span><span class="o">//</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">**</span><span class="w"> </span><span class="mi">2</span><span class="si">}</span><span class="s1"> MiB&#39;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Unknown torch device: </span><span class="si">{</span><span class="n">device</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="check_git_revision_hash">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.check_git_revision_hash.html#tomodrgn.utils.check_git_revision_hash">[docs]</a>
+<span class="k">def</span> <span class="nf">check_git_revision_hash</span><span class="p">(</span><span class="n">repo_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the git revision hash of a git repository.</span>
+<span class="sd">    Uses subprocess call to git and parses output.</span>
+
+<span class="sd">    :param repo_path: Path to repository for which to check revision hash.</span>
+<span class="sd">    :return: Git revision hash of HEAD in `repo_path`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">([</span><span class="s1">&#39;git&#39;</span><span class="p">,</span> <span class="s1">&#39;--git-dir&#39;</span><span class="p">,</span> <span class="n">repo_path</span><span class="p">,</span> <span class="s1">&#39;rev-parse&#39;</span><span class="p">,</span> <span class="s1">&#39;HEAD&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;ascii&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="get_default_device">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.get_default_device.html#tomodrgn.utils.get_default_device">[docs]</a>
+<span class="k">def</span> <span class="nf">get_default_device</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Determine whether a CUDA-capable GPU is availble or not for torch operations.</span>
+
+<span class="sd">    :return: `torch.device(&#39;cuda&#39;)` if CUDA-capable GPU is available, else `torch.device(&#39;cpu&#39;)`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">use_cuda</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cuda&#39;</span> <span class="k">if</span> <span class="n">use_cuda</span> <span class="k">else</span> <span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+    <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Use cuda </span><span class="si">{</span><span class="n">use_cuda</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">use_cuda</span><span class="p">:</span>
+        <span class="n">log</span><span class="p">(</span><span class="s1">&#39;WARNING: No GPUs detected&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">device</span></div>
+
+
+
+<div class="viewcode-block" id="get_latest_epoch">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.get_latest_epoch.html#tomodrgn.utils.get_latest_epoch">[docs]</a>
+<span class="k">def</span> <span class="nf">get_latest_epoch</span><span class="p">(</span><span class="n">workdir</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Detect the latest completed epoch of model training.</span>
+
+<span class="sd">    :param workdir: directory containing pre-existing training results</span>
+<span class="sd">    :return: integer representing the latest 0-indexed epoch of completeed model training</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># assumes args.num_epochs &gt; latest checkpoint</span>
+    <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Detecting latest checkpoint...&#39;</span><span class="p">)</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">workdir</span><span class="si">}</span><span class="s1">/weights.*.pkl&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Could not find any files in </span><span class="si">{</span><span class="n">workdir</span><span class="si">}</span><span class="s1"> matching format weights.*.pkl to auto-detect latest epoch.&#39;</span><span class="p">)</span>
+    <span class="n">epochs</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">files</span><span class="p">]</span>
+    <span class="n">epoch</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">epochs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">epoch</span></div>
+
+
+
+<div class="viewcode-block" id="print_progress_bar">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.print_progress_bar.html#tomodrgn.utils.print_progress_bar">[docs]</a>
+<span class="k">def</span> <span class="nf">print_progress_bar</span><span class="p">(</span><span class="n">curr_iteration</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                       <span class="n">num_iterations</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                       <span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                       <span class="n">suffix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+                       <span class="n">decimals</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+                       <span class="n">length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
+                       <span class="n">fill</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;*&#39;</span><span class="p">,</span>
+                       <span class="n">end_character</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\r</span><span class="s2">&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Display an ASCII progress bar in STDOUT.</span>
+<span class="sd">    Display format is: `PREFIX |*****-----| 50.0% SUFFIX`, updated in-place at STDOUT.</span>
+<span class="sd">    Intended method of use is calling this function repeatedly within a loop with updated `curr_iteration`.</span>
+<span class="sd">    The final call in which `curr_iteration == num_iterations` updates the progress bar (in place) and adds a newline for subsequent output.</span>
+
+<span class="sd">    :param curr_iteration: the current step number through the process being monitored.</span>
+<span class="sd">    :param num_iterations: the total number of steps in the process being monitored.</span>
+<span class="sd">    :param prefix: text to be prepended before the progress bar.</span>
+<span class="sd">    :param suffix: text to by appended after the progress bar.</span>
+<span class="sd">    :param decimals: the number of decimals to show in the % completion text of the progress bar.</span>
+<span class="sd">    :param length: the number of characters defining the length of the progress bar.</span>
+<span class="sd">            Does not change to preserve a constant display width if prefix, suffix, or decimals change.</span>
+<span class="sd">    :param fill: the character used to denote the completed portion of the progress bar.</span>
+<span class="sd">    :param end_character: the character at the end of the progress bar, typically carraige return or newline.</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># this function is most often called in a for loop where the value of `iteration` runs from 0 to `total-1`</span>
+    <span class="c1"># therefore, offset total to be 0-indexed such that the final iteration has `iteration`==`total`</span>
+    <span class="n">num_iterations</span> <span class="o">=</span> <span class="n">num_iterations</span> <span class="o">-</span> <span class="mi">1</span>
+
+    <span class="c1"># prepare the progress bar</span>
+    <span class="n">percent</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="mi">100</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">curr_iteration</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nb">float</span><span class="p">(</span><span class="n">num_iterations</span><span class="p">)</span><span class="si">:</span><span class="s1">3.</span><span class="si">{</span><span class="n">decimals</span><span class="si">}</span><span class="s1">f</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="n">filled_length</span> <span class="o">=</span> <span class="n">length</span> <span class="o">*</span> <span class="n">curr_iteration</span> <span class="o">//</span> <span class="n">num_iterations</span>
+    <span class="n">bar</span> <span class="o">=</span> <span class="n">fill</span> <span class="o">*</span> <span class="n">filled_length</span> <span class="o">+</span> <span class="s1">&#39;-&#39;</span> <span class="o">*</span> <span class="p">(</span><span class="n">length</span> <span class="o">-</span> <span class="n">filled_length</span><span class="p">)</span>
+
+    <span class="c1"># print the progress bar and flush stdout to ensure it displays correctly</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">\r</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s1"> |</span><span class="si">{</span><span class="n">bar</span><span class="si">}</span><span class="s1">| </span><span class="si">{</span><span class="n">percent</span><span class="si">}</span><span class="s1">% </span><span class="si">{</span><span class="n">suffix</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="n">end_character</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+    <span class="c1"># add a newline for the final iteration so that the next text to STDOUT does not overwrite the progress bar</span>
+    <span class="k">if</span> <span class="n">curr_iteration</span> <span class="o">==</span> <span class="n">num_iterations</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="first_n_factors">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.utils.first_n_factors.html#tomodrgn.utils.first_n_factors">[docs]</a>
+<span class="nd">@Memoized</span>
+<span class="k">def</span> <span class="nf">first_n_factors</span><span class="p">(</span><span class="n">target</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                    <span class="n">n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+                    <span class="n">lower_bound</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return a list of the first `n` multiplicative factors of a number `target` where no factor is smaller than `lower_bound`.</span>
+<span class="sd">    Useful to reshape arrays or tensors.</span>
+<span class="sd">    For example, enables splitting a tensor with batch_dim == 1 to produce batch_dim &gt; 1, as required for multi-gpu DataParallel.</span>
+
+<span class="sd">    :param target: The number for which to calculate multiplicative factors.</span>
+<span class="sd">    :param n: The number of multiplicative factors to return.</span>
+<span class="sd">    :param lower_bound: The minimum multiplicative factor to return.</span>
+<span class="sd">    :return: list of multiplicative factors of target sorted by increasing value</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># initialize the list of factors (which will always include 1 by definition)</span>
+    <span class="n">factors</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c1"># define the efficient upper search limit as the square root of the target number</span>
+    <span class="n">upper_bound</span> <span class="o">=</span> <span class="n">target</span> <span class="o">**</span> <span class="mf">0.5</span>
+    <span class="c1"># initialize the factor from which to search increasing values</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">2</span> <span class="k">if</span> <span class="n">lower_bound</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">lower_bound</span>
+    <span class="k">while</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">factors</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">i</span> <span class="o">&lt;=</span> <span class="n">upper_bound</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">target</span> <span class="o">%</span> <span class="n">i</span><span class="p">:</span>
+            <span class="n">factors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">factors</span><span class="p">:</span>
+        <span class="n">factors</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">factors</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, Barrett M Powell, Joseph H Davis.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

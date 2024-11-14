@@ -1,0 +1,1068 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tomodrgn.mrc &#8212; tomoDRGN 0.2.3.dev328 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!-- 
+    this give us a css class that will be invisible only if js is disabled 
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../_static/scripts/fontawesome.js?digest=26a4bc78f4c0ddb94549"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549" />
+
+    <script src="../../_static/documentation_options.js?v=d6c7774d"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/tomodrgn/mrc';</script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">tomoDRGN v0.2.3.dev328</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../overview/index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../command_usage/index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../overview/index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../command_usage/index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../api/index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">tomodrgn.mrc</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for tomodrgn.mrc</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Classes and functions for loading and writing .mrc(s) headers and data.</span>
+
+<span class="sd">Generally adheres to the MRC2014 Update 20141 specification.</span>
+<span class="sd">    - MRC2014: Extensions to the MRC format header for electron cryo-microscopy and tomography</span>
+<span class="sd">    - https://www.ccpem.ac.uk/mrc_format/mrc2014.php</span>
+<span class="sd">    - https://github.com/ccpem/mrcfile/blob/master/mrcfile/dtypes.py</span>
+
+<span class="sd">Deviations from this standard include:</span>
+<span class="sd">    (1) any data in the extended header is read (and maintained for later writing), but is not interpreted or used in any way;</span>
+<span class="sd">    (2) the `machst` attribute of the header is unpacked as a byte string (e.g b`DA\x00\x00`) rather than as an array of uint8 (e.g. `[68, 65,  0,  0]`);</span>
+<span class="sd">    (3) the `label` attribute of the header is unpacked as a concatenated byte string rather than as an array of byte strings for all 10 80-character labels that may exist</span>
+
+<span class="sd">Prefer the following uses:</span>
+<span class="sd">    - interfacing with MRC headers: mrc.MRCHeader.parse() or mrc.parse_header()</span>
+<span class="sd">    - loading an entire MRC file into memory: mrc.parse_mrc()</span>
+<span class="sd">    - loading a list of MRC files into memory: mrc.parse_mrc_list()</span>
+<span class="sd">    - lazily loading a single image from an MRC file: mrc.LazyImage</span>
+<span class="sd">    - lazily loading a group of images from an MRC file: mrc.LazyImageStack</span>
+<span class="sd">    - writing an MRC file to disk: mrc.write()</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">numpy.typing</span> <span class="k">as</span> <span class="nn">npt</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">BinaryIO</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">groupby</span>
+<span class="kn">from</span> <span class="nn">tomodrgn</span> <span class="kn">import</span> <span class="n">utils</span>
+
+
+<div class="viewcode-block" id="MRCHeader">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.mrc.MRCHeader.html#tomodrgn.mrc.MRCHeader">[docs]</a>
+<span class="k">class</span> <span class="nc">MRCHeader</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class to parse the header of an MRC file and to write a new MRC header to disk.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># define 1024-byte header fields and associated data types to use when decoding bytes</span>
+    <span class="n">fieldnames_structformats</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="p">(</span><span class="s1">&#39;nx&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;ny&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;nz&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">),</span>
+
+        <span class="p">(</span><span class="s1">&#39;mode&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">),</span>
+
+        <span class="p">(</span><span class="s1">&#39;nxstart&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;nystart&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;nzstart&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">),</span>
+
+        <span class="p">(</span><span class="s1">&#39;mx&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;my&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;mz&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">),</span>
+
+        <span class="p">(</span><span class="s1">&#39;cella_xlen&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;cella_ylen&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;cella_zlen&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span>
+
+        <span class="p">(</span><span class="s1">&#39;cellb_alpha&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;cellb_beta&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;cellb_gamma&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span>
+
+        <span class="p">(</span><span class="s1">&#39;mapc&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;mapr&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;maps&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">),</span>
+
+        <span class="p">(</span><span class="s1">&#39;dmin&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;dmax&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;dmean&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span>
+
+        <span class="p">(</span><span class="s1">&#39;ispg&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;nsymbt&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">),</span>
+
+        <span class="p">(</span><span class="s1">&#39;extra1&#39;</span><span class="p">,</span> <span class="s1">&#39;8s&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;exttyp&#39;</span><span class="p">,</span> <span class="s1">&#39;4p&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;nversion&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;extra2&#39;</span><span class="p">,</span> <span class="s1">&#39;84s&#39;</span><span class="p">),</span>
+
+        <span class="p">(</span><span class="s1">&#39;origin_x&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;origin_y&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;origin_z&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span>
+
+        <span class="p">(</span><span class="s1">&#39;map&#39;</span><span class="p">,</span> <span class="s1">&#39;4s&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;machst&#39;</span><span class="p">,</span> <span class="s1">&#39;4s&#39;</span><span class="p">),</span>  <span class="c1"># technically this should be 4B but unpacks as an array of `uint8` which is not then mapped to one `machst`</span>
+
+        <span class="p">(</span><span class="s1">&#39;rms&#39;</span><span class="p">,</span> <span class="s1">&#39;f&#39;</span><span class="p">),</span>
+
+        <span class="p">(</span><span class="s1">&#39;nlabl&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;label&#39;</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="mi">10</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">80</span><span class="si">}</span><span class="s1">s&#39;</span><span class="p">)</span>  <span class="c1"># technically this should be f&#39;{10*&quot;80s&quot;}&#39;, but unpacks as an array of `char which is not then mapped to one `label`</span>
+    <span class="p">)</span>
+
+    <span class="n">field_names</span><span class="p">,</span> <span class="n">struct_formats</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">fieldnames_structformats</span><span class="p">)</span>
+    <span class="n">struct_format_string</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">struct_formats</span><span class="p">)</span>
+
+    <span class="c1"># define the MRC standard `mode` values and corresponding numpy dtypes</span>
+    <span class="n">dtype_for_mode</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="mi">0</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int8</span><span class="p">),</span>
+        <span class="mi">1</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">),</span>
+        <span class="mi">2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
+        <span class="mi">3</span><span class="p">:</span> <span class="s1">&#39;2h&#39;</span><span class="p">,</span>  <span class="c1"># complex number from 2 shorts</span>
+        <span class="mi">4</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">complex64</span><span class="p">),</span>
+        <span class="mi">6</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint16</span><span class="p">),</span>
+        <span class="mi">7</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">),</span>
+        <span class="mi">12</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float16</span><span class="p">),</span>  <span class="c1"># IEEE754</span>
+        <span class="mi">16</span><span class="p">:</span> <span class="s1">&#39;3B&#39;</span><span class="p">,</span>  <span class="c1"># RBG values</span>
+    <span class="p">}</span>
+    <span class="n">mode_for_dtype</span> <span class="o">=</span> <span class="p">{</span><span class="n">vv</span><span class="p">:</span> <span class="n">kk</span> <span class="k">for</span> <span class="n">kk</span><span class="p">,</span> <span class="n">vv</span> <span class="ow">in</span> <span class="n">dtype_for_mode</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">header_values</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span>
+                 <span class="n">extended_header</span><span class="p">:</span> <span class="nb">bytes</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Directly initialize a MRCHeader object with pre-parsed header values.</span>
+
+<span class="sd">        :param header_values: tuple of values in correct order to be assigned to `MRCHeader.field_names`, derived from standard 1024-byte header of MRC file</span>
+<span class="sd">        :param extended_header: byte string of data in extended header of MRC file. Read in but not used.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">field_names</span><span class="p">,</span> <span class="n">header_values</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extended_header</span> <span class="o">=</span> <span class="n">extended_header</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">boxsize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;nx&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype_for_mode</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;mode&#39;</span><span class="p">]]</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;Header: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="si">}</span><span class="se">\n</span><span class="s1">Extended header: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">extended_header</span><span class="si">}</span><span class="s1">&#39;</span>
+
+<div class="viewcode-block" id="MRCHeader.parse">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.mrc.MRCHeader.html#tomodrgn.mrc.MRCHeader.parse">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">parse</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span>
+              <span class="n">fname</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor method to create an MRCHeader object from an MRC file name.</span>
+
+<span class="sd">        :param fname: path to MRC file on disk</span>
+<span class="sd">        :return: MRCHeader object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="c1"># load and unpack the header</span>
+            <span class="n">header_values</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">Struct</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">struct_format_string</span><span class="p">)</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1024</span><span class="p">))</span>
+
+            <span class="c1"># instantiate the MRCHeader object</span>
+            <span class="n">header</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">header_values</span><span class="p">)</span>
+
+            <span class="c1"># load the extended header if declared present</span>
+            <span class="n">extbytes</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;nsymbt&#39;</span><span class="p">]</span>
+            <span class="n">extended_header</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">extbytes</span><span class="p">)</span>
+            <span class="n">header</span><span class="o">.</span><span class="n">extended_header</span> <span class="o">=</span> <span class="n">extended_header</span>
+
+        <span class="k">return</span> <span class="n">header</span></div>
+
+
+<div class="viewcode-block" id="MRCHeader.make_default_header">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.mrc.MRCHeader.html#tomodrgn.mrc.MRCHeader.make_default_header">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">make_default_header</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span>
+                            <span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                            <span class="n">is_vol</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                            <span class="n">angpix</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+                            <span class="n">origin_x</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                            <span class="n">origin_y</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                            <span class="n">origin_z</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor method to create an MRCHeader object describing a 3-D data array.</span>
+
+<span class="sd">        Automaticaly calculates and sets:</span>
+<span class="sd">            `nx`,</span>
+<span class="sd">            `ny`,</span>
+<span class="sd">            `nz`,</span>
+<span class="sd">            `mode`,</span>
+<span class="sd">            `cella_xlen`,</span>
+<span class="sd">            `cella_ylen`,</span>
+<span class="sd">            `cella_zlen`</span>
+<span class="sd">            `dmin`</span>
+<span class="sd">            `dmax`</span>
+<span class="sd">            `dmean`</span>
+<span class="sd">            `ispg`</span>
+<span class="sd">            `map`</span>
+<span class="sd">            `machst`</span>
+
+<span class="sd">        Assumes default values for:</span>
+<span class="sd">            `nxstart = nystart = nzstart := 0`,</span>
+<span class="sd">            `mx := nx`,</span>
+<span class="sd">            `my := ny`,</span>
+<span class="sd">            `mz := nz`,</span>
+<span class="sd">            `cellb_alpha = cellb_beta = cellb_gamma := 90`</span>
+<span class="sd">            `mapc := 1`</span>
+<span class="sd">            `mapr := 2`</span>
+<span class="sd">            `maps := 3`</span>
+<span class="sd">            `nsymbt := 0`</span>
+<span class="sd">            `extra1 := b&#39;\x00&#39; * 8`</span>
+<span class="sd">            `exttyp := b&#39;&#39;`</span>
+<span class="sd">            `nversion := 0`</span>
+<span class="sd">            `extra2 := b&#39;\x00&#39; * 84`</span>
+<span class="sd">            `origin_x = origin_y = origin_z = 0`</span>
+<span class="sd">            `rms := -1`</span>
+<span class="sd">            `nlabl := 0`</span>
+<span class="sd">            `labels := b&#39;\x00&#39; * 84`</span>
+
+<span class="sd">        :param data: array of data to be described by this header</span>
+<span class="sd">        :param is_vol: whether the data array is a 3-D volume instead of a stack of 2-D images</span>
+<span class="sd">        :param angpix: pixel size in angstroms per pixel of the data array</span>
+<span class="sd">        :param origin_x: coordinate system origin along x-axis in angstroms, or the phase origin of the transformed image in pixels for MODE 3 or 4 data</span>
+<span class="sd">        :param origin_y: coordinate system origin along y-axis in angstroms, or the phase origin of the transformed image in pixels for MODE 3 or 4 data</span>
+<span class="sd">        :param origin_z: coordinate system origin along z-axis in angstroms, or the phase origin of the transformed image in pixels for MODE 3 or 4 data</span>
+<span class="sd">        :return: MRCHeader object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># get the number of sections, columns, and rows</span>
+        <span class="n">nz</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nx</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="c1"># set the space group header for an image stack (0) or a 3-D volume (1) following the MRC2014 standard</span>
+        <span class="n">ispg</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">is_vol</span> <span class="k">else</span> <span class="mi">0</span>
+
+        <span class="c1"># set endianness</span>
+        <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">byteorder</span> <span class="o">==</span> <span class="s1">&#39;little&#39;</span><span class="p">:</span>
+            <span class="n">machst</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;</span><span class="se">\x44\x44\x00\x00</span><span class="s1">&#39;</span>
+        <span class="k">elif</span> <span class="n">sys</span><span class="o">.</span><span class="n">byteorder</span> <span class="o">==</span> <span class="s1">&#39;big&#39;</span><span class="p">:</span>
+            <span class="n">machst</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;</span><span class="se">\x11\x11\x00\x00</span><span class="s1">&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Unrecognized byteorder </span><span class="si">{</span><span class="n">sys</span><span class="o">.</span><span class="n">byteorder</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="c1"># set data statistics for header</span>
+        <span class="k">if</span> <span class="n">is_vol</span><span class="p">:</span>
+            <span class="c1"># calculate data statistics directly</span>
+            <span class="n">dmin</span><span class="p">,</span> <span class="n">dmax</span><span class="p">,</span> <span class="n">dmean</span><span class="p">,</span> <span class="n">rms</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">data</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="n">data</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="n">data</span><span class="o">.</span><span class="n">std</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># use undefined values for image stacks since the stack could be very large and costly to evaluate min/max/mean/rms</span>
+            <span class="c1"># in keeping with standard convention, (1) dmax &lt; dmin, (2) dmean &lt; min(dmax, dmin), (3) rms &lt; 0</span>
+            <span class="n">dmin</span><span class="p">,</span> <span class="n">dmax</span><span class="p">,</span> <span class="n">dmean</span><span class="p">,</span> <span class="n">rms</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span>
+
+        <span class="c1"># populate the values in the order defined by MRCHeader.field_names</span>
+        <span class="n">vals</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">nx</span><span class="p">,</span>  <span class="c1"># nx</span>
+            <span class="n">ny</span><span class="p">,</span>  <span class="c1"># ny</span>
+            <span class="n">nz</span><span class="p">,</span>  <span class="c1"># nz</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">mode_for_dtype</span><span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">dtype</span><span class="p">],</span>  <span class="c1"># mode</span>
+            <span class="mi">0</span><span class="p">,</span>  <span class="c1"># nxstart</span>
+            <span class="mi">0</span><span class="p">,</span>  <span class="c1"># nystart</span>
+            <span class="mi">0</span><span class="p">,</span>  <span class="c1"># nzstart</span>
+            <span class="n">nx</span><span class="p">,</span>  <span class="c1"># mx</span>
+            <span class="n">ny</span><span class="p">,</span>  <span class="c1"># my</span>
+            <span class="n">nz</span><span class="p">,</span>  <span class="c1"># mz</span>
+            <span class="n">angpix</span> <span class="o">*</span> <span class="n">nx</span><span class="p">,</span>  <span class="c1"># cella_xlen</span>
+            <span class="n">angpix</span> <span class="o">*</span> <span class="n">ny</span><span class="p">,</span>  <span class="c1"># cella_ylen</span>
+            <span class="n">angpix</span> <span class="o">*</span> <span class="n">nz</span><span class="p">,</span>  <span class="c1"># cella_zlen</span>
+            <span class="mf">90.</span><span class="p">,</span>  <span class="c1"># cellb_alpha</span>
+            <span class="mf">90.</span><span class="p">,</span>  <span class="c1"># cellb_beta</span>
+            <span class="mf">90.</span><span class="p">,</span>  <span class="c1"># cellb_gamma</span>
+            <span class="mi">1</span><span class="p">,</span>  <span class="c1"># mapc</span>
+            <span class="mi">2</span><span class="p">,</span>  <span class="c1"># mapr</span>
+            <span class="mi">3</span><span class="p">,</span>  <span class="c1"># mapz,</span>
+            <span class="n">dmin</span><span class="p">,</span>  <span class="c1"># dmin</span>
+            <span class="n">dmax</span><span class="p">,</span>  <span class="c1"># dmax</span>
+            <span class="n">dmean</span><span class="p">,</span>  <span class="c1"># dmean</span>
+            <span class="n">ispg</span><span class="p">,</span>  <span class="c1"># space group header</span>
+            <span class="mi">0</span><span class="p">,</span>  <span class="c1"># nsymbt, length of extended header</span>
+            <span class="sa">b</span><span class="s1">&#39;</span><span class="se">\x00</span><span class="s1">&#39;</span> <span class="o">*</span> <span class="mi">8</span><span class="p">,</span>  <span class="c1"># extra1</span>
+            <span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="p">,</span>  <span class="c1"># exttyp</span>
+            <span class="mi">0</span><span class="p">,</span>  <span class="c1"># nversion of MRC format</span>
+            <span class="sa">b</span><span class="s1">&#39;</span><span class="se">\x00</span><span class="s1">&#39;</span> <span class="o">*</span> <span class="mi">84</span><span class="p">,</span>  <span class="c1"># extra2</span>
+            <span class="n">origin_x</span><span class="p">,</span>  <span class="c1"># origin_x</span>
+            <span class="n">origin_y</span><span class="p">,</span>  <span class="c1"># origin_y</span>
+            <span class="n">origin_z</span><span class="p">,</span>  <span class="c1"># origin_z</span>
+            <span class="sa">b</span><span class="s1">&#39;MAP &#39;</span> <span class="k">if</span> <span class="n">is_vol</span> <span class="k">else</span> <span class="sa">b</span><span class="s1">&#39;</span><span class="se">\x00</span><span class="s1">&#39;</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span>  <span class="c1"># map</span>
+            <span class="n">machst</span><span class="p">,</span>  <span class="c1"># machst</span>
+            <span class="n">rms</span><span class="p">,</span>  <span class="c1"># rms</span>
+            <span class="mi">0</span><span class="p">,</span>  <span class="c1"># nlabl</span>
+            <span class="sa">b</span><span class="s1">&#39;</span><span class="se">\x00</span><span class="s1">&#39;</span> <span class="o">*</span> <span class="mi">800</span><span class="p">,</span>  <span class="c1"># labels</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">vals</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MRCHeader.write">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.mrc.MRCHeader.html#tomodrgn.mrc.MRCHeader.write">[docs]</a>
+    <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+              <span class="n">fh</span><span class="p">:</span> <span class="n">BinaryIO</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write an MRC file header to the specified file handle.</span>
+
+<span class="sd">        :param fh: filehandle to file on disk opened in binary mode</span>
+<span class="sd">        :return: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># check that the actual and declared length of the extended header are in sync</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;nsymbt&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">extended_header</span><span class="p">)</span>
+
+        <span class="c1"># pack the header into appropriate binary format</span>
+        <span class="n">buf</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">Struct</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">struct_format_string</span><span class="p">)</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="o">*</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+
+        <span class="c1"># write the header and extended header</span>
+        <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
+        <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">extended_header</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MRCHeader.get_apix">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.mrc.MRCHeader.html#tomodrgn.mrc.MRCHeader.get_apix">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_apix</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the pixel size in angstroms per pixel based on header `cella_xlen` and `nx` ratio</span>
+
+<span class="sd">        :return: pixel size in angstroms</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cella_xlen&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;nx&#39;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="MRCHeader.update_apix">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.mrc.MRCHeader.html#tomodrgn.mrc.MRCHeader.update_apix">[docs]</a>
+    <span class="k">def</span> <span class="nf">update_apix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                    <span class="n">angpix</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update the pixel size in angstrom by adjusting the header `cella_xlen`, `cella_ylen`, and `cella_zlen`</span>
+
+<span class="sd">        :param angpix:</span>
+<span class="sd">        :return: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cella_xlen&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;nx&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">angpix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cella_ylen&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;ny&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">angpix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;cella_zlen&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;nz&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">angpix</span></div>
+
+
+<div class="viewcode-block" id="MRCHeader.get_origin">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.mrc.MRCHeader.html#tomodrgn.mrc.MRCHeader.get_origin">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_origin</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the origin of the data coordinate system.</span>
+
+<span class="sd">        :return: origin in (x, y, z)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;origin_x&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;origin_y&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;origin_z&#39;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="MRCHeader.update_origin">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.mrc.MRCHeader.html#tomodrgn.mrc.MRCHeader.update_origin">[docs]</a>
+    <span class="k">def</span> <span class="nf">update_origin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                      <span class="n">origin_x</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                      <span class="n">origin_y</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                      <span class="n">origin_z</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update the origin of the data coordinate system.</span>
+
+<span class="sd">        :param origin_x: new origin along x axis</span>
+<span class="sd">        :param origin_y: new origin along y axis</span>
+<span class="sd">        :param origin_z: new origin along z axis</span>
+<span class="sd">        :return: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;origin_x&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">origin_x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;origin_y&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">origin_y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;origin_z&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">origin_z</span></div>
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">total_header_bytes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate the total header length as standard header (1024 bytes) + optional extended header (&gt;= 0)</span>
+
+<span class="sd">        :return: total number of bytes in header and extended header</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="mi">1024</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">extended_header</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="LazyImage">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.mrc.LazyImage.html#tomodrgn.mrc.LazyImage">[docs]</a>
+<span class="k">class</span> <span class="nc">LazyImage</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class to lazily load data from an MRC file on-the-fly</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">fname</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                 <span class="n">shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span>
+                 <span class="n">dtype</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">DTypeLike</span><span class="p">,</span>
+                 <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize a LazyImage object. No disk access required or performed by creating the object.</span>
+
+<span class="sd">        :param fname: path to the .mrc file on disk</span>
+<span class="sd">        :param shape: shape of the section of data to be lazily loaded from the .mrc file, e.g. `(128,128)` for a single box128 image</span>
+<span class="sd">        :param dtype: the data type of the .mrc file contents, as described by the .mrc file header `mode` key</span>
+<span class="sd">        :param offset: offset from the start of the file to the beginning of the section of data to be lazily loaded, in bytes.</span>
+<span class="sd">                Should include standard 1024 byte mrc header, optional extended header, and number of data bytes preceeding data to be loaded.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fname</span> <span class="o">=</span> <span class="n">fname</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="n">shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">dtype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">offset</span> <span class="o">=</span> <span class="n">offset</span>
+
+<div class="viewcode-block" id="LazyImage.get">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.mrc.LazyImage.html#tomodrgn.mrc.LazyImage.get">[docs]</a>
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load the data from disk to a numpy array</span>
+
+<span class="sd">        :return: numpy array of data loaded from disk</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># create a file handle to open the file</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fname</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="c1"># go to the specified offset from the start of the file</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="p">)</span>
+            <span class="c1"># load bytes from disk into a numpy array of specified shape</span>
+            <span class="n">image</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fromfile</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">image</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="LazyImageStack">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.mrc.LazyImageStack.html#tomodrgn.mrc.LazyImageStack">[docs]</a>
+<span class="k">class</span> <span class="nc">LazyImageStack</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Efficiently load a particle stack from an NxDxD stack.mrcs file on-the-fly.</span>
+<span class="sd">    Minimizes calls to file opening, file seeking, and file reading in single-process context.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">fname</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                 <span class="n">indices_image</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+                 <span class="n">representative_header</span><span class="p">:</span> <span class="n">MRCHeader</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a LazyImageStack object from a file on disk.</span>
+
+<span class="sd">        :param fname: path to the .mrc(s) file on disk.</span>
+<span class="sd">        :param indices_image: list of integer indices of which sections (slow axis in the array) to load from the file.</span>
+<span class="sd">        :param representative_header: pre-existing MRCHeader object. Skips disk access during object creation that would otherwise be required to parse this file&#39;s header.</span>
+<span class="sd">                Causes the ``fname`` file to be loaded using values from ``representative_header`` for extended header bytes, array dtype, array shape in X,Y.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># store the input file name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fname</span> <span class="o">=</span> <span class="n">fname</span>
+
+        <span class="k">if</span> <span class="n">representative_header</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># load the input file header as an MRCHeader object</span>
+            <span class="n">header</span> <span class="o">=</span> <span class="n">MRCHeader</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># use a pre-existing MRCHeader object (skips disk access in parsing this file&#39;s header)</span>
+            <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">representative_header</span><span class="p">)</span> <span class="ow">is</span> <span class="n">MRCHeader</span>
+            <span class="n">header</span> <span class="o">=</span> <span class="n">representative_header</span>
+
+        <span class="c1"># calculate information used in determining which bytes to load as each image</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">header_offset</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">total_header_bytes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_images</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">indices_image</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype_image</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shape_image</span> <span class="o">=</span> <span class="p">(</span><span class="n">header</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;ny&#39;</span><span class="p">],</span> <span class="n">header</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;nx&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stride_image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dtype_image</span><span class="o">.</span><span class="n">itemsize</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_image</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_image</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># group the indices of images to load from this file into continuous blocks for contiguous reads and store the grouped indices</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">indices_image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_group_contiguous_indices</span><span class="p">(</span><span class="n">indices_image</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_group_contiguous_indices</span><span class="p">(</span><span class="n">indices_image</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Groups a flat list of input indices by which indices are sequentially contiguous.</span>
+<span class="sd">        For example, input of [0, 1, 2, 4, 5] would return [[0, 1, 2], [4, 5]].</span>
+
+<span class="sd">        :param indices_image: flat list of sorted, non-redundant, potentially non-contiguous input indices.</span>
+<span class="sd">        :return: list of lists of contiguous indices.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># create list to store contiguous indices</span>
+        <span class="n">contiguous_indices</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># determine which indices (`j`) are contiguous by virtue of sharing the same offset from natural numbers starting from 0 (`i`)</span>
+        <span class="n">contiguous_labels</span> <span class="o">=</span> <span class="p">[</span><span class="n">j</span> <span class="o">-</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">indices_image</span><span class="p">)]</span>
+
+        <span class="n">image_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">elements</span> <span class="ow">in</span> <span class="n">groupby</span><span class="p">(</span><span class="n">contiguous_labels</span><span class="p">):</span>
+            <span class="n">length_contiguous_subset</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">elements</span><span class="p">))</span>
+            <span class="n">contiguous_indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">indices_image</span><span class="p">[</span><span class="n">image_count</span><span class="p">:</span> <span class="n">image_count</span> <span class="o">+</span> <span class="n">length_contiguous_subset</span><span class="p">])</span>
+            <span class="n">image_count</span> <span class="o">+=</span> <span class="n">length_contiguous_subset</span>
+
+        <span class="k">return</span> <span class="n">contiguous_indices</span>
+
+<div class="viewcode-block" id="LazyImageStack.get">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.mrc.LazyImageStack.html#tomodrgn.mrc.LazyImageStack.get">[docs]</a>
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">low_memory</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load the image data from disk to a numpy array</span>
+
+<span class="sd">        :param low_memory: if True, only load selected slices into memory via multiple disk accesses of sequentially grouped slices (slower, but uses less RAM).</span>
+<span class="sd">                If False, load the whole file in one disk access and then return selected slices (faster on slow filesystems but uses more RAM).</span>
+<span class="sd">        :return: the numpy array of data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fname</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="n">low_memory</span><span class="p">:</span>
+                <span class="c1"># only read selected indices into memory via reading multiple sequentially grouped slices from the file</span>
+
+                <span class="c1"># calculate and apply the offset from the start of the file to the beginning of the first image to be loaded</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">header_offset</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">indices_image</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">stride_image</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+                <span class="c1"># preallocate an array to be populated by the loaded images</span>
+                <span class="n">stack</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">n_images</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">shape_image</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype_image</span><span class="p">)</span>
+
+                <span class="n">image_count</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">inds_contiguous</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">indices_image</span><span class="p">):</span>
+
+                    <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">inds_contiguous</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">previous_ind</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                        <span class="c1"># np.fromfile advances file pointer by length_contiguous_subset * stride_image bytes on the previous loop</span>
+                        <span class="c1"># we need to seek the file pointer ahead to the start of the next image to be loaded</span>
+                        <span class="c1"># by definition of the contiguous indices, this seeking is needed every iteration but the first</span>
+                        <span class="n">offset_from_previous_image</span> <span class="o">=</span> <span class="p">(</span><span class="n">inds_contiguous</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="n">previous_ind</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">stride_image</span>
+                        <span class="c1"># offset by the number of bytes of skipped images, relative to the file pointer&#39;s position after reading the previous contiguous images</span>
+                        <span class="n">f</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">offset_from_previous_image</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+                    <span class="n">length_contiguous_subset</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">inds_contiguous</span><span class="p">)</span>
+                    <span class="n">stack</span><span class="p">[</span><span class="n">image_count</span><span class="p">:</span> <span class="n">image_count</span> <span class="o">+</span> <span class="n">length_contiguous_subset</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fromfile</span><span class="p">(</span><span class="n">f</span><span class="p">,</span>
+                                                                                             <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype_image</span><span class="p">,</span>
+                                                                                             <span class="n">count</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shape_image</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_image</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">length_contiguous_subset</span>
+                                                                                             <span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">length_contiguous_subset</span><span class="p">,</span>
+                                                                                                       <span class="bp">self</span><span class="o">.</span><span class="n">shape_image</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                                                                                       <span class="bp">self</span><span class="o">.</span><span class="n">shape_image</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="n">image_count</span> <span class="o">+=</span> <span class="n">length_contiguous_subset</span>
+
+                    <span class="c1"># track the last image loaded of the contiguous block, to be used in adjusting file pointer offset at next iteration</span>
+                    <span class="n">previous_ind</span> <span class="o">=</span> <span class="n">inds_contiguous</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># read most of the entire file (spanning the first to the last index to preserve) into memory in one file access, then mask to selected images</span>
+
+                <span class="c1"># calculate and apply the offset from the start of the file to the beginning of the first image to be loaded</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">header_offset</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">indices_image</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">stride_image</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+                <span class="c1"># index -1,-1 is largest 0-indexed image, index[0][0] is the smallest 0-indexed image</span>
+                <span class="n">n_images_to_read</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">indices_image</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">indices_image</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+
+                <span class="c1"># read all data from disk in one call</span>
+                <span class="n">stack</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fromfile</span><span class="p">(</span><span class="n">f</span><span class="p">,</span>
+                                    <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype_image</span><span class="p">,</span>
+                                    <span class="n">count</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shape_image</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_image</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_images_to_read</span>
+                                    <span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">n_images_to_read</span><span class="p">,</span>
+                                              <span class="bp">self</span><span class="o">.</span><span class="n">shape_image</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                              <span class="bp">self</span><span class="o">.</span><span class="n">shape_image</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+                <span class="c1"># get the indices of the images to preserve, offset relative to the number of images in the loaded array</span>
+                <span class="n">indices_image_flat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">ind_img</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">indices_image</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">ind_img_contiguous</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">indices_image</span> <span class="k">for</span> <span class="n">ind_img</span> <span class="ow">in</span> <span class="n">ind_img_contiguous</span><span class="p">])</span>
+                <span class="n">stack</span> <span class="o">=</span> <span class="n">stack</span><span class="p">[</span><span class="n">indices_image_flat</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">stack</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="parse_header">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.mrc.parse_header.html#tomodrgn.mrc.parse_header">[docs]</a>
+<span class="k">def</span> <span class="nf">parse_header</span><span class="p">(</span><span class="n">fname</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MRCHeader</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convenience function to create an MRCHeader object given an MRC file name</span>
+
+<span class="sd">    :param fname: path to MRC file on disk</span>
+<span class="sd">    :return: MRCHeader object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">MRCHeader</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="parse_mrc_list">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.mrc.parse_mrc_list.html#tomodrgn.mrc.parse_mrc_list">[docs]</a>
+<span class="k">def</span> <span class="nf">parse_mrc_list</span><span class="p">(</span><span class="n">txtfile</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                   <span class="n">lazy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">LazyImage</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load the MRC file(s) specified in a text file into memory as either a numpy array or a list of LazyImages.</span>
+
+<span class="sd">    :param txtfile: path to newline-delimited text file listing the absolute path to the MRC file(s) to be loaded, or the path to the MRC file(s) relative to `txtfile`.</span>
+<span class="sd">    :param lazy: whether to load particle images now in memory (False) or later on-the-fly (True)</span>
+<span class="sd">    :return: numpy array or list of LazyImages of all images in all MRC files</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># get the names of MRC file(s) to load</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">txtfile</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+
+    <span class="c1"># confirm where to load MRC file(s) from disk</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">prefix_paths</span><span class="p">(</span><span class="n">mrcs</span><span class="o">=</span><span class="n">lines</span><span class="p">,</span>
+                               <span class="n">datadir</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">txtfile</span><span class="p">)))</span>
+
+    <span class="c1"># load the particles</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">lazy</span><span class="p">:</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">parse_mrc</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span> <span class="n">lazy</span><span class="o">=</span><span class="kc">False</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="p">[</span><span class="n">img</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">lines</span> <span class="k">for</span> <span class="n">img</span> <span class="ow">in</span> <span class="n">parse_mrc</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span> <span class="n">lazy</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]]</span>
+
+    <span class="k">return</span> <span class="n">particles</span></div>
+
+
+
+<div class="viewcode-block" id="parse_mrc">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.mrc.parse_mrc.html#tomodrgn.mrc.parse_mrc">[docs]</a>
+<span class="k">def</span> <span class="nf">parse_mrc</span><span class="p">(</span><span class="n">fname</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+              <span class="n">lazy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">LazyImage</span><span class="p">],</span> <span class="n">MRCHeader</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load an entire MRC file into memory as either a numpy array or a list of LazyImages</span>
+
+<span class="sd">    :param fname: path to MRC file on disk</span>
+<span class="sd">    :param lazy: whether to load particle images now in memory (False) or later on-the-fly (True)</span>
+<span class="sd">    :return: array: numpy array of MRC data in header-specified dtype and shape, or list of a LazyImage for each section along the nz axis in the MRC file</span>
+<span class="sd">            header: an MRCHeader object containing the information encoded in the header and extended header of the MRC file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># parse the header</span>
+    <span class="n">header</span> <span class="o">=</span> <span class="n">MRCHeader</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+
+    <span class="c1"># get information describing the data array size and layout</span>
+    <span class="n">dtype</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">dtype</span>
+    <span class="n">nz</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nx</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;nz&#39;</span><span class="p">],</span> <span class="n">header</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;ny&#39;</span><span class="p">],</span> <span class="n">header</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;nx&#39;</span><span class="p">]</span>
+
+    <span class="c1"># load all data in one block</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">lazy</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+            <span class="c1"># skip the header + extended header</span>
+            <span class="n">fh</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">header</span><span class="o">.</span><span class="n">total_header_bytes</span><span class="p">)</span>
+            <span class="c1"># load all bytes remaining in file from disk into a numpy array of specified shape</span>
+            <span class="n">array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fromfile</span><span class="p">(</span><span class="n">fh</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">nz</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">nx</span><span class="p">))</span>
+
+    <span class="c1"># or list of LazyImages</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># calculate the size of each image in bytes</span>
+        <span class="n">stride</span> <span class="o">=</span> <span class="n">dtype</span><span class="p">()</span><span class="o">.</span><span class="n">itemsize</span> <span class="o">*</span> <span class="n">ny</span> <span class="o">*</span> <span class="n">nx</span>
+        <span class="n">array</span> <span class="o">=</span> <span class="p">[</span><span class="n">LazyImage</span><span class="p">(</span><span class="n">fname</span><span class="o">=</span><span class="n">fname</span><span class="p">,</span>
+                           <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">ny</span><span class="p">,</span> <span class="n">nx</span><span class="p">),</span>
+                           <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+                           <span class="n">offset</span><span class="o">=</span><span class="n">header</span><span class="o">.</span><span class="n">total_header_bytes</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">stride</span><span class="p">)</span>
+                 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nz</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">array</span><span class="p">,</span> <span class="n">header</span></div>
+
+
+
+<div class="viewcode-block" id="write">
+<a class="viewcode-back" href="../../api/_autosummary/tomodrgn.mrc.write.html#tomodrgn.mrc.write">[docs]</a>
+<span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="n">fname</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+          <span class="n">array</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+          <span class="n">header</span><span class="p">:</span> <span class="n">MRCHeader</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+          <span class="n">angpix</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+          <span class="n">origin_x</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+          <span class="n">origin_y</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+          <span class="n">origin_z</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+          <span class="n">is_vol</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Write a data array to disk in MRC format.</span>
+
+<span class="sd">    :param fname: Name of the MRC file to write</span>
+<span class="sd">    :param array: Array of data to write as data block of MRC file</span>
+<span class="sd">    :param header: MRCFile header object to be written as the header of the new MRC file. `None` means that a default header will be created using the following parameters:</span>
+<span class="sd">    :param angpix: Pixel size of the data to be used in creating the default header</span>
+<span class="sd">    :param origin_x: new origin along x axis</span>
+<span class="sd">    :param origin_y: new origin along y axis</span>
+<span class="sd">    :param origin_z: new origin along z axis</span>
+<span class="sd">    :param is_vol: Whether the data array represents a volume (versus an image or image stack). `None` means to infer based on whether data array is a cube (volume-like).</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">header</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># get a default header if not provided</span>
+        <span class="k">if</span> <span class="n">is_vol</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">is_vol</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="kc">False</span>  <span class="c1"># Guess whether data is vol or image stack</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="n">MRCHeader</span><span class="o">.</span><span class="n">make_default_header</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">array</span><span class="p">,</span>
+                                               <span class="n">is_vol</span><span class="o">=</span><span class="n">is_vol</span><span class="p">,</span>
+                                               <span class="n">angpix</span><span class="o">=</span><span class="n">angpix</span><span class="p">,</span>
+                                               <span class="n">origin_x</span><span class="o">=</span><span class="n">origin_x</span><span class="p">,</span>
+                                               <span class="n">origin_y</span><span class="o">=</span><span class="n">origin_y</span><span class="p">,</span>
+                                               <span class="n">origin_z</span><span class="o">=</span><span class="n">origin_z</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># ensure that the supplied header describes the data correctly</span>
+        <span class="n">header</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;nz&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">header</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;ny&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">header</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;nx&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">header</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;mode&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">header</span><span class="o">.</span><span class="n">mode_for_dtype</span><span class="p">[</span><span class="n">array</span><span class="o">.</span><span class="n">dtype</span><span class="p">]</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="c1"># write the header (and extended header if present)</span>
+        <span class="n">header</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="c1"># write the data array</span>
+        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">array</span><span class="o">.</span><span class="n">tobytes</span><span class="p">())</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549"></script>
+<script defer src="../../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, Barrett M Powell, Joseph H Davis.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

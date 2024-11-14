@@ -1,0 +1,991 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tomodrgn.commands.analyze &#8212; tomoDRGN 0.2.3.dev328 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!-- 
+    this give us a css class that will be invisible only if js is disabled 
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../_static/scripts/fontawesome.js?digest=26a4bc78f4c0ddb94549"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549" />
+
+    <script src="../../../_static/documentation_options.js?v=d6c7774d"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/tomodrgn/commands/analyze';</script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">tomoDRGN v0.2.3.dev328</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../overview/index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../command_usage/index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../overview/index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../command_usage/index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">tomodrgn.commands.analyze</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for tomodrgn.commands.analyze</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Visualize latent space and generate volumes</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span> <span class="k">as</span> <span class="n">dt</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Literal</span>
+
+<span class="kn">import</span> <span class="nn">matplotlib</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+<span class="kn">from</span> <span class="nn">importlib_resources</span> <span class="kn">import</span> <span class="n">files</span>
+
+<span class="kn">from</span> <span class="nn">tomodrgn</span> <span class="kn">import</span> <span class="n">analysis</span><span class="p">,</span> <span class="n">utils</span><span class="p">,</span> <span class="n">starfile</span><span class="p">,</span> <span class="n">models</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">log</span>
+
+
+<div class="viewcode-block" id="add_args">
+<a class="viewcode-back" href="../../../api/_autosummary/tomodrgn.commands.analyze.add_args.html#tomodrgn.commands.analyze.add_args">[docs]</a>
+<span class="k">def</span> <span class="nf">add_args</span><span class="p">(</span><span class="n">parser</span><span class="p">:</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">parser</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># this script is called directly; need to create a parser</span>
+        <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="vm">__doc__</span><span class="p">,</span> <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentDefaultsHelpFormatter</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># this script is called from tomodrgn.__main__ entry point, in which case a parser is already created</span>
+        <span class="k">pass</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;workdir&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Directory with tomoDRGN results&#39;</span><span class="p">)</span>
+
+    <span class="n">group</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Core arguments&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--epoch&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;latest&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Epoch number N to analyze (0-based indexing, corresponding to z.N.pkl, weights.N.pkl). &#39;</span>
+                                                                    <span class="s1">&#39;Supplying `latest` will auto-detect the latest completed epoch of training.&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--device&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Optionally specify CUDA device&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="s1">&#39;--outdir&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Output directory for analysis results (default: [workdir]/analyze.[epoch])&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--skip-vol&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Skip generation of volumes&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--skip-umap&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Skip running UMAP&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--plot-format&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;png&#39;</span><span class="p">,</span> <span class="s1">&#39;svgz&#39;</span><span class="p">],</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;png&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;File format with which to save plots&#39;</span><span class="p">)</span>
+
+    <span class="n">group</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Arguments for latent space analysis&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--pc&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of principal component traversals to generate (default: </span><span class="si">%(default)s</span><span class="s1">)&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--pc-ondata&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Find closest on-data latent point to each PC percentile&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--ksample&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of kmeans samples to generate (default: </span><span class="si">%(default)s</span><span class="s1">)&#39;</span><span class="p">)</span>
+
+    <span class="n">group</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Arguments for volume generation&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--downsample&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Downsample volumes to this box size (pixels)&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--lowpass&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Lowpass filter to this resolution in Å&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--flip&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Flip handedness of output volumes&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--invert&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Invert contrast of output volumes&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">parser</span></div>
+
+
+
+<div class="viewcode-block" id="analyze_z_onedimensional">
+<a class="viewcode-back" href="../../../api/_autosummary/tomodrgn.commands.analyze.analyze_z_onedimensional.html#tomodrgn.commands.analyze.analyze_z_onedimensional">[docs]</a>
+<span class="k">def</span> <span class="nf">analyze_z_onedimensional</span><span class="p">(</span><span class="n">z</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                             <span class="n">outdir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                             <span class="n">plot_format</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;png&#39;</span><span class="p">,</span> <span class="s1">&#39;svgz&#39;</span><span class="p">],</span>
+                             <span class="n">vg</span><span class="p">:</span> <span class="n">models</span><span class="o">.</span><span class="n">VolumeGenerator</span><span class="p">,</span>
+                             <span class="n">skip_vol</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                             <span class="n">ondata</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                             <span class="n">downsample</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                             <span class="n">lowpass</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                             <span class="n">flip</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                             <span class="n">invert</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plotting and volume generation for 1D z</span>
+
+<span class="sd">    :param z: array of 1-D latent embeddings, shape (nptcls, 1)</span>
+<span class="sd">    :param outdir: directory in which to save all outputs (plots and generated volumes)</span>
+<span class="sd">    :param plot_format: file format with which to save plots</span>
+<span class="sd">    :param vg: VolumeGenerator instance to aid volume generation at specficied z values</span>
+<span class="sd">    :param skip_vol: whether to skip generation of volumes</span>
+<span class="sd">    :param ondata: whether to use the closest on-data latent point to each z percentile for plotting and volume generation</span>
+<span class="sd">    :param downsample: downsample reconstructed volumes to this box size (units: px) by Fourier cropping, None means to skip downsampling</span>
+<span class="sd">    :param lowpass: lowpass filter reconstructed volumes to this resolution (units: Å), None means to skip lowpass filtering</span>
+<span class="sd">    :param flip: flip the chirality of the reconstructed volumes by inverting along the z axis</span>
+<span class="sd">    :param invert: invert the data sign of the reconstructed volumes (light-on-dark vs dark-on-light)</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="n">z</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">z</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">nptcls</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+
+    <span class="c1"># scatter plot of particle index against latent embedding</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nptcls</span><span class="p">),</span> <span class="n">z</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">.1</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">rasterized</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;particle index&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;z&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/z.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c1"># histogram of latent embeddings with KDE overlay</span>
+    <span class="n">sns</span><span class="o">.</span><span class="n">displot</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">kde</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;z&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/z_hist.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">skip_vol</span><span class="p">:</span>
+        <span class="c1"># sample z values at 5th, 15th, ..., 95th percentiles of the latent distribution</span>
+        <span class="n">ztraj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="mi">95</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="mi">10</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">ondata</span><span class="p">:</span>
+            <span class="n">ztraj</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">get_nearest_point</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">ztraj</span><span class="p">)</span>
+
+        <span class="c1"># histogram of latent embeddings with KDE overlay</span>
+        <span class="n">sns</span><span class="o">.</span><span class="n">displot</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">kde</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">percentile</span> <span class="ow">in</span> <span class="n">ztraj</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">percentile</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;-&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;z&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/z_hist_percentile_volumes.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="c1"># generate corresponding volumes</span>
+        <span class="n">vg</span><span class="o">.</span><span class="n">generate_volumes</span><span class="p">(</span><span class="n">z</span><span class="o">=</span><span class="n">ztraj</span><span class="p">,</span>
+                            <span class="n">out_dir</span><span class="o">=</span><span class="n">outdir</span><span class="p">,</span>
+                            <span class="n">downsample</span><span class="o">=</span><span class="n">downsample</span><span class="p">,</span>
+                            <span class="n">lowpass</span><span class="o">=</span><span class="n">lowpass</span><span class="p">,</span>
+                            <span class="n">flip</span><span class="o">=</span><span class="n">flip</span><span class="p">,</span>
+                            <span class="n">invert</span><span class="o">=</span><span class="n">invert</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="analyze_z_multidimensional">
+<a class="viewcode-back" href="../../../api/_autosummary/tomodrgn.commands.analyze.analyze_z_multidimensional.html#tomodrgn.commands.analyze.analyze_z_multidimensional">[docs]</a>
+<span class="k">def</span> <span class="nf">analyze_z_multidimensional</span><span class="p">(</span><span class="n">z</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                               <span class="n">outdir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                               <span class="n">plot_format</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;png&#39;</span><span class="p">,</span> <span class="s1">&#39;svgz&#39;</span><span class="p">],</span>
+                               <span class="n">vg</span><span class="p">:</span> <span class="n">models</span><span class="o">.</span><span class="n">VolumeGenerator</span><span class="p">,</span>
+                               <span class="n">starfile_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                               <span class="n">source_software</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                               <span class="n">datadir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                               <span class="n">skip_vol</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                               <span class="n">skip_umap</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                               <span class="n">num_pcs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+                               <span class="n">pc_ondata</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                               <span class="n">num_ksamples</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
+                               <span class="n">downsample</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                               <span class="n">lowpass</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                               <span class="n">flip</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                               <span class="n">invert</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plotting and volume generation for multidimensional z</span>
+
+<span class="sd">    :param z: array of 1-D latent embeddings, shape (nptcls, zdim)</span>
+<span class="sd">    :param outdir: directory in which to save all outputs (plots and generated volumes)</span>
+<span class="sd">    :param plot_format: file format with which to save plots</span>
+<span class="sd">    :param vg: VolumeGenerator instance to aid volume generation at specficied z values</span>
+<span class="sd">    :param starfile_path: path to star file used during model training through which to load images</span>
+<span class="sd">    :param source_software: type of source software used to create the star file, used to indicate the appropriate star file handling class to instantiate.</span>
+<span class="sd">            Default of &#39;auto&#39; tries to infer the appropriate star file handling class based on whether ``star_path`` is an optimisation set star file.</span>
+<span class="sd">    :param datadir: path to particle images on disk, used when plotting images per kmeans class</span>
+<span class="sd">    :param skip_vol: whether to skip generation of volumes</span>
+<span class="sd">    :param skip_umap: whether to skip latent embeddings UMAP dimensionality reduction</span>
+<span class="sd">    :param num_pcs: number of principal components along which to generate volumes. If 0, then no PCA is performed</span>
+<span class="sd">    :param pc_ondata: whether to use the closest on-data latent point to each PCA axis trajectory for plotting and volume generation</span>
+<span class="sd">    :param num_ksamples: number of latent clusters to form by k-means clustering for plotting and volume generation</span>
+<span class="sd">    :param downsample: downsample reconstructed volumes to this box size (units: px) by Fourier cropping, None means to skip downsampling</span>
+<span class="sd">    :param lowpass: lowpass filter reconstructed volumes to this resolution (units: Å), None means to skip lowpass filtering</span>
+<span class="sd">    :param flip: flip the chirality of the reconstructed volumes by inverting along the z axis</span>
+<span class="sd">    :param invert: invert the data sign of the reconstructed volumes (light-on-dark vs dark-on-light)</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">zdim</span> <span class="o">=</span> <span class="n">z</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="c1"># Principal component analysis</span>
+    <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Perfoming principal component analysis ...&#39;</span><span class="p">)</span>
+    <span class="n">pc</span><span class="p">,</span> <span class="n">pca</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">run_pca</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+    <span class="n">z_trajectories</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_pcs</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/pc</span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="n">z_pc_trajectory</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">pc</span><span class="p">[:,</span> <span class="n">i</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="mi">95</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="mi">10</span><span class="p">))</span>
+        <span class="n">z_trajectory</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">get_pc_traj</span><span class="p">(</span><span class="n">pca</span><span class="o">=</span><span class="n">pca</span><span class="p">,</span>
+                                            <span class="n">dim</span><span class="o">=</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                                            <span class="n">sampling_points</span><span class="o">=</span><span class="n">z_pc_trajectory</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">pc_ondata</span><span class="p">:</span>
+            <span class="n">z_trajectory</span><span class="p">,</span> <span class="n">z_pc_ind</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">get_nearest_point</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">z_trajectory</span><span class="p">)</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/pc</span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1">/z_percentiles_ind.txt&#39;</span><span class="p">,</span> <span class="n">z_pc_ind</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">%d</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="n">z_trajectories</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">z_trajectory</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/pc</span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1">/z_percentiles.txt&#39;</span><span class="p">,</span> <span class="n">z_trajectory</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">skip_vol</span><span class="p">:</span>
+            <span class="n">vg</span><span class="o">.</span><span class="n">generate_volumes</span><span class="p">(</span><span class="n">z</span><span class="o">=</span><span class="n">z_trajectory</span><span class="p">,</span>
+                                <span class="n">out_dir</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/pc</span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                                <span class="n">downsample</span><span class="o">=</span><span class="n">downsample</span><span class="p">,</span>
+                                <span class="n">lowpass</span><span class="o">=</span><span class="n">lowpass</span><span class="p">,</span>
+                                <span class="n">flip</span><span class="o">=</span><span class="n">flip</span><span class="p">,</span>
+                                <span class="n">invert</span><span class="o">=</span><span class="n">invert</span><span class="p">)</span>
+
+    <span class="c1"># K-means clustering</span>
+    <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Performing K-means clustering ...&#39;</span><span class="p">)</span>
+    <span class="n">kmeans_labels</span><span class="p">,</span> <span class="n">kmeans_centers</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">cluster_kmeans</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">num_ksamples</span><span class="p">)</span>
+    <span class="n">kmeans_centers</span><span class="p">,</span> <span class="n">kmeans_centers_ind</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">get_nearest_point</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">kmeans_centers</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/kmeans</span><span class="si">{</span><span class="n">num_ksamples</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/kmeans</span><span class="si">{</span><span class="n">num_ksamples</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">utils</span><span class="o">.</span><span class="n">save_pkl</span><span class="p">(</span><span class="n">kmeans_labels</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/kmeans</span><span class="si">{</span><span class="n">num_ksamples</span><span class="si">}</span><span class="s1">/labels.pkl&#39;</span><span class="p">)</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/kmeans</span><span class="si">{</span><span class="n">num_ksamples</span><span class="si">}</span><span class="s1">/centers.txt&#39;</span><span class="p">,</span> <span class="n">kmeans_centers</span><span class="p">)</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/kmeans</span><span class="si">{</span><span class="n">num_ksamples</span><span class="si">}</span><span class="s1">/centers_ind.txt&#39;</span><span class="p">,</span> <span class="n">kmeans_centers_ind</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">%d</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">skip_vol</span><span class="p">:</span>
+        <span class="n">vg</span><span class="o">.</span><span class="n">generate_volumes</span><span class="p">(</span><span class="n">z</span><span class="o">=</span><span class="n">kmeans_centers</span><span class="p">,</span>
+                            <span class="n">out_dir</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/kmeans</span><span class="si">{</span><span class="n">num_ksamples</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                            <span class="n">downsample</span><span class="o">=</span><span class="n">downsample</span><span class="p">,</span>
+                            <span class="n">lowpass</span><span class="o">=</span><span class="n">lowpass</span><span class="p">,</span>
+                            <span class="n">flip</span><span class="o">=</span><span class="n">flip</span><span class="p">,</span>
+                            <span class="n">invert</span><span class="o">=</span><span class="n">invert</span><span class="p">)</span>
+
+    <span class="c1"># Make some plots using PCA transformation</span>
+
+    <span class="c1"># bar plot PCA explained variance ratio</span>
+    <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting latent PCA explained variance ratio&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">pca</span><span class="o">.</span><span class="n">explained_variance_ratio_</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;principal components&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;explained variance&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/z_pca_explainedvariance.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c1"># scatter plot latent PCA</span>
+    <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting latent principal components as scatter&#39;</span><span class="p">)</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">jointplot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">pc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+                      <span class="n">y</span><span class="o">=</span><span class="n">pc</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+                      <span class="n">alpha</span><span class="o">=</span><span class="mf">.1</span><span class="p">,</span>
+                      <span class="n">s</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">set_axis_labels</span><span class="p">(</span><span class="s1">&#39;l-PC1&#39;</span><span class="p">,</span> <span class="s1">&#39;l-PC2&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/z_pca_scatter.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c1"># hexbin plot latent PCA</span>
+    <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting latent principal components as hexbin&#39;</span><span class="p">)</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">jointplot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">pc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+                      <span class="n">y</span><span class="o">=</span><span class="n">pc</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+                      <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;hex&#39;</span><span class="p">)</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">set_axis_labels</span><span class="p">(</span><span class="s1">&#39;l-PC1&#39;</span><span class="p">,</span> <span class="s1">&#39;l-PC2&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/z_pca_hexbin.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c1"># scatter plot latent PCA with kmeans center annotations</span>
+    <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting latent principal components as scatter with latent clustering kmeans-centers annotations&#39;</span><span class="p">)</span>
+    <span class="n">analysis</span><span class="o">.</span><span class="n">scatter_annotate</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">pc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+                              <span class="n">y</span><span class="o">=</span><span class="n">pc</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+                              <span class="n">centers_ind</span><span class="o">=</span><span class="n">kmeans_centers_ind</span><span class="p">,</span>
+                              <span class="n">annotate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                              <span class="n">labels</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;k</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_ksamples</span><span class="p">)])</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;l-PC1&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;l-PC2&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/kmeans</span><span class="si">{</span><span class="n">num_ksamples</span><span class="si">}</span><span class="s1">/z_pca_scatter_annotatekmeans.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c1"># hexbin plot latent PCA with kmeans center annotations</span>
+    <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting latent principal components as hexbin with latent clustering kmeans-centers annotations&#39;</span><span class="p">)</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">scatter_annotate_hex</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">pc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+                                      <span class="n">y</span><span class="o">=</span><span class="n">pc</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+                                      <span class="n">centers_ind</span><span class="o">=</span><span class="n">kmeans_centers_ind</span><span class="p">,</span>
+                                      <span class="n">annotate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                      <span class="n">labels</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;k</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_ksamples</span><span class="p">)])</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">set_axis_labels</span><span class="p">(</span><span class="s1">&#39;l-PC1&#39;</span><span class="p">,</span> <span class="s1">&#39;l-PC2&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/kmeans</span><span class="si">{</span><span class="n">num_ksamples</span><span class="si">}</span><span class="s1">/z_pca_hexbin_annotatekmeans.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">num_pcs</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="c1"># scatter plot latent PCA with PCA trajectory annotations</span>
+        <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting latent principal components as scatter with volume-sampled principal components annotations&#39;</span><span class="p">)</span>
+        <span class="n">analysis</span><span class="o">.</span><span class="n">scatter_annotate</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">pc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+                                  <span class="n">y</span><span class="o">=</span><span class="n">pc</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+                                  <span class="n">centers_xy</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">pca</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">z_trajectories</span><span class="p">[</span><span class="mi">0</span><span class="p">])[:,</span> <span class="p">:</span><span class="mi">2</span><span class="p">],</span>  <span class="c1"># trajectory along pc 1, trajectory is pc-dimensional so just take first two dims for plotting</span>
+                                                        <span class="n">pca</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">z_trajectories</span><span class="p">[</span><span class="mi">1</span><span class="p">])[:,</span> <span class="p">:</span><span class="mi">2</span><span class="p">]]),</span>  <span class="c1"># trajectory along pc 2, trajectory is pc-dimensional so just take first two dims for plotting</span>
+                                  <span class="n">annotate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                  <span class="n">labels</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;l-PC1_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">z_trajectories</span><span class="p">[</span><span class="mi">0</span><span class="p">]))]</span> <span class="o">+</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;l-PC2_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">z_trajectories</span><span class="p">[</span><span class="mi">1</span><span class="p">]))])</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;l-PC1&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;l-PC2&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/pc1/z_pca_scatter_annotatepca.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="c1"># hexbin plot latent PCA with PCA trajectory annotations</span>
+        <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting latent principal components as hexbin with volume-sampled principal components annotations&#39;</span><span class="p">)</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">scatter_annotate_hex</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">pc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+                                          <span class="n">y</span><span class="o">=</span><span class="n">pc</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+                                          <span class="n">centers_xy</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">pca</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">z_trajectories</span><span class="p">[</span><span class="mi">0</span><span class="p">])[:,</span> <span class="p">:</span><span class="mi">2</span><span class="p">],</span>  <span class="c1"># trajectory along pc 1, trajectory is pc-dimensional so just take first two dims for plotting</span>
+                                                                <span class="n">pca</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">z_trajectories</span><span class="p">[</span><span class="mi">1</span><span class="p">])[:,</span> <span class="p">:</span><span class="mi">2</span><span class="p">]]),</span>  <span class="c1"># trajectory along pc 2, trajectory is pc-dimensional so just take first two dims for plotting</span>
+                                          <span class="n">annotate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                          <span class="n">labels</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;l-PC1_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">z_trajectories</span><span class="p">[</span><span class="mi">0</span><span class="p">]))]</span> <span class="o">+</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;l-PC2_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">z_trajectories</span><span class="p">[</span><span class="mi">1</span><span class="p">]))])</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">set_axis_labels</span><span class="p">(</span><span class="s1">&#39;l-PC1&#39;</span><span class="p">,</span> <span class="s1">&#39;l-PC2&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/pc1/z_pca_hexbin_annotatepca.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c1"># scatter plot latent PCA colored by k-means clusters</span>
+    <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting latent principal components as scatter colored by latent clustering kmeans-centers annotations&#39;</span><span class="p">)</span>
+    <span class="n">analysis</span><span class="o">.</span><span class="n">plot_by_cluster</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">pc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+                             <span class="n">y</span><span class="o">=</span><span class="n">pc</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+                             <span class="n">labels</span><span class="o">=</span><span class="n">kmeans_labels</span><span class="p">,</span>
+                             <span class="n">labels_sel</span><span class="o">=</span><span class="n">num_ksamples</span><span class="p">,</span>
+                             <span class="n">centers_ind</span><span class="o">=</span><span class="n">kmeans_centers_ind</span><span class="p">,</span>
+                             <span class="n">annotate</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;l-PC1&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;l-PC2&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/kmeans</span><span class="si">{</span><span class="n">num_ksamples</span><span class="si">}</span><span class="s1">/z_pca_scatter_colorkmeanslabel.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c1"># scatter subplots latent PCA colored by k-means clusters</span>
+    <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting latent principal components as scatter subplots colored by latent clustering kmeans-centers annotations&#39;</span><span class="p">)</span>
+    <span class="n">analysis</span><span class="o">.</span><span class="n">plot_by_cluster_subplot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">pc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+                                     <span class="n">y</span><span class="o">=</span><span class="n">pc</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+                                     <span class="n">labels</span><span class="o">=</span><span class="n">kmeans_labels</span><span class="p">,</span>
+                                     <span class="n">labels_sel</span><span class="o">=</span><span class="n">num_ksamples</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;l-PC1&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;l-PC2&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/kmeans</span><span class="si">{</span><span class="n">num_ksamples</span><span class="si">}</span><span class="s1">/z_pca_scatter_subplotkmeanslabel.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c1"># UMAP dimensionality reduction</span>
+    <span class="k">if</span> <span class="n">zdim</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">skip_umap</span><span class="p">:</span>
+        <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Running UMAP ...&#39;</span><span class="p">)</span>
+        <span class="n">umap_emb</span><span class="p">,</span> <span class="n">umap_reducer</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">run_umap</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">save_pkl</span><span class="p">(</span><span class="n">umap_emb</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/umap.pkl&#39;</span><span class="p">)</span>
+
+        <span class="c1"># scatter plot latent UMAP</span>
+        <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting latent UMAP embeddings as scatter&#39;</span><span class="p">)</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">jointplot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">umap_emb</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+                          <span class="n">y</span><span class="o">=</span><span class="n">umap_emb</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+                          <span class="n">alpha</span><span class="o">=</span><span class="mf">.1</span><span class="p">,</span>
+                          <span class="n">s</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">set_axis_labels</span><span class="p">(</span><span class="s1">&#39;l-UMAP1&#39;</span><span class="p">,</span> <span class="s1">&#39;l-UMAP2&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/z_umap_scatter.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="c1"># hexbin plot latent UMAP</span>
+        <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting latent UMAP embeddings as hexbin&#39;</span><span class="p">)</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">jointplot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">umap_emb</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+                          <span class="n">y</span><span class="o">=</span><span class="n">umap_emb</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+                          <span class="n">kind</span><span class="o">=</span><span class="s1">&#39;hex&#39;</span><span class="p">)</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">set_axis_labels</span><span class="p">(</span><span class="s1">&#39;l-UMAP1&#39;</span><span class="p">,</span> <span class="s1">&#39;l-UMAP2&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/z_umap_hexbin.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="c1"># scatter plot latent UMAP with kmeans center annotations</span>
+        <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting latent UMAP embeddings as scatter with latent clustering kmeans-centers annotations&#39;</span><span class="p">)</span>
+        <span class="n">analysis</span><span class="o">.</span><span class="n">scatter_annotate</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">umap_emb</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+                                  <span class="n">y</span><span class="o">=</span><span class="n">umap_emb</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+                                  <span class="n">centers_ind</span><span class="o">=</span><span class="n">kmeans_centers_ind</span><span class="p">,</span>
+                                  <span class="n">annotate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                  <span class="n">labels</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;k</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_ksamples</span><span class="p">)])</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;l-UMAP1&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;l-UMAP2&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/kmeans</span><span class="si">{</span><span class="n">num_ksamples</span><span class="si">}</span><span class="s1">/z_umap_scatter_annotatekmeans.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="c1"># hexbin plot latent UMAP with kmeans center annotations</span>
+        <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting latent UMAP embeddings as hexbin with latent clustering kmeans-centers annotations&#39;</span><span class="p">)</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">scatter_annotate_hex</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">umap_emb</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+                                          <span class="n">y</span><span class="o">=</span><span class="n">umap_emb</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+                                          <span class="n">centers_ind</span><span class="o">=</span><span class="n">kmeans_centers_ind</span><span class="p">,</span>
+                                          <span class="n">annotate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                          <span class="n">labels</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;k</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_ksamples</span><span class="p">)])</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">set_axis_labels</span><span class="p">(</span><span class="s1">&#39;l-UMAP1&#39;</span><span class="p">,</span> <span class="s1">&#39;l-UMAP2&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/kmeans</span><span class="si">{</span><span class="n">num_ksamples</span><span class="si">}</span><span class="s1">/z_umap_hexbin_annotatekmeans.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">num_pcs</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="c1"># scatter plot latent UMAP with PCA trajectory annotations</span>
+            <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting latent UMAP embeddings as scatter with volume-sampled principal components annotations&#39;</span><span class="p">)</span>
+            <span class="n">analysis</span><span class="o">.</span><span class="n">scatter_annotate</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">umap_emb</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+                                      <span class="n">y</span><span class="o">=</span><span class="n">umap_emb</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+                                      <span class="n">centers_xy</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">umap_reducer</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">z_trajectories</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>  <span class="c1"># trajectory in latent space along pc 1, transformed to UMAP space</span>
+                                                            <span class="n">umap_reducer</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">z_trajectories</span><span class="p">[</span><span class="mi">1</span><span class="p">])]),</span>  <span class="c1"># trajectory in latent space along pc 2, transformed to UMAP space</span>
+                                      <span class="n">annotate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                      <span class="n">labels</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;l-PC1_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">z_trajectories</span><span class="p">[</span><span class="mi">0</span><span class="p">]))]</span> <span class="o">+</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;l-PC2_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">z_trajectories</span><span class="p">[</span><span class="mi">1</span><span class="p">]))])</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;l-UMAP1&#39;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;l-UMAP2&#39;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/pc1/z_umap_scatter_annotatepca.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+            <span class="c1"># hexbin plot latent UMAP with PCA trajectory annotations</span>
+            <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting latent UMAP embeddings as hexbin with volume-sampled principal components annotations&#39;</span><span class="p">)</span>
+            <span class="n">g</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">scatter_annotate_hex</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">umap_emb</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+                                              <span class="n">y</span><span class="o">=</span><span class="n">umap_emb</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+                                              <span class="n">centers_xy</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">umap_reducer</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">z_trajectories</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>  <span class="c1"># trajectory in latent space along pc 1, transformed to UMAP space</span>
+                                                                    <span class="n">umap_reducer</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">z_trajectories</span><span class="p">[</span><span class="mi">1</span><span class="p">])]),</span>  <span class="c1"># trajectory in latent space along pc 2, transformed to UMAP space</span>
+                                              <span class="n">annotate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                              <span class="n">labels</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;l-PC1_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">z_trajectories</span><span class="p">[</span><span class="mi">0</span><span class="p">]))]</span> <span class="o">+</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;l-PC2_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">z_trajectories</span><span class="p">[</span><span class="mi">1</span><span class="p">]))])</span>
+            <span class="n">g</span><span class="o">.</span><span class="n">set_axis_labels</span><span class="p">(</span><span class="s1">&#39;l-UMAP1&#39;</span><span class="p">,</span> <span class="s1">&#39;l-UMAP2&#39;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/pc1/z_umap_hexbin_annotatepca.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="c1"># scatter plot latent UMAP colored by k-means clusters</span>
+        <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting latent UMAP embeddings as scatter colored by latent clustering kmeans-centers annotations&#39;</span><span class="p">)</span>
+        <span class="n">analysis</span><span class="o">.</span><span class="n">plot_by_cluster</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">umap_emb</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+                                 <span class="n">y</span><span class="o">=</span><span class="n">umap_emb</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+                                 <span class="n">labels</span><span class="o">=</span><span class="n">kmeans_labels</span><span class="p">,</span>
+                                 <span class="n">labels_sel</span><span class="o">=</span><span class="n">num_ksamples</span><span class="p">,</span>
+                                 <span class="n">centers_ind</span><span class="o">=</span><span class="n">kmeans_centers_ind</span><span class="p">,</span>
+                                 <span class="n">annotate</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;l-UMAP1&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;l-UMAP2&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/kmeans</span><span class="si">{</span><span class="n">num_ksamples</span><span class="si">}</span><span class="s1">/z_umap_scatter_colorkmeanslabel.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="c1"># scatter subplots latent UMAP colored by k-means clusters</span>
+        <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting latent UMAP embeddings as scatter subplots colored by latent clustering kmeans-centers annotations&#39;</span><span class="p">)</span>
+        <span class="n">analysis</span><span class="o">.</span><span class="n">plot_by_cluster_subplot</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">umap_emb</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+                                         <span class="n">y</span><span class="o">=</span><span class="n">umap_emb</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+                                         <span class="n">labels</span><span class="o">=</span><span class="n">kmeans_labels</span><span class="p">,</span>
+                                         <span class="n">labels_sel</span><span class="o">=</span><span class="n">num_ksamples</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;l-UMAP1&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;l-UMAP2&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/kmeans</span><span class="si">{</span><span class="n">num_ksamples</span><span class="si">}</span><span class="s1">/z_umap_scatter_subplotkmeanslabel.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_pcs</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting latent UMAP embeddings as scatter colored by each latent principal components&#39;</span><span class="p">)</span>
+            <span class="n">analysis</span><span class="o">.</span><span class="n">scatter_color</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">umap_emb</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+                                   <span class="n">y</span><span class="o">=</span><span class="n">umap_emb</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+                                   <span class="n">c</span><span class="o">=</span><span class="n">pc</span><span class="p">[:,</span> <span class="n">i</span><span class="p">],</span>
+                                   <span class="n">cbar_label</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;l-PC</span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;UMAP1&#39;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;UMAP2&#39;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/pc</span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1">/z_umap_colorlatentpca.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c1"># make plots of first 6 images of each kmeans class</span>
+    <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting (up to) first 6 images of each latent clustering kmeans class&#39;</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">starfile</span><span class="o">.</span><span class="n">load_sta_starfile</span><span class="p">(</span><span class="n">star_path</span><span class="o">=</span><span class="n">starfile_path</span><span class="p">,</span>
+                                   <span class="n">source_software</span><span class="o">=</span><span class="n">source_software</span><span class="p">)</span>
+    <span class="n">star_df_backup</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_ksamples</span><span class="p">):</span>
+        <span class="c1"># get indices of particles within this kmeans class</span>
+        <span class="n">ptcl_inds_this_label</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">kmeans_labels</span> <span class="o">==</span> <span class="n">label</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># randomly select N particles in the class and sort their indices</span>
+        <span class="n">ptcl_inds_random_subset</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">ptcl_inds_this_label</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ptcl_inds_this_label</span><span class="p">),</span> <span class="mi">6</span><span class="p">),</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+
+        <span class="n">s</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">ind_ptcls</span><span class="o">=</span><span class="n">ptcl_inds_random_subset</span><span class="p">,</span>
+                 <span class="n">sort_ptcl_imgs</span><span class="o">=</span><span class="s1">&#39;dose_ascending&#39;</span><span class="p">,</span>
+                 <span class="n">use_first_ntilts</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">imgs</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">get_particles_stack</span><span class="p">(</span><span class="n">datadir</span><span class="o">=</span><span class="n">datadir</span><span class="p">,</span>
+                                     <span class="n">lazy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="n">analysis</span><span class="o">.</span><span class="n">plot_projections</span><span class="p">(</span><span class="n">images</span><span class="o">=</span><span class="n">imgs</span><span class="p">,</span>
+                                  <span class="n">labels</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">ptcl_ind</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">ptcl_ind</span> <span class="ow">in</span> <span class="n">ptcl_inds_random_subset</span><span class="p">],</span>
+                                  <span class="n">width_between_imgs_px</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+                                  <span class="n">height_between_imgs_px</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/kmeans</span><span class="si">{</span><span class="n">num_ksamples</span><span class="si">}</span><span class="s1">/particle_images_kmeanslabel</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s1">.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="n">s</span><span class="o">.</span><span class="n">df</span> <span class="o">=</span> <span class="n">star_df_backup</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># make plot of class label distribution versus tomogram / micrograph in star file order</span>
+    <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting distribution of latent clustering kmeans annotations per tomogram&#39;</span><span class="p">)</span>
+    <span class="n">analysis</span><span class="o">.</span><span class="n">plot_label_count_distribution</span><span class="p">(</span><span class="n">ptcl_star</span><span class="o">=</span><span class="n">s</span><span class="p">,</span>
+                                           <span class="n">class_labels</span><span class="o">=</span><span class="n">kmeans_labels</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/kmeans</span><span class="si">{</span><span class="n">num_ksamples</span><span class="si">}</span><span class="s1">/tomogram_label_distribution.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c1"># make plots of numeric columns in star file (e.g. pose, coordinate, ctf) for correlations with UMAP</span>
+    <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Plotting latent principal components or latent UMAP embeddings against numeric columns in input star file for potential correlations&#39;</span><span class="p">)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/controls&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">zdim</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">skip_umap</span><span class="p">:</span>
+        <span class="n">ref_array</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">load_pkl</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/umap.pkl&#39;</span><span class="p">)</span>
+        <span class="n">ref_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;l-UMAP1&#39;</span><span class="p">,</span> <span class="s1">&#39;l-UMAP2&#39;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ref_array</span> <span class="o">=</span> <span class="n">pc</span>
+        <span class="n">ref_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;l-PC1&#39;</span><span class="p">,</span> <span class="s1">&#39;l-PC2&#39;</span><span class="p">]</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">sort_ptcl_imgs</span><span class="o">=</span><span class="s1">&#39;dose_ascending&#39;</span><span class="p">,</span> <span class="n">use_first_ntilts</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># only want one value per particle</span>
+    <span class="k">for</span> <span class="n">numeric_column</span> <span class="ow">in</span> <span class="n">s</span><span class="o">.</span><span class="n">df</span><span class="o">.</span><span class="n">select_dtypes</span><span class="p">(</span><span class="n">include</span><span class="o">=</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">])</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">analysis</span><span class="o">.</span><span class="n">plot_three_column_correlation</span><span class="p">(</span><span class="n">reference_array</span><span class="o">=</span><span class="n">ref_array</span><span class="p">,</span>
+                                               <span class="n">query_array</span><span class="o">=</span><span class="n">s</span><span class="o">.</span><span class="n">df</span><span class="p">[</span><span class="n">numeric_column</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span>
+                                               <span class="n">reference_names</span><span class="o">=</span><span class="n">ref_names</span><span class="p">,</span>
+                                               <span class="n">query_name</span><span class="o">=</span><span class="n">numeric_column</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/controls/</span><span class="si">{</span><span class="n">numeric_column</span><span class="si">}</span><span class="s1">.</span><span class="si">{</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+
+<div class="viewcode-block" id="main">
+<a class="viewcode-back" href="../../../api/_autosummary/tomodrgn.commands.analyze.main.html#tomodrgn.commands.analyze.main">[docs]</a>
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+    <span class="c1"># log arguments</span>
+    <span class="n">t1</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+    <span class="n">log</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="c1"># set files to use as inputs for analysis</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">workdir</span><span class="si">}</span><span class="s1">/config.pkl&#39;</span>
+    <span class="n">cfg</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">load_pkl</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+    <span class="n">star_path</span> <span class="o">=</span> <span class="n">cfg</span><span class="p">[</span><span class="s1">&#39;starfile_args&#39;</span><span class="p">][</span><span class="s1">&#39;sourcefile_filtered&#39;</span><span class="p">]</span>
+    <span class="n">datadir</span> <span class="o">=</span> <span class="n">cfg</span><span class="p">[</span><span class="s1">&#39;dataset_args&#39;</span><span class="p">][</span><span class="s1">&#39;datadir&#39;</span><span class="p">]</span>
+    <span class="n">args</span><span class="o">.</span><span class="n">epoch</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">get_latest_epoch</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">workdir</span><span class="p">)</span> <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">epoch</span> <span class="o">==</span> <span class="s1">&#39;latest&#39;</span> <span class="k">else</span> <span class="nb">int</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">epoch</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">epoch</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">zfile</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">workdir</span><span class="si">}</span><span class="s1">/z.train.pkl&#39;</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">workdir</span><span class="si">}</span><span class="s1">/weights.pkl&#39;</span>
+        <span class="n">outdir</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">workdir</span><span class="si">}</span><span class="s1">/analyze&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">zfile</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">workdir</span><span class="si">}</span><span class="s1">/z.</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">epoch</span><span class="si">}</span><span class="s1">.train.pkl&#39;</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">workdir</span><span class="si">}</span><span class="s1">/weights.</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">epoch</span><span class="si">}</span><span class="s1">.pkl&#39;</span>
+        <span class="n">outdir</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">workdir</span><span class="si">}</span><span class="s1">/analyze.</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">epoch</span><span class="si">}</span><span class="s1">&#39;</span>
+
+    <span class="c1"># override outdir if provided as input argument</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">outdir</span><span class="p">:</span>
+        <span class="n">outdir</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">outdir</span>
+    <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Saving results to </span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">outdir</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">outdir</span><span class="p">)</span>
+
+    <span class="n">z</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">load_pkl</span><span class="p">(</span><span class="n">zfile</span><span class="p">)</span>
+    <span class="n">zdim</span> <span class="o">=</span> <span class="n">z</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">vg</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">VolumeGenerator</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
+                                <span class="n">weights_path</span><span class="o">=</span><span class="n">weights</span><span class="p">)</span>
+
+    <span class="c1"># do not render figure window when drawing/saving figures</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ioff</span><span class="p">()</span>
+
+    <span class="c1"># plot the loss curve</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">parse_loss</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">workdir</span><span class="si">}</span><span class="s1">/run.log&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;epoch&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;total loss&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/model_loss.</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">plot_format</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">zdim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">analyze_z_onedimensional</span><span class="p">(</span><span class="n">z</span><span class="o">=</span><span class="n">z</span><span class="p">,</span>
+                                 <span class="n">outdir</span><span class="o">=</span><span class="n">outdir</span><span class="p">,</span>
+                                 <span class="n">plot_format</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">plot_format</span><span class="p">,</span>
+                                 <span class="n">vg</span><span class="o">=</span><span class="n">vg</span><span class="p">,</span>
+                                 <span class="n">downsample</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">downsample</span><span class="p">,</span>
+                                 <span class="n">lowpass</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">lowpass</span><span class="p">,</span>
+                                 <span class="n">flip</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">flip</span><span class="p">,</span>
+                                 <span class="n">invert</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">invert</span><span class="p">,</span>
+                                 <span class="n">skip_vol</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">skip_vol</span><span class="p">,</span>
+                                 <span class="n">ondata</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">pc_ondata</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">analyze_z_multidimensional</span><span class="p">(</span><span class="n">z</span><span class="o">=</span><span class="n">z</span><span class="p">,</span>
+                                   <span class="n">outdir</span><span class="o">=</span><span class="n">outdir</span><span class="p">,</span>
+                                   <span class="n">plot_format</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">plot_format</span><span class="p">,</span>
+                                   <span class="n">skip_vol</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">skip_vol</span><span class="p">,</span>
+                                   <span class="n">vg</span><span class="o">=</span><span class="n">vg</span><span class="p">,</span>
+                                   <span class="n">downsample</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">downsample</span><span class="p">,</span>
+                                   <span class="n">lowpass</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">lowpass</span><span class="p">,</span>
+                                   <span class="n">flip</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">flip</span><span class="p">,</span>
+                                   <span class="n">invert</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">invert</span><span class="p">,</span>
+                                   <span class="n">num_pcs</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">pc</span><span class="p">,</span>
+                                   <span class="n">pc_ondata</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">pc_ondata</span><span class="p">,</span>
+                                   <span class="n">skip_umap</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">skip_umap</span><span class="p">,</span>
+                                   <span class="n">num_ksamples</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">ksample</span><span class="p">,</span>
+                                   <span class="n">starfile_path</span><span class="o">=</span><span class="n">star_path</span><span class="p">,</span>
+                                   <span class="n">source_software</span><span class="o">=</span><span class="n">cfg</span><span class="p">[</span><span class="s1">&#39;starfile_args&#39;</span><span class="p">][</span><span class="s1">&#39;source_software&#39;</span><span class="p">],</span>
+                                   <span class="n">datadir</span><span class="o">=</span><span class="n">datadir</span><span class="p">)</span>
+
+    <span class="c1"># copy over template if file doesn&#39;t exist</span>
+    <span class="n">ipynbs</span> <span class="o">=</span> <span class="p">[[</span><span class="s1">&#39;tomoDRGN_viz+filt_template_legacy.ipynb&#39;</span><span class="p">,</span> <span class="s1">&#39;tomoDRGN_viz+filt_legacy.ipynb&#39;</span><span class="p">],</span>
+              <span class="p">[</span><span class="s1">&#39;tomoDRGN_interactive_viz_template.ipynb&#39;</span><span class="p">,</span> <span class="s1">&#39;tomoDRGN_interactive_viz.ipynb&#39;</span><span class="p">]]</span>
+    <span class="k">for</span> <span class="n">template_ipynb</span><span class="p">,</span> <span class="n">out_ipynb</span> <span class="ow">in</span> <span class="n">ipynbs</span><span class="p">:</span>
+        <span class="n">template_path</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">files</span><span class="p">(</span><span class="s1">&#39;tomodrgn.templates&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="n">template_ipynb</span><span class="p">))</span>
+        <span class="n">out_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">outdir</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">out_ipynb</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">out_path</span><span class="p">):</span>
+            <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Creating jupyter notebook...&#39;</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">template_path</span><span class="p">)</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">copyfile</span><span class="p">(</span><span class="n">template_path</span><span class="p">,</span> <span class="n">out_path</span><span class="p">)</span>
+            <span class="n">log</span><span class="p">(</span><span class="n">out_path</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">out_path</span><span class="si">}</span><span class="s1"> already exists. Skipping&#39;</span><span class="p">)</span>
+
+    <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Finished in </span><span class="si">{</span><span class="n">dt</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">t1</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">matplotlib</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;Agg&#39;</span><span class="p">)</span>  <span class="c1"># non-interactive backend</span>
+    <span class="n">main</span><span class="p">(</span><span class="n">add_args</span><span class="p">()</span><span class="o">.</span><span class="n">parse_args</span><span class="p">())</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, Barrett M Powell, Joseph H Davis.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

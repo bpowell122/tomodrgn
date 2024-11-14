@@ -1,0 +1,765 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tomodrgn.commands.downsample &#8212; tomoDRGN 0.2.3.dev328 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!-- 
+    this give us a css class that will be invisible only if js is disabled 
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../_static/scripts/fontawesome.js?digest=26a4bc78f4c0ddb94549"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549" />
+
+    <script src="../../../_static/documentation_options.js?v=d6c7774d"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/tomodrgn/commands/downsample';</script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">tomoDRGN v0.2.3.dev328</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../overview/index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../command_usage/index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../overview/index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../command_usage/index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">tomodrgn.commands.downsample</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for tomodrgn.commands.downsample</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Downsample an image stack or volume by Fourier cropping</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">get_args</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.utils.data</span>
+
+<span class="kn">from</span> <span class="nn">tomodrgn</span> <span class="kn">import</span> <span class="n">utils</span><span class="p">,</span> <span class="n">mrc</span><span class="p">,</span> <span class="n">fft</span><span class="p">,</span> <span class="n">dataset</span><span class="p">,</span> <span class="n">starfile</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">log</span>
+
+
+<div class="viewcode-block" id="add_args">
+<a class="viewcode-back" href="../../../api/_autosummary/tomodrgn.commands.downsample.add_args.html#tomodrgn.commands.downsample.add_args">[docs]</a>
+<span class="k">def</span> <span class="nf">add_args</span><span class="p">(</span><span class="n">parser</span><span class="p">:</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">parser</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># this script is called directly; need to create a parser</span>
+        <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="vm">__doc__</span><span class="p">,</span> <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentDefaultsHelpFormatter</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># this script is called from tomodrgn.__main__ entry point, in which case a parser is already created</span>
+        <span class="k">pass</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;input&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Input particles or volume (.mrc, .mrcs, .star, or .txt)&#39;</span><span class="p">)</span>
+
+    <span class="n">group</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument_group</span><span class="p">(</span><span class="s1">&#39;Core arguments&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--source-software&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">choices</span><span class="o">=</span><span class="n">get_args</span><span class="p">(</span><span class="n">starfile</span><span class="o">.</span><span class="n">KNOWN_STAR_SOURCES</span><span class="p">),</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span>
+                       <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Manually set the software used to extract particles. Default is to auto-detect.&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--downsample&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;New box size in pixels, must be even&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--output&#39;</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s1">&#39;MRCS&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Output projection stack (.mrcs)&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--batch-size&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Batch size for processing images&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--is-vol&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Flag if input .mrc is a volume&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--chunk&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Chunksize (in # of images) to split particle stack when loading and saving if full stack + downsampled stack too large for system memory&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--lazy&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Lazily load each image on the fly if full stack too large for system memory&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--datadir&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Optionally provide path to input .mrcs if loading from a .star file&#39;</span><span class="p">)</span>
+    <span class="n">group</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--write-tiltseries-starfile&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;If input is a star file, write a downsampled star file&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">parser</span></div>
+
+
+
+<div class="viewcode-block" id="mkbasedir">
+<a class="viewcode-back" href="../../../api/_autosummary/tomodrgn.commands.downsample.mkbasedir.html#tomodrgn.commands.downsample.mkbasedir">[docs]</a>
+<span class="k">def</span> <span class="nf">mkbasedir</span><span class="p">(</span><span class="n">out</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create specified output directory, and all required intermediate directories, that do not yet exist.</span>
+
+<span class="sd">    :param out: path to output directory or file within desired output directory to create</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">out</span><span class="p">)):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">out</span><span class="p">),</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="warnexists">
+<a class="viewcode-back" href="../../../api/_autosummary/tomodrgn.commands.downsample.warnexists.html#tomodrgn.commands.downsample.warnexists">[docs]</a>
+<span class="k">def</span> <span class="nf">warnexists</span><span class="p">(</span><span class="n">out</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Warn if a directory exists.</span>
+
+<span class="sd">    :param out: directory to check existence.</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">out</span><span class="p">):</span>
+        <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Warning: </span><span class="si">{</span><span class="n">out</span><span class="si">}</span><span class="s1"> already exists. Overwriting.&#39;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="downsample_images">
+<a class="viewcode-back" href="../../../api/_autosummary/tomodrgn.commands.downsample.downsample_images.html#tomodrgn.commands.downsample.downsample_images">[docs]</a>
+<span class="k">def</span> <span class="nf">downsample_images</span><span class="p">(</span><span class="n">batch_original</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                      <span class="n">start</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                      <span class="n">stop</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Downsample a batch of real space images by Fourier cropping.</span>
+
+<span class="sd">    :param batch_original: tensor of real space images, shape (batchsize, boxsize_old, boxsize_old)</span>
+<span class="sd">    :param start: image pixel index at which to begin including Fourier frequencies in Fourier cropped output</span>
+<span class="sd">    :param stop:  image pixel index at which to stop including Fourier frequencies in Fourier cropped output</span>
+<span class="sd">    :return: tensor of real space images after downsampling, shape (batchsize, boxsize_new, boxsize_new)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># calculate 2-D DHT</span>
+    <span class="n">batch_ht</span> <span class="o">=</span> <span class="n">fft</span><span class="o">.</span><span class="n">ht2_center_torch</span><span class="p">(</span><span class="n">batch_original</span><span class="p">)</span>
+
+    <span class="c1"># crop hartley-transformed image stack</span>
+    <span class="n">batch_ht_cropped</span> <span class="o">=</span> <span class="n">batch_ht</span><span class="p">[:,</span> <span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">]</span>
+
+    <span class="c1"># inverse hartley transform image stack</span>
+    <span class="n">batch_real_cropped</span> <span class="o">=</span> <span class="n">fft</span><span class="o">.</span><span class="n">iht2_center_torch</span><span class="p">(</span><span class="n">batch_ht_cropped</span><span class="p">)</span>
+
+    <span class="c1"># fix image stack scaling (due to cropping during transform) and dtype (due to numpy type promotion during transform)</span>
+    <span class="n">batch_real_cropped</span> <span class="o">*=</span> <span class="p">(</span><span class="n">stop</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="n">batch_original</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">batch_real_cropped</span> <span class="o">=</span> <span class="n">batch_real_cropped</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">batch_original</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">batch_real_cropped</span></div>
+
+
+
+<div class="viewcode-block" id="write_downsampled_starfile">
+<a class="viewcode-back" href="../../../api/_autosummary/tomodrgn.commands.downsample.write_downsampled_starfile.html#tomodrgn.commands.downsample.write_downsampled_starfile">[docs]</a>
+<span class="k">def</span> <span class="nf">write_downsampled_starfile</span><span class="p">(</span><span class="n">input_starfile</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                               <span class="n">boxsize_old</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                               <span class="n">boxsize_new</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                               <span class="n">out_mrcs</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+                               <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                               <span class="n">source_software</span><span class="p">:</span> <span class="n">starfile</span><span class="o">.</span><span class="n">KNOWN_STAR_SOURCES</span> <span class="o">=</span> <span class="s1">&#39;auto&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Write a STAR file describing a downsampled particle stack (optionally chunked into multiple .mrcs files) to disk.</span>
+
+<span class="sd">    :param input_starfile: path to the star file used to reference original (non-downsampled) images</span>
+<span class="sd">    :param boxsize_old: the original box size (units: px)</span>
+<span class="sd">    :param boxsize_new: the new box size after Fourier cropping (units: px)</span>
+<span class="sd">    :param out_mrcs: path to the downsampled mrcs file(s), referencing images in the same order as the original star file</span>
+<span class="sd">    :param chunk_size: number of images chunked together in separate .mrcs files written to disk, if used. None means no chunking was performed.</span>
+<span class="sd">    :param source_software: type of source software used to create the star file, used to indicate the appropriate star file handling class to instantiate.</span>
+<span class="sd">            Default of &#39;auto&#39; tries to infer the appropriate star file handling class based on whether ``star_path`` is an optimisation set star file.</span>
+<span class="sd">    :return: None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># load the star file</span>
+    <span class="k">assert</span> <span class="n">input_starfile</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.star&#39;</span><span class="p">)</span>
+    <span class="n">star</span> <span class="o">=</span> <span class="n">starfile</span><span class="o">.</span><span class="n">load_sta_starfile</span><span class="p">(</span><span class="n">input_starfile</span><span class="p">,</span> <span class="n">source_software</span><span class="o">=</span><span class="n">source_software</span><span class="p">)</span>
+
+    <span class="c1"># get new pixel size according to star file</span>
+    <span class="n">old_angpix</span> <span class="o">=</span> <span class="n">star</span><span class="o">.</span><span class="n">get_tiltseries_pixelsize</span><span class="p">()</span>
+    <span class="n">new_angpix</span> <span class="o">=</span> <span class="n">old_angpix</span> <span class="o">*</span> <span class="n">boxsize_old</span> <span class="o">/</span> <span class="n">boxsize_new</span>
+
+    <span class="c1"># rescale coordinates, shifts, and pixel size in the new star file</span>
+    <span class="n">star</span><span class="o">.</span><span class="n">df</span><span class="p">[</span><span class="n">star</span><span class="o">.</span><span class="n">header_pose_tx</span><span class="p">]</span> <span class="o">=</span> <span class="n">star</span><span class="o">.</span><span class="n">df</span><span class="p">[</span><span class="n">star</span><span class="o">.</span><span class="n">header_pose_tx</span><span class="p">]</span> <span class="o">*</span> <span class="n">old_angpix</span> <span class="o">/</span> <span class="n">new_angpix</span>
+    <span class="n">star</span><span class="o">.</span><span class="n">df</span><span class="p">[</span><span class="n">star</span><span class="o">.</span><span class="n">header_pose_ty</span><span class="p">]</span> <span class="o">=</span> <span class="n">star</span><span class="o">.</span><span class="n">df</span><span class="p">[</span><span class="n">star</span><span class="o">.</span><span class="n">header_pose_ty</span><span class="p">]</span> <span class="o">*</span> <span class="n">old_angpix</span> <span class="o">/</span> <span class="n">new_angpix</span>
+    <span class="k">for</span> <span class="n">coord_col</span> <span class="ow">in</span> <span class="n">star</span><span class="o">.</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="n">star</span><span class="o">.</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">pat</span><span class="o">=</span><span class="s1">&#39;Coordinate&#39;</span><span class="p">)]:</span>
+        <span class="n">star</span><span class="o">.</span><span class="n">df</span><span class="p">[</span><span class="n">coord_col</span><span class="p">]</span> <span class="o">=</span> <span class="n">star</span><span class="o">.</span><span class="n">df</span><span class="p">[</span><span class="n">coord_col</span><span class="p">]</span> <span class="o">*</span> <span class="n">old_angpix</span> <span class="o">/</span> <span class="n">new_angpix</span>
+    <span class="n">star</span><span class="o">.</span><span class="n">header_ctf_angpix</span> <span class="o">=</span> <span class="n">new_angpix</span>
+
+    <span class="c1"># update paths to .mrcs image data, forming string of form `123456@/path/to/stack.mrcs` with 1-indexed images</span>
+    <span class="k">if</span> <span class="n">chunk_size</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># wrote one .mrcs, so all particles are contained within that file</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">out_mrcs</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span>
+        <span class="n">new_paths</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">:</span><span class="s1">06</span><span class="si">}</span><span class="s1">@</span><span class="si">{</span><span class="n">out_mrcs</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">star</span><span class="o">.</span><span class="n">df</span><span class="p">))]</span>
+        <span class="n">out_star</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">out_mrcs</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">.star&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># wrote multiple .mrcs (containing `chunk_size` images except for the last file which contains &lt;= `chunk_size` images)</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">out_mrcs</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">list</span>
+        <span class="n">new_paths</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="si">:</span><span class="s1">06</span><span class="si">}</span><span class="s1">@</span><span class="si">{</span><span class="n">out_path</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">out_path</span> <span class="ow">in</span> <span class="n">out_mrcs</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">chunk_size</span><span class="p">)]</span>
+        <span class="n">out_star</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">out_mrcs</span><span class="p">[</span><span class="mi">0</span><span class="p">])[</span><span class="mi">0</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">.star&#39;</span>  <span class="c1"># convert FOO.0.mrcs to FOO</span>
+    <span class="n">star</span><span class="o">.</span><span class="n">df</span><span class="p">[</span><span class="n">star</span><span class="o">.</span><span class="n">header_ptcl_image</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_paths</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">star</span><span class="o">.</span><span class="n">df</span><span class="p">)]</span>
+
+    <span class="c1"># if input is optimisation set star file, ensure output is optimisation set star file</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">star</span><span class="p">)</span> <span class="ow">is</span> <span class="n">starfile</span><span class="o">.</span><span class="n">TomoParticlesStarfile</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s1">&#39;_optimisation_set&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">out_star</span><span class="p">:</span>
+            <span class="n">out_star</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">out_star</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1">_optimisation_set.star&#39;</span>
+
+    <span class="c1"># save the star file</span>
+    <span class="n">star</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">out_star</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="ImageDataset">
+<a class="viewcode-back" href="../../../api/_autosummary/tomodrgn.commands.downsample.ImageDataset.html#tomodrgn.commands.downsample.ImageDataset">[docs]</a>
+<span class="k">class</span> <span class="nc">ImageDataset</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simple dataset class to rapidly supply and downsample particle images. Operates per-image (rather than more typical per-particle for tilt series).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">particles</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">mrc</span><span class="o">.</span><span class="n">LazyImage</span><span class="p">]</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="n">mrc</span><span class="o">.</span><span class="n">LazyImageStack</span><span class="p">]):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">particles</span> <span class="o">=</span> <span class="n">particles</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">is</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ptcl_img_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">particles</span><span class="p">))])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nimgs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">particles</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">is</span> <span class="n">mrc</span><span class="o">.</span><span class="n">LazyImage</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ptcl_img_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">particles</span><span class="p">))])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nimgs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">particles</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">is</span> <span class="n">mrc</span><span class="o">.</span><span class="n">LazyImageStack</span><span class="p">:</span>
+            <span class="n">ptcl_img_indices</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">ptcl</span> <span class="ow">in</span> <span class="n">particles</span><span class="p">:</span>
+                <span class="n">ptcl_img_indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">offset</span><span class="p">,</span> <span class="n">offset</span> <span class="o">+</span> <span class="n">ptcl</span><span class="o">.</span><span class="n">n_images</span><span class="p">))</span>
+                <span class="n">offset</span> <span class="o">+=</span> <span class="n">ptcl</span><span class="o">.</span><span class="n">n_images</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ptcl_img_indices</span> <span class="o">=</span> <span class="n">ptcl_img_indices</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nimgs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ptcl_img_indices</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>  <span class="c1"># correct for 0-indexing</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Unsupported particles type: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">particles</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ptcl_img_indices</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                    <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">particles</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">particles</span><span class="p">[</span><span class="n">index</span><span class="p">])</span> <span class="ow">is</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">particles</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="c1"># cast to float32 because input data may be float16 which is not supported by cuFFT (https://github.com/pytorch/pytorch/issues/70664)</span>
+        <span class="n">particles</span> <span class="o">=</span> <span class="n">particles</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="c1"># get the indices of where this/these images will go in the array of all images</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ptcl_img_indices</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">indices</span><span class="p">,</span> <span class="n">particles</span></div>
+
+
+
+<div class="viewcode-block" id="collate_particle_tilts">
+<a class="viewcode-back" href="../../../api/_autosummary/tomodrgn.commands.downsample.collate_particle_tilts.html#tomodrgn.commands.downsample.collate_particle_tilts">[docs]</a>
+<span class="k">def</span> <span class="nf">collate_particle_tilts</span><span class="p">(</span><span class="n">batch</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Collate a batch of particle images, optionally with a variable number of tilt images associated with each particle.</span>
+<span class="sd">    Given input of shape ``([ind1], [a, X, X]), ([ind2], [b, X, X])`` where a and b can be any number, returns ``[ind1, ind2], [[a+b, X, X]]``.</span>
+
+<span class="sd">    :param batch: list of 2-tuples of particle indices (``np.ndarray`` of shape ``(ntilts)``) and associated images (``np.ndarray`` of shape ``(ntilts, npixels, npixels)``</span>
+<span class="sd">    :returns: 2-tuple of concatenated particle indices and concatenated particle images</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">collated_indices</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">collated_images</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">batch</span><span class="p">)):</span>
+        <span class="n">collated_indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">batch</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">collated_images</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">batch</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="n">collated_indices</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="n">collated_indices</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">collated_images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">collated_images</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">collated_images</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">collated_images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">collated_images</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">collated_images</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Unrecognized leading shape of image data: </span><span class="si">{</span><span class="n">collated_images</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">collated_indices</span><span class="p">,</span> <span class="n">collated_images</span></div>
+
+
+
+<div class="viewcode-block" id="main">
+<a class="viewcode-back" href="../../../api/_autosummary/tomodrgn.commands.downsample.main.html#tomodrgn.commands.downsample.main">[docs]</a>
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+    <span class="c1"># log the arguments</span>
+    <span class="n">log</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="c1"># check inputs</span>
+    <span class="n">warnexists</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
+    <span class="n">mkbasedir</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.mrcs&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;mrc&#39;</span><span class="p">)),</span> <span class="s2">&quot;Must specify output in .mrc(s) file format&quot;</span>
+
+    <span class="c1"># set the device</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">get_default_device</span><span class="p">()</span>
+
+    <span class="c1"># load the original particles</span>
+    <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Loading </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">input</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">lazy</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">lazy</span>
+    <span class="n">old</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">load_particles</span><span class="p">(</span><span class="n">mrcs_txt_star</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">input</span><span class="p">,</span>
+                                 <span class="n">lazy</span><span class="o">=</span><span class="n">lazy</span><span class="p">,</span>
+                                 <span class="n">datadir</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">datadir</span><span class="p">,</span>
+                                 <span class="n">source_software</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">source_software</span><span class="p">)</span>
+    <span class="n">old_dtype</span> <span class="o">=</span> <span class="n">old</span><span class="o">.</span><span class="n">dtype</span> <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">old</span><span class="p">)</span> <span class="ow">is</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="k">else</span> <span class="n">old</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">.</span><span class="n">dtype</span>
+    <span class="n">boxsize_old</span> <span class="o">=</span> <span class="n">old</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">()</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">lazy</span> <span class="k">else</span> <span class="n">old</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">boxsize_new</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">downsample</span>
+    <span class="k">assert</span> <span class="n">boxsize_new</span> <span class="o">&lt;=</span> <span class="n">boxsize_old</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;New box size </span><span class="si">{</span><span class="n">boxsize_new</span><span class="si">}</span><span class="s1"> cannot be larger than the original box size </span><span class="si">{</span><span class="n">boxsize_old</span><span class="si">}</span><span class="s1">&#39;</span>
+    <span class="k">assert</span> <span class="n">boxsize_new</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;New box size must be even&#39;</span>
+
+    <span class="c1"># establish parameters for downsampling</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">boxsize_old</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">boxsize_new</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">stop</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">boxsize_old</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">boxsize_new</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.mrcs&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">args</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.mrc&#39;</span><span class="p">):</span>
+        <span class="n">old_angpix</span> <span class="o">=</span> <span class="n">mrc</span><span class="o">.</span><span class="n">parse_header</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">input</span><span class="p">)</span><span class="o">.</span><span class="n">get_apix</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.star&#39;</span><span class="p">):</span>
+        <span class="n">old_angpix</span> <span class="o">=</span> <span class="n">starfile</span><span class="o">.</span><span class="n">load_sta_starfile</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">input</span><span class="p">,</span> <span class="n">source_software</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">source_software</span><span class="p">)</span><span class="o">.</span><span class="n">get_tiltseries_pixelsize</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">input</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.txt&#39;</span><span class="p">):</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">input</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">old_angpix</span> <span class="o">=</span> <span class="n">mrc</span><span class="o">.</span><span class="n">parse_header</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">readline</span><span class="p">())</span><span class="o">.</span><span class="n">get_apix</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span>
+    <span class="n">new_apix</span> <span class="o">=</span> <span class="n">old_angpix</span> <span class="o">*</span> <span class="n">boxsize_old</span> <span class="o">/</span> <span class="n">boxsize_new</span>
+
+    <span class="c1"># Downsample volume, saving to one .mrc file</span>
+    <span class="n">log</span><span class="p">(</span><span class="s1">&#39;Downsampling...&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">is_vol</span><span class="p">:</span>
+        <span class="n">log</span><span class="p">(</span><span class="n">old</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+        <span class="c1"># hartley transform, crop the hartley transformed volume, and return to real space</span>
+        <span class="n">vol_ht</span> <span class="o">=</span> <span class="n">fft</span><span class="o">.</span><span class="n">ht3_center</span><span class="p">(</span><span class="n">old</span><span class="p">)</span>
+        <span class="n">vol_ht_cropped</span> <span class="o">=</span> <span class="n">vol_ht</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span><span class="n">stop</span><span class="p">]</span>
+        <span class="n">vol_real_cropped</span> <span class="o">=</span> <span class="n">fft</span><span class="o">.</span><span class="n">iht3_center</span><span class="p">(</span><span class="n">vol_ht_cropped</span><span class="p">)</span>
+        <span class="n">log</span><span class="p">(</span><span class="n">vol_real_cropped</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+        <span class="c1"># fix volume scaling (due to cropping during transform)</span>
+        <span class="n">vol_real_cropped</span> <span class="o">*=</span> <span class="n">boxsize_new</span> <span class="o">**</span> <span class="mi">3</span> <span class="o">/</span> <span class="n">boxsize_old</span> <span class="o">**</span> <span class="mi">3</span>
+
+        <span class="c1"># write to disk</span>
+        <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Saving </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">mrc</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">fname</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">,</span>
+                  <span class="n">array</span><span class="o">=</span><span class="n">vol_real_cropped</span><span class="p">,</span>
+                  <span class="n">angpix</span><span class="o">=</span><span class="n">new_apix</span><span class="p">,</span>
+                  <span class="n">is_vol</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Downsample images in batches, saving to one .mrcs file</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">chunk</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># iterate through image batches to apply downsampling and store in new volume array</span>
+        <span class="n">particle_dataset</span> <span class="o">=</span> <span class="n">ImageDataset</span><span class="p">(</span><span class="n">particles</span><span class="o">=</span><span class="n">old</span><span class="p">)</span>
+        <span class="n">data_generator</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">particle_dataset</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">collate_fn</span><span class="o">=</span><span class="n">collate_particle_tilts</span><span class="p">)</span>
+
+        <span class="c1"># prepare outputs</span>
+        <span class="n">out_mrcs</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">output</span>
+        <span class="n">new</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">particle_dataset</span><span class="o">.</span><span class="n">nimgs</span><span class="p">,</span> <span class="n">boxsize_new</span><span class="p">,</span> <span class="n">boxsize_new</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">old_dtype</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">batch_idx</span><span class="p">,</span> <span class="n">batch_ptcls</span> <span class="ow">in</span> <span class="n">data_generator</span><span class="p">:</span>
+            <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Processing indices </span><span class="si">{</span><span class="n">batch_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1"> - </span><span class="si">{</span><span class="n">batch_idx</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">batch_ptcls</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+            <span class="n">batch_new</span> <span class="o">=</span> <span class="n">downsample_images</span><span class="p">(</span><span class="n">batch_original</span><span class="o">=</span><span class="n">batch_ptcls</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="n">stop</span><span class="p">)</span>
+            <span class="n">new</span><span class="p">[</span><span class="n">batch_idx</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()]</span> <span class="o">=</span> <span class="n">batch_new</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">old_dtype</span><span class="p">)</span>
+
+        <span class="c1"># write to disk</span>
+        <span class="n">log</span><span class="p">(</span><span class="n">new</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Saving </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">mrc</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">fname</span><span class="o">=</span><span class="n">out_mrcs</span><span class="p">,</span>
+                  <span class="n">array</span><span class="o">=</span><span class="n">new</span><span class="p">,</span>
+                  <span class="n">angpix</span><span class="o">=</span><span class="n">new_apix</span><span class="p">,</span>
+                  <span class="n">is_vol</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">write_tiltseries_starfile</span><span class="p">:</span>
+            <span class="n">write_downsampled_starfile</span><span class="p">(</span><span class="n">input_starfile</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">input</span><span class="p">,</span>
+                                       <span class="n">boxsize_old</span><span class="o">=</span><span class="n">boxsize_old</span><span class="p">,</span>
+                                       <span class="n">boxsize_new</span><span class="o">=</span><span class="n">boxsize_new</span><span class="p">,</span>
+                                       <span class="n">out_mrcs</span><span class="o">=</span><span class="n">out_mrcs</span><span class="p">,</span>
+                                       <span class="n">chunk_size</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">chunk</span><span class="p">,</span>
+                                       <span class="n">source_software</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">source_software</span><span class="p">)</span>
+
+    <span class="c1"># Downsample images in batches, saving chunks of N images to nchunks separate .mrcs files</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="n">args</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">&lt;=</span> <span class="n">args</span><span class="o">.</span><span class="n">chunk</span>
+        <span class="n">nchunks</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">old</span><span class="p">)</span> <span class="o">/</span> <span class="n">args</span><span class="o">.</span><span class="n">chunk</span><span class="p">)</span>
+        <span class="n">out_mrcs</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;.</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">))</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nchunks</span><span class="p">)]</span>
+        <span class="n">chunk_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">out_mrcs</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nchunks</span><span class="p">):</span>
+            <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Processing chunk </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">chunk</span> <span class="o">=</span> <span class="n">old</span><span class="p">[</span><span class="n">i</span> <span class="o">*</span> <span class="n">args</span><span class="o">.</span><span class="n">chunk</span><span class="p">:</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">args</span><span class="o">.</span><span class="n">chunk</span><span class="p">]</span>
+
+            <span class="n">particle_dataset</span> <span class="o">=</span> <span class="n">ImageDataset</span><span class="p">(</span><span class="n">particles</span><span class="o">=</span><span class="n">chunk</span><span class="p">)</span>
+            <span class="n">data_generator</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="n">particle_dataset</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">collate_fn</span><span class="o">=</span><span class="n">collate_particle_tilts</span><span class="p">)</span>
+            <span class="n">new</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">particle_dataset</span><span class="o">.</span><span class="n">nimgs</span><span class="p">,</span> <span class="n">boxsize_new</span><span class="p">,</span> <span class="n">boxsize_new</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">old_dtype</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">batch_idx</span><span class="p">,</span> <span class="n">batch_ptcls</span> <span class="ow">in</span> <span class="n">data_generator</span><span class="p">:</span>
+                <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Processing chunk indices </span><span class="si">{</span><span class="n">batch_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1"> - </span><span class="si">{</span><span class="n">batch_idx</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="n">batch_new</span> <span class="o">=</span> <span class="n">downsample_images</span><span class="p">(</span><span class="n">batch_original</span><span class="o">=</span><span class="n">batch_ptcls</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="n">stop</span><span class="p">)</span>
+                <span class="n">new</span><span class="p">[</span><span class="n">batch_idx</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()]</span> <span class="o">=</span> <span class="n">batch_new</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">old_dtype</span><span class="p">)</span>
+
+            <span class="n">log</span><span class="p">(</span><span class="n">new</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+            <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Saving </span><span class="si">{</span><span class="n">out_mrcs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">mrc</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">fname</span><span class="o">=</span><span class="n">out_mrcs</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                      <span class="n">array</span><span class="o">=</span><span class="n">new</span><span class="p">,</span>
+                      <span class="n">angpix</span><span class="o">=</span><span class="n">new_apix</span><span class="p">,</span>
+                      <span class="n">is_vol</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="c1"># Write a text file with all chunks</span>
+        <span class="n">out_txt</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">.txt&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">log</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Saving </span><span class="si">{</span><span class="n">out_txt</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">out_txt</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">chunk_names</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">write_tiltseries_starfile</span><span class="p">:</span>
+            <span class="n">write_downsampled_starfile</span><span class="p">(</span><span class="n">input_starfile</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">input</span><span class="p">,</span>
+                                       <span class="n">boxsize_old</span><span class="o">=</span><span class="n">boxsize_old</span><span class="p">,</span>
+                                       <span class="n">boxsize_new</span><span class="o">=</span><span class="n">boxsize_new</span><span class="p">,</span>
+                                       <span class="n">out_mrcs</span><span class="o">=</span><span class="n">out_mrcs</span><span class="p">,</span>
+                                       <span class="n">chunk_size</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">chunk</span><span class="p">,</span>
+                                       <span class="n">source_software</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">source_software</span><span class="p">)</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">(</span><span class="n">add_args</span><span class="p">()</span><span class="o">.</span><span class="n">parse_args</span><span class="p">())</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, Barrett M Powell, Joseph H Davis.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

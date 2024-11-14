@@ -1,0 +1,555 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Learn structural heterogeneity &#8212; tomoDRGN 0.2.3.dev328 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!-- 
+    this give us a css class that will be invisible only if js is disabled 
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=26a4bc78f4c0ddb94549" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=26a4bc78f4c0ddb94549"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549" />
+
+    <script src="../_static/documentation_options.js?v=d6c7774d"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'tutorials/learn_structural_heterogeneity';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Analyze structural heterogeneity" href="analyze_structural_heterogeneity.html" />
+    <link rel="prev" title="Validate particle extraction" href="validate_homogeneous_reconstruction.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">tomoDRGN v0.2.3.dev328</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../overview/index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../command_usage/index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../overview/index.html">
+    Overview
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Tutorials
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../command_usage/index.html">
+    Command Usage
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">EMPIAR-10499 ribosomes</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="upstream_preprocessing.html">Upstream processing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="validate_homogeneous_reconstruction.html">Validate particle extraction</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Learn structural heterogeneity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="analyze_structural_heterogeneity.html">Analyze structural heterogeneity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="visualize_spatially_contextualized_heterogeneity.html">Visualize spatially-contextualized heterogeneity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="isolate_particle_subsets.html">Isolate particle subsets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="external_iterative_processing.html">External iterative processing</a></li>
+</ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">U-M cryoET workshop 2024</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="um_cryoet_workshop_2024.html">Tutorial: U-M cryoET workshop 2024</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Tutorial: EMPIAR-10499 70S ribosomes</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Learn structural heterogeneity</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="learn-structural-heterogeneity">
+<h1>Learn structural heterogeneity<a class="headerlink" href="#learn-structural-heterogeneity" title="Link to this heading">#</a></h1>
+<section id="purpose">
+<h2>Purpose<a class="headerlink" href="#purpose" title="Link to this heading">#</a></h2>
+<p>Learning structural heterogeneity from a dataset is the core purpose of tomoDRGN.
+Once you have confirmed that your particles have been extracted correctly, training a single tomoDRGN network should enable parsing of significant heterogeneity.
+Additional, iterative rounds of model training on progressively-smaller particle subsets are possible for deeper analyses.
+As with the homogeneous reconstructions, all commands on this page benefit from access to a machine with a GPU available for computation, and sufficient RAM to hold all particles in memory.</p>
+</section>
+<section id="train-heterogeneous-tomodrgn-model">
+<h2>Train heterogeneous tomoDRGN model<a class="headerlink" href="#train-heterogeneous-tomodrgn-model" title="Link to this heading">#</a></h2>
+<p>We begin by training a tomoDRGN model on all particles, as done with the homogeneous reconstructions.
+If you set <code class="docutils literal notranslate"><span class="pre">--uninvert-data</span></code> on the previous page’s homogeneous reconstruction, set it again here.
+The full list of command line arguments can be found <a class="reference internal" href="../command_usage/train_vae.html"><span class="doc">here</span></a>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">tomodrgn</span> <span class="n">train_vae</span> \
+    <span class="n">imageseries</span><span class="o">.</span><span class="n">star</span> \
+    <span class="o">-</span><span class="n">o</span> <span class="mi">03</span><span class="n">_heterogeneity</span><span class="o">-</span><span class="mi">1</span><span class="n">_train_vae</span> \
+    <span class="o">--</span><span class="n">datadir</span> <span class="o">.../</span><span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">particleseries</span><span class="o">/</span><span class="n">images</span> \
+    <span class="o">--</span><span class="n">recon</span><span class="o">-</span><span class="n">dose</span><span class="o">-</span><span class="n">weight</span> \
+    <span class="o">--</span><span class="n">recon</span><span class="o">-</span><span class="n">tilt</span><span class="o">-</span><span class="n">weight</span> \
+    <span class="o">--</span><span class="n">l</span><span class="o">-</span><span class="n">dose</span><span class="o">-</span><span class="n">mask</span> \
+    <span class="o">--</span><span class="n">num</span><span class="o">-</span><span class="n">epochs</span> <span class="mi">50</span>
+</pre></div>
+</div>
+<p>This command produces several outputs in the <code class="docutils literal notranslate"><span class="pre">03_heterogeneity-1_train_vae</span></code> directory:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">config.pkl</span></code>: this is a configuration file containing all parameters (specified and defaults) to work with this model again via downstream tomoDRGN commands.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">run.log</span></code>: this contains (most of) the output produced by the program. We are currently reworking logging, and recommend instead redirecting STDOUT to a log file as the more complete log history (<code class="docutils literal notranslate"><span class="pre">run.log</span></code> is a subset of STDOUT).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">weights.*.pkl</span></code>: these files, generated once per epoch according to <code class="docutils literal notranslate"><span class="pre">train_vae</span> <span class="pre">...</span>&#160; <span class="pre">--checkpoint</span></code> interval, contain the learned model weights at the named epoch. These weight files are used to resume model training from a checkpoint, or to load a model for downstream latent/volume space analysis.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">z.*.pkl</span></code>: these files, generated at the same interval as <code class="docutils literal notranslate"><span class="pre">weights.*.pkl</span></code>, contain the learned latent embeddings for each particle as a numpy array of shape (<code class="docutils literal notranslate"><span class="pre">num_particles,</span> <span class="pre">latent_dimensionality</span></code>)</p></li>
+</ul>
+</section>
+<section id="interpreting-outputs">
+<h2>Interpreting outputs<a class="headerlink" href="#interpreting-outputs" title="Link to this heading">#</a></h2>
+<p>Unlike the homogeneous reconstruction steps previously, here the outputs do not include files that can be immediately viewed (e.g., plots of latent space, volumes that can be viewed in ChimeraX, etc.).
+Instead, the trained model encoding your dataset’s structural heterogeneity can be analyzed in several different ways.
+See the next page on analyzing learned structural heterogeneity to learn about various tools that can be used to gain insight into the structural landscape of your dataset.</p>
+</section>
+<section id="assessing-model-convergence-and-overfitting">
+<h2>Assessing model convergence and overfitting<a class="headerlink" href="#assessing-model-convergence-and-overfitting" title="Link to this heading">#</a></h2>
+<p>The tool <code class="docutils literal notranslate"><span class="pre">tomodrgn</span> <span class="pre">convergence_vae</span></code> can be used to learn about the model’s training dynamics, and to gain a sense of whether training has converged.
+The full list of command line arguments can be found <a class="reference internal" href="../command_usage/convergence_vae.html"><span class="doc">here</span></a>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">tomodrgn</span> <span class="n">convergence_vae</span> \
+    <span class="mi">03</span><span class="n">_heterogeneity</span><span class="o">-</span><span class="mi">1</span><span class="n">_train_vae</span>
+</pre></div>
+</div>
+<p>The outputs of this command include the following:</p>
+<ul class="simple">
+<li><p>plots</p>
+<ul>
+<li><p>the model’s loss (reconstructed image error, KL divergence from the standard normal distributed latent, and total loss) at each epoch</p></li>
+<li><p>PCA-projected latent space at every few epochs</p></li>
+<li><p>UMAP-projected latent space at every few epochs</p></li>
+<li><p>the mean relative change in latent embeddings for each particle in successive epochs</p></li>
+<li><p>a sampling of well-supported regions of latent space (i.e., highly populated neighborhoods of latent space) and the correlations between volumes generated from these neighborhoods every few epochs as evaluated by volumetric correlation coefficient and by FSC</p></li>
+</ul>
+</li>
+<li><p>a number of supporting files involved in generating these plots, if you desire to take a closer look at the model’s training dynamics</p></li>
+</ul>
+<p>Generally, we expect a well-converged model to exhibit (relative) stabilization in most of these plots, though not all plots may fully stabilize.
+We suggest that further downstream analysis should be performed on the model at the epoch at which stabilization appears to begin, so as to minimize the potential for overfitting artifacts.</p>
+<p>Overfitting is periodically observed, and is generally characterized by</p>
+<ul class="simple">
+<li><p>a loss curve that descends significantly with no visible improvement in map quality, map heterogeneity, or latent space distribution</p></li>
+<li><p>maps that exhibit streaks along a particular axis (similar to preferred orientation issues), or exhibit increasing amounts of high frequency noise</p></li>
+</ul>
+<p>In the event that your model is not yet converged, you can resume training with the same <code class="docutils literal notranslate"><span class="pre">train_vae</span></code> command as above, appended with <code class="docutils literal notranslate"><span class="pre">--load</span> <span class="pre">latest</span></code> to resume training from the most recent model checkpoint (a <code class="docutils literal notranslate"><span class="pre">weights.*.pkl</span></code> file).</p>
+</section>
+<section id="common-pitfalls">
+<h2>Common pitfalls<a class="headerlink" href="#common-pitfalls" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>model is overfit / underfit: see the section above</p></li>
+<li><p>NaN or otherwise non-decreasing reconstruction loss
+- Reconstruction (aka MSE aka generative) loss should generally decrease from about 1 - 1.5 (at the start of training) to 0.8 - 0.9 (at the end of training). Other loss curve behavior (increasing loss, NaN loss, wildly oscillating loss) is usually a result of the learning rate being too high leading to unstable training. The learning rate is set to a low default value, but thereafter increases as the square root of the batch size, and may also need tuning for different datasets. We recommend that you increase the <code class="docutils literal notranslate"><span class="pre">--batch-size</span></code> until your GPU is saturated (i.e. you get a “CUDA out of memory error”, typically batch sizes 1-16 depending on particle box size), then decrease the learning rate <code class="docutils literal notranslate"><span class="pre">--lr</span></code> until the reconstruction loss behaves as described above.</p></li>
+<li><p>the latent space looks like a homogeneous blob:
+- the model may have nonetheless learned structural heterogeneity! We frequently observe that conformational heterogeneity (and even small-scale compositional heterogeneity) results in relatively continuous latent spaces. See the next page for analyzing structural heterogeneity.
+- if no structural heterogeneity has been learned, then try training a new model with a decreased beta value (<code class="docutils literal notranslate"><span class="pre">--beta</span></code>) to decrease the impact of KL regularization, and/or an increased latent dimensionality (<code class="docutils literal notranslate"><span class="pre">--zdim</span></code>) to provide a larger latent space.</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="validate_homogeneous_reconstruction.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Validate particle extraction</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="analyze_structural_heterogeneity.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Analyze structural heterogeneity</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#purpose">Purpose</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#train-heterogeneous-tomodrgn-model">Train heterogeneous tomoDRGN model</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#interpreting-outputs">Interpreting outputs</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#assessing-model-convergence-and-overfitting">Assessing model convergence and overfitting</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#common-pitfalls">Common pitfalls</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/tutorials/learn_structural_heterogeneity.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=26a4bc78f4c0ddb94549"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=26a4bc78f4c0ddb94549"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, Barrett M Powell, Joseph H Davis.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.1.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

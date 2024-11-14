@@ -1,0 +1,25 @@
+﻿tomodrgn.starfile.TomoParticlesStarfileStarHeaders
+==================================================
+
+.. currentmodule:: tomodrgn.starfile
+
+.. autoclass:: TomoParticlesStarfileStarHeaders
+   :members:
+   :show-inheritance:
+   :inherited-members:
+   :special-members: __call__, __add__, __mul__
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~TomoParticlesStarfileStarHeaders.warptools
+      ~TomoParticlesStarfileStarHeaders.relion
+   
+   

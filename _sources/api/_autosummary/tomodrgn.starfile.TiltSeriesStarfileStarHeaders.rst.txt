@@ -1,0 +1,27 @@
+﻿tomodrgn.starfile.TiltSeriesStarfileStarHeaders
+===============================================
+
+.. currentmodule:: tomodrgn.starfile
+
+.. autoclass:: TiltSeriesStarfileStarHeaders
+   :members:
+   :show-inheritance:
+   :inherited-members:
+   :special-members: __call__, __add__, __mul__
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~TiltSeriesStarfileStarHeaders.warp
+      ~TiltSeriesStarfileStarHeaders.cryosrpnt
+      ~TiltSeriesStarfileStarHeaders.nextpyp
+      ~TiltSeriesStarfileStarHeaders.cistem
+   
+   
