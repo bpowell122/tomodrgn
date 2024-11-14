@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Get git tags
-        run: git fetch --tags origin/dev
+        run: git fetch --tags origin
 
       - name: Set up python
         uses: actions/setup-python@v5
