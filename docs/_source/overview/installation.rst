@@ -46,7 +46,7 @@ Once you have installed conda, run the commands below to create a tomoDRGN envir
     python -m pip install .
 
 If you did not see any errors, great!
-Your installation of tomoDRGN is ready to use, and you may confirm this by running tomoDRGN's suite of CLI tests as described :doc:`here <run_tests.rst>`.
+Your installation of tomoDRGN is ready to use, and you may confirm this by running tomoDRGN's suite of CLI tests as described :doc:`here <run_tests>`.
 
 Resolving potential installation errors
 ----------------------------------------
