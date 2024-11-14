@@ -5,30 +5,33 @@ tomodrgn downsample
 Purpose
 --------
 Downsample an image stack or volume by Fourier cropping.
+Note that where possible, it is preferred to re-extract particles in the appropriate upstream processing software at the desired box size, rather than downsampling here.
 
 
 Sample usage
 ------------
-The examples below are taken from ``tomodrgn/testing/commandtest.py``, and rely on other outputs from ``commandtest.py`` to execute successfully.
+The examples below are adapted from ``tomodrgn/testing/commandtest*.py``, and rely on other outputs from ``commandtest.py`` to execute successfully.
 
 .. code-block:: bash
 
-    # baseline
+    # Warp v1 style inputs
     tomodrgn \
         downsample \
         data/10076_classE_32_sim.star \
+        --source-software cryosrpnt \
         --downsample 16 \
         --batch-size 50 \
         --output output/10076_classE_16_sim.mrcs \
-        -write-tiltseries-starfile
+        --write-tiltseries-starfile \
+        --lazy
 
-    # lazy loading
+    # WarpTools style inputs
     tomodrgn \
         downsample \
-        data/10076_classE_32_sim.star \
+        data/warptools_test_4-tomos_10-ptcls_box-32_angpix-12_optimisation_set.star \
         --downsample 16 \
         --batch-size 50 \
-        --output output/10076_classE_16_sim.mrcs \
+        --output output/warptools_70S_box-16.mrcs \
         --write-tiltseries-starfile \
         --lazy
 

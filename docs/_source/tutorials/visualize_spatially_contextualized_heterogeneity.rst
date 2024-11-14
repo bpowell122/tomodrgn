@@ -6,13 +6,13 @@ Purpose
 While many interesting structural or biological insights can be gleaned from examining individual volumes or volume ensembles in isolation, in cryo-ET we have knowledge of where each particle originates in the source tomogram.
 With this knowledge, we can map particles (and by extension, their structural heterogeneity) back to the underlying tomogram / cellular context, which opens significant further avenues of investigation and hypothesis generation.
 
-Visualizing particle mapbacks
-------------------------------
+Visualizing particle "mapbacks"
+-------------------------------
 TomoDRGN provides two ways to view particles mapped back to tomogram positions: an interactive 3-D plot built into Jupyter notebook, and ChimeraX command scripts.
 
 Interactive 3-D plot
 ^^^^^^^^^^^^^^^^^^^^^
-The ``tomoDRGN_interactive_viz.ipynb`` Jupyter notebook contains a widget to generate an interactive 3-D scatter plot of all particles.
+The ``tomoDRGN_interactive_viz.ipynb`` Jupyter notebook contains a widget to generate an interactive 3-D scatter plot of all particles in a selected tomogram.
 This can be a useful way to rapidly explore spatially contextualized heterogeneity in a relatively lightweight application.
 Open the notebook, run the first few cells to import dependencies, enable widgets, and load data, and proceed to the section titled "View particle distributions in tomogram context".
 
@@ -38,9 +38,9 @@ Hovering over a particle reports its index in the input star file used for train
 
 ChimeraX command scripts
 ^^^^^^^^^^^^^^^^^^^^^^^^^
-TomoDRGN also provides functionality to view spatially contextuallized heterogeneity in ChimeraX through the command ``tomodrgn subtomo2chimerax``.
+TomoDRGN also provides functionality to view spatially contextualized heterogeneity in ChimeraX through the command ``tomodrgn subtomo2chimerax``.
 The subtomo2chimerax command has been adapted and modified with permission from ``relionsubtomo2ChimeraX.py``, written by `Huy Bui at McGill University <https://doi.org/10.5281/zenodo.6820119>`_.
-Subtomo2chimerax generates outputs in three possible rendering ``--mode``'s: placing spherical markers at each particle position, placing a homogeneous consensus structure at each particle position, or generating a unique tomoDRGN volume for each particle and placing the corresponding volume at its particle's source location.
+This command generates outputs in three possible rendering ``--mode``'s: placing spherical markers at each particle position, placing a homogeneous consensus structure at each particle position, or generating a unique tomoDRGN volume for each particle and placing the corresponding volume at its particle's source location.
 In all cases, it requires a volume series star file describing the same set of particles in the same order that tomoDRGN was trained on (in order to correctly map heterogeneity to spatial location).
 
 The full list of command line arguments can be found :doc:`here <../command_usage/subtomo2chimerax>`.
@@ -79,6 +79,6 @@ Interpreting outputs
 Common pitfalls
 ----------------
 * The image series star file used for model training, and the volume series star file used for deriving particle 3-D coordinates, must describe the same set of particles in the same order. See the discussion on the next page for further information.
-* The shape of the array specified by ``--coloring-labels`` must be the ``(num_particles)`` and must match the particle indexing specified by the input star file. The file ``analyze.49/kmeans100/labels.pkl`` is a good example that meets these requirements.
+* The length of the array specified by ``--coloring-labels`` must be ``(num_particles)`` and must match the particle indexing specified by the input star file. The automatically generated file ``analyze.49/kmeans100/labels.pkl`` is a good example that meets these requirements.
 * A useful way to check that your volume series star file and coloring labels are being parsed correctly is to use an array of every particle's X-coordinate in the tomogram as the ``--coloring-labels`` input, and using a continuous colormap such as ``--colormap viridis``.
 

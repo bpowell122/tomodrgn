@@ -70,9 +70,9 @@ def test_train_nn_dose_tilt_weight_dose_mask_batchsize8(script_runner, output_di
     run_assert_no_error(script_runner, command=f'tomodrgn train_nn data/10076_classE_32_sim.star --source-software cryosrpnt --outdir {output_dir}/nn_classE_sim_dosetiltweightmask_batchsize8 --uninvert-data --seed 42 --layers 3 --dim 256 --num-epochs 1 --l-dose-mask --recon-dose-weight --recon-tilt-weight --batch-size 8')
 
 
-#####################
-# tomodrgn train_nn #
-#####################
+###########################
+# tomodrgn convergence_nn #
+###########################
 def test_convergence_nn(script_runner, output_dir):
     run_assert_no_error(script_runner, command=f'tomodrgn convergence_nn {output_dir}/nn_classE_sim data/10076_classE_32.mrc --fsc-mask none')
 

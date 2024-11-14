@@ -48,6 +48,7 @@ tomodrgn.models.FTPositionalDecoder
       ~FTPositionalDecoder.named_parameters
       ~FTPositionalDecoder.parameters
       ~FTPositionalDecoder.positional_encoding
+      ~FTPositionalDecoder.postprocess_volume_batch
       ~FTPositionalDecoder.register_backward_hook
       ~FTPositionalDecoder.register_buffer
       ~FTPositionalDecoder.register_forward_hook

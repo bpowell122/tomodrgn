@@ -16,6 +16,7 @@
       :nosignatures:
    
       add_args
+      check_args_compatible
       filter_image_series_starfile
       filter_volume_series_starfile
       main

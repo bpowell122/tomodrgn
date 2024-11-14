@@ -103,7 +103,7 @@ def write_downsampled_starfile(input_starfile: str,
     :param boxsize_new: the new box size after Fourier cropping (units: px)
     :param out_mrcs: path to the downsampled mrcs file(s), referencing images in the same order as the original star file
     :param chunk_size: number of images chunked together in separate .mrcs files written to disk, if used. None means no chunking was performed.
-        :param source_software: type of source software used to create the star file, used to indicate the appropriate star file handling class to instantiate.
+    :param source_software: type of source software used to create the star file, used to indicate the appropriate star file handling class to instantiate.
             Default of 'auto' tries to infer the appropriate star file handling class based on whether ``star_path`` is an optimisation set star file.
     :return: None
     """

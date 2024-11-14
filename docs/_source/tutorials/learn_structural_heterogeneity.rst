@@ -19,21 +19,13 @@ The full list of command line arguments can be found :doc:`here <../command_usag
 .. code-block:: python
 
     tomodrgn train_vae \
-        particleseries.star \
+        imageseries.star \
         -o 03_heterogeneity-1_train_vae \
-        --datadir .../path/to/particleseries \
+        --datadir .../path/to/particleseries/images \
         --recon-dose-weight \
         --recon-tilt-weight \
         --l-dose-mask \
-        --enc-layers-A 3 \
-        --enc-dim-A 256 \
-        --out-dim-A 128 \
-        --enc-layers-B 3 \
-        --enc-dim-B 256 \
-        --zdim 128 \
-        --dec-layers 3 \
-        --dec-dim 512 \
-        -n 50
+        --num-epochs 50
 
 This command produces several outputs in the ``03_heterogeneity-1_train_vae`` directory:
 
@@ -46,7 +38,7 @@ This command produces several outputs in the ``03_heterogeneity-1_train_vae`` di
 Interpreting outputs
 ---------------------
 Unlike the homogeneous reconstruction steps previously, here the outputs do not include files that can be immediately viewed (e.g., plots of latent space, volumes that can be viewed in ChimeraX, etc.).
-The trained model encoding your dataset's structural heterogeneity can be analyzed in several different ways.
+Instead, the trained model encoding your dataset's structural heterogeneity can be analyzed in several different ways.
 See the next page on analyzing learned structural heterogeneity to learn about various tools that can be used to gain insight into the structural landscape of your dataset.
 
 
@@ -80,13 +72,15 @@ Overfitting is periodically observed, and is generally characterized by
 * a loss curve that descends significantly with no visible improvement in map quality, map heterogeneity, or latent space distribution
 * maps that exhibit streaks along a particular axis (similar to preferred orientation issues), or exhibit increasing amounts of high frequency noise
 
-In the event that your model is not yet converged, you can resume training with the same ``train_vae`` command as above, appended with ``--load latest`` to resume training from the most recent model checkpoint (``weights.*.pkl``).
+In the event that your model is not yet converged, you can resume training with the same ``train_vae`` command as above, appended with ``--load latest`` to resume training from the most recent model checkpoint (a ``weights.*.pkl`` file).
 
 
 Common pitfalls
 ----------------
 
 * model is overfit / underfit: see the section above
+* NaN or otherwise non-decreasing reconstruction loss
+  - Reconstruction (aka MSE aka generative) loss should generally decrease from about 1 - 1.5 (at the start of training) to 0.8 - 0.9 (at the end of training). Other loss curve behavior (increasing loss, NaN loss, wildly oscillating loss) is usually a result of the learning rate being too high leading to unstable training. The learning rate is set to a low default value, but thereafter increases as the square root of the batch size, and may also need tuning for different datasets. We recommend that you increase the ``--batch-size`` until your GPU is saturated (i.e. you get a "CUDA out of memory error", typically batch sizes 1-16 depending on particle box size), then decrease the learning rate ``--lr`` until the reconstruction loss behaves as described above.
 * the latent space looks like a homogeneous blob:
-    * the model may have nonetheless learned structural heterogeneity! We frequently observe that conformational heterogeneity (and even small-scale compositional heterogeneity) results in relatively continuous latent spaces. See the next page for analyzing structural heterogeneity.
-    * if no structural heterogeneity has been learned, then try training a new model with a decreased beta value (``--beta``) to decrease the impact of KL regularization, and/or an increased latent dimensionality (``--zdim``) to provide a larger latent space.
+  - the model may have nonetheless learned structural heterogeneity! We frequently observe that conformational heterogeneity (and even small-scale compositional heterogeneity) results in relatively continuous latent spaces. See the next page for analyzing structural heterogeneity.
+  - if no structural heterogeneity has been learned, then try training a new model with a decreased beta value (``--beta``) to decrease the impact of KL regularization, and/or an increased latent dimensionality (``--zdim``) to provide a larger latent space.

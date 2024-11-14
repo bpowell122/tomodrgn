@@ -9,6 +9,15 @@
 
    
    
+   .. rubric:: Functions
+
+   .. autosummary::
+      :toctree:
+      :nosignatures:
+   
+      is_starfile_optimisation_set
+      load_sta_starfile
+   
    
 
    
@@ -22,6 +31,9 @@
    
       GenericStarfile
       TiltSeriesStarfile
+      TiltSeriesStarfileStarHeaders
+      TomoParticlesStarfile
+      TomoParticlesStarfileStarHeaders
    
    
 

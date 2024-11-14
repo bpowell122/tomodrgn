@@ -25,8 +25,8 @@ References
    :hidden:
    :titlesonly:
 
-   quickstart <quickstart/index>
-   command usage <command_usage/index>
+   Overview <overview/index>
+   Tutorials <tutorials/index>
+   Command Usage <command_usage/index>
    API <api/index>
-   tutorials <tutorials/index>
 
