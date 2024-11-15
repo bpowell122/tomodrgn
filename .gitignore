@@ -46,7 +46,9 @@ coverage.xml
 *.cover
 .hypothesis/
 
+# Testing outputs
 testing/output
+testing/data/*.png
 
 # Translations
 *.mo
@@ -65,6 +67,8 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/_source/api/_autosummary
+docs/_source/assets/*.ai
 
 # PyBuilder
 target/
@@ -103,3 +107,10 @@ ENV/
 .mypy_cache/
 /analysis_scripts/
 /focused_heterogeneity/
+
+# pycharm
+.idea/
+
+# misc
+TODO.txt
+/personal_analysis_scripts/

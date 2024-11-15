@@ -1,114 +1,168 @@
-'''
+"""
 Assess convergence of a decoder-only network relative to an external volume by FSC
-'''
+"""
+import argparse
+import os
+import fnmatch
+from typing import Literal
 
-import numpy as np
 import matplotlib.pyplot as plt
-import argparse, os, fnmatch
-from tomodrgn import utils
+import numpy as np
 
-def add_args(parser):
+from tomodrgn import utils, convergence, analysis
+
+
+def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.ArgumentParser:
+    if parser is None:
+        # this script is called directly; need to create a parser
+        parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    else:
+        # this script is called from tomodrgn.__main__ entry point, in which case a parser is already created
+        pass
+
     parser.add_argument('training_directory', type=os.path.abspath, help='train_nn directory containing reconstruct.N.mrc')
     parser.add_argument('reference_volume', type=os.path.abspath, help='volume against which to calculate FSC')
     parser.add_argument('--max-epoch', type=int, help='Maximum epoch for which to calculate FSCs')
     parser.add_argument('--include-dc', action='store_true', help='Include FSC calculation for DC component, default False because DC component default excluded during training')
     parser.add_argument('--fsc-mask', choices=('none', 'sphere', 'tight', 'soft'), default='soft', help='Type of mask applied to volumes before calculating FSC')
+    parser.add_argument('--plot-format', type=str, choices=['png', 'svgz'], default='png', help='File format with which to save plots')
+
     return parser
 
 
-def main(args):
-    LOG = f'{args.training_directory}/convergence_nn.log'
-    def flog(msg):  # HACK: switch to logging module
-        return utils.flog(msg, LOG)
+def make_plots(resolution: np.ndarray,
+               fscs: np.ndarray,
+               fsc_metrics: np.ndarray,
+               epochs: np.ndarray | list,
+               outdir: str,
+               plot_format: Literal['png', 'svgz']) -> None:
+    """
+    Save an array of standard plots characterizing homogeneous volume model training convergence.
 
-    reconstruction_vols = []
+    :param resolution: array of resolution values in units 1/px and shape (boxsize // 2)
+    :param fscs: array of FSC curves with shape (len(vol_paths), boxsize // 2)
+    :param fsc_metrics: array of FSC metrics with shape (3, len(vol_paths)): resolution crossing FSC 0.143, resolution crossing FSC 0.5, integral under FSC before 0.143 crossing
+    :param epochs: list of epochs being evaluated and saved
+    :param outdir: output directory in which to save plots
+    :param plot_format: file format with which to save plots
+    :return: None
+    """
+    def plot_and_save(x_values: np.ndarray | list,
+                      y_values: np.ndarray | list,
+                      x_label: str,
+                      y_label: str,
+                      outpath: str,
+                      **kwargs) -> None:
+        """
+        Helper function to produce a line plot and save it as an image to the specified path.
+
+        :param x_values: list or array of values to plot along x axis
+        :param y_values: list or array of values to plot along y axis
+        :param x_label: label for x axis
+        :param y_label: label for y axis
+        :param outpath: name of output image to save plot as
+        :param kwargs: additional key word arguments passed to matplotlib.pyplot.plot
+        :return: None
+        """
+        plt.plot(x_values, y_values, **kwargs)
+        plt.xlabel(x_label)
+        plt.ylabel(y_label)
+        plt.tight_layout()
+        plt.savefig(outpath)
+
+    plot_and_save(x_values=epochs,
+                  y_values=fsc_metrics[0],
+                  x_label='epoch',
+                  y_label='0.143 fsc frequency (1/px)',
+                  outpath=f'{outdir}/convergence_nn_fsc0.143resolution.{plot_format}',
+                  linestyle='-', marker='.', mfc='red', mec='red', markersize=2)
+    plt.close()
+    plot_and_save(x_values=epochs,
+                  y_values=fsc_metrics[1],
+                  x_label='epoch',
+                  y_label='0.5 fsc frequency (1/px)',
+                  outpath=f'{outdir}/convergence_nn_fsc0.5resolution.{plot_format}',
+                  linestyle='-', marker='.', mfc='red', mec='red', markersize=2)
+    plt.close()
+    plot_and_save(x_values=epochs,
+                  y_values=fsc_metrics[2],
+                  x_label='epoch',
+                  y_label='fsc-frequency integral (1/px)',
+                  outpath=f'{outdir}/convergence_nn_fsc0.143integral.{plot_format}',
+                  linestyle='-', marker='.', mfc='red', mec='red', markersize=2)
+    plt.close()
+    epoch_colors = analysis.get_colors_matplotlib(len(epochs), 'coolwarm')
+    for epoch in epochs:
+        plot_and_save(x_values=resolution,
+                      y_values=fscs.T[:, epoch],
+                      x_label='spatial frequency (1/px)',
+                      y_label='fsc',
+                      outpath=f'{outdir}/convergence_nn_fullfsc_all.{plot_format}',
+                      color=epoch_colors[epoch])
+    plt.close()
+    plot_and_save(x_values=resolution,
+                  y_values=fscs.T[:, -1],
+                  x_label='spatial frequency (1/px)',
+                  y_label='fsc',
+                  outpath=f'{outdir}/convergence_nn_fullfsc_final.{plot_format}')
+    plt.close()
+
+
+def main(args):
+    # make output log file
+    logfile = f'{args.training_directory}/convergence_nn.log'
+
+    def flog(msg):  # HACK: switch to logging module
+        return utils.flog(msg, logfile)
+
+    # log arguments
+    flog(args)
+
+    # identify volumes generated at each epoch
+    reconstruct_vols_paths = []
     for file in os.listdir(args.training_directory):
         if fnmatch.fnmatch(file, 'reconstruct.*.mrc'):
-            reconstruction_vols.append(os.path.abspath(os.path.join(args.training_directory, file)))
-    reconstruction_vols = sorted(reconstruction_vols, key=lambda x: int(os.path.splitext(x)[0].split('.')[-1]))
-    epochs = [i for i in range(len(reconstruction_vols))]
+            reconstruct_vols_paths.append(os.path.abspath(os.path.join(args.training_directory, file)))
+    reconstruct_vols_paths = sorted(reconstruct_vols_paths, key=lambda path: int(os.path.splitext(path)[0].split('.')[-1]))
+    epochs = [int(os.path.splitext(path)[0].split('.')[-1]) for path in reconstruct_vols_paths]
     assert epochs, f'No reconstruct.*.mrc files detected in {args.training_directory}; exiting...'
-    flog(f'Found {len(epochs)} epochs to compute FSC')
+    flog(f'Found the following epochs at which to compute an FSC: {epochs}')
 
+    # optionally limit convergence analysis to a certain maximum epoch
     if args.max_epoch:
-        epochs = epochs[:args.max_epoch]
-        reconstruction_vols = reconstruction_vols[:args.max_epoch]
-        flog(f'Using first {len(epochs)} epochs to compute FSC')
+        epochs = [epoch for epoch in epochs if epoch < args.max_epoch]
+        reconstruct_vols_paths = reconstruct_vols_paths[:len(epochs)]
+        flog(f'Using first {len(epochs)} epochs to compute FSCs')
 
+    # make output directory
     outdir = f'{args.training_directory}/convergence.{len(epochs)}'
     os.makedirs(outdir, exist_ok=True)
 
-    flog(f'Using FSC reference volume: {args.reference_volume}')
+    # calculate convergence metrics
+    resolution, fscs, fsc_metrics = convergence.fsc_referencevol_to_manyvols(reference_vol=args.reference_volume,
+                                                                             vol_paths=reconstruct_vols_paths,
+                                                                             fsc_mask=args.fsc_mask,
+                                                                             include_dc=args.include_dc)
+    flog(f'Maximum FSC=0.143 resolution of {np.array(fsc_metrics[0]).max()} was first reached at epoch {np.array(fsc_metrics[0]).argmax()}')
+    flog(f'Maximum FSC=0.5 resolution of {np.array(fsc_metrics[1]).max()} was first reached at epoch {np.array(fsc_metrics[1]).argmax()}')
+    flog(f'Maximum FSC integral prior to crossing FSC=0.143 of {np.array(fsc_metrics[2]).max()} was first reached at epoch {np.array(fsc_metrics[2]).argmax()}')
+    flog(f'Final FSC=0.143 resolution: {np.array(fsc_metrics[0])[-1]}')
+    flog(f'Final FSC=0.5 resolution: {np.array(fsc_metrics[1])[-1]}')
 
-    resolutions_point143 = []
-    resolutions_point5 = []
-    integrals = []
-    fscs = []
-    for vol in reconstruction_vols:
-        flog(f'Processing volume: {vol}')
-        x, fsc = utils.calc_fsc(args.reference_volume, vol, mask=args.fsc_mask)
-        if not args.include_dc:
-            x = x[1:]
-            fsc = fsc[1:]
-        fscs.append(fsc)
-
-        # find the resolution at which FSC crosses 0.5 correlation"
-        if np.all(fsc >= 0.5):
-            threshold_resolution = x[-1]
-            resolutions_point5.append(threshold_resolution)
-        else:
-            threshold_resolution = x[np.argmax(fsc < 0.5)]
-            resolutions_point5.append(threshold_resolution)
-
-        # find the resolution at which FSC crosses 0.143 correlation"
-        if np.all(fsc >= 0.143):
-            threshold_resolution = x[-1]
-            threshold_index = x.shape[0]
-            resolutions_point143.append(threshold_resolution)
-        else:
-            threshold_resolution = x[np.argmax(fsc < 0.143)]
-            threshold_index = np.argmax(fsc < 0.143)
-            resolutions_point143.append(threshold_resolution)
-
-        # calculate the integral of correlation against resolution
-        integral = np.trapz(fsc[:threshold_index], x[:threshold_index])
-        integrals.append(integral)
-
-    fscs = np.array(fscs)
-
-    flog(f'Maximum 0.143 resolution of {np.array(resolutions_point143).max()} was first reached at epoch {np.array(resolutions_point143).argmax()}')
-    flog(f'Maximum 0.5 resolution of {np.array(resolutions_point5).max()} was first reached at epoch {np.array(resolutions_point5).argmax()}')
-    flog(f'Maximum FSC integral over 0.143 of {np.array(integrals).max()} was first reached at epoch {np.array(integrals).argmax()}')
-    flog(f'Final FSC 0.143 resolution: {np.array(resolutions_point143)[-1]}')
-    flog(f'Final FSC 0.5 resolution: {np.array(resolutions_point5)[-1]}')
-
-    def plot_and_save(x_axis, y_values, xlabel, ylabel, outpath, **kwargs):
-        plt.plot(x_axis, y_values, **kwargs)
-        plt.xlabel(xlabel)
-        plt.ylabel(ylabel)
-        plt.tight_layout()
-        plt.savefig(os.path.join(args.training_directory, outpath))
-
+    # save standard plots
     flog(f'Saving plots to {outdir}')
-    plot_and_save(epochs, resolutions_point143, 'epoch', '0.143 fsc frequency (1/px)', f'{outdir}/convergence_nn_fsc0.143resolution.png', linestyle='-', marker='.', mfc='red', mec='red', markersize=2)
-    plt.clf()
-    plot_and_save(epochs, resolutions_point5, 'epoch', '0.5 fsc frequency (1/px)', f'{outdir}/convergence_nn_fsc0.5resolution.png', linestyle='-', marker='.', mfc='red', mec='red', markersize=2)
-    plt.clf()
-    plot_and_save(epochs, integrals, 'epoch', 'fsc-frequency integral (1/px)', f'{outdir}/convergence_nn_fsc0.143integral.png', linestyle='-', marker='.', mfc='red', mec='red', markersize=2)
-    plt.clf()
-    colors = plt.cm.coolwarm(np.linspace(0, 1, len(epochs)))
-    for epoch in epochs:
-        plot_and_save(x, fscs.T[:,epoch], 'spatial frequency (1/px)', 'fsc', f'{outdir}/convergence_nn_fullfsc_all.png', color=colors[epoch])
-    plt.clf()
-    plot_and_save(x, fscs.T[:,-1], 'spatial frequency (1/px)', 'fsc', f'{outdir}/convergence_nn_fullfsc_final.png')
+    make_plots(resolution=resolution,
+               fscs=fscs,
+               fsc_metrics=fsc_metrics,
+               epochs=epochs,
+               outdir=outdir,
+               plot_format=args.plot_format)
 
-    utils.save_pkl((x, fscs), f'{outdir}/freqs_fscs.pkl')
-
+    # save all other outputs
+    utils.save_pkl((resolution, fscs), f'{outdir}/freqs_fscs.pkl')
     flog('Done!')
-    os.rename(LOG, f'{outdir}/convergence_nn.log')
+    os.rename(logfile, f'{outdir}/convergence_nn.log')
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__)
-    args = add_args(parser).parse_args()
-    main(args)
+    main(add_args().parse_args())

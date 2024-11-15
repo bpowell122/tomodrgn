@@ -1,1019 +1,1147 @@
-'''Pytorch models'''
+"""
+Classes for creating, loading, training, and evaluating pytorch models.
+"""
+
+import itertools
+import os
+from multiprocessing import Pool
+from typing import Literal
 
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.cuda.amp import autocast
+import torchinfo
+from einops import repeat, pack
+from einops.layers.torch import Reduce, Rearrange
+from torch.amp import autocast
 
-from tomodrgn import fft, lie_tools, utils, lattice, set_transformer
+from tomodrgn import utils, lattice, set_transformer, fft, mrc
 
 log = utils.log
 
-class HetOnlyVAE(nn.Module):
-    # No pose inference
-    def __init__(self, lattice, # Lattice object
-            qlayers, qdim, 
-            players, pdim,
-            in_dim, zdim = 1, 
-            encode_mode = 'resid',
-            enc_mask = None,
-            enc_type = 'linear_lowf',
-            enc_dim = None,
-            domain = 'fourier',
-            activation = nn.ReLU):
-        super(HetOnlyVAE, self).__init__()
-        self.lattice = lattice
-        self.zdim = zdim
-        self.in_dim = in_dim
-        self.enc_mask = enc_mask
-        if encode_mode == 'conv':
-            self.encoder = ConvEncoder(qdim, zdim*2)
-        elif encode_mode == 'resid':
-            self.encoder = ResidLinearMLP(in_dim, 
-                            qlayers, # nlayers
-                            qdim,  # hidden_dim
-                            zdim*2, # out_dim
-                            activation) 
-        elif encode_mode == 'mlp':
-            self.encoder = MLP(in_dim, 
-                            qlayers, 
-                            qdim, # hidden_dim
-                            zdim*2, # out_dim
-                            activation) #in_dim -> hidden_dim
-        elif encode_mode == 'tilt':
-            self.encoder = TiltEncoder(in_dim,
-                            qlayers,
-                            qdim,
-                            zdim*2,
-                            activation)
-        else:
-            raise RuntimeError('Encoder mode {} not recognized'.format(encode_mode))
-        self.encode_mode = encode_mode
-        self.decoder = get_decoder(3+zdim, lattice.D, players, pdim, domain, enc_type, enc_dim, activation)
-   
-    @classmethod
-    def load(self, config, weights=None, device=None):
-        '''Instantiate a model from a config.pkl
-
-        Inputs:
-            config (str, dict): Path to config.pkl or loaded config.pkl
-            weights (str): Path to weights.pkl
-            device: torch.device object
-
-        Returns:
-            HetOnlyVAE instance, Lattice instance
-        '''
-        cfg = utils.load_pkl(config) if type(config) is str else config
-        c = cfg['lattice_args']
-        lat = lattice.Lattice(c['D'], extent=c['extent'])
-        c = cfg['model_args']
-        if c['enc_mask'] > 0:
-            enc_mask = lat.get_circular_mask(c['enc_mask'])
-            in_dim = int(enc_mask.sum())
-        else:
-            assert c['enc_mask'] == -1
-            enc_mask = None
-            in_dim = lat.D**2
-        activation={"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[c['activation']]
-        model = HetOnlyVAE(lat, 
-                          c['qlayers'], c['qdim'],
-                          c['players'], c['pdim'],
-                          in_dim, c['zdim'],
-                          encode_mode=c['encode_mode'],
-                          enc_mask=enc_mask,
-                          enc_type=c['pe_type'],
-                          enc_dim=c['pe_dim'],
-                          domain=c['domain'],
-                          activation=activation)
-        if weights is not None:
-            ckpt = torch.load(weights)
-            model.load_state_dict(ckpt['model_state_dict'])
-        if device is not None:
-            model.to(device)
-        return model, lat
-
-    def reparameterize(self, mu, logvar):
-        if not self.training:
-            return mu
-        std = torch.exp(.5*logvar)
-        eps = torch.randn_like(std)
-        return eps*std + mu
-
-    def encode(self, *img):
-        img = (x.view(x.shape[0],-1) for x in img)
-        if self.enc_mask is not None:
-            img = (x[:,self.enc_mask] for x in img)
-        z = self.encoder(*img)
-        return z[:,:self.zdim], z[:,self.zdim:]
-
-    def cat_z(self, coords, z):
-        '''
-        coords: Bx...x3
-        z: Bxzdim
-        '''
-        assert coords.size(0) == z.size(0)
-        z = z.view(z.size(0), *([1]*(coords.ndimension()-2)), self.zdim)
-        z = torch.cat((coords,z.expand(*coords.shape[:-1],self.zdim)),dim=-1)
-        return z
-
-    def decode(self, coords, z, mask=None):
-        '''
-        coords: BxNx3 image coordinates
-        z: Bxzdim latent coordinate
-        '''
-        return self.decoder(self.cat_z(coords,z))
-
-    # Need forward func for DataParallel -- TODO: refactor
-    def forward(self, *args, **kwargs):
-        return self.decode(*args, **kwargs)
-
 
 class TiltSeriesHetOnlyVAE(nn.Module):
+    # TODO move sequential tilt sampling from dataset.__getitem__ to encoder A -> B transition
+    # TODO add torch.compile here and to other common functions (calc ctf? eval vol batch? ffts?) https://discuss.pytorch.org/t/how-should-i-use-torch-compile-properly/179021
+    """
+    A module to encode multiple tilt images of a particle to a learned low-dimensional latent space embedding,
+    then decode spatial frequency coordinates to corresponding voxel amplitudes conditioned on the per-particle latent embedding.
+    """
+
     # No pose inference
-    def __init__(self, lattice, qlayersA, qdimA, out_dimA, ntilts, qlayersB, qdimB, players, pdim,
-                 in_dim, zdim=1, enc_mask=None, enc_type='geom_lowf', enc_dim=None, domain='fourier',
-                 activation = nn.ReLU, l_dose_mask=False, feat_sigma = None, pooling_function='mean',
-                 num_seeds=1, num_heads=4, layer_norm=False):
-        super(TiltSeriesHetOnlyVAE, self).__init__()
-        self.lattice = lattice
+    def __init__(self,
+                 in_dim: int,
+                 hidden_layers_a: int,
+                 hidden_dim_a: int,
+                 out_dim_a: int,
+                 ntilts: int,
+                 hidden_layers_b: int,
+                 hidden_dim_b: int,
+                 zdim: int,
+                 hidden_layers_decoder: int,
+                 hidden_dim_decoder: int,
+                 lat: lattice.Lattice,
+                 activation: nn.ReLU | nn.LeakyReLU = nn.ReLU,
+                 enc_mask: torch.Tensor | None = None,
+                 pooling_function: Literal['concatenate', 'max', 'mean', 'median', 'set_encoder'] = 'mean',
+                 feat_sigma: float = 0.5,
+                 num_seeds: int = 1,
+                 num_heads: int = 4,
+                 layer_norm: bool = False,
+                 pe_type: Literal['geom_ft', 'geom_full', 'geom_lowf', 'geom_nohighf', 'linear_lowf', 'gaussian', 'none'] = 'geom_lowf',
+                 pe_dim: int | None = None):
+
+        # initialize the parent nn.Module class
+        super().__init__()
+
+        # save attributes used elsewhere
+        self.enc_mask = enc_mask
+        self.in_dim = in_dim
         self.ntilts = ntilts
         self.zdim = zdim
-        self.in_dim = in_dim
-        self.enc_mask = enc_mask
-        self.l_dose_mask = l_dose_mask
-        self.encoder = TiltSeriesEncoder(in_dim, qlayersA, qdimA, out_dimA, qlayersB, qdimB, zdim * 2, activation,
-                                         ntilts, pooling_function, num_seeds, num_heads, layer_norm)
-        self.decoder = FTPositionalDecoder(3+zdim, lattice.D, players, pdim, activation, enc_type, enc_dim, feat_sigma)
+        self.lat = lat
 
+        # instantiate the encoder module
+        self.encoder = TiltSeriesEncoder(in_dim=in_dim,
+                                         hidden_layers_a=hidden_layers_a,
+                                         hidden_dim_a=hidden_dim_a,
+                                         out_dim_a=out_dim_a,
+                                         hidden_layers_b=hidden_layers_b,
+                                         hidden_dim_b=hidden_dim_b,
+                                         out_dim=zdim * 2,
+                                         activation=activation,
+                                         ntilts=ntilts,
+                                         pooling_function=pooling_function,
+                                         num_seeds=num_seeds,
+                                         num_heads=num_heads,
+                                         layer_norm=layer_norm)
+
+        # instantiate the decoder module
+        self.decoder = FTPositionalDecoder(boxsize_ht=lat.boxsize,
+                                           in_dim=3 + zdim,
+                                           hidden_layers=hidden_layers_decoder,
+                                           hidden_dim=hidden_dim_decoder,
+                                           activation=activation,
+                                           pe_type=pe_type,
+                                           pe_dim=pe_dim,
+                                           feat_sigma=feat_sigma)
 
     @classmethod
-    def load(self, config, weights=None, device=None):
-        '''Instantiate a model from a config.pkl
+    def load(cls,
+             config: str | dict,
+             weights: str,
+             device: torch.device = torch.device('cpu')):
+        """
+        Constructor method to create an TiltSeriesHetOnlyVAE object from a config.pkl.
 
-        Inputs:
-            config (str, dict): Path to config.pkl or loaded config.pkl
-            weights (str): Path to weights.pkl
-            device: torch.device object
+        :param config: Path to config.pkl or loaded config.pkl
+        :param weights: Path to weights.pkl
+        :param device: `torch.device` object
+        :return: TiltSeriesHetOnlyVAE instance, Lattice instance
+        """
+        # load the config dict if not preloaded
+        cfg: dict = utils.load_pkl(config) if type(config) is str else config
 
-        Returns:
-            HetOnlyVAE instance, Lattice instance
-        '''
-        cfg = utils.load_pkl(config) if type(config) is str else config
-        ntilts = cfg['dataset_args']['ntilts']
-        lat = lattice.Lattice(cfg['lattice_args']['D'], extent=cfg['lattice_args']['extent'], device=device)
-        c = cfg['model_args']
-        if cfg['model_args']['enc_mask'] > 0:
-            enc_mask = lat.get_circular_mask(c['enc_mask'])
-            in_dim = int(enc_mask.sum())
-        else:
-            assert c['enc_mask'] == -1
-            enc_mask = None
-            in_dim = lat.D ** 2
+        # create the Lattice object
+        lat = lattice.Lattice(boxsize=cfg['lattice_args']['boxsize'],
+                              extent=cfg['lattice_args']['extent'],
+                              device=device)
+
+        # create the TiltSeriesHetOnlyVAE object
         activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[cfg['model_args']['activation']]
-        model = TiltSeriesHetOnlyVAE(lat,
-                                     cfg['model_args']['qlayersA'], cfg['model_args']['qdimA'],
-                                     cfg['model_args']['out_dimA'], ntilts,
-                                     cfg['model_args']['qlayersB'], cfg['model_args']['qdimB'],
-                                     cfg['model_args']['players'], cfg['model_args']['pdim'],
-                                     in_dim, cfg['model_args']['zdim'],
-                                     enc_mask=enc_mask,
-                                     enc_type=cfg['model_args']['pe_type'],
-                                     enc_dim=cfg['model_args']['pe_dim'],
-                                     domain=cfg['model_args']['domain'],
+        model = TiltSeriesHetOnlyVAE(in_dim=cfg['model_args']['in_dim'],
+                                     hidden_layers_a=cfg['model_args']['qlayersA'],
+                                     hidden_dim_a=cfg['model_args']['qdimA'],
+                                     out_dim_a=cfg['model_args']['out_dimA'],
+                                     ntilts=cfg['model_args']['ntilts'],
+                                     hidden_layers_b=cfg['model_args']['qlayersB'],
+                                     hidden_dim_b=cfg['model_args']['qdimB'],
+                                     zdim=cfg['model_args']['zdim'],
+                                     hidden_layers_decoder=cfg['model_args']['players'],
+                                     hidden_dim_decoder=cfg['model_args']['pdim'],
+                                     lat=lat,
                                      activation=activation,
-                                     l_dose_mask=cfg['model_args']['l_dose_mask'],
-                                     feat_sigma=cfg['model_args']['feat_sigma'],
+                                     enc_mask=cfg['model_args']['enc_mask'],
                                      pooling_function=cfg['model_args']['pooling_function'],
+                                     feat_sigma=cfg['model_args']['feat_sigma'],
                                      num_seeds=cfg['model_args']['num_seeds'],
                                      num_heads=cfg['model_args']['num_heads'],
-                                     layer_norm=cfg['model_args']['layer_norm'])
+                                     layer_norm=cfg['model_args']['layer_norm'],
+                                     pe_type=cfg['model_args']['pe_type'],
+                                     pe_dim=cfg['model_args']['pe_dim'], )
 
+        # load weights if provided
         if weights is not None:
-            ckpt = torch.load(weights)
+            ckpt = torch.load(weights, weights_only=True, map_location=device)
             model.load_state_dict(ckpt['model_state_dict'])
-        if device is not None:
-            model.to(device)
+
+        # move the model to the requested device
+        model.to(device)
+
         return model, lat
 
-    def reparameterize(self, mu, logvar):
-        if not self.training:
-            return mu
-        std = torch.exp(.5 * logvar)
-        eps = torch.randn_like(std)
-        return eps * std + mu
+    def encode(self,
+               batch: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Encode the input batch of particle's tilt images to a corresponding batch of latent embeddings.
+        Input images are masked by `self.enc_mask` if provided.
 
-    def encode(self, batch, B, ntilts):
-        # input batch is of shape B x ntilts x D x D
-        batch = batch.view(B,ntilts,-1)  # B x ntilts x D*D
+        :param batch: batch of particle tilt images to encode, shape (batch, ntilts, boxsize*boxsize)
+        :return: `mu`: batch of mean values parameterizing latent embedding as Gaussian, shape (batch, zdim).
+                `logvar`: batch of log variance values parameterizing latent embedding as Gaussian, shape (batch, zdim).
+        """
         if self.enc_mask is not None:
-            batch = batch[:,:,self.enc_mask] # B x ntilts x D*D[mask]
-        z = self.encoder(batch)  # B x zdim
+            batch = batch[:, :, self.enc_mask]  # B x ntilts x D*D[mask]
+        z = self.encoder(batch)  # B x zdim*2
 
-        return z[:, :self.zdim], z[:, self.zdim:] # B x zdim
+        return z[:, :self.zdim], z[:, self.zdim:]  # B x zdim
 
-    def cat_z(self, coords, z):
-        '''
-        coords: B x ntilts*D*D[mask] x 3 image coordinates
-        z: B x zdim latent coordinate
-        returns: B x ntilts*D*D[mask] x 3+zdim
-        '''
-        assert coords.size(0) == z.size(0)
-        z = z.view(z.size(0), *([1] * (coords.ndimension() - 2)), self.zdim)
-        z = torch.cat((coords, z.expand(*coords.shape[:-1], self.zdim)), dim=-1)
-        return z
+    def decode(self,
+               coords: torch.Tensor,
+               z: torch.Tensor) -> torch.Tensor:
+        """
+        Decode a batch of lattice coordinates concatenated with the corresponding latent embedding to infer the associated voxel intensities.
 
-    def decode(self, coords_z):
-        '''
-        coords_z: B x ntilts*D*D[critical_exposure_mask] x 3 image coordinates + zdim
-        '''
-        return self.decoder(coords_z)
+        :param coords: 3-D spatial frequency coordinates (e.g. from Lattice.coords) concatenated with the
+                shape (batch, ntilts * boxsize_ht * boxsize_ht [mask], 3).
+        :param z: latent embedding per-particle, shape (batch, zdim)
+        :return: Decoded voxel intensities at the specified 3-D spatial frequencies.
+        """
+        return self.decoder(coords, z)
 
-    # Need forward func for DataParallel -- TODO: refactor
-    def forward(self, *args, **kwargs):
-        return self.decode(*args, **kwargs)
+    def print_model_info(self) -> None:
+        """
+        Wrapper around torchinfo to display summary of model layers, input and output tensor shapes, and number of trainable parameters.
+        Note that the predicted model size assumes float32 input tensors and model weights, which is an overestimate by ~2x if AMP is enabled.
 
+        :return: None
+        """
+        # print the encoder module which we know input size exactly due to fixed ntilt sampling
+        torchinfo.summary(self.encoder,
+                          input_size=(self.ntilts, self.in_dim),
+                          batch_dim=0,
+                          col_names=('input_size', 'output_size', 'num_params'),
+                          depth=3)
+        # print the decoder module which will be a conservative overestimate of input size without lattice masking
+        # this is because each particle has a potentially unique lattice mask and therefore this is an upper bound on model size
+        torchinfo.summary(self.decoder,
+                          input_data=[torch.rand(self.ntilts * self.lat.boxsize * self.lat.boxsize, 3) - 0.5, torch.rand(self.zdim)],
+                          batch_dim=0,
+                          col_names=('input_size', 'output_size', 'num_params'),
+                          depth=3)
 
-def load_decoder(config, weights=None, device=None):
-    '''
-    Instantiate a decoder model from a config.pkl
-
-    Inputs:
-        config (str, dict): Path to config.pkl or loaded config.pkl
-        weights (str): Path to weights.pkl
-        device: torch.device object
-
-    Returns a decoder model 
-    '''
-    cfg = utils.load_pkl(config) if type(config) is str else config
-    c = cfg['model_args']
-    D = cfg['lattice_args']['D']
-    activation={"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[c['activation']]
-    model = get_decoder(3, D, c['layers'], c['dim'], c['domain'], c['pe_type'], c['pe_dim'], activation, feat_sigma=cfg['model_args']['feat_sigma'])
-    if weights is not None:
-        ckpt = torch.load(weights)
-        model.load_state_dict(ckpt['model_state_dict'])
-    if device is not None:
-        model.to(device)
-    return model
-
-def get_decoder(in_dim, D, layers, dim, domain, enc_type, enc_dim=None, activation=nn.ReLU, feat_sigma=None):
-    if enc_type == 'none':
-        if domain == 'hartley':
-            model = ResidLinearMLP(in_dim, layers, dim, 1, activation)
-            ResidLinearMLP.eval_volume = PositionalDecoder.eval_volume # EW FIXME
-        else:
-            model = FTSliceDecoder(in_dim, D, layers, dim, activation)
-        return model
-    else:
-        model = PositionalDecoder if domain == 'hartley' else FTPositionalDecoder 
-        return model(in_dim, D, layers, dim, activation, enc_type=enc_type, enc_dim=enc_dim, feat_sigma=feat_sigma)
- 
-class PositionalDecoder(nn.Module):
-    def __init__(self, in_dim, D, nlayers, hidden_dim, activation, enc_type='linear_lowf', enc_dim=None):
-        super(PositionalDecoder, self).__init__()
-        assert in_dim >= 3 
-        self.zdim = in_dim - 3
-        self.D = D
-        self.D2 = D // 2
-        self.DD = 2 * (D // 2)
-        self.enc_dim = self.D2 if enc_dim is None else enc_dim
-        self.enc_type = enc_type
-        self.in_dim = 3 * (self.enc_dim) * 2 + self.zdim
-        self.decoder = ResidLinearMLP(self.in_dim, nlayers, hidden_dim, 1, activation)
-     
-    def positional_encoding_geom(self, coords):
-        '''Expand coordinates in the Fourier basis with geometrically spaced wavelengths from 2/D to 2pi'''
-        freqs = torch.arange(self.enc_dim, dtype=torch.float)
-        if self.enc_type == 'geom_ft':
-            freqs = self.DD*np.pi*(2./self.DD)**(freqs/(self.enc_dim-1)) # option 1: 2/D to 1 
-        elif self.enc_type == 'geom_full':
-            freqs = self.DD*np.pi*(1./self.DD/np.pi)**(freqs/(self.enc_dim-1)) # option 2: 2/D to 2pi
-        elif self.enc_type == 'geom_lowf':
-            freqs = self.D2*(1./self.D2)**(freqs/(self.enc_dim-1)) # option 3: 2/D*2pi to 2pi 
-        elif self.enc_type == 'geom_nohighf':
-            freqs = self.D2*(2.*np.pi/self.D2)**(freqs/(self.enc_dim-1)) # option 4: 2/D*2pi to 1 
-        elif self.enc_type == 'linear_lowf':
-            return self.positional_encoding_linear(coords)
-        else:
-            raise RuntimeError('Encoding type {} not recognized'.format(self.enc_type))
-        freqs = freqs.view(*[1]*len(coords.shape), -1) # 1 x 1 x D2
-        coords = coords.unsqueeze(-1) # B x 3 x 1
-        k = coords[...,0:3,:] * freqs # B x 3 x D2
-        s = torch.sin(k) # B x 3 x D2
-        c = torch.cos(k) # B x 3 x D2
-        x = torch.cat([s,c], -1) # B x 3 x D
-        x = x.view(*coords.shape[:-2], self.in_dim-self.zdim) # B x in_dim-zdim
-        if self.zdim > 0:
-            x = torch.cat([x,coords[...,3:,:].squeeze(-1)], -1)
-            assert x.shape[-1] == self.in_dim
-        return x
-
-    def positional_encoding_linear(self, coords):
-        '''Expand coordinates in the Fourier basis, i.e. cos(k*n/N), sin(k*n/N), n=0,...,N//2'''
-        freqs = torch.arange(1, self.D2+1, dtype=torch.float) 
-        freqs = freqs.view(*[1]*len(coords.shape), -1) # 1 x 1 x D2
-        coords = coords.unsqueeze(-1) # B x 3 x 1
-        k = coords[...,0:3,:] * freqs # B x 3 x D2
-        s = torch.sin(k) # B x 3 x D2
-        c = torch.cos(k) # B x 3 x D2
-        x = torch.cat([s,c], -1) # B x 3 x D
-        x = x.view(*coords.shape[:-2], self.in_dim-self.zdim) # B x in_dim-zdim
-        if self.zdim > 0:
-            x = torch.cat([x,coords[...,3:,:].squeeze(-1)], -1)
-            assert x.shape[-1] == self.in_dim
-        return x
-
-    def forward(self, coords):
-        '''Input should be coordinates from [-.5,.5]'''
-        assert (coords[...,0:3].abs() - 0.5 < 1e-4).all()
-        return self.decoder(self.positional_encoding_geom(coords))
-
-    def eval_volume(self, coords, D, extent, norm, zval=None):
-        '''
-        Evaluate the model on a DxDxD volume
-        
-        Inputs:
-            coords: lattice coords on the x-y plane (D^2 x 3)
-            D: size of lattice
-            extent: extent of lattice [-extent, extent]
-            norm: data normalization 
-            zval: value of latent (zdim x 1)
-        '''
-        # Note: extent should be 0.5 by default, except when a downsampled
-        # volume is generated
-        if zval is not None:
-            zdim = len(zval)
-            z = torch.zeros(D**2, zdim, dtype=torch.float32)
-            z += torch.tensor(zval, dtype=torch.float32)
-
-        vol_f = np.zeros((D,D,D),dtype=np.float32)
-        assert not self.training
-        # evaluate the volume by zslice to avoid memory overflows
-        for i, dz in enumerate(np.linspace(-extent,extent,D,endpoint=True,dtype=np.float32)):
-            x = coords + torch.tensor([0,0,dz])
-            if zval is not None:
-                x = torch.cat((x,z), dim=-1)
-            with torch.no_grad():
-                y = self.forward(x)
-                y = y.view(D,D).cpu().numpy()
-            vol_f[i] = y
-        vol_f = vol_f*norm[1]+norm[0]
-        vol = fft.ihtn_center(vol_f[0:-1,0:-1,0:-1]) # remove last +k freq for inverse FFT
-        return vol
 
 class FTPositionalDecoder(nn.Module):
-    def __init__(self, in_dim, D, nlayers, hidden_dim, activation, enc_type='linear_lowf', enc_dim=None, feat_sigma=None):
-        super(FTPositionalDecoder, self).__init__()
-        assert in_dim >= 3
-        self.zdim = in_dim - 3
-        self.D = D
-        self.D2 = D // 2
-        self.DD = 2 * (D // 2)
-        self.enc_type = enc_type
-        self.enc_dim = self.D2 if enc_dim is None else enc_dim
-        self.in_dim = 3 * (self.enc_dim) * 2 + self.zdim
-        self.decoder = ResidLinearMLP(self.in_dim, nlayers, hidden_dim, 2, activation)
+    """
+    A module to decode a (batch of tilts of) spatial frequency coordinates spanning (-0.5, 0.5) to the corresponding spatial frequency amplitude.
+    The output may optionally be conditioned on a latent embedding `z`.
+    """
 
-        if enc_type == "gaussian":
-            # We construct 3 * self.enc_dim random vector frequences, to match the original positional encoding:
-            # In the positional encoding we produce self.enc_dim features for each of the x,y,z dimensions,
-            # whereas in gaussian encoding we produce self.enc_dim features each with random x,y,z components
+    def __init__(self,
+                 boxsize_ht: int,
+                 in_dim: int = 3,
+                 hidden_layers: int = 3,
+                 hidden_dim: int = 256,
+                 activation: torch.nn.ReLU | torch.nn.LeakyReLU = torch.nn.ReLU,
+                 pe_type: Literal['geom_ft', 'geom_full', 'geom_lowf', 'geom_nohighf', 'linear_lowf', 'gaussian', 'none'] = 'geom_lowf',
+                 pe_dim: int | None = None,
+                 feat_sigma: float = 0.5):
+        """
+        Create the FTPositionalDecoder module.
+
+        :param boxsize_ht: fourier-symmetrized box width in pixels (typically odd, 1px larger than input image)
+        :param in_dim: number of dimensions of input coordinate lattice, typically 3 (x,y,z) + zdim
+        :param hidden_layers: number of intermediate hidden layers in the decoder module
+        :param hidden_dim: number of features in each hidden layer in the decoder module
+        :param activation: activation function to be applied after each layer, either `torch.nn.ReLU` or `torch.nn.LeakyReLU`
+        :param pe_type: the type of positional encoding to map each spatial frequency coordinate (x,y,z) to a higher dimensional representation to be passed to the decoder.
+        :param pe_dim: the dimension of the higher dimensional representation of the positional encoding, typically automatically set to half of the box size to sample up to Nyquist.
+        :param feat_sigma: the scale of random frequency vectors sampled from a gaussian for pe_type gaussian.
+        """
+        # initialize the parent nn.Module class
+        super().__init__()
+
+        # sanity check inputs
+        assert in_dim >= 3
+
+        # determine the latent dimensionality as the input dimensionality minus the expected three spatial dimensions
+        self.zdim = in_dim - 3
+
+        # commonly referenced boxsize-related constants
+        self.D = boxsize_ht
+        self.D2 = boxsize_ht // 2
+        self.DD = 2 * (boxsize_ht // 2)
+
+        # what type of positional encoding to use
+        self.pe_type = pe_type
+
+        # the dimensionality of the positional encoding defaults to half of the input coordinate box size
+        self.pe_dim = self.D2 if pe_dim is None else pe_dim
+
+        # the final number of features the decoder network receives as input per 3-D coordinate to evaluate
+        # each of the 3 spatial frequency axes will have pe_dim features expressed as both sin and cos, finally concatenated with latent embedding
+        self.in_dim = 3 * self.pe_dim * 2 + self.zdim
+        self.hidden_layers = hidden_layers
+        self.hidden_dim = hidden_dim
+
+        # construct the decoder ResidLinearMLP module
+        self.decoder = ResidLinearMLP(in_dim=self.in_dim,
+                                      nlayers=hidden_layers,
+                                      hidden_dim=hidden_dim,
+                                      out_dim=2,
+                                      activation=activation)
+
+        if self.pe_type == 'geom_ft':
+            # option 1: 2/D to 1
+            freqs = torch.arange(self.pe_dim, dtype=torch.float)
+            self.freqs = self.DD * np.pi * (2. / self.DD) ** (freqs / (self.pe_dim - 1))
+        elif self.pe_type == 'geom_full':
+            # option 2: 2/D to 2pi
+            freqs = torch.arange(self.pe_dim, dtype=torch.float)
+            self.freqs = self.DD * np.pi * (1. / self.DD / np.pi) ** (freqs / (self.pe_dim - 1))
+        elif self.pe_type == 'geom_lowf':
+            # option 3: 2/D*2pi to 2pi
+            freqs = torch.arange(self.pe_dim, dtype=torch.float)
+            self.freqs = self.D2 * (1. / self.D2) ** (freqs / (self.pe_dim - 1))
+        elif self.pe_type == 'geom_nohighf':
+            # option 4: 2/D*2pi to 1
+            freqs = torch.arange(self.pe_dim, dtype=torch.float)
+            self.freqs = self.D2 * (2. * np.pi / self.D2) ** (freqs / (self.pe_dim - 1))
+        elif self.pe_type == "gaussian":
+            # We construct 3 * self.pe_dim random vector frequences, to match the original positional encoding:
+            # In the positional encoding we produce self.pe_dim features for each of the x,y,z dimensions,
+            # whereas in gaussian encoding we produce self.pe_dim features each with random x,y,z components
             #
             # Each of the random feats is the sine/cosine of the dot product of the coordinates with a frequency
             # vector sampled from a gaussian with std of feat_sigma
-            rand_freqs = torch.randn((3 * self.enc_dim, 3), dtype=torch.float) * feat_sigma
-            # make rand_feats a parameter so it is saved in the checkpoint, but do not perform SGD on it
-            self.rand_freqs = nn.Parameter(rand_freqs, requires_grad=False)
+            freqs = torch.randn((3 * self.pe_dim, 3), dtype=torch.float) * feat_sigma * self.D2
+            # make rand_feats a parameter so that it is saved in the checkpoint, but do not perform SGD on it
+            self.freqs = nn.Parameter(freqs, requires_grad=False)
+        elif self.pe_type == 'linear':
+            # construct a linear increase in frequency, i.e. cos(k*n/N), sin(k*n/N), n=0,...,N//2
+            self.freqs = torch.arange(1, self.D2 + 1, dtype=torch.float)
         else:
-            self.rand_feats = None
-    
-    def positional_encoding_geom(self, coords):
-        '''Expand coordinates in the Fourier basis with geometrically spaced wavelengths from 2/D to 2pi'''
-        if self.enc_type == "gaussian":
-            return self.random_fourier_encoding(coords)
-        freqs = torch.arange(self.enc_dim, dtype=torch.float, device=coords.device)
-        if self.enc_type == 'geom_ft':
-            freqs = self.DD*np.pi*(2./self.DD)**(freqs/(self.enc_dim-1)) # option 1: 2/D to 1 
-        elif self.enc_type == 'geom_full':
-            freqs = self.DD*np.pi*(1./self.DD/np.pi)**(freqs/(self.enc_dim-1)) # option 2: 2/D to 2pi
-        elif self.enc_type == 'geom_lowf':
-            freqs = self.D2*(1./self.D2)**(freqs/(self.enc_dim-1)) # option 3: 2/D*2pi to 2pi 
-        elif self.enc_type == 'geom_nohighf':
-            freqs = self.D2*(2.*np.pi/self.D2)**(freqs/(self.enc_dim-1)) # option 4: 2/D*2pi to 1 
-        elif self.enc_type == 'linear_lowf':
-            return self.positional_encoding_linear(coords)
+            raise ValueError(f'Invalid pe_type {pe_type}')
+
+    @classmethod
+    def load(cls,
+             config: str | dict,
+             weights: str,
+             device: torch.device = torch.device('cpu')):
+        """
+        Constructor method to create an FTPositionalDecoder object from a config.pkl.
+
+        :param config: Path to config.pkl or loaded config.pkl
+        :param weights: Path to weights.pkl
+        :param device: `torch.device` object
+        :return: FTPositionalDecoder instance, Lattice instance
+        """
+        # load the config dict if not preloaded
+        cfg: dict = utils.load_pkl(config) if type(config) is str else config
+
+        # create the Lattice object
+        lat = lattice.Lattice(boxsize=cfg['lattice_args']['boxsize'],
+                              extent=cfg['lattice_args']['extent'],
+                              device=device)
+
+        # create the FTPositionalDecoder object
+        activation = {"relu": nn.ReLU, "leaky_relu": nn.LeakyReLU}[cfg['model_args']['activation']]
+        model = FTPositionalDecoder(boxsize_ht=cfg['lattice_args']['boxsize'],
+                                    in_dim=3,
+                                    hidden_layers=cfg['model_args']['players'],
+                                    hidden_dim=cfg['model_args']['pdim'],
+                                    activation=activation,
+                                    pe_type=cfg['model_args']['pe_type'],
+                                    pe_dim=cfg['model_args']['pe_dim'],
+                                    feat_sigma=cfg['model_args']['feat_sigma'])
+
+        # load weights if provided
+        if weights is not None:
+            ckpt = torch.load(weights, weights_only=True, map_location=device)
+            model.load_state_dict(ckpt['model_state_dict'])
+
+        # move the model to the requested device
+        model.to(device)
+
+        return model, lat
+
+    def positional_encoding(self,
+                            coords: torch.Tensor) -> torch.Tensor:
+        """
+        Expand coordinates in the Fourier basis with variably spaced wavelengths
+
+        :param coords: Tensor or NestedTensor shape (batch, ntilts * boxsize_ht * boxsize_ht [mask], 3).
+        :return: Positionally encoded spatial coordinates
+        """
+        if self.pe_type == 'gaussian':
+            # expand freqs with singleton dimension along the batch dimensions, e.g. dim (1, ..., 1, n_feats, 3)
+            freqs = self.freqs.view(1, 1, -1, 3)  # 1 x 1 x 3*D2 x 3
+            # calculate features as torch.dot(k, freqs): compute x,y,z components of k then sum x,y,z components
+            kxkykz = coords[..., None, :] * freqs  # B x N*D*D[mask] x 3*D2 x 3
+            k = kxkykz.sum(-1)  # B x N*D*D[mask] x 3*D2
+            s = torch.sin(k)  # B x N*D*D[mask] x 3*D2
+            c = torch.cos(k)  # B x N*D*D[mask] x 3*D2
+            x = torch.cat([s, c], dim=-1)  # B x N*D*D[mask] x 3*D == B x N*D*D[mask] x in_dim - zdim
         else:
-            raise RuntimeError('Encoding type {} not recognized'.format(self.enc_type))
-        freqs = freqs.view(*[1] * len(coords.shape), -1)  # 1 x 1 x 1 x D2
-        coords = coords.unsqueeze(-1)  # B x N x 3 x 1
+            # expand freqs with singleton dimension along the batch dimensions, e.g. dim (1, ..., 1, n_feats)
+            freqs = self.freqs.view(1, 1, 1, -1)  # 1 x 1 x 1 x D2
+            # calculate the features as freqs scaled by coords
+            k = coords[..., None] * freqs  # B x N*D*D[mask] x 3 x D2
+            s = torch.sin(k)  # B x N*D*D[mask] x 3 x D2
+            c = torch.cos(k)  # B x N*D*D[mask] x 3 x D2
+            x = torch.cat([s, c], -1)  # B x N*D*D[mask] x 3 x D
+            x = x.view(coords.size(0), -1, self.in_dim - self.zdim)  # B x N*D*D[mask] x in_dim-zdim
 
-        k = coords[..., 0:3, :] * freqs  # B x N x 3 x D2
-        s = torch.sin(k)  # B x N x 3 x D2
-        c = torch.cos(k)  # B x N x 3 x D2
-        x = torch.cat([s, c], -1)  # B x N x 3 x D
-        x = x.view(*coords.shape[:-2], self.in_dim - self.zdim)  # B x N x in_dim-zdim
-        if self.zdim > 0:
-            x = torch.cat([x, coords[..., 3:, :].squeeze(-1)], -1)
-            assert x.shape[-1] == self.in_dim
         return x
 
-    def random_fourier_encoding(self, coords):
-        assert self.rand_freqs is not None
-        # k = coords . rand_freqs
-        # expand rand_freqs with singleton dimension along the batch dimensions
-        # e.g. dim (1, ..., 1, n_rand_feats, 3)
-        freqs = self.rand_freqs.view(*[1] * (len(coords.shape) - 1), -1, 3) * self.D2     # 1 x 1 x 3*D2 x 3
+    @staticmethod
+    def cat_z(coords: torch.Tensor,
+              z: torch.Tensor) -> torch.Tensor:
+        """
+        Concatenate each 3-D spatial coordinate (from a particular particle's particular tilt image) with the latent embedding assigned to that particle.
 
-        # kxkykz = (coords[..., None, 0:3] * freqs)  # compute the x,y,z components of k    # B x N x 3*D2 x 3
-        # k = kxkykz.sum(-1)  # compute k                                                   # B x N x 3*D2
-        # s = torch.sin(k)                                                                  # B x N x 3*D2
-        # c = torch.cos(k)                                                                  # B x N x 3*D2
-        # x = torch.cat([s, c], -1)                                                         # B x N x 3*D2 x 2
-        # x = x.view(*coords.shape[:-1], self.in_dim - self.zdim)                           # B x N x 3*D2*2
+        :param coords: 3-D spatial frequency coordinates at which to decode corresponding voxel intensity, possibly NestedTensor, shape (batch, ntilts * boxsize**2 [mask], self.in_dim - zdim)
+        :param z: latent embedding for each particle, shape (batch, zdim)
+        :return: concatenated coordinates and latent embedding tensors, possibly NestedTensor, shape (batch, ntilts * boxsize**2 [mask], self.in_dim)
+        """
+        # confirm coords and z have same batch size (axis over which they will eventualy be aligned)
+        if z.ndim == 1:
+            # coords should have batch dimension populated from positional_encoding, but z might not
+            z = z.unsqueeze(0)
+        assert coords.size(0) == z.size(0)
+        assert z.ndim == 2
 
-        # compute x,y,z components of k then sum x,y,z components
-        k = (coords[..., None, 0:3] * freqs).sum(-1)
-        x = torch.zeros(*k.shape, 2, dtype=k.dtype, device=k.device)  # preallocate memory to slightly lower allocation requirement
-        x[...,0] = torch.sin(k)
-        x[...,1] = torch.cos(k)
-        x = x.view(*coords.shape[:-1], self.in_dim - self.zdim)
+        # repeat z along a new axis corresponding to spatial frequency coordinates for each particle's images
+        z = repeat(z, 'batch zdim -> batch repeat_ntilts_npixels zdim', repeat_ntilts_npixels=coords.shape[1])
 
-        if self.zdim > 0:
-            x = torch.cat([x, coords[..., 3:]], -1)
-            assert x.shape[-1] == self.in_dim
-        return x
+        # concatenate coords with z along the last axis (coordinate + zdim value)
+        coords_z, _ = pack([coords, z], 'batch ntilts_npixels *')
 
-    def positional_encoding_linear(self, coords):
-        '''Expand coordinates in the Fourier basis, i.e. cos(k*n/N), sin(k*n/N), n=0,...,N//2'''
-        freqs = torch.arange(1, self.D2+1, dtype=torch.float, device=coords.device)
-        freqs = freqs.view(*[1]*len(coords.shape), -1) # 1 x 1 x D2
-        coords = coords.unsqueeze(-1) # B x 3 x 1
-        k = coords[...,0:3,:] * freqs # B x 3 x D2
-        s = torch.sin(k) # B x 3 x D2
-        c = torch.cos(k) # B x 3 x D2
-        x = torch.cat([s,c], -1) # B x 3 x D
-        x = x.view(*coords.shape[:-2], self.in_dim-self.zdim) # B x in_dim-zdim
-        if self.zdim > 0:
-            x = torch.cat([x,coords[...,3:,:].squeeze(-1)], -1)
-            assert x.shape[-1] == self.in_dim
-        return x
+        return coords_z
 
-    def forward(self, lattice):
-        '''
-        lattice: B x N x 3+zdim (generally)
-        lattice: 1 x B*ntilts*N[mask] x 3+zdim, useful when images are different sizes to avoid ragged tensors
-        '''
+    def forward(self,
+                coords: torch.Tensor,
+                z: torch.Tensor | None = None) -> torch.Tensor:
+        """
+        Decode a batch of lattice coordinates concatenated with the corresponding latent embedding to Hartley Transform spatial frequency amplitudes.
+
+        :param coords: masked 3-D spatial frequency coordinates (e.g. from Lattice.coords), shape (batch, ntilts * boxsize_ht * boxsize_ht [mask], 3)
+        :param z: latent embedding per-particle, shape (batch, zdim)
+        :return: Decoded voxel intensities at the specified 3-D spatial frequencies.
+        """
         # evaluate model on all pixel coordinates for each image
-        full_image = self.decode(lattice)
+        # TODO revisit whether it is worth leveraging Hermitian symmetry to only evaluate half of each image
+        full_image = self.decode(coords=coords, z=z)
 
         # return hartley information (FT real - FT imag) for each image
-        image = full_image[...,0] - full_image[...,1]
+        image = full_image[..., 0] - full_image[..., 1]
 
         return image
 
+    def decode(self,
+               coords: torch.Tensor,
+               z: torch.Tensor | None = None) -> torch.Tensor:
+        """
+        Decode a batch of lattice coordinates concatenated with the corresponding latent embedding to Fourier Transform spatial frequency amplitudes.
 
-    def decode(self, lattice):
-        '''Return FT transform'''
-        assert (lattice[...,0:3].abs() - 0.5 < 1e-4).all(), \
-            f'lattice[...,0:3].max(): {lattice[...,0:3].max().to(torch.float32)}; ' \
-            f'lattice[...,0:3].min(): {lattice[...,0:3].min().to(torch.float32)}'
-        # convention: only evaluate the -z points
-        w = lattice[...,2] > 0.0
-        w_zflipper = torch.ones_like(lattice, device=lattice.device)
-        w_zflipper[..., 0:3][w] *= -1
-        lattice = lattice * w_zflipper  # avoids "modifying tensor in-place" warnings+errors
-        # lattice[..., 0:3][w] = -lattice[..., 0:3][w]  # negate lattice coordinates where z > 0
-        result = self.decoder(self.positional_encoding_geom(lattice))
-        result[...,1][w] *= -1 # replace with complex conjugate to get correct values for original lattice positions
+        :param coords: 3-D spatial frequency coordinates (e.g. from Lattice.coords) concatenated with the shape (batch, ntilts * boxsize_ht * boxsize_ht [mask], 3).
+        :param z: latent embedding per-particle, shape (batch, zdim)
+        :return: Decoded voxel intensities at the specified 3-D spatial frequencies.
+        """
+        # sanity check inputs coordinates are within range (-0.5, 0.5)
+        assert (coords.abs() - 0.5 < 1e-4).all(), f'coords.max(): {coords.max()}; coords.min(): {coords.min()}'
+
+        # TODO reimplement hermetian symmetry to evaluate +z coords only?
+
+        # positionally encode x,y,z 3-D coordinate
+        coords_pe = self.positional_encoding(coords)
+
+        # concatenate each spatial coordinate with the appropriate latent embedding to be conditioned on
+        if z is not None:
+            coords_pe = self.cat_z(coords_pe, z)
+
+        # evaluate the model
+        result = self.decoder(coords_pe)
+
         return result
 
-    def eval_volume(self, coords, D, extent, norm, zval=None):
-        '''
-        Evaluate the model on a DxDxD volume
-        
-        Inputs:
-            coords: lattice coords on the x-y plane (D^2 x 3)
-            D: size of lattice
-            extent: extent of lattice [-extent, extent]
-            norm: data normalization 
-            zval: value of latent (zdim) ... or 1 x zdim from eval_vol?
-        '''
+    def eval_volume_batch(self,
+                          coords: torch.Tensor,
+                          z: torch.Tensor | None,
+                          extent: float) -> torch.Tensor:
+        """
+        Evaluate the model on 3-D volume coordinates given an optional (batch of) latent coordinate.
+
+        :param coords: lattice coords on the x-y plane, shape (boxsize_ht**2, 3)
+        :param z: latent embedding associated with the volume to decode, shape (batchsize, zdim)
+        :param extent: maximum value of the grid along each dimension, typically <= 0.5 to constrain points to range (-0.5, 0.5)
+        :return: batch of decoded volumes directly output from the model (Fourier space, symmetrized) with no postprocessing applied, shape (batchsize, boxsize_ht, boxsize_ht, boxsize_ht).
+        """
+
+        # sanity check inputs
         assert extent <= 0.5
-        if zval is not None:
-            zdim = len(zval)
-            z = torch.tensor(zval, dtype=torch.float32, device=coords.device)
+        if z is not None:
+            assert z.ndim == 2
 
-        vol_f = torch.zeros((D, D, D), dtype=coords.dtype, device=coords.device, requires_grad=False)
-        assert not self.training
-        # evaluate the volume by zslice to avoid memory overflows
-        for i, dz in enumerate(np.linspace(-extent, extent, D, endpoint=True, dtype=np.float32)):
-            x = coords + torch.tensor([0, 0, dz], device=coords.device)
-            keep = x.pow(2).sum(dim=1) <= extent ** 2
-            x = x[keep]
-            if zval is not None:
-                x = torch.cat((x, z.expand(x.shape[0], zdim)), dim=-1)
-            with torch.no_grad():
-                if dz == 0.0:
-                    y = self.forward(x)
-                else:
-                    y = self.decode(x)
-                    y = y[..., 0] - y[..., 1]
-                slice_ = torch.zeros((D ** 2), dtype=coords.dtype, device=coords.device, requires_grad=False)
-                slice_[keep] = y.to(slice_.dtype)
-                vol_f[i] = slice_.view(D, D)
-        vol_f = vol_f.cpu().numpy()
-        vol_f = vol_f * norm[1] + norm[0]
-        vol = fft.ihtn_center(vol_f[:-1, :-1, :-1])  # remove last +k freq for inverse FFT
-        return vol
+        # get key array sizes
+        batchsize = len(z) if z is not None else 1
+        boxsize_ht = int(coords.shape[0] ** 0.5)
 
-    def eval_volume_batch(self, coords_zz, keep, norm):
-        '''
-        Evaluate the model on a batch of DxDxD volumes sharing pre-defined masked coords, D, extent
+        # preallocate array to store batch of decoded volumes
+        batch_vol_f = torch.zeros((batchsize, boxsize_ht, boxsize_ht, boxsize_ht), dtype=coords.dtype, device=coords.device)
 
-        Inputs:
-            coords_zz: pre-batched and z-concatenated lattice coords (B x D(z) x D**2(xy) x 3+zdim)
-            keep: mask of which coords to keep per z-plane (satisfying extent) (B=1 x D(z) x D**2(xy))
-            norm: data normalization (B=1 x 2)
-        '''
-        batch_size, D, _, _ = coords_zz.shape
-        batch_vol_f = torch.zeros((batch_size, D, D, D), dtype=coords_zz.dtype, device=coords_zz.device, requires_grad=False)
-        assert not self.training
-        # evaluate the volume by zslice to avoid memory overflows
-        for i in range(D):
-            with torch.no_grad():
-                x = coords_zz[:, i, keep[0, i], :]
-                y = self.decode(x)
-                y = y[..., 0] - y[..., 1]
-                slice_ = torch.zeros((batch_size, D ** 2), dtype=coords_zz.dtype, device=coords_zz.device, requires_grad=False)
-                slice_[:, keep[0, i]] = y.to(slice_.dtype)
-                batch_vol_f[:, i] = slice_.view(batch_size, D, D)
-        batch_vol_f = batch_vol_f * norm[0, 1] + norm[0, 0]
-        batch_vol = torch.stack([fft.ihtn_center_torch(vol_f[:-1, :-1, :-1]) for vol_f in batch_vol_f], dim=0)  # remove last +k freq for inverse FFT
-        return batch_vol
+        # evaluate the batch of volumes slice-by-slice along z axis to avoid potential memory overflows from evaluating D**3 voxels at once
+        zslices = torch.linspace(-extent, extent, boxsize_ht, dtype=batch_vol_f.dtype)
+        for (i, zslice) in enumerate(zslices):
+            # create the z slice to evaluate
+            xy_coords = coords + torch.tensor([0, 0, zslice], dtype=coords.dtype, device=coords.device)
 
+            # only evaluate coords within `extent` radius (if extent==0.5, nyquist limit in reciprocal space)
+            slice_mask = xy_coords.pow(2).sum(dim=-1) <= extent ** 2
+            if torch.sum(slice_mask) == 0:
+                # no coords left to evaluate after masking, skip to next zslice in next loop iteration
+                continue
+            xy_coords = xy_coords[slice_mask]
 
-class FTSliceDecoder(nn.Module):
-    '''
-    Evaluate a central slice out of a 3D FT of a model, returns representation in
-    Hartley reciprocal space
+            # expand coords to batch size
+            batch_xy_coords = torch.stack(batchsize * [xy_coords])
 
-    Exploits the symmetry of the FT where F*(x,y) = F(-x,-y) and only
-    evaluates half of the lattice. The decoder is f(x,y,z) => real, imag
-    '''
-    def __init__(self, in_dim, D, nlayers, hidden_dim, activation):
-        '''D: image width or height'''
-        super(FTSliceDecoder, self).__init__()
-        self.decoder = ResidLinearMLP(in_dim, nlayers, hidden_dim, 2, activation)
-        D2 = int(D/2)
+            # reconstruct the slice by passing it through the model
+            batch_xy_slice = self.forward(coords=batch_xy_coords, z=z)
 
-        ### various pixel indices to keep track of for forward_even
-        self.center = D2*D + D2 
-        self.extra = np.arange((D2+1)*D, D**2, D) # bottom-left column without conjugate pair
-        # evalute the top half of the image up through the center pixel 
-        # and extra bottom-left column (todo: just evaluate a D-1 x D-1 image so 
-        # we don't have to worry about this)
-        self.all_eval = np.concatenate((np.arange(self.center+1), self.extra))
-        
-        # pixel indices for the top half of the image up to (but not incl) 
-        # the center pixel and excluding the top row and left-most column
-        i, j = np.meshgrid(np.arange(1,D),np.arange(1,D2+1))
-        self.top = (j*D+i).ravel()[:-D2]
+            # fill the corresponding slice in the 3-D volume with these amplitudes
+            batch_vol_f[:, i, slice_mask.view(boxsize_ht, boxsize_ht)] = batch_xy_slice.to(batch_vol_f.dtype)
 
-        # pixel indices for bottom half of the image after the center pixel
-        # excluding left-most column and given in reverse order
-        i, j =np.meshgrid(np.arange(1,D),np.arange(D2,D))
-        self.bottom_rev = (j*D+i).ravel()[D2:][::-1].copy()
+        return batch_vol_f
 
-        self.D = D
-        self.D2 = D2
+    @staticmethod
+    def postprocess_volume_batch(batch_vols: torch.Tensor,
+                                 norm: tuple[float, float],
+                                 iht_downsample_scaling_correction: float,
+                                 lowpass_mask: np.ndarray | None = None,
+                                 flip: bool = False,
+                                 invert: bool = False) -> np.ndarray:
+        """
+        Apply post-volume-decoding processing steps: downsampling scaling correction, lowpass filtering, inverse fourier transform, volume handedness flipping, volume data sign inversion.
 
-    def forward(self, lattice):
-        '''
-        Call forward on central slices only
-            i.e. the middle pixel should be (0,0,0)
+        :param batch_vols: batch of fourier space non-symmetrized volumes directly from eval_vol_batch, shape (nvols, boxsize, boxsize, boxsize)
+        :param norm: tuple of floats representing mean and standard deviation of preprocessed particles used during model training
+        :param iht_downsample_scaling_correction: a global scaling factor applied when forward and inverse fourier / hartley transforming.
+                This is calculated and applied internally by the fft.py module as a function of array shape.
+                Thus, when the volume is downsampled, a further correction is required.
+        :param lowpass_mask: a binary mask applied to fourier space symmetrized volumes to low pass filter the reconstructions.
+                Typically, the same mask is used for all volumes via broadcasting, thus this may be of shape (1, boxsize, boxsize, boxsize) or (nvols, boxsize, boxsize, boxsize).
+        :param flip: Whether to invert the volume chirality by flipping the data order along the z axis.
+        :param invert: Whether to invert the data light-on-dark vs dark-on-light convention, relative to the reconstruction returned by the decoder module.
+        :return: Postprocessed volume batch in real space
+        """
+        # sanity check inputs
+        assert batch_vols.ndim == 4, f'The volume batch must have four dimensions (batch size, boxsize, boxsize, boxsize). Found {batch_vols.shape}'
+        if lowpass_mask is not None:
+            assert batch_vols.shape[-3:] == lowpass_mask.shape[-3:], f'The volume batch must have the same volume dimensions as the lowpass mask. Found {batch_vols.shape}, {lowpass_mask.shape}'
 
-        lattice: B x N x 3+zdim
-        '''
-        assert lattice.shape[-2] % 2 == 1
-        c = lattice.shape[-2]//2 # center pixel
-        assert lattice[...,c,0:3].sum() == 0.0, '{} != 0.0'.format(lattice[...,c,0:3].sum())
-        assert abs(lattice[...,0:3].mean()) < 1e-4, '{} != 0.0'.format(lattice[...,0:3].mean())
-        image = torch.empty(lattice.shape[:-1]) 
-        top_half = self.decode(lattice[...,0:c+1,:])
-        image[..., 0:c+1] = top_half[...,0] - top_half[...,1]
-        # the bottom half of the image is the complex conjugate of the top half
-        image[...,c+1:] = (top_half[...,0] + top_half[...,1])[...,np.arange(c-1,-1,-1)]
-        return image
+        # convert torch tensor to numpy array for future operations
+        batch_vols = batch_vols.cpu().numpy()
 
-    def forward_even(self, lattice):
-        '''Extra bookkeeping with extra row/column for an even sized DFT'''
-        image = torch.empty(lattice.shape[:-1])
-        top_half = self.decode(lattice[...,self.all_eval,:])
-        image[..., self.all_eval] = top_half[...,0] - top_half[...,1]
-        # the bottom half of the image is the complex conjugate of the top half
-        image[...,self.bottom_rev] = top_half[...,self.top,0] + top_half[...,self.top,1]
-        return image
+        # normalize the volume (mean and standard deviation) by normalization used when training the model
+        batch_vols = batch_vols * norm[1] + norm[0]
 
-    def decode(self, lattice):
-        '''Return FT transform'''
-        # convention: only evalute the -z points
-        w = lattice[...,2] > 0.0
-        lattice[...,0:3][w] = -lattice[...,0:3][w] # negate lattice coordinates where z > 0
-        result = self.decoder(lattice)
-        result[...,1][w] *= -1 # replace with complex conjugate to get correct values for original lattice positions
-        return result
+        # lowpass filter with fourier space mask
+        if lowpass_mask is not None:
+            batch_vols = batch_vols * lowpass_mask
 
-    def eval_volume(self, coords, D, extent, norm, zval=None):
-        '''
-        Evaluate the model on a DxDxD volume
-        
-        Inputs:
-            coords: lattice coords on the x-y plane (D^2 x 3)
-            D: size of lattice
-            extent: extent of lattice [-extent, extent]
-            norm: data normalization 
-            zval: value of latent (zdim x 1)
-        '''
-        if zval is not None:
-            zdim = len(zval)
-            z = torch.zeros(D**2, zdim, dtype=torch.float32)
-            z += torch.tensor(zval, dtype=torch.float32)
+        # transform to real space and scale values if downsampling was applied
+        batch_vols = fft.iht3_center(batch_vols)
+        batch_vols *= iht_downsample_scaling_correction
 
-        vol_f = np.zeros((D,D,D),dtype=np.float32)
-        assert not self.training
-        # evaluate the volume by zslice to avoid memory overflows
-        for i, dz in enumerate(np.linspace(-extent,extent,D,endpoint=True,dtype=np.float32)):
-            x = coords + torch.tensor([0,0,dz])
-            if zval is not None:
-                x = torch.cat((x,z), dim=-1)
-            with torch.no_grad():
-                y = self.decode(x)
-                y = y[...,0] - y[...,1]
-                y = y.view(D,D).cpu().numpy()
-            vol_f[i] = y
-        vol_f = vol_f*norm[1]+norm[0]
-        vol_f = utils.zero_sphere(vol_f)
-        vol = fft.ihtn_center(vol_f[:-1,:-1,:-1]) # remove last +k freq for inverse FFT
-        return vol
+        if flip:
+            batch_vols = np.flip(batch_vols, 1)
 
-class VAE(nn.Module):
-    def __init__(self, 
-            lattice,
-            qlayers, qdim, 
-            players, pdim,
-            encode_mode = 'mlp',
-            no_trans = False,
-            enc_mask = None
-            ):
-        super(VAE, self).__init__()
-        self.lattice = lattice
-        self.D = lattice.D
-        self.in_dim = lattice.D*lattice.D if enc_mask is None else enc_mask.sum()
-        self.enc_mask = enc_mask
-        assert qlayers > 2
-        if encode_mode == 'conv':
-            self.encoder = ConvEncoder(qdim, qdim)
-        elif encode_mode == 'resid':
-            self.encoder = ResidLinearMLP(self.in_dim, 
-                            qlayers-2, # -2 bc we add 2 more layers in the homeomorphic encoer
-                            qdim,  # hidden_dim
-                            qdim, # out_dim
-                            nn.ReLU) #in_dim -> hidden_dim
-        elif encode_mode == 'mlp':
-            self.encoder = MLP(self.in_dim, 
-                            qlayers-2, 
-                            qdim, # hidden_dim
-                            qdim, # out_dim
-                            nn.ReLU) #in_dim -> hidden_dim
-        else:
-            raise RuntimeError('Encoder mode {} not recognized'.format(encode_mode))
-        # predict rotation and translation in two completely separate NNs
-        #self.so3_encoder = SO3reparameterize(qdim) # hidden_dim -> SO(3) latent variable
-        #self.trans_encoder = ResidLinearMLP(nx*ny, 5, qdim, 4, nn.ReLU)
+        if invert:
+            batch_vols *= -1
 
-        # or predict rotation/translations from intermediate encoding
-        self.so3_encoder = SO3reparameterize(qdim, 1, qdim) # hidden_dim -> SO(3) latent variable
-        self.trans_encoder = ResidLinearMLP(qdim, 1, qdim, 4, nn.ReLU)
+        return batch_vols
 
-        self.decoder = FTSliceDecoder(3, self.D, players, pdim, nn.ReLU)
-        self.no_trans = no_trans
-
-    def reparameterize(self, mu, logvar):
-        if not self.training:
-            return mu
-        std = torch.exp(.5*logvar)
-        eps = torch.randn_like(std)
-        return eps*std + mu
-
-    def encode(self, img):
-        '''img: BxDxD'''
-        img = img.view(img.size(0),-1)
-        if self.enc_mask is not None:
-            img = img[:,self.enc_mask]
-        enc = nn.ReLU()(self.encoder(img))
-        z_mu, z_std = self.so3_encoder(enc)
-        if self.no_trans:
-            tmu, tlogvar = (None, None)
-        else:
-            z = self.trans_encoder(enc)
-            tmu, tlogvar = z[:,:2], z[:,2:]
-        return z_mu, z_std, tmu, tlogvar
-
-    def eval_volume(self, norm):
-        return self.decoder.eval_volume(self.lattice.coords, self.D, self.lattice.extent, norm)
-
-    def decode(self, rot):
-        # transform lattice by rot.T
-        x = self.lattice.coords @ rot # R.T*x
-        y_hat = self.decoder(x)
-        y_hat = y_hat.view(-1, self.D, self.D)
-        return y_hat
-
-    def forward(self, img):
-        z_mu, z_std, tmu, tlogvar = self.encode(img)
-        rot, w_eps = self.so3_encoder.sampleSO3(z_mu, z_std)
-        # transform lattice by rot and predict image
-        y_hat = self.decode(rot)
-        if not self.no_trans:
-            # translate image by t
-            B = img.size(0)
-            t = self.reparameterize(tmu, tlogvar)
-            t = t.unsqueeze(1) # B x 1 x 2
-            img = self.lattice.translate_ht(img.view(B,-1), t)
-            img = img.view(B,self.D, self.D)
-        return y_hat, img, z_mu, z_std, w_eps, tmu, tlogvar
-
-class TiltVAE(nn.Module):
-    def __init__(self, 
-            lattice, tilt,
-            qlayers, qdim, 
-            players, pdim,
-            no_trans=False,
-            enc_mask=None
-            ):
-        super(TiltVAE, self).__init__()
-        self.lattice = lattice
-        self.D = lattice.D
-        self.in_dim = lattice.D*lattice.D if enc_mask is None else enc_mask.sum()
-        self.enc_mask = enc_mask
-        assert qlayers > 3
-        self.encoder = ResidLinearMLP(self.in_dim,
-                                      qlayers-3,
-                                      qdim,
-                                      qdim,
-                                      nn.ReLU)
-        self.so3_encoder = SO3reparameterize(2*qdim, 3, qdim) # hidden_dim -> SO(3) latent variable
-        self.trans_encoder = ResidLinearMLP(2*qdim, 2, qdim, 4, nn.ReLU)
-        self.decoder = FTSliceDecoder(3, self.D, players, pdim, nn.ReLU)
-        assert tilt.shape == (3,3), 'Rotation matrix input required'
-        self.tilt = torch.tensor(tilt)
-        self.no_trans = no_trans
-
-    def reparameterize(self, mu, logvar):
-        if not self.training:
-            return mu
-        std = torch.exp(.5*logvar)
-        eps = torch.randn_like(std)
-        return eps*std + mu
-
-    def eval_volume(self, norm):
-        return self.decoder.eval_volume(self.lattice.coords, self.D, self.lattice.extent, norm)
-
-    def encode(self, img, img_tilt):
-        img = img.view(img.size(0), -1)
-        img_tilt = img_tilt.view(img_tilt.size(0), -1)
-        if self.enc_mask is not None:
-            img = img[:,self.enc_mask]
-            img_tilt = img_tilt[:,self.enc_mask]
-        enc1 = self.encoder(img)
-        enc2 = self.encoder(img_tilt)
-        enc = torch.cat((enc1,enc2), -1) # then nn.ReLU?
-        z_mu, z_std = self.so3_encoder(enc)
-        rot, w_eps = self.so3_encoder.sampleSO3(z_mu, z_std)
-        if self.no_trans:
-            tmu, tlogvar, t = (None,None,None)
-        else:
-            z = self.trans_encoder(enc)
-            tmu, tlogvar = z[:,:2], z[:,2:]
-            t = self.reparameterize(tmu, tlogvar)
-        return z_mu, z_std, w_eps, rot, tmu, tlogvar, t
-
-    def forward(self, img, img_tilt):
-        B = img.size(0)
-        z_mu, z_std, w_eps, rot, tmu, tlogvar, t = self.encode(img, img_tilt)
-        if not self.no_trans:
-            t = t.unsqueeze(1) # B x 1 x 2
-            img = self.lattice.translate_ht(img.view(B,-1), -t)
-            img_tilt = self.lattice.translate_ht(img_tilt.view(B,-1), -t)
-            img = img.view(B, self.D, self.D)
-            img_tilt = img_tilt.view(B, self.D, self.D)
-
-        # rotate lattice by rot.T
-        x = self.lattice.coords @ rot # R.T*x
-        y_hat = self.decoder(x)
-        y_hat = y_hat.view(-1, self.D, self.D)
-
-        # tilt series pair
-        x = self.lattice.coords @ self.tilt @ rot
-        y_hat2 = self.decoder(x)
-        y_hat2 = y_hat2.view(-1, self.D, self.D)
-        return y_hat, y_hat2, img, img_tilt, z_mu, z_std, w_eps, tmu, tlogvar
-
-# fixme: this is half-deprecated (not used in TiltVAE, but still used in tilt BNB)
-class TiltEncoder(nn.Module):
-    def __init__(self, in_dim, nlayers, hidden_dim, out_dim, activation):
-        super(TiltEncoder, self).__init__()
-        assert nlayers > 2
-        self.encoder1 = ResidLinearMLP(in_dim, nlayers-2, hidden_dim, hidden_dim, activation)
-        self.encoder2 = ResidLinearMLP(hidden_dim*2, 2, hidden_dim, out_dim, activation)
-        self.in_dim = in_dim
-
-    def forward(self, x, x_tilt):
-        x_enc = self.encoder1(x)
-        x_tilt_enc = self.encoder1(x_tilt)
-        z = self.encoder2(torch.cat((x_enc,x_tilt_enc),-1))
-        return z
 
 class TiltSeriesEncoder(nn.Module):
-    def __init__(self, in_dim, nlayersA, hidden_dimA, out_dimA, nlayersB,
-                 hidden_dimB, out_dim, activation, ntilts, pooling_function,
-                 num_seeds, num_heads, layer_norm):
-        super(TiltSeriesEncoder, self).__init__()
+    """
+    A module to encode multiple (tilt) images of a particle to a latent embedding.
+    The module comprises two submodules: `encoder_a` and `encoder_b`.
+    Encoder_a is a ResidLinearMLP module that embeds a single tilt image of a particle with `in_dim` features (pixels) to an embedding with `out_dim_a` features.
+    Encoder_b is a ResidLinearMLP module that pools all per-tilt-image embeddings from `encoder_a` by a `pooling_function`,
+    and embeds this pooled representation to a single latent embedding with `out_dim` features.
+    """
+
+    def __init__(self,
+                 in_dim: int,
+                 hidden_layers_a: int = 3,
+                 hidden_dim_a: int = 256,
+                 out_dim_a: int = 128,
+                 hidden_layers_b: int = 3,
+                 hidden_dim_b: int = 256,
+                 out_dim: int = 64 * 2,
+                 activation: torch.nn.ReLU | torch.nn.LeakyReLU = torch.nn.ReLU,
+                 ntilts: int = 41,
+                 pooling_function: Literal['concatenate', 'max', 'mean', 'median', 'set_encoder'] = 'concatenate',
+                 num_seeds: int = 1,
+                 num_heads: int = 4,
+                 layer_norm: bool = False):
+        """
+        Create the TiltSeriesEncoder module.
+
+        :param in_dim: number of input features to the module (typically the number of pixels in a masked image)
+        :param hidden_layers_a: number of intermediate hidden layers in the encoder_a submodule
+        :param hidden_dim_a: number of features in each hidden layer in the encoder_a submodule
+        :param out_dim_a: number of output features from the encoder_a submodule (sometimes referred to as the intermediate latent embedding dimensionality)
+        :param hidden_layers_b: number of intermediate hidden layers in the encoder_b submodule
+        :param hidden_dim_b: number of features in each hidden layer in the encoder_b submodule
+        :param out_dim: number of output features from the encoder_b submodule (sometimes referred to as the latent embedding dimensionality or zdim)
+        :param activation: activation function to be applied after each layer, either `torch.nn.ReLU` or `torch.nn.LeakyReLU`
+        :param ntilts: the number of tilt images per particle, used in setting the number of input features to `encoder_b`
+        :param pooling_function: the method used to pool the per-tilt-image intermediate latent representations prior to `encoder_b`
+        :param num_seeds: number of seed vectors to use in the set encoder module. Generally should be set to 1
+        :param num_heads: number of heads for multihead attention in the set encoder module. Generally should be set to a power of 2
+        :param layer_norm: whether to apply layer normalization in the set encoder module
+        """
+        # initialize the parent nn.Module class
+        super().__init__()
+
+        # assign attributes from parameters used at instance creation
         self.in_dim = in_dim
-        self.out_dimA = out_dimA
+        self.hidden_layers_a = hidden_layers_a
+        self.hidden_dim_a = hidden_dim_a
+        self.out_dim_a = out_dim_a
+        self.hidden_layers_b = hidden_layers_b
+        self.hidden_dim_b = hidden_dim_b
+        self.out_dim = out_dim
+        self.activation = activation
         self.ntilts = ntilts
         self.pooling_function = pooling_function
-        assert nlayersA + nlayersB > 2
+        self.num_seeds = num_seeds
+        self.num_heads = num_heads
+        self.layer_norm = layer_norm
+
+        assert hidden_layers_a >= 0  # possible to have no hidden layers, just a direct mapping from input to output
+        assert hidden_layers_b >= 0  # possible to have no hidden layers, just a direct mapping from input to output
+        if pooling_function in ['concatenate', 'set_encoder']:
+            # other pooling functions do not use ntilts so not relevant
+            assert ntilts > 1  # having ntilts == 1 is very likely to cause problems with squeezing and broadcasting tensors
 
         # encoder1 encodes each identically-masked tilt image, independently
-        self.encoder1 = ResidLinearMLP(in_dim, nlayersA, hidden_dimA, out_dimA, activation)
+        self.encoder_a = ResidLinearMLP(in_dim, hidden_layers_a, hidden_dim_a, out_dim_a, activation)
 
         # encoder2 merges ntilts-concatenated encoder1 information and encodes further to latent space via one of
         # ('concatenate', 'max', 'mean', 'median', 'set_encoder')
         if self.pooling_function == 'concatenate':
-            self.encoder2 = ResidLinearMLP(in_dim = out_dimA * ntilts, nlayers = nlayersB, hidden_dim = hidden_dimB,
-                                           out_dim = out_dim, activation = activation)
+            self.pooling_layer = nn.Sequential(Rearrange('batch tilt pixels -> batch (tilt pixels)'),
+                                               activation())
+            self.encoder_b = ResidLinearMLP(in_dim=out_dim_a * ntilts,
+                                            nlayers=hidden_layers_b,
+                                            hidden_dim=hidden_dim_b,
+                                            out_dim=out_dim,
+                                            activation=activation)
 
         elif self.pooling_function == 'max':
-            self.encoder2 = ResidLinearMLP(in_dim = out_dimA, nlayers = nlayersB, hidden_dim = hidden_dimB,
-                                           out_dim = out_dim, activation = activation)
+            self.pooling_layer = nn.Sequential(Reduce('batch tilt pixels -> batch pixels', 'max'),
+                                               activation())
+            self.encoder_b = ResidLinearMLP(in_dim=out_dim_a,
+                                            nlayers=hidden_layers_b,
+                                            hidden_dim=hidden_dim_b,
+                                            out_dim=out_dim,
+                                            activation=activation)
 
         elif self.pooling_function == 'mean':
-            self.encoder2 = ResidLinearMLP(in_dim=out_dimA, nlayers=nlayersB, hidden_dim=hidden_dimB,
-                                           out_dim=out_dim, activation=activation)
+            self.pooling_layer = nn.Sequential(Reduce('batch tilt pixels -> batch pixels', 'mean'),
+                                               activation())
+            self.encoder_b = ResidLinearMLP(in_dim=out_dim_a,
+                                            nlayers=hidden_layers_b,
+                                            hidden_dim=hidden_dim_b,
+                                            out_dim=out_dim,
+                                            activation=activation)
 
         elif self.pooling_function == 'median':
-            self.encoder2 = ResidLinearMLP(in_dim=out_dimA, nlayers=nlayersB, hidden_dim=hidden_dimB,
-                                           out_dim=out_dim, activation=activation)
+            self.pooling_layer = nn.Sequential(MedianPool1d(pooling_axis=-2),
+                                               activation())
+            self.encoder_b = ResidLinearMLP(in_dim=out_dim_a,
+                                            nlayers=hidden_layers_b,
+                                            hidden_dim=hidden_dim_b,
+                                            out_dim=out_dim,
+                                            activation=activation)
 
         elif self.pooling_function == 'set_encoder':
-            self.encoder2 = set_transformer.SetTransformer(dim_input = out_dimA, num_outputs = num_seeds, dim_output = out_dim,
-                                                           dim_hidden = hidden_dimB, num_heads = num_heads, ln = layer_norm)
+            self.pooling_layer = nn.Sequential(set_transformer.SetTransformer(dim_input=out_dim_a,
+                                                                              num_outputs=num_seeds,
+                                                                              dim_output=out_dim,
+                                                                              dim_hidden=hidden_dim_b,
+                                                                              num_heads=num_heads,
+                                                                              ln=layer_norm),
+                                               Rearrange('batch 1 latent -> batch latent'))
+            self.encoder_b = nn.Identity()
 
         else:
             raise ValueError
 
-
     def forward(self, batch):
-        # input: B x ntilts x D*D[lattice_circular_mask]
-        batch_tilts_intermediate = self.encoder1(batch)
+        """
+        Pass data forward through the module.
 
-        # input: B x ntilts x out_dim_A
-        if self.pooling_function != 'set_encoder':
+        :param batch: Input data tensor, shape (batch, ntilts, boxsize*boxsize[enc_mask])
+        :return: Output data tensor, shape (batch, zdim*2)
+        """
+        # pass each tilt independently through encoder_a (parallelizing along both batch and ntilts dimensions)
+        batch_tilts_intermediate = self.encoder_a(batch)
+        # pool each tilt's intermediate latent embedding along the ntilts dimension
+        batch_tilts_pooled = self.pooling_layer(batch_tilts_intermediate)
+        # obtain parameters for per-particle latent embedding mean and log(variance) as a single concatenated tensor output
+        z = self.encoder_b(batch_tilts_pooled)
 
-            if self.pooling_function == 'concatenate':
-                batch_pooled_tilts = batch_tilts_intermediate.view(-1, self.out_dimA * self.ntilts)
+        return z
 
-            elif self.pooling_function == 'max':
-                batch_pooled_tilts = batch_tilts_intermediate.max(dim = 1)[0]
-                batch_pooled_tilts = torch.nn.functional.relu(batch_pooled_tilts)
+    def reparameterize(self,
+                       mu: torch.Tensor,
+                       logvar: torch.Tensor) -> torch.Tensor:
+        """
+        Reparamaterization trick to allow backpropogation through semi-randomly sampled latent embedding.
+        Sampling a latent embedding from a gaussian parameterized by mu and logvar is an operation without an associated gradient with respect to inputs, and therefore breaks training.
+        We reparamaterize such that the latent embedding is deterministically calculated as `z = epsilon * standard_deviation + mean`.
+        This representation "outsources" the randomness from `z` itself to `epsilon`, and allows gradient calculation through `z` to `standard_deviation` and `mean`, and onward to earlier layers.
 
-            elif self.pooling_function == 'mean':
-                batch_pooled_tilts = batch_tilts_intermediate.mean(dim = 1)
-                batch_pooled_tilts = torch.nn.functional.relu(batch_pooled_tilts)
+        :param mu: mean parameterizing latent embeddings `z`, shape (batch, zdim)
+        :param logvar: log(variance) parameterizing latent embeddings `z`, shape (batch, zdim)
+        :return: reparameterized latent embeddings `z`, shape (batch, zdim)
+        """
+        # no need for reparameterization at inference time; better to be deterministic
+        if not self.training:
+            return mu
 
-            elif self.pooling_function == 'median':
-                with autocast(enabled=False):  # torch.quantile and torch.median do not support fp16 so casting to fp32 assuming AMP is used
-                    batch_pooled_tilts = batch_tilts_intermediate.to(torch.float32).quantile(dim = 1, q = 0.5)
-                    batch_pooled_tilts = torch.nn.functional.relu(batch_pooled_tilts)
-
-            else:
-                raise ValueError
-
-            # input: B x out_dim_A
-            z = self.encoder2(batch_pooled_tilts)  # reshape to encode all tilts of one ptcl together
-
-        else:
-            # with autocast(enabled=False):  # set encoder appears numerically unstable in half-precision
-            z = self.encoder2(batch_tilts_intermediate)
-            z = z.squeeze(0)
-
-        return z  # B x zdim
+        # otherwise perform reparameterization
+        std = torch.exp(.5 * logvar)
+        eps = torch.randn_like(std)
+        return eps * std + mu
 
 
 class ResidLinearMLP(nn.Module):
-    def __init__(self, in_dim, nlayers, hidden_dim, out_dim, activation):
-        super(ResidLinearMLP, self).__init__()
-        layers = [ResidLinear(in_dim, hidden_dim) if in_dim == hidden_dim else nn.Linear(in_dim, hidden_dim), activation()]
+    """
+    Multiple connected Residual Blocks as a Multi-Layer Perceptron.
+    """
+
+    def __init__(self,
+                 in_dim: int,
+                 nlayers: int,
+                 hidden_dim: int,
+                 out_dim: int,
+                 activation: torch.nn.ReLU | torch.nn.LeakyReLU):
+        """
+        Create the ResidLinearMLP module.
+
+        :param in_dim: number of input features to the module
+        :param nlayers: number of intermediate hidden layers in the module
+        :param hidden_dim: number of features in each hidden layer
+        :param out_dim: number of output features from the module
+        :param activation: activation function to be applied after each layer, either `torch.nn.ReLU` or `torch.nn.LeakyReLU`
+        """
+        # intialize the parent nn.Module class
+        super().__init__()
+
+        # create the first layer to receive input
+        # the layer will be a ResidLinear layer if possible, otherwise a Linear layer
+        if in_dim == hidden_dim:
+            layers = [ResidLinear(in_dim, hidden_dim)]
+        else:
+            layers = [nn.Linear(in_dim, hidden_dim)]
+        layers.append(activation())
+
+        # append the hidden layers to the module as ResidLinear layers
         for n in range(nlayers):
             layers.append(ResidLinear(hidden_dim, hidden_dim))
             layers.append(activation())
-        layers.append(ResidLinear(hidden_dim, out_dim) if out_dim == hidden_dim else nn.Linear(hidden_dim, out_dim))
+
+        # append the output layer to the module without a final activation function
+        # the layer will be a ResidLinear layer if possible, otherwise a Linear layer
+        if out_dim == hidden_dim:
+            layers.append(ResidLinear(hidden_dim, out_dim))
+        else:
+            layers.append(nn.Linear(hidden_dim, out_dim))
+
+        # create the overall module as a sequential pass through the defined layers
         self.main = nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self,
+                x: torch.Tensor) -> torch.Tensor:
+        """
+        Pass data forward through the module.
+
+        :param x: Input data tensor.
+        :return: Output data tensor.
+        """
         return self.main(x)
 
-class ResidLinear(nn.Module):
-    def __init__(self, nin, nout):
-        super(ResidLinear, self).__init__()
-        self.linear = nn.Linear(nin, nout)
-        #self.linear = nn.utils.weight_norm(nn.Linear(nin, nout))
 
-    def forward(self, x):
+class ResidLinear(nn.Module):
+    """
+    A Residual Block layer consisting of a single linear layer with an identity skip connection.
+    Note that the identity mapping requires that the number of input and output features are the same for element-wise addition.
+    References: https://arxiv.org/abs/1512.03385
+    """
+
+    def __init__(self,
+                 nin: int,
+                 nout: int):
+        """
+        Create the ResidLinear layer.
+
+        :param nin: number of input features to the linear layer
+        :param nout: number of output features to the linear layer
+        """
+        super().__init__()
+        self.linear = nn.Linear(nin, nout)
+
+    def forward(self,
+                x: torch.Tensor) -> torch.Tensor:
+        """
+        Pass data forward through the layer.
+
+        :param x: Input data tensor.
+        :return: Output data tensor.
+        """
+        # output is element-wise addition of the output of the linear layer given x with (identity-mapped) input x
         z = self.linear(x) + x
         return z
 
-class MLP(nn.Module):
-    def __init__(self, in_dim, nlayers, hidden_dim, out_dim, activation):
-        super(MLP, self).__init__()
-        layers = [nn.Linear(in_dim, hidden_dim), activation()]
-        for n in range(nlayers):
-            layers.append(nn.Linear(hidden_dim, hidden_dim))
-            layers.append(activation())
-        layers.append(nn.Linear(hidden_dim, out_dim))
-        self.main = nn.Sequential(*layers)
 
-    def forward(self, x):
-        return self.main(x)
-      
-# Adapted from soumith DCGAN
-class ConvEncoder(nn.Module):
-    def __init__(self, hidden_dim, out_dim):
-        super(ConvEncoder, self).__init__()
-        ndf = hidden_dim
-        self.main = nn.Sequential(
-            # input is 1 x 64 x 64
-            nn.Conv2d(1, ndf, 4, 2, 1, bias=False),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf) x 32 x 32
-            nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False),
-            #nn.BatchNorm2d(ndf * 2),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*2) x 16 x 16
-            nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False),
-            #nn.BatchNorm2d(ndf * 4),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*4) x 8 x 8
-            nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False),
-            #nn.BatchNorm2d(ndf * 8),
-            nn.LeakyReLU(0.2, inplace=True),
-            # state size. (ndf*8) x 4 x 4
-            nn.Conv2d(ndf * 8, out_dim, 4, 1, 0, bias=False),
-            # state size. out_dims x 1 x 1
-        )
-    def forward(self, x):
-        x = x.view(-1,1,64,64)
-        x = self.main(x)
-        return x.view(x.size(0), -1) # flatten
+class MedianPool1d(nn.Module):
+    """
+    Median pool module.
+    Primarily exists due to limitations in pre-existing layer-based definitions of median.
+     * torch.nn does not have a MedianPool module
+     * einops does not support a callable (such as `torch.median`) when defining a Reduce layer.
+    """
 
-class SO3reparameterize(nn.Module):
-    '''Reparameterize R^N encoder output to SO(3) latent variable'''
-    def __init__(self, input_dims, nlayers=None, hidden_dim=None):
+    def __init__(self, pooling_axis=-2):
+        """
+        Create the MedianPool1d layer.
+
+        :param pooling_axis: the tensor axis over which to take the median
+        """
         super().__init__()
-        if nlayers is not None:
-            self.main = ResidLinearMLP(input_dims, nlayers, hidden_dim, 9, nn.ReLU)
+        self.pooling_axis = pooling_axis
+
+    def forward(self, x: torch.Tensor):
+        """
+        Pass data forward through the layer.
+
+        :param x: Input data tensor.
+        :return: Output data tensor.
+        """
+        with autocast(device_type=x.device.type, enabled=False):  # torch.quantile and torch.median do not support fp16 so casting to fp32 in case AMP is used
+            x = x.to(dtype=torch.float32, device=x.device)
+            x = x.quantile(dim=self.pooling_axis, q=0.5)
+            return x
+
+
+class DataParallelPassthrough(torch.nn.DataParallel):
+    """
+    Class to wrap underlying module in DataParallel for GPU-parallelized computations, but allow accessing underlying module attributes and methods.
+    Intended use: `model = DataParallelPassthrough(model)`
+    """
+
+    def __getattr__(self,
+                    name: str):
+        """
+        Get the requested attribute or method from the parent DataParallel module if it exists, otherwise from the wrapped module.
+
+        :param name: name of the attribute or method to request
+        :return: the requested attribute or method
+        """
+        try:
+            return super().__getattr__(name)
+        except AttributeError:
+            return getattr(self.module, name)
+
+
+class VolumeGenerator:
+    """
+    Convenience class to generate volume(s) from a trained tomoDRGN model.
+    Supports evaluating homogeneous (`train_nn`) or heterogeneous (`train_vae`) models.
+    """
+
+    def __init__(self,
+                 config: str | dict[str, dict],
+                 weights_path: str | None = None,
+                 model: TiltSeriesHetOnlyVAE | FTPositionalDecoder | None = None,
+                 lat: lattice.Lattice | None = None,
+                 amp: bool = True):
+        """
+        Instantiate a `VolumeGenerator` object.
+        :param config: path to trained model `config.pkl` from `train_vae.py` or `train_nn.py`, or the corresponding preloaded config dictionary
+        :param weights_path: path to trained model `weights.*.pkl` from `train_vae.py` or `train_nn.py`.
+                Prefer specifying `weights_path` over `model` when a model is not yet loaded in memory.
+        :param model: preloaded model from which to evaluate volumes.
+                Prefer specifying `model` over `weights_path` when a model is already loaded in memory. Must specify `lat` with `model`.
+        :param lat: preloaded tomodrgn lattice object. Must specify `model` with `lat`.
+        :param amp: Enable or disable use of mixed-precision model inference
+        """
+        # set the device
+        device = utils.get_default_device()
+        if device == torch.device('cpu'):
+            amp = False
+            log('Warning: pytorch AMP does not support non-CUDA (e.g. cpu) devices. Automatically disabling AMP and continuing')
+            # https://github.com/pytorch/pytorch/issues/55374
+
+        # load the model configuration
+        if type(config) is str:
+            cfg = utils.load_pkl(config)
         else:
-            self.main = nn.Linear(input_dims, 9)
+            assert type(config) is dict
+            cfg = config
 
-        # start with big outputs
-        #self.s2s2map.weight.data.uniform_(-5,5)
-        #self.s2s2map.bias.data.uniform_(-5,5)
+        # set parameters for volume generation
+        boxsize_ht = int(cfg['lattice_args']['boxsize'])  # image size + 1
+        zdim = int(cfg['model_args']['zdim']) if 'zdim' in cfg['model_args'].keys() else None
+        norm = cfg['dataset_args']['norm']
+        angpix = float(cfg['angpix'])
 
-    def sampleSO3(self, z_mu, z_std):
-        '''
-        Reparameterize SO(3) latent variable
-        # z represents mean on S2xS2 and variance on so3, which enocdes a Gaussian distribution on SO3
-        # See section 2.5 of http://ethaneade.com/lie.pdf
-        '''
-        # resampling trick
-        if not self.training:
-            return z_mu, z_std
-        eps = torch.randn_like(z_std)
-        w_eps = eps*z_std
-        rot_eps = lie_tools.expmap(w_eps)
-        #z_mu = lie_tools.quaternions_to_SO3(z_mu)
-        rot_sampled = z_mu @ rot_eps
-        return rot_sampled, w_eps
+        # load the model and lattice
+        if weights_path is not None:
+            assert model is None, 'Cannot specify both weights_path` and `model`'
+            if zdim:
+                # load a VAE model
+                model, lat = TiltSeriesHetOnlyVAE.load(config=cfg,
+                                                       weights=weights_path,
+                                                       device=device)
+            else:
+                # load a non-VAE decoder-only model
+                model, lat = FTPositionalDecoder.load(config=cfg,
+                                                      weights=weights_path,
+                                                      device=device)
+        elif model is not None:
+            # using a pre-loaded model and lattice
+            assert weights_path is None, 'Cannot specify both weights_path` and `model`'
+            assert type(model) in [TiltSeriesHetOnlyVAE, FTPositionalDecoder], f'Unrecognized model type: {type(model)}'
+        else:
+            raise ValueError('Must specify one of weights_path` or `model`')
 
-    def forward(self, x):
-        z = self.main(x)
-        z1 = z[:,:3].double()
-        z2 = z[:,3:6].double()
-        z_mu = lie_tools.s2s2_to_SO3(z1, z2).float()
-        logvar = z[:,6:]
-        z_std = torch.exp(.5*logvar) # or could do softplus
-        return z_mu, z_std
+        # define the volume evaluation and postprocessing functions associated with the model
+        if zdim:
+            eval_volume_batch = model.decoder.eval_volume_batch
+            postprocess_volume_batch = model.decoder.postprocess_volume_batch
+        else:
+            eval_volume_batch = model.eval_volume_batch
+            postprocess_volume_batch = model.postprocess_volume_batch
 
-        
+        self.device = device
+        self.model_boxsize_ht = boxsize_ht
+        self.model_angpix = angpix
+        self.norm = norm
+        self.zdim = zdim
+        self.model = model
+        self.lat = lat
+        self.amp = amp
+        self.eval_volume_batch = eval_volume_batch
+        self.postprocess_volume_batch = postprocess_volume_batch
 
+    def generate_volumes(self,
+                         z: np.ndarray | str | None,
+                         out_dir: str,
+                         out_name: str = 'vol',
+                         downsample: int | None = None,
+                         lowpass: float | None = None,
+                         flip: bool = False,
+                         invert: bool = False,
+                         batch_size: int = 1) -> None:
+        """
+        Generate volumes at specified latent embeddings and save to specified output directory.
+        Generated volume filename format is `out_dir / out_name _ {i:03d if multiple volumes} .mrc`
+
+        :param z: latent embeddings to evaluate as numpy array of shape `(nptcls, zdim)`, or path to a .txt or .pkl file containing array of shape (nptcls, zdim).
+                `None` if evaluating a homogeneous tomodrgn model.
+        :param out_dir: path to output directory in which to save output mrc file(s)
+        :param out_name: string to prepend to output .mrc file name(s)
+        :param downsample: downsample reconstructed volumes to this box size (units: px) by Fourier cropping, None means to skip downsampling
+        :param lowpass: lowpass filter reconstructed volumes to this resolution (units: Å), None means to skip lowpass filtering
+        :param flip: flip the chirality of the reconstructed volumes by inverting along the z axis
+        :param invert: invert the data sign of the reconstructed volumes (light-on-dark vs dark-on-light)
+        :param batch_size: batch size to parallelize volume generation (32-64 works well for box64 volumes)
+        :return: None
+        """
+        # sanity check inputs for evaluating model and postprocessing
+        self._check_inputs(downsample=downsample,
+                           out_dir=out_dir)
+
+        # prepare inputs for evaluating model and postprocessing
+        coords, extent, iht_downsample_scaling_correction, angpix, lowpass_mask, z = self._prepare_inputs(out_dir=out_dir,
+                                                                                                          downsample=downsample,
+                                                                                                          lowpass=lowpass,
+                                                                                                          z=z)
+
+        # set context managers and flags for inference mode evaluation loop
+        self.model.eval()
+        with torch.inference_mode():
+            with torch.amp.autocast(device_type=self.device.type, enabled=self.amp):
+                if z is None:
+                    batch_vols = self.eval_volume_batch(coords=coords,
+                                                        z=z,
+                                                        extent=extent)
+                    batch_vols = self.postprocess_volume_batch(batch_vols=batch_vols[:, :-1, :-1, :-1],  # exclude symmetrized +k frequency
+                                                               norm=self.norm,
+                                                               iht_downsample_scaling_correction=iht_downsample_scaling_correction,
+                                                               lowpass_mask=lowpass_mask,
+                                                               flip=flip,
+                                                               invert=invert)
+                    out_mrc = f'{out_dir}/{out_name}.mrc'
+                    mrc.write(fname=out_mrc,
+                              array=batch_vols[0],
+                              angpix=angpix)
+
+                else:
+                    # batch size cannot be larger than the number of latent embeddings to evaluate, or is 1 if homogeneous model
+                    batch_size = min(batch_size, z.shape[0])
+                    # construct z iterator
+                    z_iterator = torch.split(z, split_size_or_sections=batch_size, dim=0)
+                    num_batches = len(z_iterator)
+                    log(f'Generating {len(z)} volumes in batches of {batch_size}')
+
+                    # prepare threadpool for parallelized file writing
+                    with Pool(min(os.cpu_count(), batch_size)) as p:
+                        for (i, z_batch) in enumerate(z_iterator):
+                            log(f'    Generating volume batch {i+1} / {num_batches}')
+                            z_batch = torch.as_tensor(z_batch, device=self.device)
+                            batch_vols = self.eval_volume_batch(coords=coords,
+                                                                z=z_batch,
+                                                                extent=extent)
+                            batch_vols = self.postprocess_volume_batch(batch_vols=batch_vols[:, :-1, :-1, :-1],  # exclude symmetrized +k frequency
+                                                                       norm=self.norm,
+                                                                       iht_downsample_scaling_correction=iht_downsample_scaling_correction,
+                                                                       lowpass_mask=lowpass_mask,
+                                                                       flip=flip,
+                                                                       invert=invert)
+                            out_mrcs = [f'{out_dir}/{out_name}_{i * batch_size + j:03d}.mrc' for j in range(len(z_batch))]
+                            p.starmap(func=mrc.write, iterable=zip(out_mrcs,
+                                                                   batch_vols[:len(out_mrcs)],
+                                                                   itertools.repeat(None, len(out_mrcs)),
+                                                                   itertools.repeat(angpix, len(out_mrcs))))
+
+    def _check_inputs(self,
+                      out_dir: str,
+                      downsample: int | None = None) -> None:
+        """
+        Check inputs are expected types, shapes, and within expected bounds for model evaluation.
+        :param out_dir: path to output directory in which to save output mrc file(s)
+        :param downsample: downsample reconstructed volumes to this box size (units: px) by Fourier cropping, None means to skip downsampling
+        :return: None
+        """
+        # create output directory
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
+
+        # downsample checks
+        if downsample:
+            assert downsample % 2 == 0, "Boxsize must be even"
+            assert downsample <= self.model_boxsize_ht - 1, "Must be smaller than original box size"
+
+    def _prepare_inputs(self,
+                        out_dir: str,
+                        downsample: int | None = None,
+                        lowpass: float | None = None,
+                        z: np.ndarray | str | None = None) -> tuple[torch.Tensor, float, float, float, np.ndarray, torch.Tensor | None]:
+        """
+        Prepare inputs for repeatedly evaluating a tomoDRGN model to produce and postprocess and ensemble of volumes.
+            generate 2d plane of coords to evaluate with appropriate extent and eventual volume scaling factor for downsampling
+            generate lowpass filter mask
+            calculate downsample scaling factor
+            load z values to evaluate (if any, and write to disk if given array)
+        :return:
+        """
+        # generate 2-D XY plane of coordinates to eventually evaluate (as cube of coords by repeating along z axis) with appropriate extent and IHT scaling factor for downsampling
+        if downsample:
+            boxsize_ht = downsample + 1
+            coords = self.lat.get_downsample_coords(boxsize_new=boxsize_ht).to(self.device)
+            extent = self.lat.extent * (downsample / (self.model_boxsize_ht - 1))
+            iht_downsample_scaling_correction = downsample ** 3 / (self.model_boxsize_ht - 1) ** 3
+            angpix = self.model_angpix * (self.model_boxsize_ht - 1) / downsample
+        else:
+            boxsize_ht = self.model_boxsize_ht
+            coords = self.lat.coords.to(self.device)
+            extent = self.lat.extent
+            iht_downsample_scaling_correction = 1.
+            angpix = self.model_angpix
+
+        # generate array to be multiplied into volumes as lowpass filter (note this takes place after removing symmetrized +k frequency row/column of pixels, and operates on np array so device None)
+        if lowpass is not None:
+            lowpass_mask = utils.calc_lowpass_filter_mask(boxsize=boxsize_ht-1,
+                                                          angpix=angpix,
+                                                          lowpass=lowpass,
+                                                          device=None)
+        else:
+            lowpass_mask = np.ones((boxsize_ht-1, boxsize_ht-1, boxsize_ht-1),
+                                   dtype=bool)
+        # unsqueeze along batch dimension
+        lowpass_mask = lowpass_mask[np.newaxis, ...]
+
+        # prepare array of latent values to evaluate, if provided
+        if z is not None:
+            # load latent if not preloaded
+            if type(z) is str:
+                if z.endswith('.pkl'):
+                    z = utils.load_pkl(z)
+                elif z.endswith('.txt'):
+                    z = np.loadtxt(z)
+                else:
+                    raise ValueError(f'Unrecognized file type for loading z: {z}')
+            elif type(z) is np.ndarray:
+                pass
+            else:
+                raise ValueError(f'Unrecognized data structure for z: {type(z)}')
+
+            # confirm latent array shape
+            if z.ndim == 1:
+                z = z.reshape(1, -1)
+            elif z.ndim > 2:
+                raise ValueError(f'zdim must be 1 or 2, got {z.ndim}')
+
+            # confirm latent dimensionality matches value loaded from config
+            assert z.shape[1] == self.zdim
+
+            # save the z values used to generate the volumes in the output directory for future convenience
+            zfile = f'{out_dir}/z_values.txt'
+            np.savetxt(zfile, z)
+            log(f'Saved latent embeddings to decode to {zfile}')
+
+            # convert z to tensor
+            z = torch.as_tensor(z, dtype=torch.float32)
+
+        return coords, extent, iht_downsample_scaling_correction, angpix, lowpass_mask, z
+
+
+def mlp_ascii(input_dim: int, hidden_dims: list[int], output_dim: int):
+    """
+    Create ASCII art of a fully connected multi-layer perceptron.
+    Constraints: number of digits in each dimension cannot exceed 5.
+    Sample usage: ``print_mlp_ascii(input_dim=12345, hidden_dims=[128, 128, 128], output_dim=2)``
+
+    :param input_dim: dimensionality of input layer
+    :param hidden_dims: list of dimensionalities of hidden layers
+    :param output_dim: dimensionality of output layer
+    :return: None
+    """
+    output = []
+    art_height = 9  # 9 lines tall
+    node_symbol = '\u25CF'
+    node_connection_symbol = '\u292C'
+    for i in range(art_height):
+        if i in (0, 2, 6, 8):
+            # draw the conneciton lines and nodes
+            if i in (0, 8):
+                # top or bottom line, number of nodes = len(hidden_dims)
+                line = f'        {node_symbol} ' + ''.join([f'--- {node_symbol} ' for _ in range(len(hidden_dims) - 1)]) + '       '
+            else:
+                # central two lines, number of nodes = len(hidden_dims + 2)
+                line = f'  {node_symbol} ---' + ''.join([f' {node_symbol} ---' for _ in range(len(hidden_dims))]) + f' {node_symbol}  '
+        elif i in (1, 3, 5, 7):
+            # draw the connection lines and colons only
+            if i == 1:
+                # top line, number of connections with X = len(hidden_dims)-1
+                line = '     /     ' + ''.join([f'{node_connection_symbol}     ' for _ in range(len(hidden_dims) - 1)]) + '\\     '
+            elif i == 3:
+                # central two lines, number of connections with X = len(hidden_dims)-1 and need to draw colons connecting nodes
+                line = '  :  \\ ' + ''.join([f' :  {node_connection_symbol} ' for _ in range(len(hidden_dims) - 1)]) + ' :  /  :  '
+            elif i == 5:
+                # central two lines, number of connections with X = len(hidden_dims)-1 and need to draw colons connecting nodes
+                line = '  :  / ' + ''.join([f' :  {node_connection_symbol} ' for _ in range(len(hidden_dims) - 1)]) + ' :  \\  :  '
+            else:
+                # bottom line, number of connections with X = len(hidden_dims)-1
+                line = '     \\     ' + ''.join([f'{node_connection_symbol}     ' for _ in range(len(hidden_dims) - 1)]) + '/     '
+        else:
+            # draw the center padded node numbers
+            # f'{input_dim:^5}'
+            line = f'{input_dim:^5} ' + ''.join([f'{hidden_dim:^5} ' for hidden_dim in hidden_dims]) + f'{output_dim:^5}'
+        output.append(line)
+
+    return output
+
+
+def print_tiltserieshetonlyvae_ascii(model: TiltSeriesHetOnlyVAE):
+    """
+    Print an ASCII art representation of a TiltSeriesHetOnlyVAE model
+
+    :param model: the model to represent
+    :return: None
+    """
+    enca = mlp_ascii(input_dim=model.encoder.in_dim,
+                     hidden_dims=[model.encoder.hidden_dim_a for _ in range(model.encoder.hidden_layers_a)],
+                     output_dim=model.encoder.out_dim_a)
+    enca.insert(0, f'{"ENCODER A - PER IMAGE":^{len(enca[-1])}}')
+
+    encb = mlp_ascii(input_dim=model.encoder.out_dim_a * model.encoder.ntilts,
+                     hidden_dims=[model.encoder.hidden_dim_b for _ in range(model.encoder.hidden_layers_b)],
+                     output_dim=model.zdim * 2)
+    encb.insert(0, f'{"ENCODER B - PER PARTICLE":^{len(encb[-1])}}')
+
+    dec = mlp_ascii(input_dim=model.decoder.in_dim,
+                    hidden_dims=[model.decoder.hidden_dim for _ in range(model.decoder.hidden_layers)],
+                    output_dim=2)
+    dec.insert(0, f'{"DECODER - PER VOXEL":^{len(dec[-1])}}')
+
+    output = [f'{enca_line} {encb_line} {dec_line}' for enca_line, encb_line, dec_line in zip(enca, encb, dec)]
+    for line in output:
+        print(line)

@@ -1,42 +1,117 @@
-'''
-Find shortest path along nearest neighbor graph
-'''
-import torch
+"""
+Sample latent embeddings along the shortest path through the latent space nearest neighbor graph which connects specified anchor points.
+"""
 import argparse
-import pickle
-import numpy as np
-import os, sys
-from tomodrgn import utils
+import os
 from heapq import heappush, heappop
+from itertools import pairwise
 
-def add_args(parser):
-    parser.add_argument('data', help='Input z.pkl embeddings')
-    parser.add_argument('--anchors', type=int, nargs='+', required=True, help='Index of anchor points')
-    parser.add_argument('--max-neighbors', type=int, default=10)
-    parser.add_argument('--avg-neighbors', type=float, default=5)
-    parser.add_argument('--batch-size', type=int, default=1000)
-    parser.add_argument('--max-images', type=int, default=None)
-    parser.add_argument('-o', type=os.path.abspath, required=True, help='Output .txt or .pkl file for path indices')
-    parser.add_argument('--out-z', type=os.path.abspath, required=True, help='Output .txt or .pkl file for path z-values')
+import matplotlib.pyplot as plt
+import numpy as np
+from adjustText import adjust_text
+from matplotlib.collections import LineCollection
+from scipy.spatial import KDTree
+
+from tomodrgn import utils
+
+log = utils.log
+
+
+def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.ArgumentParser:
+    if parser is None:
+        # this script is called directly; need to create a parser
+        parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    else:
+        # this script is called from tomodrgn.__main__ entry point, in which case a parser is already created
+        pass
+
+    parser.add_argument('z', type=os.path.abspath,
+                        help='Input latent embeddings z.pkl file')
+
+    group = parser.add_argument_group('Core arguments')
+    group.add_argument('--anchors', type=int, nargs='+', required=True,
+                       help='Indices of anchor points along desired trajectory. At least 2 points must be specified.')
+    group.add_argument('-o', '--outdir', type=os.path.abspath, required=True,
+                       help='Directory in which to store output .txt/.pkl files of path indices and latent embeddings')
+    group.add_argument('--max-neighbors', type=int, default=10,
+                       help='The maximum number of neighbors to initially calculate distances for from each latent embedding')
+    group.add_argument('--avg-neighbors', type=float, default=None,
+                       help='Used to set a cutoff distance defining connected neighbors such that each embedding will have this many connected neighbors on average')
+    group.add_argument('--plot-format', type=str, choices=['png', 'svgz'], default='png', help='File format with which to save plots')
+
     return parser
 
 
-class Graph(object):
+class LatentGraph:
+    """
+    Class for describing connected latent embeddings as a graph based on proximity in latent space.
+    """
 
-    def __init__(self, edges):  # edges is a list of tuples (src, dest, distance)
-        # everything after here is derived from (weights, actions, probs)
-        # for computational efficiency
+    def __init__(self,
+                 edges: list[tuple[int, int, float]]):
+        """
+        Initialize a LatentGraph object from a list of connected edges.
 
-        # FIXME: nodes and goal nodes should be the same
+        :param edges: list of tuples (src, dest, distance)
+        """
         self.nodes = set([x[0] for x in edges] + [x[1] for x in edges])
         self.edges = {x: set() for x in self.nodes}
         self.edge_length = {}
         for s, d, L in edges:
-            assert type(s) == int and type(d) == int and type(L) == float
+            assert type(s) is int and type(d) is int and type(L) is float
             self.edges[s].add(d)
             self.edge_length[(s, d)] = L
 
-    def find_path(self, src, dest):
+    @classmethod
+    def construct_from_array(cls,
+                             data: np.ndarray,
+                             max_neighbors: int,
+                             avg_neighbors: int, ):
+        """
+        Constructor method to create a graph of connected latent embeddings from an array of all latent embeddings.
+
+        :param data: array of latent embeddings, shape (nptcls, zdim)
+        :param max_neighbors: maximum number of neighbors to initially calculate distances for from each latent embedding
+        :param avg_neighbors: used to set a cutoff distance defining connected neighbors such that each embedding will have this many connected neighbors on average
+        :return: LatentGraph instance
+        """
+        nptcls, zdim = data.shape
+
+        # construct the distance tree
+        tree = KDTree(data)
+        # query the tree for the max_neighbors nearest points (+1 because query will return self as the closest point in this context)
+        dists, neighbors = tree.query(x=data, k=max_neighbors + 1)
+        # exclude self from the neighbor results
+        dists = dists[:, 1:]
+        neighbors = neighbors[:, 1:]
+        # calculate the maximum allowable distance to enforce an average of args.avg_neighbors neighbors per particle
+        if avg_neighbors:
+            total_neighbors = int(nptcls * avg_neighbors)
+            max_dist = np.sort(dists.flatten())[total_neighbors - 1]
+        else:
+            max_dist = None
+
+        log(f'Constructing graph of neighbor particles within distance {max_dist} (to enforce average of {avg_neighbors} neighbors)')
+        edges = []
+        for i in range(nptcls):
+            for j in range(max_neighbors):
+                if max_dist is None or dists[i, j] < max_dist:
+                    # edges are defined as (idx_particle, idx_neighbor, dist_to_neighbor)
+                    edges.append((int(i), int(neighbors[i, j]), float(dists[i, j])))
+
+        return LatentGraph(edges)
+
+    def find_path_dijkstra(self,
+                           src: int,
+                           dest: int) -> tuple[list[int], float] | tuple[None, None]:
+        """
+        Standard implementation of Dijkstra's algorithm to find the shortest path through a weighted graph.
+        Earliest reference I can find for this code is: https://github.com/theannielin/drkung143/blob/master/q9/dijkstra.py
+
+        :param src: index of starting node
+        :param dest: index of ending node
+        :return: list of node indices connecting src and dest nodes and total distance of that path, or (None, None) if no path can be found
+        """
         visited = set()
         unvisited = []
         distances = {}
@@ -73,103 +148,151 @@ class Graph(object):
         # couldn't find a path
         return None, None
 
+    def plot_graph(self,
+                   data: np.ndarray) -> tuple[plt.Figure, plt.Axes]:
+        """
+        Plot a 2-D graph of the data underlying the LatentGraph object.
+        Scatter plot all points; draw line segments between connected graph components.
+
+        :param data: data array from which this graph object was created, shape (nptcls, zdim)
+        :return: the created graph figure and its contained axis
+        """
+        fig, ax = plt.subplots(figsize=(8, 8))
+
+        # plot the latent embeddings as scatter points
+        ax.scatter(data[:, 0], data[:, 1], s=1, rasterized=True)
+
+        # plot the graph as lines connecting latent embeddings
+        for src, dest in self.edge_length.keys():
+            ax.plot(data[[src, dest], 0], data[[src, dest], 1], linewidth=0.5, alpha=0.1, color='black', rasterized=True)
+
+        edges_to_plot = [data[[src, dest], :2] for src, dest in self.edge_length.keys()]
+        line_collection = LineCollection(edges_to_plot, linewidths=0.5, alpha=0.1, color='black', rasterized=True)
+        ax.add_collection(line_collection)
+
+        ax.set_xlabel('z1')
+        ax.set_ylabel('z2')
+        ax.set_aspect('equal')
+        plt.tight_layout()
+        return fig, ax
+
+    def plot_path(self,
+                  data: np.ndarray,
+                  anchor_inds: list[int],
+                  path_inds: list[int]) -> tuple[plt.Figure, plt.Axes]:
+        """
+        Plot a 2-D graph of the data underlying the LatentGraph object, superimposed by a series of connected paths.
+        The connected paths are drawn as red line segments.
+        Data (particle) indices along path are annotated, with anchor points defining path search input marked in bold.
+
+        :param data: data array from which this graph object was created, shape (nptcls, zdim)
+        :param anchor_inds: list of node indices used as anchors to define start and end of each searched path segment
+        :param path_inds: list of node indices defining each minimum-distance path, in order of input anchor indices
+        :return: the created graph figure and its contained axis
+        """
+
+        # create a base plot of the graph
+        fig, ax = self.plot_graph(data=data)
+
+        # plot the path
+        ax.plot(data[path_inds, 0], data[path_inds, 1], linewidth=1, alpha=1, color='red', marker='.', linestyle=':')
+
+        # plot the anchor points and points along the path
+        annotations = []
+        for path_ind in path_inds:
+            if path_ind in anchor_inds:
+                annotations.append(plt.text(x=float(data[path_ind, 0]),
+                                            y=float(data[path_ind, 1]),
+                                            s=str(path_ind),
+                                            ha='center',
+                                            va='center',
+                                            color='red',
+                                            weight='bold'))
+            else:
+                annotations.append(plt.text(x=float(data[path_ind, 0]),
+                                            y=float(data[path_ind, 1]),
+                                            s=str(path_ind),
+                                            ha='center',
+                                            va='center',
+                                            color='red'))
+        adjust_text(texts=annotations,
+                    expand=(1.5, 1.5),
+                    arrowprops=dict(arrowstyle='->', color='black'))
+
+        return fig, ax
+
 
 def main(args):
-    data_np = pickle.load(open(args.data, 'rb'))
-    data = torch.from_numpy(data_np)
+    # log args, create output directory
+    log(args)
+    if not os.path.exists(args.outdir):
+        os.makedirs(args.outdir)
 
-    if args.max_images is not None:
-        data = data[:args.max_images]
+    # load the latent embeddings array
+    data = utils.load_pkl(args.z)
 
-    ## set the device
-    device = utils.get_default_device()
-    torch.set_grad_enabled(False)
-    data = data.to(device)
-
-    N, D = data.shape
+    # sanity check inputs
+    nptcls, zdim = data.shape
     for i in args.anchors:
-        assert i < N
-    assert len(args.anchors) >= 2
+        assert i < nptcls, f'A particle index in --anchors exceeds the number of particles found in {args.z}: {nptcls}'
+    assert len(args.anchors) >= 2, 'At least 2 anchors (beginning and ending particles) required to initialize path search'
 
-    n2 = (data*data).sum(-1, keepdim=True)
-    B = args.batch_size
-    ndist = torch.empty(data.shape[0], args.max_neighbors, device=device)
-    neighbors = torch.empty(data.shape[0], args.max_neighbors, dtype=torch.long, device=device)
-    for i in range(0, data.shape[0], B):
-        # (a-b)^2 = a^2 + b^2 - 2ab
-        print(f"Working on images {i}-{i+B}")
-        batch_dist = n2[i:i+B] + n2.t() - 2 * torch.mm(data[i:i+B], data.t())
-        ndist[i:i+B], neighbors[i:i+B] = batch_dist.topk(args.max_neighbors, dim=-1, largest=False)
+    # construct the graph of connected neighbors in latent space (connected meaning Euclidean nearest within a threshold)
+    graph = LatentGraph.construct_from_array(data=data,
+                                             max_neighbors=args.max_neighbors,
+                                             avg_neighbors=args.avg_neighbors)
 
-    # assert ndist.min() >= -1e-3, ndist.min()
-
-    # convert d^2 to d
-    ndist = ndist.clamp(min=0).pow(0.5)
-    if args.avg_neighbors:
-        total_neighbors = int(N * args.avg_neighbors)
-        max_dist = ndist.view(-1).topk(total_neighbors, largest=False)[0][-1]
-    else:
-        max_dist = None
-    print(f"Max dist between neighbors: {max_dist}  (to enforce average of {args.avg_neighbors} neighbors)")
-
-    max_dist = max_dist.to("cpu")
-    neighbors = neighbors.to("cpu")
-    ndist = ndist.to("cpu")
-    edges = []
-    for i in range(neighbors.shape[0]):
-        for j in range(neighbors.shape[1]):
-            if max_dist is None or ndist[i, j] < max_dist:
-                edges.append((int(i), int(neighbors[i, j]), float(ndist[i, j])))
-
-    graph = Graph(edges)
+    # find the shortest path connecting all anchor points
     full_path = []
-    for i in range(len(args.anchors)-1):
-        src, dest = args.anchors[i], args.anchors[i+1]
-        path, total_distance = graph.find_path(src, dest)
-        dd = data[path].cpu().numpy()
-        dists = ((dd[1:,:] - dd[0:-1,:])**2).sum(axis=1)**.5
-        
+    for src, dest in pairwise(args.anchors):
+        # find the shortest path connecting each sequential pair of anchors
+        log(f'Searching for shortest path between anchor points {src} and {dest}')
+        path, path_distance = graph.find_path_dijkstra(src, dest)
+        dd = data[path]
+        dists = ((dd[1:, :] - dd[0:-1, :]) ** 2).sum(axis=1) ** .5
+
+        # report details about the found path
+        if path is not None:
+            log(f'Found shortest path: {" ".join(str(ind) for ind in path)}')
+            log(f"Total path distance: {path_distance}")
+            log(f'Distances between each neighbor along path: {" ".join(str(dist) for dist in dists)}')
+            log(f'Direct distance between source and destination anchor points: {((dd[0] - dd[-1]) ** 2).sum() ** .5}')
+        else:
+            log("Could not find path!")
+
+        # extend the overall path between all anchor points
         if path is not None:
             if full_path and full_path[-1] == path[0]:
+                # avoid repeating the same node twice
                 full_path.extend(path[1:])
             else:
                 full_path.extend(path)
 
-        print()
-        if path is not None:
-            print("Path:")
-            for id in path:
-                print(id)
-            print()
-            print(f"Total distance: {total_distance}")
-            print()
-            print('Neighbor distance:')
-            for d in dists:
-                print(d)
-            print()
-            print('Euclidean distance: {}'.format(((dd[0]-dd[-1])**2).sum()**.5))
-        else:
-            print("Could not find path!")
-    
-    if not os.path.exists(os.path.dirname(args.o)):
-        os.makedirs(os.path.dirname(args.o))
-    print(args.o)
-    if args.o.endswith('.txt'):
-        np.savetxt(args.o, full_path, fmt='%d')
-    elif args.o.endswith('.pkl'):
-        utils.save_pkl(full_path, args.o)
-    else:
-        sys.exit(f'Output format {args.o} not recognized')
-    print(args.out_z)
-    if args.out_z.endswith('.txt'):
-        np.savetxt(args.out_z, data_np[full_path])
-    elif args.out_z.endswith('.pkl'):
-        utils.save_pkl(data_np[full_path], args.out_z)
-    else:
-        sys.exit(f'Output format {args.out_z} not recognized')
+    # save outputs
+    np.savetxt(fname=os.path.join(args.outdir, 'path_particle_indices.txt'), X=full_path)
+    utils.save_pkl(data=full_path, out_pkl=os.path.join(args.outdir, 'path_particle_indices.pkl'), )
+    utils.save_pkl(data=data[full_path], out_pkl=os.path.join(args.outdir, 'path_particle_embeddings.pkl'), )
+
+    # make some plots
+    log('Plotting graph and path')
+    _ = graph.plot_graph(data=data)
+    plt.savefig(os.path.join(args.outdir, f'latent_graph.{args.plot_format}'), dpi=300)
+    plt.close()
+    _ = graph.plot_path(data=data, anchor_inds=args.anchors, path_inds=full_path)
+    plt.savefig(os.path.join(args.outdir, f'latent_graph_path.{args.plot_format}'), dpi=300)
+    plt.close()
+
+    potential_umap_path = f'{os.path.dirname(args.z)}/analyze.{os.path.basename(args.z).split(".")[1]}/umap.pkl'
+    if os.path.isfile(potential_umap_path):
+        log('Found umap.pkl, creating additional plots with UMAP embeddings of latent graph for visualization')
+        umap = utils.load_pkl(potential_umap_path)
+        _ = graph.plot_graph(data=umap)
+        plt.savefig(os.path.join(args.outdir, f'umap_graph.{args.plot_format}'), dpi=300)
+        plt.close()
+        _ = graph.plot_path(data=umap, anchor_inds=args.anchors, path_inds=full_path)
+        plt.savefig(os.path.join(args.outdir, f'umap_graph_path.{args.plot_format}'), dpi=300)
+        plt.close()
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__)
-    add_args(parser)
-    main(parser.parse_args())
+    main(add_args().parse_args())

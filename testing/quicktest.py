@@ -1,32 +1,17 @@
-'''
+"""
 Quickly test train_vae and analyze with default parameters (most common commands)
-'''
+"""
 
-import os
-import shutil
-from testing_module import CommandTester
-
-def main():
-
-    # remove pre-existing output and create new output folder
-    workdir = 'output'
-    if os.path.exists(workdir):
-        shutil.rmtree(workdir)
-    os.mkdir(workdir)
-
-    # instantiate the tester
-    tester = CommandTester(workdir)
-
-    # add the tests
-    tester.commands.append('tomodrgn train_vae data/10076_both_32_sim.star -o output/01_vae_both_sim --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 16 --dec-layers 3 -n 5')
-    tester.commands.append('tomodrgn analyze output/01_vae_both_sim 4 --Apix 13.1 --ksample 2')
-
-    # run the tests
-    tester.run()
-
-    # report the results
-    tester.report_run_summary()
+from testing_module import run_assert_no_error
 
 
-if __name__ == '__main__':
-    main()
+def test_version(script_runner, output_dir):
+    run_assert_no_error(script_runner, command='tomodrgn --version')
+
+
+def test_train_vae(script_runner, output_dir):
+    run_assert_no_error(script_runner, command=f'tomodrgn train_vae data/10076_both_32_sim.star --source-software cryosrpnt -o {output_dir}/01_vae_both_sim --zdim 8 --uninvert-data --seed 42 --log-interval 100 --enc-dim-A 64 --enc-layers-A 2 --out-dim-A 64 --enc-dim-B 32 --enc-layers-B 4 --dec-dim 16 --dec-layers 3 -n 5')
+
+
+def test_analyze(script_runner, output_dir):
+    run_assert_no_error(script_runner, command=f'tomodrgn analyze {output_dir}/01_vae_both_sim --ksample 20')
