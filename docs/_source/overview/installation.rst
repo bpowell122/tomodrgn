@@ -36,7 +36,7 @@ Once you have installed conda, run the commands below to create a tomoDRGN envir
 .. code-block:: bash
 
     # Create conda environment
-    conda create --name tomodrgn "python>=3.10"
+    conda create --name tomodrgn "python>=3.10, <3.13"
     conda activate tomodrgn
 
     # Clone source code and install tomoDRGN + dependencies
