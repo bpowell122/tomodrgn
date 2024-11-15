@@ -443,6 +443,10 @@ def analyze_z_multidimensional(z: np.ndarray,
         # randomly select N particles in the class and sort their indices
         ptcl_inds_random_subset = np.sort(np.random.choice(ptcl_inds_this_label, min(len(ptcl_inds_this_label), 6), replace=False))
 
+        # skip classes with no particles
+        if len(ptcl_inds_random_subset) == 0:
+            continue
+
         s.filter(ind_ptcls=ptcl_inds_random_subset,
                  sort_ptcl_imgs='dose_ascending',
                  use_first_ntilts=1)

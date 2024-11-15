@@ -124,6 +124,19 @@ def plot_latent_pca(workdir: str,
 
     # plot pc1 vs pc2 for each epoch as a hexbin
     epoch_pcs = np.array(epoch_pcs)
+
+    # set axis limits with padding if all values along axis are the same value
+    xmin = np.min(epoch_pcs[:, :, 0])
+    xmax = np.max(epoch_pcs[:, :, 0])
+    ymin = np.min(epoch_pcs[:, :, 1])
+    ymax = np.max(epoch_pcs[:, :, 1])
+    if xmin == xmax:
+        xmin -= 0.1
+        xmax += 0.1
+    if ymin == ymax:
+        ymin -= 0.1
+        ymax += 0.1
+
     n_cols = int(np.ceil(len(epochs) ** 0.5))
     n_rows = int(np.ceil(len(epochs) / n_cols))
     fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex='all', sharey='all')
@@ -136,10 +149,7 @@ def plot_latent_pca(workdir: str,
                                pc[:, 1],
                                bins='log',
                                mincnt=1,
-                               extent=(np.min(epoch_pcs[:, :, 0]),
-                                       np.max(epoch_pcs[:, :, 0]),
-                                       np.min(epoch_pcs[:, :, 1]),
-                                       np.max(epoch_pcs[:, :, 1])))
+                               extent=(xmin, xmax, ymin, ymax))
             ax.set_title(f'epoch {epochs[i]}')
             if i % n_cols == 0:
                 # set y axis label only for the left column of subplots
@@ -209,6 +219,19 @@ def plot_latent_umap(workdir: str,
 
     # plot umap1 vs umap2 for each epoch as a hexbin
     epoch_umaps = np.array(epoch_umaps)
+
+    # set axis limits with padding if all values along axis are the same value
+    xmin = np.min(epoch_umaps[:, :, 0])
+    xmax = np.max(epoch_umaps[:, :, 0])
+    ymin = np.min(epoch_umaps[:, :, 1])
+    ymax = np.max(epoch_umaps[:, :, 1])
+    if xmin == xmax:
+        xmin -= 0.1
+        xmax += 0.1
+    if ymin == ymax:
+        ymin -= 0.1
+        ymax += 0.1
+
     n_cols = int(np.ceil(len(epochs) ** 0.5))
     n_rows = int(np.ceil(len(epochs) / n_cols))
     fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(3 * n_cols, 3 * n_rows), sharex='all', sharey='all')
@@ -221,10 +244,7 @@ def plot_latent_umap(workdir: str,
                                umap_emb[:, 1],
                                bins='log',
                                mincnt=1,
-                               extent=(np.min(epoch_umaps[:, :, 0]),
-                                       np.max(epoch_umaps[:, :, 0]),
-                                       np.min(epoch_umaps[:, :, 1]),
-                                       np.max(epoch_umaps[:, :, 1])))
+                               extent=(xmin, xmax, ymin, ymax))
             ax.set_title(f'epoch {epochs[i]}')
             if i % n_cols == 0:
                 # set y axis label only for the left column of subplots
@@ -478,7 +498,7 @@ def sketch_via_umap_local_maxima(outdir: str,
     labels = ascii_uppercase[:len(values)]
     for (i, ax) in enumerate(axes.ravel()):
         if to_plot[i] == 'umap':
-            ax.hexbin(umap_emb[:, 0], umap_emb[:, 1], mincnt=1)
+            ax.hexbin(umap_emb[:, 0], umap_emb[:, 1], mincnt=1, vmin=0)
             ax.vlines(x=xedges, ymin=umap_emb.min(axis=0)[1], ymax=umap_emb.max(axis=0)[1], colors='red', linewidth=0.35)
             ax.hlines(y=yedges, xmin=umap_emb.min(axis=0)[0], xmax=umap_emb.max(axis=0)[0], colors='red', linewidth=0.35)
             ax.set_title(f'epoch {sketch_epoch} UMAP')
@@ -494,7 +514,7 @@ def sketch_via_umap_local_maxima(outdir: str,
             ax.imshow(np.rot90(peaks_img_top))
             ax.set_title(f'final {len(labels)} local maxima')
         elif to_plot[i] == 'sketched_umap':
-            ax.hexbin(umap_emb[:, 0], umap_emb[:, 1], mincnt=1)
+            ax.hexbin(umap_emb[:, 0], umap_emb[:, 1], mincnt=1, vmin=0)
             ax.scatter(*coords.T, c='r')
             ax.set_title(f'sketched epoch {sketch_epoch} UMAP')
             ax.set_xlabel('UMAP1')
@@ -566,7 +586,23 @@ def follow_candidate_particles(workdir: str,
                         y=umap_maxima_median_ondata[k, 1] + 0.3,
                         s=labels[k],
                         fontdict=dict(color='r', size=10))
-            toplot = ax.hexbin(*umap.T, bins='log', mincnt=1)
+
+            # set axis limits with padding if all values along axis are the same value
+            xmin = np.min(umap[:, 0])
+            xmax = np.max(umap[:, 0])
+            ymin = np.min(umap[:, 1])
+            ymax = np.max(umap[:, 1])
+            if xmin == xmax:
+                xmin -= 0.1
+                xmax += 0.1
+            if ymin == ymax:
+                ymin -= 0.1
+                ymax += 0.1
+            toplot = ax.hexbin(umap[:, 0],
+                               umap[:, 1],
+                               bins='log',
+                               mincnt=1,
+                               extent=(xmin, xmax, ymin, ymax))
             ax.scatter(umap_maxima_median_ondata[:, 0], umap_maxima_median_ondata[:, 1], s=10, linewidth=0, c='r',
                        alpha=1)
             ax.set_title(f'epoch {epochs[i]}')
