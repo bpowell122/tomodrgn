@@ -35,9 +35,12 @@ def prefix_paths(mrcs: list[str],
     filename_patterns = [
         mrcs,
         [f'{datadir}/{os.path.basename(x)}' for x in mrcs],
-        [f'{datadir}/{x}' for x in mrcs],
-        [f'{datadir}/{x.split("/")[-2]}/{x.split("/")[-1]}' for x in mrcs]
+        [f'{datadir}/{x}' for x in mrcs]
     ]
+    if all(['/' in x for x in mrcs]):
+        # in some cases (e.g. WarpTools), the paths defined in `mrcs` need to retain the immediate parent directory
+        # this is because in this format, extracted particles are arranged in subdirectories by source tomogram
+        filename_patterns.append([f'{datadir}/{x.split("/")[-2]}/{x.split("/")[-1]}' for x in mrcs])
 
     for filename_pattern in filename_patterns:
         # loop through all defined filename patterns
