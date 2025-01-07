@@ -472,7 +472,7 @@ def save_checkpoint(*,
     # save model weights
     torch.save({
         'epoch': epoch,
-        'model_state_dict': model.state_dict(),
+        'model_state_dict': model.unwrapped_state_dict() if isinstance(model, DataParallelPassthrough) else model.state_dict(),
         'optimizer_state_dict': optim.state_dict(),
         'scaler': scaler.state_dict() if scaler is not None else None
     }, out_weights)
