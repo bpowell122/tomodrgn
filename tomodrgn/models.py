@@ -2,6 +2,7 @@
 Classes for creating, loading, training, and evaluating pytorch models.
 """
 
+from collections import OrderedDict
 import itertools
 import os
 from multiprocessing import Pool
@@ -817,6 +818,13 @@ class DataParallelPassthrough(torch.nn.DataParallel):
             return super().__getattr__(name)
         except AttributeError:
             return getattr(self.module, name)
+
+    def unwrapped_state_dict(self):
+        """
+        Returns a copy of the state_dict of the wrapped model with dict keys renamed as if the model was never wrapped with DataParallelPassthrough.
+        This is particularly useful when saving the wrapped model's state_dict for a model checkpoint, as loading a new model from the saved state_dict without this key renaming results in RuntimeError due to incorrect key names.
+        """
+        return OrderedDict((k.replace('module.', ''), v) for k, v in self.state_dict().items())
 
 
 class VolumeGenerator:

@@ -139,7 +139,7 @@ def save_checkpoint(model: FTPositionalDecoder | DataParallelPassthrough,
     torch.save({
         'norm': norm,
         'epoch': epoch,
-        'model_state_dict': model.state_dict(),
+        'model_state_dict': model.unwrapped_state_dict() if isinstance(model, DataParallelPassthrough) else model.state_dict(),
         'optimizer_state_dict': optim.state_dict(),
     }, out_weights)
 
