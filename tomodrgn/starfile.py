@@ -100,6 +100,47 @@ class TiltSeriesStarfileStarHeaders(Enum):
             '_rlnTiltIndex',
         ]
     }
+    tomodrgn_preprocessed = {
+        'data_optics': [
+            '_rlnOpticsGroupName',
+            '_rlnOpticsGroup',
+            '_rlnMicrographOriginalPixelSize',
+            '_rlnVoltage',
+            '_rlnSphericalAberration',
+            '_rlnAmplitudeContrast',
+            '_rlnImagePixelSize',
+            '_rlnImageSize',
+            '_rlnImageDimensionality',
+        ],
+        'data_particles': [
+            '_rlnImageName',
+            '_rlnMicrographName',
+            '_rlnCoordinateX',
+            '_rlnCoordinateY',
+            '_rlnAnglePsi',
+            '_rlnAngleTilt',
+            '_rlnAngleRot',
+            '_rlnOriginXAngst',
+            '_rlnOriginYAngst',
+            '_rlnDefocusU',
+            '_rlnDefocusV',
+            '_rlnDefocusAngle',
+            '_rlnPhaseShift',
+            '_rlnOpticsGroup',
+            '_rlnGroupNumber',
+            '_rlnCtfBfactor',
+            '_rlnCtfScalefactor',
+            '_rlnLogLikeliContribution',
+            '_rlnRandomSubset',
+            '_rlnTiltIndex',
+            '_tomodrgnTotalDose',
+            '_tomodrgnPseudoStageTilt',
+            '_rlnOriginX',
+            '_rlnOriginY',
+            '_UnfilteredParticleInds',
+            '_tomodrgnRandomSubset',
+        ]
+    }
     cistem = {
         'data_': [
             '_cisTEMPositionInStack',
@@ -219,7 +260,7 @@ class TomoParticlesStarfileStarHeaders(Enum):
 
 # to avoid potential mistakes while repeating names of supported star file source software, dynamically define the Literal of allowable source software
 # note that this does not work for static typing, but does work correctly at runtime (e.g. for building documentation)
-TILTSERIESSTARFILE_STAR_SOURCES = Literal['auto', 'warp', 'cryosrpnt', 'nextpyp', 'cistem']
+TILTSERIESSTARFILE_STAR_SOURCES = Literal['auto', 'warp', 'cryosrpnt', 'nextpyp', 'tomodrgn_preprocessed', 'cistem']
 
 TOMOPARTICLESSTARFILE_STAR_SOURCES = Literal['auto', 'warptools', 'relion']
 
@@ -754,6 +795,8 @@ class TiltSeriesStarfile(GenericStarfile):
             self._cryosrpnt_metadata_mapping()
         elif source_software == TiltSeriesStarfileStarHeaders.nextpyp.name:
             self._nextpyp_metadata_mapping()
+        elif source_software == TiltSeriesStarfileStarHeaders.tomodrgn_preprocessed.name:
+            self._tomodrgn_preprocessed_metadata_mapping()
         elif source_software == TiltSeriesStarfileStarHeaders.cistem.name:
             self._cistem_metadata_mapping()
         else:
@@ -875,6 +918,52 @@ class TiltSeriesStarfile(GenericStarfile):
         self.image_dose_weighted = False
         self.image_tilt_weighted = False
 
+    def _tomodrgn_preprocessed_metadata_mapping(self):
+        utils.log(f'Using STAR source software: {TiltSeriesStarfileStarHeaders.tomodrgn_preprocessed.name}')
+
+        # easy reference to particles data block
+        self.block_optics = 'data_optics'
+        self.block_particles = 'data_particles'
+
+        # set header aliases used by tomodrgn
+        self.header_pose_phi = '_rlnAngleRot'
+        self.header_pose_theta = '_rlnAngleTilt'
+        self.header_pose_psi = '_rlnAnglePsi'
+
+        self.header_pose_tx = '_rlnOriginX'  # already exists in filtered file
+        self.header_pose_tx_angst = '_rlnOriginXAngst'
+        self.header_pose_ty = '_rlnOriginY'  # already exists in filtered file
+        self.header_pose_ty_angst = '_rlnOriginYAngst'
+
+        self.header_ctf_angpix = '_rlnImagePixelSize'
+        self.header_ctf_defocus_u = '_rlnDefocusU'
+        self.header_ctf_defocus_v = '_rlnDefocusV'
+        self.header_ctf_defocus_ang = '_rlnDefocusAngle'
+        self.header_ctf_voltage = '_rlnVoltage'
+        self.header_ctf_cs = '_rlnSphericalAberration'
+        self.header_ctf_w = '_rlnAmplitudeContrast'
+        self.header_ctf_ps = '_rlnPhaseShift'
+
+        self.header_ptcl_uid = '_rlnGroupNumber'
+        self.header_ptcl_dose = '_tomodrgnTotalDose'  # already exists in filtered file
+        self.header_ptcl_tilt = '_tomodrgnPseudoStageTilt'  # already exists in filtered file
+        self.header_ptcl_image = '_rlnImageName'
+        self.header_ptcl_micrograph = '_rlnMicrographName'
+
+        # merge optics groups block with particle data block
+        self.df = self.df.merge(self.blocks[self.block_optics], on='_rlnOpticsGroup', how='inner', validate='many_to_one', suffixes=('', '_DROP')).filter(regex='^(?!.*_DROP)')
+
+        # Additional headers already exist in filtered file, no need to calculate them
+        # self.df[self.header_ptcl_dose] = self.df['_rlnCtfBfactor'] / -4  # already exists
+        # self.df[self.header_ptcl_tilt] = np.arccos(self.df['_rlnCtfScalefactor'])  # already exists
+        # self.df[self.header_pose_tx] = self.df[self.header_pose_tx_angst] / self.df[self.header_ctf_angpix]  # already exists
+        # self.df[self.header_pose_ty] = self.df[self.header_pose_ty_angst] / self.df[self.header_ctf_angpix]  # already exists
+
+        # image processing applied during particle extraction
+        self.image_ctf_premultiplied = False
+        self.image_dose_weighted = False
+        self.image_tilt_weighted = False
+
     def _cistem_metadata_mapping(self):
         utils.log(f'Using STAR source software: {TiltSeriesStarfileStarHeaders.cistem.name}')
         raise NotImplementedError
@@ -897,6 +986,9 @@ class TiltSeriesStarfile(GenericStarfile):
 
             case TiltSeriesStarfileStarHeaders.nextpyp.value:
                 self._nextpyp_metadata_mapping()
+
+            case TiltSeriesStarfileStarHeaders.tomodrgn_preprocessed.value:
+                self._tomodrgn_preprocessed_metadata_mapping()
 
             case TiltSeriesStarfileStarHeaders.cistem.value:
                 self._cistem_metadata_mapping()
