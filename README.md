@@ -13,11 +13,11 @@ TomoDRGN documentation, including installation instructions, tutorials, CLI and 
 
 
 ## Relevant literature
-1. Powell, B.M., Davis, J.H. Learning structural heterogeneity from cryo-electron sub-tomograms with tomoDRGN. bioRxiv; Nature Methods, [doi:10.1038/s41592-024-02210-z](https://www.nature.com/articles/s41592-024-02210-z). (2023)
-2. Powell, B.M., Brant, T.S., Davis, J.H.+, Mosalaganti, S.+. Rapid Structural Analysis of Bacterial Ribosomes In Situ. bioRxiv; Nature Communications Biology, [doi:10.1038/s42003-025-07586-y](https://www.nature.com/articles/s42003-025-07586-y). (2024)
-3. Zhong, E.D., Bepler, T., Berger, B. & Davis, J.H. CryoDRGN: Reconstruction of Heterogeneous cryo-EM Structures Using Neural Networks. bioRxiv; Nature Methods, [doi:10.1038/s41592-020-01049-4](https://doi.org/10.1038/s41592-020-01049-4) (2021)
-4. Kinman, L.F., Powell, B.M., Zhong, E.D. et al. Uncovering structural ensembles from single-particle cryo-EM data using cryoDRGN. bioRxiv; Nat Protoc 18, 319–339 (2023). [https://doi.org/10.1038/s41596-022-00763-x](https://doi.org/10.1038/s41596-022-00763-x)
-5. Sun, J., Kinman, L., Jahagirdar, D., Ortega, J., Davis. J. KsgA facilitates ribosomal small subunit maturation by proofreading a key structural lesion. bioRxiv; Nature STructural and Molecular Biology [doi:10.1038/s41594-023-01078-5](https://www.nature.com/articles/s41594-023-01078-5) (2022)
+1. Powell, B.M., Davis, J.H. Learning structural heterogeneity from cryo-electron sub-tomograms with tomoDRGN. bioRxiv; Nature Methods, [doi:10.1038/s41592-024-02210-z](https://www.nature.com/articles/s41592-024-02210-z) (2023).
+2. Powell, B.M., Brant, T.S., Davis, J.H.+, Mosalaganti, S.+. Rapid Structural Analysis of Bacterial Ribosomes In Situ. bioRxiv; Nature Communications Biology, [doi:10.1038/s42003-025-07586-y](https://www.nature.com/articles/s42003-025-07586-y) (2024).
+3. Zhong, E.D., Bepler, T., Berger, B. & Davis, J.H. CryoDRGN: Reconstruction of Heterogeneous cryo-EM Structures Using Neural Networks. bioRxiv; Nature Methods, [doi:10.1038/s41592-020-01049-4](https://doi.org/10.1038/s41592-020-01049-4) (2021).
+4. Kinman, L.F., Powell, B.M., Zhong, E.D. et al. Uncovering structural ensembles from single-particle cryo-EM data using cryoDRGN. bioRxiv; Nat Protoc 18, 319–339. [https://doi.org/10.1038/s41596-022-00763-x](https://doi.org/10.1038/s41596-022-00763-x) (2023).
+5. Sun, J., Kinman, L., Jahagirdar, D., Ortega, J., Davis. J. KsgA facilitates ribosomal small subunit maturation by proofreading a key structural lesion. bioRxiv; Nature STructural and Molecular Biology [doi:10.1038/s41594-023-01078-5](https://www.nature.com/articles/s41594-023-01078-5) (2022).
 
 
 ## Contact
