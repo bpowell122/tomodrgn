@@ -664,6 +664,12 @@ def main(args):
     print_tiltserieshetonlyvae_ascii(model)
     # model.print_model_info()
 
+    ### JC:
+    import torch._dynamo
+    torch._dynamo.config.verbose = True
+
+    model = torch.compile(model)    # JC: this is the line that compiles the model... Hopefully graph is continuous...
+
     # save configuration
     out_config = f'{args.outdir}/config.pkl'
     config.save_config(args=args,
