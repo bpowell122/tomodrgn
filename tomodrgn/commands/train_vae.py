@@ -14,6 +14,7 @@ import torch
 import torch.nn
 import torch.amp
 import torch.utils.data
+import torch._dynamo    # JC: this is the module that contains the compiler
 
 from tomodrgn import utils, ctf, config, convergence
 from tomodrgn.beta_schedule import get_beta_schedule
@@ -665,7 +666,6 @@ def main(args):
     # model.print_model_info()
 
     ### JC:
-    import torch._dynamo
     torch._dynamo.config.verbose = True
 
     model = torch.compile(model)    # JC: this is the line that compiles the model... Hopefully graph is continuous...
