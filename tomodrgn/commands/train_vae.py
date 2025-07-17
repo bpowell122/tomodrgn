@@ -85,6 +85,7 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: 0, std of dataset)')
     group.add_argument('--no-amp', action='store_true', help='Disable use of mixed-precision training')
     group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs')
+    group.add_argument('--dont-compile', action='store_true', help='Disable torch.compile( ) before training')
 
     group = parser.add_argument_group('Encoder Network')
     group.add_argument('--enc-layers-A', dest='qlayersA', type=int, default=3, help='Number of hidden layers for each tilt')
@@ -674,9 +675,13 @@ def main(args):
                        model=model,
                        out_config=out_config)
 
-    ### JC:
-    torch._dynamo.config.verbose = True
-    model = torch.compile(model)    # JC: this is the line that compiles the model... Hopefully graph is continuous...
+    # compile the model
+    compile_model = not args.dont_compile
+    if compile_model:
+        flog('Compiling the model...')
+        torch._dynamo.config.verbose = True
+        model = torch.compile(model)
+        flog('Done compiling!')
 
     # set beta schedule
     if args.beta is None:
