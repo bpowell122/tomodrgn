@@ -4,7 +4,7 @@ Filter a .star file by selected particle or image indices, optionally per-tomogr
 import argparse
 import copy
 import os
-from typing import Literal
+from typing import Literal, get_args
 import warnings
 
 import numpy as np
@@ -28,6 +28,10 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     group.add_argument('--starfile-type', type=str, default='imageseries', choices=('imageseries', 'volumeseries', 'optimisation_set'),
                        help='Type of star file to filter. Select imageseries if rows correspond to particle images. Select volumeseries if rows correspond to particle volumes. '
                             'Select optimisation_set if passing in an optimisation set star file.')
+    group.add_argument('--source-software', type=str,
+                       choices=get_args(starfile.TOMOPARTICLESSTARFILE_STAR_SOURCES), default='auto',
+                       help='Manually set the source software for optimisation_set or volumeseries star files. '
+                            'Default is auto-detect. Only applies when --starfile-type is optimisation_set or volumeseries.')
     group.add_argument('--action', choices=('keep', 'drop'), default='keep', help='keep or remove particles associated with ind.pkl')
     group.add_argument('--tomogram', type=str, help='optionally select by individual tomogram name (if `all` then writes individual star files per tomogram')
     group.add_argument('--tomo-id-col', type=str, default='_rlnMicrographName', help='Name of column in input starfile with unique values per tomogram')
@@ -164,7 +168,8 @@ def filter_volume_series_starfile(star_path: str,
                                   ind_path: str,
                                   labels_path: str,
                                   labels_sel: list[int],
-                                  ind_action: Literal['keep', 'drop'] = 'keep') -> starfile.GenericStarfile:
+                                  ind_action: Literal['keep', 'drop'] = 'keep',
+                                  source_software: starfile.TOMOPARTICLESSTARFILE_STAR_SOURCES = 'auto') -> starfile.GenericStarfile:
     """
     Filter a volumeseries star file by specified indices in-place.
 
@@ -173,11 +178,12 @@ def filter_volume_series_starfile(star_path: str,
     :param labels_path: path to labels pkl file on disk
     :param labels_sel: space-separated list of integer class labels to be selected (to be kept or dropped in accordance with ``ind_action``)
     :param ind_action: are specified indices being kept in the output star file, or dropped from the output star file
+    :param source_software: manually set the source software for the star file, or 'auto' to detect
     :return: filtered GenericStarfile object
     """
     # load the star file
     if starfile.is_starfile_optimisation_set(star_path):
-        star = starfile.TomoParticlesStarfile(star_path)
+        star = starfile.TomoParticlesStarfile(star_path, source_software=source_software)
         ptcl_block_name = star.block_particles
         df = star.df
     else:
@@ -259,7 +265,8 @@ def main(args):
                                              ind_path=args.ind,
                                              labels_path=args.labels,
                                              labels_sel=args.labels_sel,
-                                             ind_action=args.action, )
+                                             ind_action=args.action,
+                                             source_software=args.source_software)
     else:
         raise ValueError('Unknown starfile type')
 
