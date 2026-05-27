@@ -266,6 +266,22 @@ TOMOPARTICLESSTARFILE_STAR_SOURCES = Literal['auto', 'warptools', 'relion']
 
 KNOWN_STAR_SOURCES = Literal[TILTSERIESSTARFILE_STAR_SOURCES, TOMOPARTICLESSTARFILE_STAR_SOURCES]
 
+# Columns that must be present (as a subset) in each block to recognize a TomoParticlesStarfile.
+# Derived from the canonical enum so there is one source of truth.
+_TOMO_PARTICLES_REQUIRED_GENERAL = set(TomoParticlesStarfileStarHeaders.warptools.value['data_general'])
+_TOMO_PARTICLES_REQUIRED_OPTICS = {'_rlnOpticsGroup', '_rlnVoltage', '_rlnImagePixelSize', '_rlnAmplitudeContrast'}
+_TOMO_PARTICLES_REQUIRED_PARTICLES = {
+    '_rlnTomoName', '_rlnCoordinateX', '_rlnCoordinateY', '_rlnCoordinateZ',
+    '_rlnAngleRot', '_rlnAngleTilt', '_rlnAnglePsi',
+    '_rlnImageName', '_rlnOriginXAngst', '_rlnOriginYAngst', '_rlnOriginZAngst',
+}
+
+# Columns present in relion but not warptools — used to discriminate the two after the subset check passes.
+_RELION_ONLY_PARTICLES = (
+    set(TomoParticlesStarfileStarHeaders.relion.value['data_particles'])
+    - set(TomoParticlesStarfileStarHeaders.warptools.value['data_particles'])
+)
+
 
 class GenericStarfile:
     """
@@ -1548,23 +1564,35 @@ class TomoParticlesStarfile(GenericStarfile):
         :return: None
         """
 
-        headers = {block_name: (self.blocks[block_name].columns.values.tolist() if type(self.blocks[block_name]) is pd.DataFrame else list(self.blocks[block_name].keys()))
-                   for block_name in self.block_names}
-        match headers:
+        actual = {
+            block_name: set(self.blocks[block_name].columns.tolist())
+                        if isinstance(self.blocks[block_name], pd.DataFrame)
+                        else set(self.blocks[block_name].keys())
+            for block_name in self.block_names
+        }
 
-            case TomoParticlesStarfileStarHeaders.warptools.value:
-                utils.log(f'Using STAR source software: {TomoParticlesStarfileStarHeaders.warptools.name}')
-                self._warptools_metadata_mapping()
+        required_blocks = {'data_general', 'data_optics', 'data_particles'}
+        if not required_blocks.issubset(actual.keys()):
+            raise NotImplementedError(
+                f'Auto detection of source software failed: expected blocks {required_blocks}, '
+                f'found {set(actual.keys())}. '
+                f'Consider retrying with manually specified `source_software`.')
 
-            case TomoParticlesStarfileStarHeaders.relion.value:
-                utils.log(f'Using STAR source software: {TomoParticlesStarfileStarHeaders.relion.name}')
-                self._relion_metadata_mapping()
+        if not (_TOMO_PARTICLES_REQUIRED_GENERAL.issubset(actual['data_general'])
+                and _TOMO_PARTICLES_REQUIRED_OPTICS.issubset(actual['data_optics'])
+                and _TOMO_PARTICLES_REQUIRED_PARTICLES.issubset(actual['data_particles'])):
+            raise NotImplementedError(
+                f'Auto detection of source software failed. '
+                f'Consider retrying with manually specified `source_software`. '
+                f'Found STAR file headers: {actual}. '
+                f'TomoDRGN known STAR file headers: {TomoParticlesStarfileStarHeaders}')
 
-            case _:
-                raise NotImplementedError(f'Auto detection of source software failed. '
-                                          f'Consider retrying with manually specified `source_software`.'
-                                          f'Found STAR file headers: {headers}. '
-                                          f'TomoDRGN known STAR file headers: {TomoParticlesStarfileStarHeaders}')
+        if _RELION_ONLY_PARTICLES & actual['data_particles']:
+            utils.log(f'Using STAR source software: {TomoParticlesStarfileStarHeaders.relion.name}')
+            self._relion_metadata_mapping()
+        else:
+            utils.log(f'Using STAR source software: {TomoParticlesStarfileStarHeaders.warptools.name}')
+            self._warptools_metadata_mapping()
 
     @property
     def headers_rot(self) -> list[str]:
