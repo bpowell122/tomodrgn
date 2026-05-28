@@ -49,6 +49,14 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     group = parser.add_argument_group('Particle starfile loading and filtering')
     group.add_argument('--source-software', type=str, choices=get_args(KNOWN_STAR_SOURCES), default='auto',
                        help='Manually set the software used to extract particles. Default is to auto-detect.')
+    group.add_argument('--image-ctf-premultiplied', type=lambda x: x.lower() == 'true',
+                       default=None, metavar='BOOL',
+                       help='Override whether CTF premultiplication was applied during extraction (true/false). '
+                       'Default: auto-detected from star file.')
+    group.add_argument('--image-dose-weighted', type=lambda x: x.lower() == 'true',
+                       default=None, metavar='BOOL',
+                       help='Override whether dose weighting was applied during extraction (true/false). '
+                       'Default: auto-detected from star file.')
     group.add_argument('--ind-ptcls', type=os.path.abspath, metavar='PKL', help='Filter starfile by particles (unique rlnGroupName values) using np array pkl as indices')
     group.add_argument('--ind-imgs', type=os.path.abspath, help='Filter starfile by particle images (star file rows) using np array pkl as indices')
     group.add_argument('--sort-ptcl-imgs', choices=('unsorted', 'dose_ascending', 'random'), default='unsorted', help='Sort the star file images on a per-particle basis by the specified criteria')
@@ -126,6 +134,7 @@ def train_batch(*,
                 batch_trans: torch.Tensor,
                 batch_ctf_params: torch.Tensor,
                 batch_recon_error_weights: torch.Tensor,
+                batch_dose_weights: torch.Tensor,
                 batch_hartley_2d_mask: torch.Tensor,
                 image_ctf_premultiplied: bool,
                 image_dose_weighted: bool,
@@ -148,6 +157,7 @@ def train_batch(*,
     :param batch_recon_error_weights: Batch of 2-D weights to be applied to the per-spatial-frequency error between the reconstructed slice and the input image.
             Calculated from critical dose exposure curves and electron beam vs sample tilt geometry.
             May be `torch.zeros((batchsize))` instead to indicate no weighting should be applied to the reconstructed slice error.
+    :param batch_dose_weights: Dose-only frequency weights per tilt image, shape (batchsize, ntilts, boxsize_ht**2).
     :param batch_hartley_2d_mask: Batch of 2-D masks to be applied per-spatial-frequency.
             Calculated as the intersection of critical dose exposure curves and a Nyquist-limited circular mask in reciprocal space, including masking the DC component.
     :param image_ctf_premultiplied: Whether images were multiplied by their CTF during particle extraction.
@@ -185,6 +195,7 @@ def train_batch(*,
                                                  batch_images_recon=batch_images_recon,
                                                  batch_ctf_weights=batch_ctf_weights,
                                                  batch_recon_error_weights=batch_recon_error_weights,
+                                                 batch_dose_weights=batch_dose_weights,
                                                  batch_hartley_2d_mask=batch_hartley_2d_mask,
                                                  image_ctf_premultiplied=image_ctf_premultiplied,
                                                  image_dose_weighted=image_dose_weighted,
@@ -297,6 +308,7 @@ def loss_function(*,
                   batch_images_recon: torch.Tensor,
                   batch_ctf_weights: torch.Tensor,
                   batch_recon_error_weights: torch.Tensor,
+                  batch_dose_weights: torch.Tensor,
                   batch_hartley_2d_mask: torch.Tensor,
                   image_ctf_premultiplied: bool,
                   image_dose_weighted: bool,
@@ -312,10 +324,12 @@ def loss_function(*,
     :param batch_ctf_weights: CTF evaluated at each spatial frequency corresponding to input images, shape (batchsize, ntilts, boxsize_ht**2) or None if no CTF should be applied
     :param batch_recon_error_weights: Batch of 2-D weights to be applied to the per-spatial-frequency error between each reconstructed slice and input image, shape (batchsize, ntilts, boxsize_ht**2).
             Calculated from critical dose exposure curves and electron beam vs sample tilt geometry.
+    :param batch_dose_weights: Dose-only frequency weights (without tilt weighting), shape (batchsize, ntilts, boxsize_ht**2).
+            Used to normalize dose weighting out of CTF-premultiplied input images before the loss comparison.
     :param batch_hartley_2d_mask: Batch of 2-D masks to be applied per-spatial-frequency.
             Calculated as the intersection of critical dose exposure curves and a Nyquist-limited circular mask in reciprocal space, including masking the DC component.
     :param image_ctf_premultiplied: Whether images were multiplied by their CTF during particle extraction.
-    :param image_dose_weighted: Whether images were multiplied by their exposure-dependent frequency weighting during particle extraction.    :param beta: scaling factor to apply to KLD during loss calculation.
+    :param image_dose_weighted: Whether images were multiplied by their exposure-dependent frequency weighting during particle extraction.
     :param beta: scaling factor to apply to KLD during loss calculation.
     :param beta_control: KL-Controlled VAE gamma. Beta is KL target.
     :return: total summed loss, generative loss between reconstructed slices and input images, and beta-weighted kld loss between latent embeddings and standard normal
@@ -331,6 +345,7 @@ def loss_function(*,
         # reconstruction error
         batch_images = batch_images[batch_hartley_2d_mask].view(-1)
         batch_recon_error_weights = batch_recon_error_weights[batch_hartley_2d_mask].view(-1)
+        batch_dose_weights = batch_dose_weights[batch_hartley_2d_mask].view(-1)
         if batch_ctf_weights is not None:
             batch_ctf_weights = batch_ctf_weights[batch_hartley_2d_mask].view(-1)
             batch_images_recon = batch_images_recon * batch_ctf_weights  # apply CTF to reconstructed image
@@ -341,8 +356,9 @@ def loss_function(*,
                 # reconstructed image needs to correspond to input ctf_premultiplied images, i.e. images that are doubly convolved with the CTF
                 batch_images_recon = batch_images_recon * batch_ctf_weights  # apply CTF to reconstructed image again
         if image_dose_weighted:
-            # images may have been extracted with dose weights pre-applied
-            batch_images_recon = batch_images_recon * batch_recon_error_weights
+            # divide dose weights out of input images so both sides compare on equal footing;
+            # clamp avoids division by zero at masked frequencies (l_dose_mask handles zero-weight regions)
+            batch_images = batch_images / batch_dose_weights.clamp(min=1e-6)
         gen_loss = torch.nanmean(batch_recon_error_weights * ((batch_images_recon - batch_images) ** 2))
 
         # latent loss
@@ -406,7 +422,7 @@ def encoder_inference(*,
                                                          persistent_workers=False,  # creating this dataloading for a single pass, no need for peristent workers
                                                          pin_memory=pin_memory)
 
-            for batch_images, _, batch_trans, batch_ctf_params, _, _, batch_indices in data_generator:
+            for batch_images, _, batch_trans, batch_ctf_params, _, _, batch_indices, _ in data_generator:
                 # transfer to GPU
                 batch_images = batch_images.to(lat.device)
                 batch_ctf_params = batch_ctf_params.to(lat.device)
@@ -517,7 +533,9 @@ def main(args):
 
     # load star file
     ptcls_star = load_sta_starfile(star_path=args.particles,
-                                   source_software=args.source_software)
+                                   source_software=args.source_software,
+                                   image_ctf_premultiplied=args.image_ctf_premultiplied,
+                                   image_dose_weighted=args.image_dose_weighted)
     ptcls_star.plot_particle_uid_ntilt_distribution(outpath=f'{args.outdir}/{os.path.basename(ptcls_star.sourcefile)}_particle_uid_ntilt_distribution.{args.plot_format}')
 
     # filter star file
@@ -747,7 +765,7 @@ def main(args):
         losses_accum = np.zeros(3)
         batch_it = 0
 
-        for batch_images, batch_rots, batch_trans, batch_ctf_params, batch_recon_error_weights, batch_hartley_2d_mask, batch_indices in data_train_generator:
+        for batch_images, batch_rots, batch_trans, batch_ctf_params, batch_recon_error_weights, batch_hartley_2d_mask, batch_indices, batch_dose_weights in data_train_generator:
             # impression counting
             batch_it += len(batch_indices)  # total number of ptcls seen
             global_it = nptcls * epoch + batch_it
@@ -759,6 +777,7 @@ def main(args):
             batch_trans = batch_trans.to(device)
             batch_ctf_params = batch_ctf_params.to(device)
             batch_recon_error_weights = batch_recon_error_weights.to(device)
+            batch_dose_weights = batch_dose_weights.to(device)
             batch_hartley_2d_mask = batch_hartley_2d_mask.to(device)
 
             # training minibatch
@@ -771,6 +790,7 @@ def main(args):
                                        batch_trans=batch_trans,
                                        batch_ctf_params=batch_ctf_params,
                                        batch_recon_error_weights=batch_recon_error_weights,
+                                       batch_dose_weights=batch_dose_weights,
                                        batch_hartley_2d_mask=batch_hartley_2d_mask,
                                        image_ctf_premultiplied=image_ctf_premultiplied,
                                        image_dose_weighted=image_dose_weighted,

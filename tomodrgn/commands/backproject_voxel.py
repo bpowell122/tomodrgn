@@ -78,7 +78,7 @@ def backproject_dataset(data: TiltSeriesMRCData | TomoParticlesMRCData,
     batchsize = 1
     data_generator = torch.utils.data.DataLoader(data, batch_size=batchsize, shuffle=False)
 
-    for batch_images, batch_rot, batch_trans, batch_ctf_params, batch_frequency_weights, _, batch_indices in data_generator:
+    for batch_images, batch_rot, batch_trans, batch_ctf_params, batch_frequency_weights, _, batch_indices, _ in data_generator:
 
         # logging
         n_ptcls_backprojected += len(batch_indices)

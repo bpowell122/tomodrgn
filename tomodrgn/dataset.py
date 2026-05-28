@@ -216,7 +216,7 @@ class TiltSeriesMRCData(data.Dataset):
         decoder_mask = np.asarray([self.spatial_frequency_dose_masks.get(cumulative_dose) for cumulative_dose in self.cumulative_doses[ptcl_img_ind]])
         decoder_weights = np.asarray(dose.combine_dose_tilt_weights(dose_weights, tilt_weights))
 
-        return images, rot, trans, ctf_params, decoder_weights, decoder_mask, idx_ptcl
+        return images, rot, trans, ctf_params, decoder_weights, decoder_mask, idx_ptcl, dose_weights
 
     def get(self, index):
         return self.ptcls[index]
@@ -623,7 +623,7 @@ class TomoParticlesMRCData(data.Dataset):
         decoder_mask = np.asarray([self.spatial_frequency_dose_masks.get(cumulative_dose) for cumulative_dose in self.cumulative_doses[ptcl_img_ind]])
         decoder_weights = np.asarray(dose.combine_dose_tilt_weights(dose_weights, tilt_weights))
 
-        return images, rot, trans, ctf_params, decoder_weights, decoder_mask, idx_ptcl
+        return images, rot, trans, ctf_params, decoder_weights, decoder_mask, idx_ptcl, dose_weights
 
     def get(self, index):
         return self.ptcls[index]
