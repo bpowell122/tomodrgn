@@ -210,7 +210,7 @@ def main(args):
     ptcls_star = load_sta_starfile(star_path=args.particles,
                                    source_software=args.source_software,
                                    image_ctf_premultiplied=args.image_ctf_premultiplied,
-+                                  image_dose_weighted=args.image_dose_weighted)
+                                   image_dose_weighted=args.image_dose_weighted)
     
     ptcls_star.plot_particle_uid_ntilt_distribution(outpath=f'{os.path.dirname(args.output)}/{os.path.basename(ptcls_star.sourcefile)}_particle_uid_ntilt_distribution.{args.plot_format}')
 
