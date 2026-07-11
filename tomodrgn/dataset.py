@@ -706,6 +706,11 @@ class TomoParticlesMRCData(data.Dataset):
         :return: ctf_params as either numpy array with shape (nimgs, 9) or None
         """
         ctf_params = None
+        
+        if self.star.image_ctf_premultiplied:
+                raise ValueError('CTF pre-multiplied particles are not supported. '
+                                                 'Please re-extract particles without CTF pre-multiplication.')
+        
         ctf_params_in_particles_df = all([header_ctf in self.star.df.columns for header_ctf in [self.star.header_ptcl_box_size,
                                                                                                 self.star.header_ctf_angpix,
                                                                                                 self.star.header_ctf_voltage,
