@@ -216,7 +216,7 @@ class TiltSeriesMRCData(data.Dataset):
         decoder_mask = np.asarray([self.spatial_frequency_dose_masks.get(cumulative_dose) for cumulative_dose in self.cumulative_doses[ptcl_img_ind]])
         decoder_weights = np.asarray(dose.combine_dose_tilt_weights(dose_weights, tilt_weights))
 
-        return images, rot, trans, ctf_params, decoder_weights, decoder_mask, idx_ptcl
+        return images, rot, trans, ctf_params, decoder_weights, decoder_mask, idx_ptcl, dose_weights
 
     def get(self, index):
         return self.ptcls[index]
@@ -251,8 +251,7 @@ class TiltSeriesMRCData(data.Dataset):
     def _load_ctf_params(self) -> np.ndarray | None:
         """
         Load CTF parameters from TiltSeriesMRCData-associated TiltSeriesStarfile object to numpy array.
-        If CTF parameters are not present in star file, returns None.
-        CTF pre-multiplied particles are not supported and will raise a ValueError.
+        If CTF parameters are not present in star file, or if images are not CTF corrected, returns None.
         CTF parameters are organized as columns: box_size, pixel_size, defocus_u, defocus_v, defocus_angle, voltage, spherical_aberration, amplitude_contrast, phase_shift.
 
         :return: ctf_params as either numpy array with shape (nimgs, 9) or None
@@ -260,13 +259,13 @@ class TiltSeriesMRCData(data.Dataset):
         ctf_params = None
 
         if self.star.image_ctf_premultiplied:
-            raise ValueError('CTF pre-multiplied particles are not supported. '
-                         'Please re-extract particles without CTF pre-multiplication.')
+            utils.log('Particles exported by detected STAR file source software are pre-CTF corrected. During training, reconstructed Fourier central slices will not have CTF applied.')
+            return ctf_params
 
         if not all(header_ctf in self.star.df.columns for header_ctf in self.star.headers_ctf):
             utils.log('CTF parameters not found in star file. During training, reconstructed Fourier central slices will not have CTF applied.')
             return ctf_params
-        
+
         num_images = len(self.star.df)
         boxsize = self.star.get_image_size(self.datadir)
         ctf_params = np.zeros((num_images, 9), dtype=np.float32)
@@ -624,7 +623,7 @@ class TomoParticlesMRCData(data.Dataset):
         decoder_mask = np.asarray([self.spatial_frequency_dose_masks.get(cumulative_dose) for cumulative_dose in self.cumulative_doses[ptcl_img_ind]])
         decoder_weights = np.asarray(dose.combine_dose_tilt_weights(dose_weights, tilt_weights))
 
-        return images, rot, trans, ctf_params, decoder_weights, decoder_mask, idx_ptcl
+        return images, rot, trans, ctf_params, decoder_weights, decoder_mask, idx_ptcl, dose_weights
 
     def get(self, index):
         return self.ptcls[index]
@@ -701,6 +700,8 @@ class TomoParticlesMRCData(data.Dataset):
         """
         Load CTF parameters from TomoParticlesMRCData-associated TomoParticlesStarfile object to numpy array.
         If CTF parameters are not present in star file, returns None.
+        If images are CTF pre-multiplied, returns CTF parameters as numpy array of shape ``(nptcls * ntilts, 9)``.
+        Note that CTF pre-multiplied images have correct phases but doubly CTF-down-weighted amplitudes and appropriate corrections should be taken when processing images.
         CTF parameters are organized as columns: box_size, pixel_size, defocus_u, defocus_v, defocus_angle, voltage, spherical_aberration, amplitude_contrast, phase_shift.
 
         :return: ctf_params as either numpy array with shape (nimgs, 9) or None

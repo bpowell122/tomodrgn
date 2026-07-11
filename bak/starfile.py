@@ -789,8 +789,10 @@ class TiltSeriesStarfile(GenericStarfile):
         self.header_ptcl_micrograph = None
 
         self.header_image_random_split = '_tomodrgnRandomSubset'
-        self.image_ctf_premultiplied = False  # CTF-premultiplied particles are not accepted.
-        
+        self.image_ctf_premultiplied = None
+        self.image_dose_weighted = None
+        self.image_tilt_weighted = None
+
         self.ind_imgs = None
         self.ind_ptcls = None
         self.sort_ptcl_imgs = 'unsorted'
@@ -846,6 +848,11 @@ class TiltSeriesStarfile(GenericStarfile):
         self.df[self.header_ptcl_dose] = self.df['_rlnCtfBfactor'] / -4
         self.df[self.header_ptcl_tilt] = np.arccos(self.df['_rlnCtfScalefactor'])
 
+        # image processing applied during particle extraction
+        self.image_ctf_premultiplied = False
+        self.image_dose_weighted = False
+        self.image_tilt_weighted = False
+
     def _cryosrpnt_metadata_mapping(self):
         utils.log(f'Using STAR source software: {TiltSeriesStarfileStarHeaders.cryosrpnt.name}')
 
@@ -876,6 +883,10 @@ class TiltSeriesStarfile(GenericStarfile):
         self.df[self.header_ptcl_dose] = self.df['_rlnCtfBfactor'] / -4
         self.df[self.header_ptcl_tilt] = np.arccos(self.df['_rlnCtfScalefactor'])
 
+        # image processing applied during particle extraction
+        self.image_ctf_premultiplied = False
+        self.image_dose_weighted = False
+        self.image_tilt_weighted = False
 
     def _nextpyp_metadata_mapping(self):
         utils.log(f'Using STAR source software: {TiltSeriesStarfileStarHeaders.nextpyp.name}')
@@ -918,6 +929,10 @@ class TiltSeriesStarfile(GenericStarfile):
         self.df[self.header_pose_tx] = self.df[self.header_pose_tx_angst] / self.df[self.header_ctf_angpix]
         self.df[self.header_pose_ty] = self.df[self.header_pose_ty_angst] / self.df[self.header_ctf_angpix]
 
+        # image processing applied during particle extraction
+        self.image_ctf_premultiplied = False
+        self.image_dose_weighted = False
+        self.image_tilt_weighted = False
 
     def _tomodrgn_preprocessed_metadata_mapping(self):
         utils.log(f'Using STAR source software: {TiltSeriesStarfileStarHeaders.tomodrgn_preprocessed.name}')
@@ -959,6 +974,11 @@ class TiltSeriesStarfile(GenericStarfile):
         # self.df[self.header_ptcl_tilt] = np.arccos(self.df['_rlnCtfScalefactor'])  # already exists
         # self.df[self.header_pose_tx] = self.df[self.header_pose_tx_angst] / self.df[self.header_ctf_angpix]  # already exists
         # self.df[self.header_pose_ty] = self.df[self.header_pose_ty_angst] / self.df[self.header_ctf_angpix]  # already exists
+
+        # image processing applied during particle extraction
+        self.image_ctf_premultiplied = False
+        self.image_dose_weighted = False
+        self.image_tilt_weighted = False
 
     def _cistem_metadata_mapping(self):
         utils.log(f'Using STAR source software: {TiltSeriesStarfileStarHeaders.cistem.name}')
@@ -1364,7 +1384,9 @@ class TomoParticlesStarfile(GenericStarfile):
 
     def __init__(self,
                  starfile: str,
-                 source_software: TOMOPARTICLESSTARFILE_STAR_SOURCES = 'auto'):
+                 source_software: TOMOPARTICLESSTARFILE_STAR_SOURCES = 'auto',
+                 image_ctf_premultiplied: bool | None = None,
+                 image_dose_weighted: bool | None = None):
         # the input star file is the optimisation set; store its path and contents for future writing
         assert is_starfile_optimisation_set(starfile)
         self.optimisation_set_star_path = os.path.abspath(starfile)
@@ -1420,8 +1442,10 @@ class TomoParticlesStarfile(GenericStarfile):
 
         self.header_ptcl_random_split = None
         self.header_image_random_split = '_tomodrgnRandomSubset'
-        self.image_ctf_premultiplied = False  # CTF-premultiplied particles are not accepted.
-        
+        self.image_ctf_premultiplied = None
+        self.image_dose_weighted = None
+        self.image_tilt_weighted = None
+
         self.ind_imgs = None
         self.ind_ptcls = None
         self.sort_ptcl_imgs = 'unsorted'
@@ -1430,6 +1454,8 @@ class TomoParticlesStarfile(GenericStarfile):
         self.sourcefile_filtered = None
 
         self.source_software = source_software
+        self._override_image_ctf_premultiplied = image_ctf_premultiplied
+        self._override_image_dose_weighted = image_dose_weighted
 
         # infer the upstream metadata format
         if source_software == 'auto':
@@ -1442,6 +1468,13 @@ class TomoParticlesStarfile(GenericStarfile):
             self._relion_metadata_mapping()
         else:
             raise ValueError(f'Unrecognized source_software {source_software} not one of known starfile sources for TomoParticlesStarfile {TOMOPARTICLESSTARFILE_STAR_SOURCES}')
+
+        if self._override_image_ctf_premultiplied is not None:
+            utils.log(f'Overriding image_ctf_premultiplied: {self.image_ctf_premultiplied} -> {self._override_image_ctf_premultiplied}')
+            self.image_ctf_premultiplied = self._override_image_ctf_premultiplied
+        if self._override_image_dose_weighted is not None:
+            utils.log(f'Overriding image_dose_weighted: {self.image_dose_weighted} -> {self._override_image_dose_weighted}')
+            self.image_dose_weighted = self._override_image_dose_weighted
 
     def _warptools_metadata_mapping(self):
         # in the examples I have seen so far, the warptools metadata and relion metadata are equivalent for the fields required by tomodrgn
@@ -1526,9 +1559,12 @@ class TomoParticlesStarfile(GenericStarfile):
             for projection_matrices_header in projection_matrices_headers:
                 df_tomo[projection_matrices_header] = [np.asarray([proj_element for proj_element in tilt_proj.replace('[', '').replace(']', '').split(',')], dtype=float)
                                                        for tilt_proj in df_tomo[projection_matrices_header]]
-        # read CTF premultiplication status from star file
-        self.image_ctf_premultiplied = int(self.blocks[self.block_optics]['_rlnCtfDataAreCtfPremultiplied'].to_numpy()[0]) == 1
-        
+
+        # image processing applied during particle extraction
+        self.image_ctf_premultiplied = bool(self.blocks[self.block_optics]['_rlnCtfDataAreCtfPremultiplied'].to_numpy()[0])
+        self.image_dose_weighted = True  # warptools applies fixed exposure weights per-frequency for each extracted image
+        self.image_tilt_weighted = False
+
         # note columns added during init, so that we can remove these columns later when writing the star file
         self.tomodrgn_added_headers = [self.header_pose_tx, self.header_pose_ty, self.header_pose_tz, self.header_ctf_ps]
 
@@ -2067,7 +2103,9 @@ def is_starfile_optimisation_set(star_path: str) -> bool:
 
 
 def load_sta_starfile(star_path: str,
-                      source_software: KNOWN_STAR_SOURCES = 'auto') -> TiltSeriesStarfile | TomoParticlesStarfile:
+                      source_software: KNOWN_STAR_SOURCES = 'auto',
+                      image_ctf_premultiplied: bool | None = None,
+                      image_dose_weighted: bool | None = None) -> TiltSeriesStarfile | TomoParticlesStarfile:
     """
     Loads a tomodrgn star file handling class (either ``TiltSeriesStarfile`` or ``TomoParticlesStarfile``) from a star file on disk.
     The input ``star_path`` must point to either a particle imageseries star file (e.g. from Warp v1) or an optimisation set star file (e.g. from RELION v5).
@@ -2076,12 +2114,20 @@ def load_sta_starfile(star_path: str,
     :param star_path: path to star file to load on disk
     :param source_software: type of source software used to create the star file, used to indicate the appropriate star file handling class to instantiate.
             Default of 'auto' tries to infer the appropriate star file handling class based on whether ``star_path`` is an optimisation set star file.
+    :param image_ctf_premultiplied: optional override for whether CTF premultiplication was applied during particle extraction.
+            Only applied when loading a ``TomoParticlesStarfile``. If None (default), the value is read from the star file.
+            If True or False, this overrides the value inferred from the star file.
+    :param image_dose_weighted: optional override for whether dose weighting was applied during particle extraction.
+            Only applied when loading a ``TomoParticlesStarfile``. If None (default), the standard default for the detected software is used.
+            If True or False, this overrides that default.
     :return: The created starfile object (either ``TiltSeriesStarfile`` or ``TomoParticlesStarfile``)
     """
 
     if source_software == 'auto':
         if is_starfile_optimisation_set(star_path):
-            return TomoParticlesStarfile(star_path)
+            return TomoParticlesStarfile(star_path,
+                                         image_ctf_premultiplied=image_ctf_premultiplied,
+                                         image_dose_weighted=image_dose_weighted)
         else:
             return TiltSeriesStarfile(star_path)
     else:
@@ -2089,6 +2135,8 @@ def load_sta_starfile(star_path: str,
             return TiltSeriesStarfile(star_path, source_software=source_software)
         elif source_software in get_args(TOMOPARTICLESSTARFILE_STAR_SOURCES):
             return TomoParticlesStarfile(star_path,
-                                         source_software=source_software)
+                                         source_software=source_software,
+                                         image_ctf_premultiplied=image_ctf_premultiplied,
+                                         image_dose_weighted=image_dose_weighted)
         else:
             raise ValueError(f'Unrecognized source_software {source_software} not one of known starfile sources {KNOWN_STAR_SOURCES}')
