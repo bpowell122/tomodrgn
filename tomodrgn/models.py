@@ -152,7 +152,7 @@ class TiltSeriesHetOnlyVAE(nn.Module):
                 `logvar`: batch of log variance values parameterizing latent embedding as Gaussian, shape (batch, zdim).
         """
         if self.enc_mask is not None:
-            batch = batch[:, :, self.enc_mask]  # B x ntilts x D*D[mask]
+            batch = batch[:, :, self.enc_mask.to(batch.device)]  # B x ntilts x D*D[mask]
         z = self.encoder(batch)  # B x zdim*2
 
         return z[:, :self.zdim], z[:, self.zdim:]  # B x zdim
@@ -169,6 +169,20 @@ class TiltSeriesHetOnlyVAE(nn.Module):
         :return: Decoded voxel intensities at the specified 3-D spatial frequencies.
         """
         return self.decoder(coords, z)
+
+    def forward(self,
+                *,
+                batch_images: torch.Tensor | None = None,
+                coords: torch.Tensor | None = None,
+                z: torch.Tensor | None = None) -> tuple[torch.Tensor, torch.Tensor] | torch.Tensor:
+        """
+        Route VAE encode and decode calls through nn.Module.forward for DataParallel compatibility.
+        """
+        if batch_images is not None:
+            return self.encode(batch_images)
+        if coords is not None:
+            return self.decode(coords=coords, z=z)
+        raise ValueError('Provide either batch_images or coords')
 
     def print_model_info(self) -> None:
         """

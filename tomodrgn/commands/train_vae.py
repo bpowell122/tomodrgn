@@ -76,14 +76,14 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
 
     group = parser.add_argument_group('Training parameters')
     group.add_argument('-n', '--num-epochs', type=int, default=20, help='Number of training epochs')
-    group.add_argument('-b', '--batch-size', type=int, default=1, help='Minibatch size')
+    group.add_argument('-b', '--batch-size', type=int, default=1, help='Global minibatch size. With --multigpu, this batch is split across all visible GPUs.')
     group.add_argument('--wd', type=float, default=0, help='Weight decay in Adam optimizer')
     group.add_argument('--lr', type=float, default=0.0001, help='Learning rate in Adam optimizer for batch size 1. Is automatically further scaled as square-root of batch size.')
     group.add_argument('--beta', default=None, help='Choice of beta schedule or a constant for KLD weight')
     group.add_argument('--beta-control', type=float, help='KL-Controlled VAE gamma. Beta is KL target')
     group.add_argument('--norm', type=float, nargs=2, default=None, help='Data normalization as shift, 1/scale (default: 0, std of dataset)')
     group.add_argument('--no-amp', action='store_true', help='Disable use of mixed-precision training')
-    group.add_argument('--multigpu', action='store_true', help='Parallelize training across all detected GPUs')
+    group.add_argument('--multigpu', action='store_true', help='Parallelize training across all visible GPUs. Select GPUs with CUDA_VISIBLE_DEVICES.')
 
     group = parser.add_argument_group('Encoder Network')
     group.add_argument('--enc-layers-A', dest='qlayersA', type=int, default=3, help='Number of hidden layers for each tilt')
@@ -243,7 +243,7 @@ def encode_batch(*,
     :return: z_logvar: Direct output of encoder module parameterizing the log variance of the latent embedding for each particle, shape (batchsize, zdim)
     :return: z: Resampling of the latent embedding for each particle parameterized as a gaussian with mean `z_mu` and variance `z_logvar`, shape (batchsize, zdim)
     """
-    z_mu, z_logvar = model.encode(batch_images)  # ouput is B x zdim, i.e. one value per ptcl (not per img)
+    z_mu, z_logvar = model(batch_images=batch_images)  # output is B x zdim, i.e. one value per ptcl (not per img)
     z = model.encoder.reparameterize(z_mu, z_logvar)
 
     return z_mu, z_logvar, z
@@ -271,11 +271,13 @@ def decode_batch(*,
     # prepare lattice at rotated fourier components
     input_coords = lat.coords @ batch_rots  # shape batchsize x ntilts x boxsize_ht**2 x 3 from [boxsize_ht**2 x 3] @ [batchsize x ntilts x 3 x 3]
 
-    # filter by dec_mask to skip decoding coordinates that have low contribution to SNR
-    # decode each particle one at a time due to variable # pixels in batch_hartley_2d_mask per particle producing ragged tensor
-    # this will eventually be replaceable with pytorch NestedTensor, but as of torch v2.4 this still does not work at backprop (and does not support many common operations we need prior to that)
-    batch_images_recon = torch.cat([model.decode(coords=coords_ptcl[mask_ptcl].unsqueeze(0), z=z_ptcl.unsqueeze(0)).squeeze(0)
-                                    for coords_ptcl, mask_ptcl, z_ptcl in zip(input_coords, batch_hartley_2d_mask, z, strict=True)], dim=0)
+    # Mask first to preserve existing loss semantics, then pad to expose a real batch dimension to DataParallel.
+    coords_masked = [coords_ptcl[mask_ptcl]
+                     for coords_ptcl, mask_ptcl in zip(input_coords, batch_hartley_2d_mask, strict=True)]
+    lengths = torch.tensor([len(coords) for coords in coords_masked], device=input_coords.device)
+    coords_padded = torch.nn.utils.rnn.pad_sequence(coords_masked, batch_first=True)
+    valid = torch.arange(coords_padded.shape[1], device=input_coords.device)[None, :] < lengths[:, None]
+    batch_images_recon = model(coords=coords_padded, z=z)[valid]
 
     return batch_images_recon
 
@@ -652,10 +654,11 @@ def main(args):
     # set beta schedule
     if args.beta is None:
         args.beta = 1. / args.zdim
-    beta_schedule = get_beta_schedule(args.beta, n_iterations=args.num_epochs * nptcls + args.batch_size)
+    global_batch_size = args.batch_size
+    beta_schedule = get_beta_schedule(args.beta, n_iterations=args.num_epochs * nptcls + global_batch_size)
 
     # instantiate optimizer
-    args.lr = args.lr * (args.batch_size ** 0.5)
+    args.lr = args.lr * (global_batch_size ** 0.5)
     if not args.sequential_tilt_sampling:
         log('Scaling learning rate larger by 2 due to using random tilt sampling')
         args.lr = args.lr * 2
@@ -670,7 +673,7 @@ def main(args):
     flog(f'AMP acceleration enabled (autocast + gradscaler) : {use_amp}')
     scaler = torch.amp.GradScaler(device=device.type, enabled=use_amp)
     if use_amp:
-        if not args.batch_size % 8 == 0:
+        if not global_batch_size % 8 == 0:
             flog('Warning: recommended to have batch size divisible by 8 for AMP training')
         if not (boxsize_ht - 1) % 8 == 0:
             flog('Warning: recommended to have image size divisible by 8 for AMP training')
@@ -701,18 +704,25 @@ def main(args):
     epoch = start_epoch
 
     # parallelize
-    if args.multigpu and torch.cuda.device_count() > 1:
-        log(f'Using {torch.cuda.device_count()} GPUs!')
-        args.batch_size *= torch.cuda.device_count()
-        log(f'Increasing batch size to {args.batch_size}')
+    using_multigpu = args.multigpu and torch.cuda.device_count() > 1
+    n_gpus = torch.cuda.device_count() if using_multigpu else 1
+    if using_multigpu:
+        flog(f'Using {n_gpus} GPUs!')
+        flog(f'Global batch size: {global_batch_size}')
+        flog(f'Global batch will be split across {n_gpus} GPUs')
+        if global_batch_size < n_gpus:
+            flog(f'WARNING: global batch size {global_batch_size} is smaller than visible GPU count {n_gpus}; some GPUs may receive no particles')
         model = DataParallelPassthrough(model)
     elif args.multigpu:
-        log(f'WARNING: --multigpu selected, but {torch.cuda.device_count()} GPUs detected')
+        flog(f'WARNING: --multigpu selected, but {torch.cuda.device_count()} GPUs detected')
+        flog(f'Global batch size: {global_batch_size}')
+    else:
+        flog(f'Global batch size: {global_batch_size}')
 
     # train
     flog('Done all preprocessing; starting training now!')
     data_train_generator = torch.utils.data.DataLoader(data_train,
-                                                       batch_size=args.batch_size,
+                                                       batch_size=global_batch_size,
                                                        shuffle=True,
                                                        num_workers=args.num_workers,
                                                        prefetch_factor=args.prefetch_factor,
@@ -775,7 +785,7 @@ def main(args):
                                                            lat=lat,
                                                            data=data_train,
                                                            use_amp=use_amp,
-                                                           batchsize=args.batch_size,
+                                                           batchsize=global_batch_size,
                                                            num_workers=args.num_workers,
                                                            prefetch_factor=args.prefetch_factor,
                                                            pin_memory=args.pin_memory)
@@ -785,7 +795,7 @@ def main(args):
                                                              lat=lat,
                                                              data=data_test,
                                                              use_amp=use_amp,
-                                                             batchsize=args.batch_size,
+                                                             batchsize=global_batch_size,
                                                              num_workers=args.num_workers,
                                                              prefetch_factor=args.prefetch_factor,
                                                              pin_memory=args.pin_memory)
@@ -827,7 +837,7 @@ def main(args):
                                                    lat=lat,
                                                    data=data_train,
                                                    use_amp=use_amp,
-                                                   batchsize=args.batch_size,
+                                                   batchsize=global_batch_size,
                                                    num_workers=args.num_workers,
                                                    prefetch_factor=args.prefetch_factor,
                                                    pin_memory=args.pin_memory)
@@ -837,7 +847,7 @@ def main(args):
                                                      lat=lat,
                                                      data=data_test,
                                                      use_amp=use_amp,
-                                                     batchsize=args.batch_size,
+                                                     batchsize=global_batch_size,
                                                      num_workers=args.num_workers,
                                                      prefetch_factor=args.prefetch_factor,
                                                      pin_memory=args.pin_memory)
