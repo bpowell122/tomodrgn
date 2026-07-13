@@ -44,15 +44,6 @@ def add_args(parser: argparse.ArgumentParser | None = None) -> argparse.Argument
     group.add_argument('--uninvert-data', dest='invert_data', action='store_false', help='Do not invert data sign')
     group.add_argument('--datadir', type=os.path.abspath, help='Path prefix to particle stack if loading relative paths star file')
     group.add_argument('--lazy', action='store_true', help='Lazy loading if full dataset is too large to fit in memory (Should copy dataset to SSD)')
-    group.add_argument('--image-ctf-premultiplied', type=lambda x: x.lower() == 'true',
-                       default=None, metavar='BOOL',
-                       help='Override whether CTF premultiplication was applied during extraction (true/false). '
-                       'Default: auto-detected from star file.')
-    group.add_argument('--image-dose-weighted', type=lambda x: x.lower() == 'true',
-                       default=None, metavar='BOOL',
-                       help='Override whether dose weighting was applied during extraction (true/false). '
-                       'Default: auto-detected from star file.')
-    
     group = parser.add_argument_group('Reconstruction options')
     group.add_argument('--recon-tilt-weight', action='store_true', help='Weight images in fourier space by cosine(tilt_angle)')
     group.add_argument('--recon-dose-weight', action='store_true', help='Weight images in fourieri space per tilt per pixel by dose dependent amplitude attenuation')
@@ -86,7 +77,7 @@ def backproject_dataset(data: TiltSeriesMRCData | TomoParticlesMRCData,
     batchsize = 1
     data_generator = torch.utils.data.DataLoader(data, batch_size=batchsize, shuffle=False)
 
-    for batch_images, batch_rot, batch_trans, batch_ctf_params, batch_frequency_weights, _, batch_indices, _ in data_generator:
+    for batch_images, batch_rot, batch_trans, batch_ctf_params, batch_frequency_weights, _, batch_indices in data_generator:
 
         # logging
         n_ptcls_backprojected += len(batch_indices)
@@ -110,9 +101,8 @@ def backproject_dataset(data: TiltSeriesMRCData | TomoParticlesMRCData,
 
         # correct CTF by phase flipping images
         if not torch.all(batch_ctf_params == torch.zeros(batchsize, device=batch_ctf_params.device)):
-            if not data.star.image_ctf_premultiplied:
-                batch_ctf_weights = ctf.compute_ctf(lattice, *torch.split(batch_ctf_params.view(batchsize * ntilts, 9)[:, 1:], 1, 1))
-                batch_images *= batch_ctf_weights.sign()  # phase flip by CTF to be all positive amplitudes
+            batch_ctf_weights = ctf.compute_ctf(lattice, *torch.split(batch_ctf_params.view(batchsize * ntilts, 9)[:, 1:], 1, 1))
+            batch_images *= batch_ctf_weights.sign()  # phase flip by CTF to be all positive amplitudes
 
         # weight by dose and tilt
         batch_images = batch_images * batch_frequency_weights
@@ -208,9 +198,7 @@ def main(args):
 
     # load the star file
     ptcls_star = load_sta_starfile(star_path=args.particles,
-                                   source_software=args.source_software,
-                                   image_ctf_premultiplied=args.image_ctf_premultiplied,
-                                   image_dose_weighted=args.image_dose_weighted)
+                                   source_software=args.source_software)
     
     ptcls_star.plot_particle_uid_ntilt_distribution(outpath=f'{os.path.dirname(args.output)}/{os.path.basename(ptcls_star.sourcefile)}_particle_uid_ntilt_distribution.{args.plot_format}')
 
