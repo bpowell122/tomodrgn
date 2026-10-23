@@ -1,6 +1,14 @@
 Changelog
 =========
 
+v1.0.5
+-------
+
+- Bugfixes
+
+  * Fixed loading particles exported by WarpTools >= 2.0.0dev40, which only contain the tilts in which each particle is visible (`#20 <https://github.com/bpowell122/tomodrgn/issues/20>`_). Particles should be extracted with ``ts_export_particles --dont_premultiply``.
+  * ``_rlnTomoVisibleFrames`` is no longer modified in star files written by tomoDRGN.
+
 v1.0.0
 -------
 

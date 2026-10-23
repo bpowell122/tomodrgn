@@ -60,6 +60,7 @@ TomoDRGN model training requires as inputs:
 
 The diagram above summarizes the upstream processing workflows that are tested and known to be compatible with tomoDRGN.
 Note that in each case, particles should be exported as 2-D image stacks, not as 3-D subtomogram volumes.
+When using WarpTools, particles should be extracted with WarpTools >= 2.0.0dev40 using ``ts_export_particles --dont_premultiply``.
 In the case of the Warp (v1) to RELION (v3) stack, we recommend making use of the excellent [dynamo2warp](https://github.com/alisterburt/dynamo2m) tools from Alister Burt.
 
 

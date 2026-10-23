@@ -1420,6 +1420,7 @@ class TomoParticlesStarfile(GenericStarfile):
 
         self.header_ptcl_random_split = None
         self.header_image_random_split = '_tomodrgnRandomSubset'
+        self.header_ptcl_stack_frames = None  # source of truth for which tilts are stored in each particle's stack on disk; never modified by tomodrgn
         self.image_ctf_premultiplied = False  # CTF-premultiplied particles are not accepted.
         
         self.ind_imgs = None
@@ -1515,6 +1516,21 @@ class TomoParticlesStarfile(GenericStarfile):
         # more efficient (though less robust) than ast.literal_eval because we know the data structure ahead of time
         self.df[self.header_ptcl_visible_frames] = [np.asarray([include for include in ptcl_frames.replace('[', '').replace(']', '').split(',')], dtype=int)
                                                     for ptcl_frames in self.df[self.header_ptcl_visible_frames]]
+
+        # _rlnTomoVisibleFrames describes which tilts are stored in each particle's stack on disk (e.g. WarpTools >= 2.0.0dev40 only stores visible tilts),
+        # so it is preserved unmodified as the stack key; tomodrgn's own per-image selection is tracked in a separate column that filtering operates on
+        self.header_ptcl_stack_frames = self.header_ptcl_visible_frames
+        self.header_ptcl_visible_frames = '_tomodrgnIncludedFrames'
+        if self.header_ptcl_visible_frames in self.df.columns:
+            # star file previously written by tomodrgn with a per-image selection
+            self.df[self.header_ptcl_visible_frames] = [np.asarray([include for include in ptcl_frames.replace('[', '').replace(']', '').split(',')], dtype=int)
+                                                        for ptcl_frames in self.df[self.header_ptcl_visible_frames]]
+        else:
+            # copy each array so that filtering the included frames can never modify the stack key
+            self.df[self.header_ptcl_visible_frames] = [ptcl_frames.copy() for ptcl_frames in self.df[self.header_ptcl_stack_frames]]
+        for ptcl_stack_frames, ptcl_included_frames in zip(self.df[self.header_ptcl_stack_frames], self.df[self.header_ptcl_visible_frames]):
+            if len(ptcl_included_frames) != len(ptcl_stack_frames) or np.any((ptcl_included_frames != 0) & (ptcl_stack_frames == 0)):
+                raise ValueError(f'{self.header_ptcl_visible_frames} must have the same length as {self.header_ptcl_stack_frames} and only include tilts marked visible in it')
 
         # convert the _rlnTomoProj{X,Y,Z,W} columns from default dtype inferred by pandas (str of list of float, e.g. '[1.0,0.0,0.0,0]' to numpy array of floats
         for tomogram_block_name in self.tomograms_star.block_names:
@@ -1679,16 +1695,17 @@ class TomoParticlesStarfile(GenericStarfile):
                use_first_ntilts: int = -1,
                use_first_nptcls: int = -1) -> None:
         """
-        Filter the TomoParticlesStarfile in-place by image indices (e.g., datafram _rlnTomoVisibleFrames column) and particle indices (dataframe rows).
+        Filter the TomoParticlesStarfile in-place by image indices (e.g., dataframe _tomodrgnIncludedFrames column) and particle indices (dataframe rows).
         Operations are applied in order: `ind_img -> ind_ptcl -> sort_ptcl_imgs -> use_first_ntilts -> use_first_nptcls`.
+        The _rlnTomoVisibleFrames column is never modified, as it describes which tilts are stored in each particle's image stack.
 
         :param ind_imgs: numpy array or path to numpy array of integer images to preserve, shape (nimgs),
-                Sets values in the _rlnTomoVisibleFrames column to 0 if that image's index is not in ind_imgs.
+                Sets values in the _tomodrgnIncludedFrames column to 0 if that image's index is not in ind_imgs.
         :param ind_ptcls: numpy array or path to numpy array of integer particle indices to preserve, shape (nptcls).
                 Drops particles from the dataframe if that particle's index is not in ind_ptcls.
         :param sort_ptcl_imgs: sort the star file images on a per-particle basis by the specified criteria.
                 This is primarily useful in combination with ``use_first_ntilts`` to get the first ``ntilts`` images of each particle after sorting.
-        :param use_first_ntilts: keep the first `use_first_ntilts` images (of those images previously marked to be included by _rlnTomoVisibleFrames) of each particle in the sorted star file.
+        :param use_first_ntilts: keep the first `use_first_ntilts` images (of those images previously marked to be included by _tomodrgnIncludedFrames) of each particle in the sorted star file.
                 Default -1 means to use all. Will drop particles with fewer than this many tilt images.
         :param use_first_nptcls: keep the first `use_first_nptcls` particles in the sorted star file.
                 Default -1 means to use all.
@@ -1705,7 +1722,7 @@ class TomoParticlesStarfile(GenericStarfile):
         # how many particles does the star file initially contain
         utils.log(f'Found {len(self.df)} particles in input star file')
 
-        # filter by image (element of _rlnTomoVisibleFrames list per row) by presupplied indices
+        # filter by image (element of _tomodrgnIncludedFrames list per row) by presupplied indices
         if ind_imgs is not None:
             utils.log('Filtering particle images by supplied indices')
 
@@ -1870,6 +1887,8 @@ class TomoParticlesStarfile(GenericStarfile):
         # get indices associated with train and test
         train_test_split = []
         for ptcl_visible_frames in self.df[self.header_ptcl_visible_frames]:
+            # copy so that marking split2 images below does not modify the included frames column in place
+            ptcl_visible_frames = ptcl_visible_frames.copy()
             # get the number of included images, and split this set into the number of included assigned to train/test
             ptcl_n_imgs = np.sum(ptcl_visible_frames == 1)
             ptcl_n_imgs_train = np.rint(ptcl_n_imgs * fraction_split1).astype(int)
@@ -1917,6 +1936,55 @@ class TomoParticlesStarfile(GenericStarfile):
         plt.savefig(outpath, dpi=200)
         plt.close()
 
+    def _get_stack_indices(self,
+                           ptcl_mrcs_files: list[str],
+                           representative_header: mrc.MRCHeader) -> list[list[int]]:
+        """
+        Determine which images to load from each particle's stack on disk, accounting for how the stack was written.
+        Each stack's layout is detected from its file size, relative to the stack key ``self.header_ptcl_stack_frames``:
+
+        * full: one image per tilt in the key (e.g. WarpTools < 2.0.0dev40, or particles visible in all tilts)
+        * compact: one image per tilt marked visible in the key, in ascending tilt order (WarpTools >= 2.0.0dev40)
+
+        :param ptcl_mrcs_files: path to each particle's image stack, one per row of ``self.df``
+        :param representative_header: header used to determine the size of each image in bytes
+        :return: list (one per particle) of 0-indexed images to load from that particle's stack, corresponding to the tilts included in ``self.header_ptcl_visible_frames``
+        """
+        bytes_per_image = representative_header.dtype.itemsize * representative_header.fields['ny'] * representative_header.fields['nx']
+
+        all_ptcls_stack_indices = []
+        problems = []
+        n_full = n_compact = 0
+        for ptcl_mrcs_file, ptcl_stack_frames, ptcl_included_frames in zip(ptcl_mrcs_files,
+                                                                            self.df[self.header_ptcl_stack_frames],
+                                                                            self.df[self.header_ptcl_visible_frames],
+                                                                            strict=True):
+            # nonzero values (rather than == 1) are treated as stored tilts, for compatibility with star files written by tomodrgn <= 1.0.4
+            ptcl_stored_frames = ptcl_stack_frames != 0
+            data_bytes = os.path.getsize(ptcl_mrcs_file) - representative_header.total_header_bytes
+            n_images = data_bytes // bytes_per_image
+            if data_bytes <= 0 or data_bytes % bytes_per_image != 0:
+                problems.append(f'{ptcl_mrcs_file}: file size is not a whole number of {representative_header.fields["nx"]}x{representative_header.fields["ny"]} images')
+                stack_index_of_tilt = None
+            elif n_images == len(ptcl_stack_frames):
+                stack_index_of_tilt = np.arange(len(ptcl_stack_frames))
+                n_full += 1
+            elif n_images == np.sum(ptcl_stored_frames):
+                stack_index_of_tilt = np.cumsum(ptcl_stored_frames) - 1
+                n_compact += 1
+            else:
+                problems.append(f'{ptcl_mrcs_file}: contains {n_images} images, but {self.header_ptcl_stack_frames} implies '
+                                f'{len(ptcl_stack_frames)} (one per tilt) or {np.sum(ptcl_stored_frames)} (one per visible tilt)')
+                stack_index_of_tilt = None
+            all_ptcls_stack_indices.append([] if stack_index_of_tilt is None else stack_index_of_tilt[ptcl_included_frames == 1].tolist())
+
+        if problems:
+            problems_str = '\n    '.join(problems[:10])
+            raise ValueError(f'{len(problems)} of {len(ptcl_mrcs_files)} particle image stacks do not match {self.header_ptcl_stack_frames} in the star file (up to 10 shown):\n    {problems_str}\n'
+                             f'If these particles were extracted with WarpTools, re-export them with WarpTools >= 2.0.0dev40 using ts_export_particles --dont_premultiply.')
+        utils.log(f'Particle image stacks: {n_full} with one image per tilt, {n_compact} with one image per visible tilt')
+        return all_ptcls_stack_indices
+
     def get_particles_stack(self,
                             *,
                             datadir: str = None,
@@ -1927,7 +1995,8 @@ class TomoParticlesStarfile(GenericStarfile):
         Load the particles referenced in the TomoParticlesStarfile.
         Particles are loaded into memory directly as a numpy array of shape ``(n_images, boxsize+1, boxsize+1)``, or as a list of ``mrc.LazyImageStack`` objects of length ``n_particles``.
         The column specifying the path to images on disk must not specify the image index to load from that file (i.e., syntax like ``1@/path/to/stack.mrcs`` is not supported).
-        Instead, specification of which images to load for each particle should be done in the ``_rlnTomoVisibleFrames`` column.
+        Instead, specification of which images to load for each particle should be done in the ``_tomodrgnIncludedFrames`` column (initialized from ``_rlnTomoVisibleFrames``).
+        Each particle's stack may contain either one image per tilt or one image per visible tilt (WarpTools >= 2.0.0dev40); see ``_get_stack_indices``.
 
         :param datadir: absolute path to particle images .mrcs to override particles_path_column.
         :param lazy: whether to load particle images now in memory (False) or later on-the-fly (True).
@@ -1946,9 +2015,10 @@ class TomoParticlesStarfile(GenericStarfile):
             datadir = os.path.dirname(self.sourcefile)
         ptcl_mrcs_files = utils.prefix_paths(ptcl_mrcs_files, datadir)
 
-        # identify which tilt images to load for each particle
-        all_ptcls_visible_frames = self.df[self.header_ptcl_visible_frames].to_list()  # [np.array([1, 1, 0]), np.array([1, 1, 1]), ...]
-        all_ptcls_visible_frames = [[index for index, include in enumerate(ptcl_visible_frames) if include == 1] for ptcl_visible_frames in all_ptcls_visible_frames]  # [[0, 1], [0, 1, 2], ...]
+        # identify which images to load from each particle's stack
+        representative_header = mrc.parse_header(fname=ptcl_mrcs_files[0])
+        all_ptcls_visible_frames = self._get_stack_indices(ptcl_mrcs_files=ptcl_mrcs_files,
+                                                           representative_header=representative_header)  # [[0, 1], [0, 1, 2], ...]
 
         # create the LazyImageStack object for each particle
         if check_headers:
@@ -1960,7 +2030,6 @@ class TomoParticlesStarfile(GenericStarfile):
             assert all([ptcl.shape_image == lazyparticles[0].shape_image for ptcl in lazyparticles])
 
         else:
-            representative_header = mrc.parse_header(fname=ptcl_mrcs_files[0])
             lazyparticles = [mrc.LazyImageStack(fname=ptcl_mrcs_file, indices_image=ptcl_visible_frames, representative_header=representative_header)
                              for ptcl_mrcs_file, ptcl_visible_frames in zip(ptcl_mrcs_files, all_ptcls_visible_frames, strict=True)]
 
@@ -2000,12 +2069,19 @@ class TomoParticlesStarfile(GenericStarfile):
         # drop all other columns in common from the data_particles block
         self.df = self.df.drop(columns_in_common, axis=1)
 
-        # temporarily move columns added during __init__ to separate dataframe so that the written file does not contain these new columns
-        temp_df = self.df[self.tomodrgn_added_headers].copy()
-        self.df = self.df.drop(self.tomodrgn_added_headers, axis=1)
+        # the included frames column only needs to be written if tomodrgn filtering made it differ from the stack key
+        write_included_frames = not all(np.array_equal(ptcl_stack_frames, ptcl_included_frames)
+                                        for ptcl_stack_frames, ptcl_included_frames in zip(self.df[self.header_ptcl_stack_frames], self.df[self.header_ptcl_visible_frames]))
 
-        # temporarily convert self.header_ptcl_visible_frames to dtype str of list of int, as it was at input, for appropriate white-spacing in writing file to disk
-        self.df[self.header_ptcl_visible_frames] = [f'[{",".join([str(include) for include in ptcl_visible_frames])}]' for ptcl_visible_frames in self.df[self.header_ptcl_visible_frames]]
+        # temporarily move columns added during __init__ to separate dataframe so that the written file does not contain these new columns
+        headers_not_written = self.tomodrgn_added_headers if write_included_frames else self.tomodrgn_added_headers + [self.header_ptcl_visible_frames]
+        temp_df = self.df[headers_not_written].copy()
+        self.df = self.df.drop(headers_not_written, axis=1)
+
+        # temporarily convert the frames columns to dtype str of list of int, as at input, for appropriate white-spacing in writing file to disk
+        headers_frames_written = [self.header_ptcl_stack_frames, self.header_ptcl_visible_frames] if write_included_frames else [self.header_ptcl_stack_frames]
+        for header in headers_frames_written:
+            self.df[header] = [f'[{",".join([str(include) for include in ptcl_frames])}]' for ptcl_frames in self.df[header]]
 
         # now call parent write method for the TomoParticlesStar file
         assert '_optimisation_set' in os.path.basename(outstar), f'The name of the output star file must include the string "_optimisation_set", but got {outstar}'
@@ -2031,9 +2107,10 @@ class TomoParticlesStarfile(GenericStarfile):
         # re-add the columns added during __init__ to restore the state of self.df from the start of this function call
         self.df = pd.concat([self.df, temp_df], axis=1)
 
-        # re-convert the header_ptcl_visible_frames to dtype np.array of int, as set during __init__
-        self.df[self.header_ptcl_visible_frames] = [np.asarray([include for include in ptcl_frames.replace('[', '').replace(']', '').split(',')], dtype=int)
-                                                    for ptcl_frames in self.df[self.header_ptcl_visible_frames]]
+        # re-convert the frames columns to dtype np.array of int, as set during __init__
+        for header in headers_frames_written:
+            self.df[header] = [np.asarray([include for include in ptcl_frames.replace('[', '').replace(']', '').split(',')], dtype=int)
+                               for ptcl_frames in self.df[header]]
 
 
 def is_starfile_optimisation_set(star_path: str) -> bool:
